@@ -5,7 +5,8 @@ lyric field in an audio-reactive room lit by the album cover.
 
 **Status:** M1 (foundation) closed with an accepted SEC-10 exception
 ([`docs/reviews/M1-SEC-10-exception.md`](docs/reviews/M1-SEC-10-exception.md)); M2 in progress
-(task 1 done: the shell frame and deep-linkable views, [`docs/reviews/M2.md`](docs/reviews/M2.md)).
+(tasks 1–2 done: the shell frame, deep-linkable views and the UI components,
+[`docs/reviews/M2.md`](docs/reviews/M2.md)).
 There is no library data or playback yet. The server serves the client and a health check.
 Typeface: **Mona Sans**. The design and plan live in [`docs/`](docs/README.md), which is the source of
 truth.
@@ -46,6 +47,13 @@ ECHO_PORT=18790 pnpm dev        # then open <vite url>/specimen.html   (F: Mona 
 It opens on Mona Sans, ECHO's typeface, and keeps Geologica for comparison. The production image is
 built without it (`ECHO_SPECIMEN=0`), so neither the page nor Geologica ships. Decision record:
 [`docs/reviews/M1-type.md`](docs/reviews/M1-type.md).
+
+## Component gallery (development page)
+
+`/__ui` (with `pnpm dev`, or the built client from `pnpm build && pnpm start`) shows every UI
+component in every state. Like the specimen, it is compiled out of the production image
+(`ECHO_SPECIMEN=0`), where `/__ui` is "Page not found". Visual baselines:
+`pnpm test:e2e --project=chromium ui.visual` (update with `-u` after review).
 
 ## Container
 

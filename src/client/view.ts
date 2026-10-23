@@ -14,6 +14,7 @@ export type Route =
   | { view: 'album'; id: string }
   | { view: 'search'; q: string }
   | { view: 'settings'; section: SettingsSection }
+  | { view: 'ui' }
   | { view: 'notFound'; path: string };
 
 const isOneOf = <T extends string>(list: readonly T[], v: string | undefined): v is T =>
@@ -30,6 +31,7 @@ export function parseRoute(pathname: string, search = ''): Route {
   }
   const [head, a, b, ...rest] = decoded;
   if (!head) return { view: 'listen' };
+  if (head === '__ui' && a === undefined) return { view: 'ui' };
   if (head === 'library') {
     if (a === undefined) return { view: 'library', tab: 'albums' };
     if (isOneOf(LIBRARY_TABS, a) && b === undefined) return { view: 'library', tab: a };
@@ -58,6 +60,8 @@ export function routePath(route: Route): string {
       return route.q ? `/search?${new URLSearchParams({ q: route.q })}` : '/search';
     case 'settings':
       return route.section === 'preferences' ? '/settings' : `/settings/${route.section}`;
+    case 'ui':
+      return '/__ui';
     case 'notFound':
       return route.path;
   }

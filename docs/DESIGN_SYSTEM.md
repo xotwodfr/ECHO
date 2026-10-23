@@ -482,6 +482,7 @@ the fallback (achromatic) palette and are overwritten at runtime.
   /* type */
   --font: "Mona Sans", system-ui, sans-serif;   /* decided in M1 (§4.1) */
   --fs-title: 20px; --fs-section: 16px; --fs-figure: 24px; --fs-body: 14px; --fs-small: 12px;
+  --lh-title: 28px; --lh-section: 24px; --lh-figure: 30px; --lh-body: 20px; --lh-small: 16px;
   --ly-active: clamp(32px, min(6.2vh, 4.6vw), 88px);
 
   /* space */
@@ -496,9 +497,19 @@ the fallback (achromatic) palette and are overwritten at runtime.
   /* controls */
   --control-h: 36px; --input-h: 40px; --row-h: 48px; --row-h-media: 64px; --nav-pitch: 34px;
 
+  /* component sizes (§5, §8, §9; added in M2) */
+  --rule: 1px; --focus-ring: 2px; --trace: 2px; --dot: 4px;
+  --icon: 20px; --hit-lg: 40px; --play: 56px; --tile-play: 32px; --search-h: 32px; --menu-item-h: 32px;
+  --tile-min: 168px; --art-row: 40px; --art-dock: 64px; --art-detail: 240px;
+  --scrub-track: 4px; --scrub-thumb: 12px; --scrub-hit: 24px; --volume-w: 96px;
+  --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
+  --sheet-w: 400px; --signin-w: 360px;
+  --primary-hover: #FFFFFF;
+
   /* motion */
   --dur-press: 140ms; --dur-hover: 180ms; --dur-ui: 240ms; --dur-toast: 320ms;
   --dur-art: 640ms; --dur-palette: 1200ms;
+  --dur-pop: 160ms; --dur-scrub: 150ms; --dur-loop: 1000ms;   /* added in M2 */
   --ease-out: cubic-bezier(.16,1,.3,1);
   --ease-in-out: cubic-bezier(.65,0,.35,1);
   --ease-exit: cubic-bezier(.4,0,1,1);

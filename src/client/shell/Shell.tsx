@@ -1,43 +1,16 @@
-import {
-  type AnchorHTMLAttributes,
-  createContext,
-  type MouseEvent,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-} from 'react';
-import { useStore } from 'zustand';
+import { lazy, Suspense, useEffect, useRef } from 'react';
 import { strings } from '../strings.ts';
-import {
-  LIBRARY_TABS,
-  type Route,
-  routePath,
-  SETTINGS_SECTIONS,
-  type ViewState,
-  type ViewStore,
-} from '../view.ts';
+import { buttonClass } from '../ui/controls.tsx';
+import { AlbumGrid } from '../ui/media.tsx';
+import { ToastRegion } from '../ui/overlays.tsx';
+import { LIBRARY_TABS, type Route, SETTINGS_SECTIONS, type ViewStore } from '../view.ts';
+import { Link, useView, ViewContext } from './link.tsx';
 
 // The shell frame (DESIGN_SYSTEM.md §5): sidebar + canvas + dock, or the full-bleed Stage on Listen.
 
-const ViewContext = createContext<ViewStore | null>(null);
-
-function useView<T>(select: (s: ViewState) => T): T {
-  const store = useContext(ViewContext);
-  if (!store) throw new Error('useView outside <Shell>');
-  return useStore(store, select);
-}
-
-/** A real `<a href>` (open in new tab and copy link work); plain left clicks navigate in place. */
-function Link({ to, ...rest }: { to: Route } & AnchorHTMLAttributes<HTMLAnchorElement>) {
-  const navigate = useView((s) => s.navigate);
-  const onClick = (e: MouseEvent<HTMLAnchorElement>) => {
-    if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    e.preventDefault();
-    navigate(to);
-  };
-  return <a href={routePath(to)} onClick={onClick} {...rest} />;
-}
+// The component gallery (DESIGN_SYSTEM.md §9, DS-06) is a development page like the type specimen:
+// compiled out of the production image (ECHO_SPECIMEN=0), where /__ui is "Page not found".
+const Gallery = __ECHO_UI_PAGE__ ? lazy(() => import('./Gallery.tsx')) : null;
 
 const isTextField = (el: Element | null) =>
   el instanceof HTMLInputElement ||
@@ -132,21 +105,6 @@ function Tabs<T extends string>(props: {
   );
 }
 
-/**
- * Album grid (DESIGN_SYSTEM.md §5). W is the canvas content width: the window minus the 224px
- * sidebar minus the two 32px gutters. Tiles are at least 168px with the one 16px gap, so
- *
- *   columns = floor((W + 16) / (168 + 16))
- *
- * (n tiles need n·168 + (n − 1)·16 ≤ W). CSS `repeat(auto-fill, minmax(168px, 1fr))` computes exactly
- * this count, and `1fr` stretches the tiles over the remainder, so the first tile starts on the left
- * gutter and the last one ends on the right gutter. Example, 1440 wide: W = 1440 − 224 − 64 = 1152,
- * floor(1168 / 184) = 6 columns of (1152 − 5·16) / 6 = 178.67px.
- */
-function AlbumGrid({ children }: { children?: ReactNode }) {
-  return <ul className="album-grid">{children}</ul>;
-}
-
 function View({ route }: { route: Route }) {
   switch (route.view) {
     case 'listen':
@@ -156,7 +114,7 @@ function View({ route }: { route: Route }) {
             {strings.nav.listen}
           </h1>
           <div className="stage-chrome">
-            <Link className="tertiary" to={{ view: 'library', tab: 'albums' }}>
+            <Link className={buttonClass('tertiary')} to={{ view: 'library', tab: 'albums' }}>
               {strings.nav.library}
             </Link>
           </div>
@@ -207,12 +165,20 @@ function View({ route }: { route: Route }) {
           <p className="empty">{strings.settings.empty}</p>
         </>
       );
+    case 'ui':
+      if (Gallery)
+        return (
+          <Suspense>
+            <Gallery />
+          </Suspense>
+        );
+      return <View route={{ view: 'notFound', path: '/__ui' }} />;
     case 'notFound':
       return (
         <>
           <h1 tabIndex={-1}>{strings.notFound.title}</h1>
           <p className="empty">{strings.notFound.body}</p>
-          <Link className="tertiary" to={{ view: 'library', tab: 'albums' }}>
+          <Link className={buttonClass('tertiary')} to={{ view: 'library', tab: 'albums' }}>
             {strings.nav.library}
           </Link>
         </>
@@ -226,6 +192,7 @@ const TITLES: Record<Route['view'], string> = {
   album: strings.album.title,
   search: strings.nav.search,
   settings: strings.nav.settings,
+  ui: strings.gallery.title,
   notFound: strings.notFound.title,
 };
 
@@ -271,6 +238,7 @@ function Frame() {
       <section className="dock" aria-label={strings.dock.label}>
         <p className="dock-idle">{strings.dock.idle}</p>
       </section>
+      <ToastRegion />
     </div>
   );
 }

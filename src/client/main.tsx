@@ -2,6 +2,7 @@ import { createRoot } from 'react-dom/client';
 import './fonts.css';
 import './tokens.css';
 import './main.css';
+import './ui/ui.css';
 import { Shell } from './shell/Shell.tsx';
 import { createViewStore } from './view.ts';
 

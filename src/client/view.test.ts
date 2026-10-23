@@ -50,6 +50,7 @@ const CANONICAL: [string, Route][] = [
   ['/search?q=night+turns', { view: 'search', q: 'night turns' }],
   ['/settings', { view: 'settings', section: 'preferences' }],
   ['/settings/account', { view: 'settings', section: 'account' }],
+  ['/__ui', { view: 'ui' }],
 ];
 
 describe('parseRoute / routePath', () => {
@@ -75,6 +76,7 @@ describe('parseRoute / routePath', () => {
     '/library/album/x/extra',
     '/settings/admin',
     '/search/x',
+    '/__ui/x',
     '/library/album/%E0%A4%A',
   ])('%s is not found', (path) => {
     expect(parseRoute(path)).toEqual({ view: 'notFound', path });

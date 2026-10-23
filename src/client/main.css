@@ -1,6 +1,5 @@
-/* Shell frame (DESIGN_SYSTEM.md §5). Every value comes from tokens.css; the exceptions are 1px rules,
-   the 2px focus ring (§9), the 168px tile minimum (§5) and the breakpoints, which media queries
-   cannot read from custom properties. */
+/* Shell frame (DESIGN_SYSTEM.md §5). Every value comes from tokens.css; the one exception is the
+   breakpoint, because media queries cannot read custom properties (DS-01 allow-list). */
 
 body {
   margin: 0;
@@ -8,19 +7,19 @@ body {
   color: var(--text);
   font-family: var(--font);
   font-size: var(--fs-body);
-  line-height: calc(20 / 14);
+  line-height: var(--lh-body);
 }
 
 h1 {
   font-size: var(--fs-title);
-  line-height: calc(28 / 20);
+  line-height: var(--lh-title);
   font-weight: 600;
   margin: 0 0 var(--sp-4);
 }
 
 h2 {
   font-size: var(--fs-section);
-  line-height: calc(24 / 16);
+  line-height: var(--lh-section);
   font-weight: 500;
   margin: var(--sp-5) 0 var(--sp-2);
 }
@@ -30,20 +29,21 @@ h1:focus {
 }
 
 a,
-input {
+input,
+button {
   color: inherit;
   font: inherit;
 }
 
 :focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+  outline: var(--focus-ring) solid var(--focus);
+  outline-offset: var(--focus-ring);
 }
 
 .visually-hidden {
   position: absolute;
-  width: 1px;
-  height: 1px;
+  width: var(--rule);
+  height: var(--rule);
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
@@ -63,7 +63,7 @@ input {
   flex-direction: column;
   gap: var(--sp-5);
   padding: var(--sp-5) var(--sp-4);
-  border-right: 1px solid var(--line);
+  border-right: var(--rule) solid var(--line);
 }
 
 .wordmark {
@@ -92,7 +92,7 @@ input {
   display: flex;
   align-items: center;
   flex: 1;
-  height: var(--sp-6);
+  height: var(--search-h);
   padding: 0 var(--sp-3);
   border-radius: var(--r-control);
   color: var(--muted);
@@ -122,10 +122,10 @@ input {
 .search-field input {
   flex: 1;
   min-width: 0;
-  height: var(--sp-6);
+  height: var(--search-h);
   box-sizing: border-box;
   padding: 0 var(--sp-6) 0 var(--sp-3);
-  border: 1px solid var(--control);
+  border: var(--rule) solid var(--control);
   border-radius: var(--r-pill);
   background: var(--surface-2);
 }
@@ -142,6 +142,7 @@ input {
   color: var(--faint);
   font: inherit;
   font-size: var(--fs-small);
+  line-height: var(--lh-small);
 }
 
 .shell .search-compact {
@@ -170,21 +171,10 @@ input {
   margin: 0 0 var(--sp-4);
 }
 
-.tertiary {
-  color: var(--text);
-  text-decoration: none;
-}
-
-.tertiary:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.18em;
-}
-
-/* See AlbumGrid in shell/Shell.tsx for the column arithmetic. */
+/* See AlbumGrid in ui/media.tsx for the column arithmetic. */
 .album-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
   gap: var(--gap);
   margin: 0;
   padding: 0;
@@ -197,7 +187,7 @@ input {
   align-items: center;
   padding: 0 var(--gutter);
   background: var(--surface-1);
-  border-top: 1px solid var(--line);
+  border-top: var(--rule) solid var(--line);
 }
 
 .dock-idle {
@@ -227,7 +217,92 @@ input {
   padding: var(--sp-5) var(--gutter);
 }
 
-/* compact < 720px: the sidebar becomes a bottom bar of 4 destinations. */
+/* /__ui component gallery (development page) */
+.ui-section {
+  margin-bottom: var(--sp-8);
+}
+
+.ui-section > h2 {
+  margin: 0 0 var(--sp-5);
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--rule) solid var(--line);
+}
+
+.ui-row,
+.ui-stack {
+  display: flex;
+  gap: var(--sp-5) var(--sp-6);
+  margin-bottom: var(--sp-6);
+}
+
+.ui-row {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.ui-stack {
+  flex-direction: column;
+}
+
+.ui-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+.ui-cell[data-wide] {
+  width: 100%;
+  max-width: calc(2 * var(--sheet-w));
+}
+
+.ui-cell-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--hit-lg);
+}
+
+.ui-cell figcaption {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+.ui-cell-body > .field {
+  width: min(100%, 18em);
+}
+
+.ui-cell-body:has(> .signin) {
+  box-sizing: border-box;
+  width: calc(var(--signin-w) + 2 * var(--sp-5));
+  max-width: 100%;
+  padding: var(--sp-5);
+  border: var(--rule) solid var(--line);
+  border-radius: var(--r-panel);
+}
+
+.ui-cell-body > .track-list,
+.ui-cell-body > .scrubber {
+  width: 100%;
+}
+
+.ui-inline,
+.ui-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.ui-section .album-grid {
+  margin-bottom: var(--sp-6);
+}
+
+/* compact < 720px: the sidebar becomes a bottom bar of 4 destinations. Breakpoint: see the top. */
 @media (max-width: 719.98px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
@@ -242,7 +317,7 @@ input {
     grid-area: 3 / 1;
     padding: var(--sp-2);
     border-right: 0;
-    border-top: 1px solid var(--line);
+    border-top: var(--rule) solid var(--line);
   }
 
   .shell .wordmark,

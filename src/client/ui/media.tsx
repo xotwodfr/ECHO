@@ -1,0 +1,201 @@
+import { type CSSProperties, type ReactNode, useState } from 'react';
+import { Link } from '../shell/link.tsx';
+import { strings } from '../strings.ts';
+import type { Force } from './controls.tsx';
+import { Icon } from './icons.tsx';
+import { formatTime } from './logic.ts';
+import { Menu, type MenuItem } from './overlays.tsx';
+
+// Artwork, track rows and album tiles (DESIGN_SYSTEM.md §8, §9.3, §9.4).
+
+type ArtSize = 'row' | 'dock' | 'grid' | 'detail';
+
+/**
+ * Cover art (§8): never cropped, overlaid or animated; 4px radius up to 64px, 8px above. Missing
+ * art is a `--surface-2` square with the album title, no icon. Decorative: the title is always
+ * next to it.
+ */
+export function Artwork({ src, title, size }: { src?: string; title: string; size: ArtSize }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <span className={`art art--${size}`}>
+      {src && !failed ? (
+        <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
+      ) : (
+        <span className="art-fallback" aria-hidden="true">
+          {title}
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** The animated 3-bar now-playing glyph (static under reduced motion). */
+function NowPlayingBars() {
+  return (
+    <span className="np-bars" aria-hidden="true">
+      <span />
+      <span />
+      <span />
+    </span>
+  );
+}
+
+export interface TrackRowProps {
+  number?: number;
+  title: string;
+  artist: string;
+  durationMs: number;
+  /** A media row (64px) with a 40px cover and the artist as a subline. */
+  artwork?: { src?: string; album: string };
+  selected?: boolean;
+  nowPlaying?: boolean;
+  /** The decay trace (§2.3): only on the most recently played row of a list. */
+  decay?: { durationMs: number; elapsedMs: number };
+  onPlay: () => void;
+  menu?: MenuItem[];
+  force?: Force;
+}
+
+/** Track row (§9.3): the whole row plays; numbers right-aligned and tabular. */
+export function TrackRow(p: TrackRowProps) {
+  return (
+    <li
+      className="track-row"
+      data-media={p.artwork ? true : undefined}
+      data-selected={p.selected || undefined}
+      data-now-playing={p.nowPlaying || undefined}
+      data-force={p.force}
+      aria-current={p.nowPlaying || undefined}
+    >
+      {p.number !== undefined && <span className="track-num num">{p.number}</span>}
+      {p.artwork && <Artwork size="row" src={p.artwork.src} title={p.artwork.album} />}
+      <button
+        type="button"
+        className="track-main"
+        aria-label={strings.ui.playItem(p.title)}
+        onClick={p.onPlay}
+      >
+        <span className="track-title">
+          {p.nowPlaying && <NowPlayingBars />}
+          {p.title}
+        </span>
+        {p.artwork && <span className="track-sub">{p.artist}</span>}
+      </button>
+      {p.nowPlaying && <span className="visually-hidden">{strings.ui.nowPlaying}</span>}
+      <span className="track-dur num">{formatTime(p.durationMs)}</span>
+      {p.menu && <Menu label={strings.ui.moreFor(p.title)} items={p.menu} />}
+      {p.decay && (
+        <span
+          className="decay-trace"
+          aria-hidden="true"
+          style={
+            {
+              '--trace-ms': `${p.decay.durationMs}ms`,
+              '--trace-at': `${-p.decay.elapsedMs}ms`,
+            } as CSSProperties
+          }
+        />
+      )}
+    </li>
+  );
+}
+
+/** Loading row: the final layout with flat bars at the real sizes, no shimmer (§10). */
+export function TrackRowSkeleton({ media = false }: { media?: boolean }) {
+  return (
+    <li className="track-row track-row--loading" data-media={media || undefined} aria-hidden="true">
+      {media && <span className="art art--row" />}
+      <span className="track-main">
+        <span className="bar bar--body" />
+        {media && <span className="bar bar--small" />}
+      </span>
+      <span className="bar bar--small bar--num" />
+    </li>
+  );
+}
+
+/** A list of track rows. `ruled`: the Detail table, rules between rows and a header (§9.3). */
+export function TrackList({
+  label,
+  ruled = false,
+  busy = false,
+  children,
+}: {
+  label: string;
+  ruled?: boolean;
+  busy?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <div className="track-list" data-ruled={ruled || undefined}>
+      {ruled && (
+        <div className="track-head" aria-hidden="true">
+          <span className="track-num">#</span>
+          <span>{strings.ui.title}</span>
+          <span className="track-dur">{strings.ui.duration}</span>
+        </div>
+      )}
+      <ol aria-label={label} aria-busy={busy || undefined}>
+        {children}
+      </ol>
+    </div>
+  );
+}
+
+/**
+ * Album tile (§9.4). The tile opens the album; a 32px play button sits at the end of the title
+ * row, never on the cover, shown on hover and on keyboard focus. No lift or zoom.
+ */
+export function AlbumTile(p: {
+  id: string;
+  title: string;
+  artist: string;
+  cover?: string;
+  onPlay: () => void;
+  force?: Force;
+}) {
+  return (
+    <li className="tile" data-force={p.force}>
+      <Link className="tile-link" to={{ view: 'album', id: p.id }}>
+        <Artwork size="grid" src={p.cover} title={p.title} />
+        <span className="tile-title">{p.title}</span>
+        <span className="tile-artist">{p.artist}</span>
+      </Link>
+      <button
+        type="button"
+        className="tile-play"
+        aria-label={strings.ui.playItem(p.title)}
+        onClick={p.onPlay}
+      >
+        <Icon name="play" className="icon--solid" />
+      </button>
+    </li>
+  );
+}
+
+export function AlbumTileSkeleton() {
+  return (
+    <li className="tile tile--loading" aria-hidden="true">
+      <span className="art art--grid" />
+      <span className="bar bar--body" />
+      <span className="bar bar--small" />
+    </li>
+  );
+}
+
+/**
+ * Album grid (DESIGN_SYSTEM.md §5). W is the canvas content width: the window minus the 224px
+ * sidebar (--sidebar) minus the two 32px gutters (--gutter). Tiles are at least 168px (--tile-min),
+ * with the one 16px gap (--gap), so
+ *
+ *   columns = floor((W + 16) / (168 + 16))
+ *
+ * (n tiles need n·168 + (n − 1)·16 ≤ W). CSS `repeat(auto-fill, minmax(168px, 1fr))` computes exactly
+ * this count, and `1fr` stretches the tiles over the remainder, so the first tile starts on the left
+ * gutter and the last one ends on the right gutter. Example, 1440 wide: W = 1440 − 224 − 64 = 1152,
+ * floor(1168 / 184) = 6 columns of (1152 − 5·16) / 6 = 178.67px.
+ */
+export function AlbumGrid({ children }: { children?: ReactNode }) {
+  return <ul className="album-grid">{children}</ul>;
+}

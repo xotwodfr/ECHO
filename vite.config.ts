@@ -3,7 +3,11 @@ import { defineConfig } from 'vite';
 
 const serverPort = process.env.ECHO_PORT ?? '8080';
 
+// Development pages (the type specimen, the /__ui component gallery) are left out of the image.
+const devPages = process.env.ECHO_SPECIMEN !== '0';
+
 export default defineConfig({
+  define: { __ECHO_UI_PAGE__: JSON.stringify(devPages) },
   build: {
     outDir: 'dist/client',
     emptyOutDir: true,
@@ -12,7 +16,7 @@ export default defineConfig({
       // The production image builds with ECHO_SPECIMEN=0 so neither ships (DS-10).
       input: {
         main: 'index.html',
-        ...(process.env.ECHO_SPECIMEN === '0' ? {} : { specimen: 'specimen.html' }),
+        ...(devPages ? { specimen: 'specimen.html' } : {}),
       },
     },
   },
