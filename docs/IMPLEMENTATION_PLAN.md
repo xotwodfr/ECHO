@@ -87,7 +87,9 @@ fallback room.
 **Dependencies:** M1.
 
 **Progress:** tasks 1–5 done (2026-10-23; record and open items in `docs/reviews/M2.md`). Task 6
-open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 not started.
+open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 open on two FAILs:
+Library 0 FAIL; Settings `blank-gap` (the empty Preferences stub, content is M8); `/__ui`
+`edge-text` (a verified probe false positive on ellipsis-truncated text).
 
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
@@ -106,7 +108,8 @@ open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 not 
 6. Deterministic mode `?frame&seed&fixture&tier`.
 7. **taste-skill check:** `node ~/.claude/skills/design-taste-frontend/scripts/inspect.mjs --app` on
    Library, Settings and `/__ui`. Fix every FAIL. Critique answers (app-screens §2.7) go in
-   `docs/reviews/M2.md`.
+   `docs/reviews/M2.md`. **Run; two FAILs open** (see Progress). The script audits one URL per
+   run; on a machine without system Chromium, set `CHROME_PATH` to Playwright's Chromium.
 
 **Tests and verification:** V snapshots of every component state and the Listen stage (Ambient,
 Still) at 4 viewports. E for context loss and hidden tab on Chromium and Firefox. Squint-test

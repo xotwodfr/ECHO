@@ -485,7 +485,8 @@ test.describe('track rows and tiles', () => {
     const s = section(page, 'Album tiles');
     // Covers load lazily: the broken one only errors once it is scrolled into view.
     await s.scrollIntoViewIfNeeded();
-    await expect(s.locator('li', { hasText: 'No Cover' }).locator('.art-fallback')).toHaveText(
+    await expect(s.locator('li', { hasText: 'No Cover' }).locator('.art-fallback')).toHaveAttribute(
+      'data-title',
       'Field Recordings, Volume Two',
     );
     await expect(

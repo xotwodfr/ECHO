@@ -22,9 +22,9 @@ export function Artwork({ src, title, size }: { src?: string; title: string; siz
       {src && !failed ? (
         <img src={src} alt="" loading="lazy" decoding="async" onError={() => setFailed(true)} />
       ) : (
-        <span className="art-fallback" aria-hidden="true">
-          {title}
-        </span>
+        // The title is generated content: the square is a picture, so its text stays out of
+        // find-in-page, selection and text measurement.
+        <span className="art-fallback" data-title={title} aria-hidden="true" />
       )}
     </span>
   );

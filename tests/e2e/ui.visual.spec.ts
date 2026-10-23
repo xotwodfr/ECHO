@@ -28,10 +28,10 @@ const SECTIONS = [
 async function open(page: Page, width: number, height = 2400) {
   await page.setViewportSize({ width, height });
   await page.goto('/__ui');
-  await expect(page.locator('[data-ui="signin"]')).toBeVisible();
+  await expect(page.locator('[data-section="signin"]')).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   // Wait for the fixture covers (and the deliberate broken one to fall back).
-  await page.locator('[data-ui="tiles"]').scrollIntoViewIfNeeded();
+  await page.locator('[data-section="tiles"]').scrollIntoViewIfNeeded();
   await expect(page.locator('.tile', { hasText: 'Missing File' }).locator('img')).toHaveCount(0);
   await expect
     .poll(() =>
@@ -48,7 +48,7 @@ for (const width of WIDTHS) {
   test(`component states at ${width}`, async ({ page }) => {
     await open(page, width);
     for (const id of SECTIONS) {
-      await expect(page.locator(`[data-ui="${id}"]`)).toHaveScreenshot(`${id}-${width}.png`, {
+      await expect(page.locator(`[data-section="${id}"]`)).toHaveScreenshot(`${id}-${width}.png`, {
         animations: 'disabled',
         caret: 'hide',
       });
@@ -66,13 +66,16 @@ for (const width of [1440, 390]) {
     await expect(page).toHaveScreenshot(`sheet-${width}.png`, shot);
     await page.keyboard.press('Escape');
 
-    await page.locator('[data-ui="overlays"]').getByRole('button', { name: 'Disconnect' }).click();
+    await page
+      .locator('[data-section="overlays"]')
+      .getByRole('button', { name: 'Disconnect' })
+      .click();
     await expect(page.getByRole('alertdialog')).toBeVisible();
     await expect(page).toHaveScreenshot(`dialog-${width}.png`, shot);
     await page.keyboard.press('Escape');
 
     const trigger = page
-      .locator('[data-ui="overlays"]')
+      .locator('[data-section="overlays"]')
       .getByRole('button', { name: 'More for Undertow' });
     await trigger.scrollIntoViewIfNeeded();
     await trigger.press('Enter');

@@ -627,6 +627,10 @@
   line-clamp: 4;
 }
 
+.art-fallback::before {
+  content: attr(data-title);
+}
+
 /* At 40 and 64px, 18% would be under the 12px type floor (§4.2); the title is beside them anyway. */
 .art--row .art-fallback,
 .art--dock .art-fallback {

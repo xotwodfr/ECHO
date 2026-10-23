@@ -40,7 +40,7 @@ const STATES: { name: string; force?: Force }[] = [
 
 function Section({ id, title, children }: { id: string; title: string; children: ReactNode }) {
   return (
-    <section className="ui-section" aria-labelledby={`ui-${id}`} data-ui={id}>
+    <section className="ui-section" aria-labelledby={`ui-${id}`} data-section={id}>
       <h2 id={`ui-${id}`}>{title}</h2>
       {children}
     </section>
@@ -238,7 +238,7 @@ export default function Gallery() {
       <Section id="fields" title="Fields, toggles and pills">
         <div className="ui-row">
           <Cell caption="Field · Empty">
-            <Field label="Server URL" placeholder="https://music.example.com" />
+            <Field label="Server URL" placeholder="https://music.home.lan" />
           </Cell>
           <Cell caption="Field · Filled, hint">
             <Field
