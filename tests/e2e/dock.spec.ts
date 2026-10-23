@@ -290,3 +290,121 @@ for (const vp of VIEWPORTS) {
     await expect(dock(page).getByRole('button', { name: 'Queue' })).toBeVisible();
   });
 }
+
+test.describe('task 3 polish', () => {
+  test('keyboard transport (PRODUCT_SPEC §7)', async ({ page }) => {
+    await start(page);
+    await playAlbum(page, 'Harbour Lights');
+    // Away from any control, so Space and the arrows are free for shortcuts.
+    await page.getByRole('heading', { level: 1 }).click();
+    await page.keyboard.press('Space');
+    await expect(dock(page)).toHaveAttribute('data-status', 'paused');
+    await page.keyboard.press('ArrowRight');
+    await expect(seek(page)).toHaveAttribute('aria-valuetext', /^5 seconds of/);
+    await page.keyboard.press('Shift+ArrowRight');
+    await expect(seek(page)).toHaveAttribute('aria-valuetext', /^20 seconds of/);
+    await page.keyboard.press('ArrowLeft');
+    await expect(seek(page)).toHaveAttribute('aria-valuetext', /^15 seconds of/);
+    await page.keyboard.press('Space');
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+    await page.keyboard.press('Control+ArrowRight');
+    await page.clock.runFor(LOAD_MS);
+    await expect(title(page)).toHaveText('Low Tide Radio');
+    await page.keyboard.press('Control+ArrowLeft'); // under 3 s: back a track
+    await page.clock.runFor(LOAD_MS);
+    await expect(title(page)).toHaveText('Ferry at Six');
+    await page.keyboard.press('s');
+    await expect(dock(page).getByRole('button', { name: 'Shuffle' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    await page.keyboard.press('r');
+    await expect(dock(page).getByRole('button', { name: 'Repeat all' })).toBeVisible();
+    await page.keyboard.press('m');
+    await expect(dock(page).getByRole('slider', { name: 'Volume' })).toHaveAttribute(
+      'aria-valuetext',
+      '0%',
+    );
+    await page.keyboard.press('m');
+    await expect(dock(page).getByRole('slider', { name: 'Volume' })).toHaveAttribute(
+      'aria-valuetext',
+      '100%',
+    );
+    await page.keyboard.press('q');
+    await expect(page.getByRole('dialog', { name: 'Queue' })).toBeVisible();
+    await page.keyboard.press('q');
+    await expect(page.getByRole('dialog', { name: 'Queue' })).toBeHidden();
+  });
+
+  test('shortcuts never fire while typing, and ↑/↓ volume only on the Stage', async ({ page }) => {
+    await start(page);
+    await playAlbum(page, 'Harbour Lights');
+    const search = page.getByRole('navigation', { name: 'Main' }).getByRole('searchbox');
+    await search.fill('');
+    await search.pressSequentially('rs m');
+    await expect(page).toHaveURL(/\/search\?q=rs\+m$/);
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+    await expect(dock(page).getByRole('button', { name: 'Shuffle' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    await page.getByRole('heading', { level: 1 }).click();
+    await page.keyboard.press('ArrowDown');
+    await expect(dock(page).getByRole('slider', { name: 'Volume' })).toHaveAttribute(
+      'aria-valuetext',
+      '100%',
+    );
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Listen' })
+      .click();
+    await page.locator('.stage').click({ position: { x: 400, y: 300 } });
+    await page.keyboard.press('ArrowDown');
+    await expect(dock(page).getByRole('slider', { name: 'Volume' })).toHaveAttribute(
+      'aria-valuetext',
+      '95%',
+    );
+  });
+
+  test('queueing with nothing playing cues the first track, ready to play', async ({ page }) => {
+    await start(page, '/library/album/al-paper');
+    await page.getByRole('button', { name: 'Add to queue' }).click();
+    await page.clock.runFor(LOAD_MS);
+    await expect(title(page)).toHaveText('Orbit');
+    await expect(dock(page)).toHaveAttribute('data-status', 'paused');
+    await dock(page).getByRole('button', { name: 'Play' }).click();
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+  });
+
+  test('Next is disabled at the end of the queue and says why', async ({ page }) => {
+    await start(page, '/library/album/al-paper');
+    await page.getByRole('button', { name: 'Play Re-entry' }).click();
+    await page.clock.runFor(LOAD_MS);
+    const next = dock(page).getByRole('button', { name: 'Next' });
+    await expect(next).toBeDisabled();
+    await expect(next).toHaveAccessibleDescription('End of the queue');
+    await dock(page).getByRole('button', { name: 'Repeat off' }).click(); // → all: can wrap
+    await expect(next).toBeEnabled();
+  });
+
+  test("the album's Play button controls the album while it plays", async ({ page }) => {
+    await start(page, '/library/album/al-paper');
+    const main = page.getByRole('main');
+    await main.getByRole('button', { name: 'Play', exact: true }).click();
+    await page.clock.runFor(LOAD_MS + 4000);
+    await main.getByRole('button', { name: 'Pause', exact: true }).click();
+    await expect(dock(page)).toHaveAttribute('data-status', 'paused');
+    await main.getByRole('button', { name: 'Play', exact: true }).click();
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+    await expect(seek(page)).toHaveAttribute('aria-valuetext', /^4 seconds of/); // resumed, not restarted
+  });
+
+  test('clicking the Now playing row in the queue never pauses', async ({ page }) => {
+    await start(page);
+    await playAlbum(page, 'Harbour Lights');
+    await dock(page).getByRole('button', { name: 'Queue' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Queue' });
+    await sheet.getByRole('list', { name: 'Now playing' }).getByRole('button').click();
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+  });
+});

@@ -286,6 +286,51 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect([...seen].sort()).toEqual(titles(album));
   });
 
+  it('queueing with nothing loaded cues the first queued track, paused', () => {
+    const { clock, c, s } = setup();
+    c.addToQueue([track(7), track(8)], 'Album B');
+    expect(s()).toMatchObject({ status: 'loading', track: { id: 't7' } });
+    clock.advance(100);
+    expect(s().status).toBe('paused');
+    expect(titles(Q.upcoming(c.queue.getState()))).toEqual(['t8']);
+    c.toggle();
+    expect(s().status).toBe('playing');
+  });
+
+  it('hasNext: false at the end unless repeat-all can wrap', () => {
+    const { clock, c } = setup();
+    c.playList(album, 4, ctx);
+    clock.advance(100);
+    expect(c.hasNext()).toBe(false);
+    c.cycleRepeat(); // all
+    expect(c.hasNext()).toBe(true);
+    c.cycleRepeat(); // one
+    expect(c.hasNext()).toBe(false);
+    c.addToQueue([track(9)], 'Track 9');
+    expect(c.hasNext()).toBe(true);
+  });
+
+  it('resume never pauses; toggleMute returns to the volume before muting', () => {
+    const { clock, c, s } = setup();
+    c.playList(album, 0, ctx);
+    clock.advance(100);
+    c.resume();
+    expect(s().status).toBe('playing');
+    c.toggle();
+    c.resume();
+    expect(s().status).toBe('playing');
+    c.setVolume(0.35);
+    c.toggleMute();
+    expect(s().volume).toBe(0);
+    c.toggleMute();
+    expect(s().volume).toBe(0.35);
+    // Methods work detached (passed straight to onClick).
+    const { toggleMute, toggle } = c;
+    toggleMute();
+    toggle();
+    expect(s()).toMatchObject({ volume: 0, status: 'paused' });
+  });
+
   it('without a provider every command is a no-op', () => {
     const c = createPlaybackController({ provider: null });
     c.playList(album, 0, ctx);

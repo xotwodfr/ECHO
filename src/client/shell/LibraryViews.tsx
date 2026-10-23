@@ -1,6 +1,6 @@
 import type { PlayContext, Track } from '../../shared/types.ts';
 import { type Album, albumDurationMs } from '../library.ts';
-import { useLibrary, usePlayback, usePlayer } from '../playback/context.tsx';
+import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
 import { Button } from '../ui/controls.tsx';
@@ -107,6 +107,11 @@ export function AlbumView({ id }: { id: string }) {
   const c = usePlayback();
   const a = library?.album(id);
   const s = strings.album;
+  // While this album is what plays, its Play button controls it instead of restarting it.
+  const status = usePlayer((p) => p.status);
+  const isCurrent = useQueue((q) => q.contextSource?.kind === 'album' && q.contextSource.id === id);
+  const live = isCurrent && status !== 'idle' && status !== 'ended';
+  const playing = live && ['playing', 'loading', 'buffering'].includes(status);
   if (!a)
     return (
       <>
@@ -126,8 +131,11 @@ export function AlbumView({ id }: { id: string }) {
             <span className="num">{formatTime(albumDurationMs(a))}</span>
           </p>
           <div className="detail-actions">
-            <Button variant="primary" onClick={() => c.playList(a.tracks, 0, albumContext(a))}>
-              {s.play}
+            <Button
+              variant="primary"
+              onClick={live ? c.toggle : () => c.playList(a.tracks, 0, albumContext(a))}
+            >
+              {playing ? s.pause : s.play}
             </Button>
             <Button onClick={() => c.playList(a.tracks, 'shuffle', albumContext(a))}>
               {s.shuffle}

@@ -61,6 +61,8 @@ export function createPlaybackController(opts: {
   /** The whole list being played, for repeat-all to wrap around. */
   let source: { tracks: Track[]; context: PlayContext } | null = null;
   let loading = false;
+  /** The volume to return to when unmuting. */
+  let unmuted = 1;
 
   provider?.on('state', (s) => {
     if (!s.buffering) loading = false;
@@ -131,6 +133,16 @@ export function createPlaybackController(opts: {
     }
   }
 
+  /**
+   * Queueing with nothing loaded cues the first queued track, paused, so the dock has something
+   * to play instead of a queue that nothing can start.
+   */
+  function enqueue(q: QueueState) {
+    if (q.now || !provider) return queue.setState(q);
+    const cued = Q.advance(q);
+    if (cued) load({ ...cued, provider: provider.id }, false);
+  }
+
   function seek(ms: number) {
     const s = player.getState();
     if (!provider || !s.track || !s.capabilities.canSeek) return;
@@ -138,6 +150,24 @@ export function createPlaybackController(opts: {
     player.setState({ positionMs: to, positionAt: clock.now() });
     if (seeking) pendingSeek = to;
     else void sendSeek(to);
+  }
+
+  function toggle() {
+    const s = player.getState();
+    if (!provider || !s.track) return;
+    if (isActive()) return void provider.pause();
+    if (s.status === 'ended') {
+      player.setState({ status: 'paused' });
+      void provider.seek(0);
+    }
+    void provider.play();
+  }
+
+  function setVolume(v: number) {
+    const volume = Math.min(1, Math.max(0, v));
+    if (volume > 0) unmuted = volume;
+    player.setState({ volume });
+    void provider?.setVolume(volume);
   }
 
   return {
@@ -164,21 +194,23 @@ export function createPlaybackController(opts: {
       );
     },
 
-    toggle() {
-      const s = player.getState();
-      if (!provider || !s.track) return;
-      if (isActive()) return void provider.pause();
-      if (s.status === 'ended') {
-        player.setState({ status: 'paused' });
-        void provider.seek(0);
-      }
-      void provider.play();
-    },
+    toggle,
 
     next() {
       const next =
         Q.advance(queue.getState()) ?? (player.getState().repeat === 'all' ? wrap() : null);
       if (next) load(next, isActive());
+    },
+
+    /** True when Next has somewhere to go (§3: nextUp, then the context, then repeat-all). */
+    hasNext() {
+      const q = queue.getState();
+      return Q.upcoming(q).length > 0 || (player.getState().repeat === 'all' && source !== null);
+    },
+
+    /** Start or resume without ever pausing (a click on the "Now playing" row). */
+    resume() {
+      if (!isActive()) toggle();
     },
 
     previous() {
@@ -191,10 +223,11 @@ export function createPlaybackController(opts: {
 
     seek,
 
-    setVolume(v: number) {
-      const volume = Math.min(1, Math.max(0, v));
-      player.setState({ volume });
-      void provider?.setVolume(volume);
+    setVolume,
+
+    /** M: mute, or return to the volume before muting (§9.2). */
+    toggleMute() {
+      setVolume(player.getState().volume > 0 ? 0 : unmuted);
     },
 
     toggleShuffle() {
@@ -212,7 +245,7 @@ export function createPlaybackController(opts: {
     playNext(tracks: Track[], label: string) {
       let q = queue.getState();
       for (const t of [...tracks].reverse()) q = Q.playNext(q, t);
-      queue.setState(q);
+      enqueue(q);
       notify(strings.playback.playingNext(label));
     },
 
@@ -220,7 +253,7 @@ export function createPlaybackController(opts: {
     addToQueue(tracks: Track[], label: string) {
       let q = queue.getState();
       for (const t of tracks) q = Q.addToQueue(q, t);
-      queue.setState(q);
+      enqueue(q);
       notify(strings.playback.added(label));
     },
 

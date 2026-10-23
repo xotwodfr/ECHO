@@ -22,6 +22,7 @@ export const strings = {
     missing: 'This album is not in your library.',
     trackCount: (n: number) => `${n} track${n === 1 ? '' : 's'}`,
     play: 'Play',
+    pause: 'Pause',
     shuffle: 'Shuffle',
     addToQueue: 'Add to queue',
     playNext: 'Play next',
@@ -44,6 +45,7 @@ export const strings = {
     idle: 'Nothing playing',
     queue: 'Queue',
     noSeek: "This server can't seek in converted audio.",
+    endOfQueue: 'End of the queue',
     repeat: { off: 'Repeat off', all: 'Repeat all', one: 'Repeat one' },
   },
   queue: {
