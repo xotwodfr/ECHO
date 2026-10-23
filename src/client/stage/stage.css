@@ -1,0 +1,57 @@
+/* The Stage (DESIGN_SYSTEM.md §1 Stage zone, §7; VISUALIZER_SPEC.md §5, §9). Light effects are
+   allowed here, unlike the shell: this file is the only CSS exempt from the DS-02 shell check. */
+
+.stage {
+  position: relative;
+  isolation: isolate;
+  height: 100%;
+  overflow: hidden;
+  background: var(--art-room);
+}
+
+.stage-canvas,
+.stage-room-css {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  width: 100%;
+  height: 100%;
+}
+
+.stage-canvas {
+  display: block;
+}
+
+/* CSS room (§9): --art-room with two soft pools in --art-accent and --art-highlight at 14%, and a
+   tiled blue-noise overlay at 3% against banding. Shown when WebGL 2 is missing or lost. */
+.stage-room-css {
+  display: none;
+  background:
+    radial-gradient(
+      70vh 70vh at 34% 42%,
+      color-mix(in oklab, var(--art-accent) 14%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      60vh 60vh at 68% 58%,
+      color-mix(in oklab, var(--art-highlight) 14%, transparent),
+      transparent
+    ),
+    var(--art-room);
+}
+
+.stage-room-css::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("./blue-noise-128.png");
+  opacity: 0.03;
+}
+
+.stage[data-renderer="css"] .stage-room-css {
+  display: block;
+}
+
+.stage[data-renderer="css"] .stage-canvas {
+  visibility: hidden;
+}

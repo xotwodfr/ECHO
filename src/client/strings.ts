@@ -38,6 +38,8 @@ export const strings = {
     sections: { preferences: 'Preferences', account: 'Account' },
     sectionsLabel: 'Settings sections',
     empty: 'Nothing to set here yet.',
+    visualsLimitedPill: 'Visuals limited',
+    visualsLimited: "WebGL 2 isn't available in this browser.",
   },
   notFound: { title: 'Page not found', body: 'There is nothing at this address.' },
   dock: {

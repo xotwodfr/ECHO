@@ -3,6 +3,7 @@ import './fonts.css';
 import './tokens.css';
 import './main.css';
 import './ui/ui.css';
+import './stage/stage.css';
 import { createPlaybackController } from './playback/controller.ts';
 import { Shell } from './shell/Shell.tsx';
 import { toastStore } from './ui/logic.ts';

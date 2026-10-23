@@ -131,7 +131,7 @@ dependencies.
 | @playwright/test | 1.64.0 | E2E + visual (Chromium, Firefox) | — |
 | @biomejs/biome | 2.5.15 | Lint and format | — |
 | pnpm (`packageManager`) | 12.11.2 | Installs with lockfile, build-script allow-list, release-age gate | — |
-| @types/node, @types/react, @types/react-dom, @types/better-sqlite3 | 24.19.1, 19.3.0, 19.3.0, 9.6.0 | Types only | — |
+| @types/node, @types/react, @types/react-dom, @types/better-sqlite3, @types/three | 24.19.1, 19.3.0, 19.3.0, 9.6.0, 0.186.0 | Types only. `@types/three` added in M2 (three ships no types); 0.186.0 is the only release for the 0.186 line | — |
 
 **Not used** (considered and rejected):
 

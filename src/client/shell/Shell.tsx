@@ -2,13 +2,15 @@ import { lazy, Suspense, useEffect, useRef } from 'react';
 import type { Library } from '../library.ts';
 import { PlaybackContext } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
+import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
-import { buttonClass } from '../ui/controls.tsx';
+import { buttonClass, Pill } from '../ui/controls.tsx';
 import { ToastRegion } from '../ui/overlays.tsx';
 import { LIBRARY_TABS, type Route, SETTINGS_SECTIONS, type ViewStore } from '../view.ts';
 import { Dock } from './Dock.tsx';
 import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
+import { Stage } from './Stage.tsx';
 
 // The shell frame (DESIGN_SYSTEM.md §5): sidebar + canvas + dock, or the full-bleed Stage on Listen.
 
@@ -113,7 +115,7 @@ function View({ route }: { route: Route }) {
   switch (route.view) {
     case 'listen':
       return (
-        <div className="stage">
+        <Stage>
           <h1 className="visually-hidden" tabIndex={-1}>
             {strings.nav.listen}
           </h1>
@@ -122,7 +124,7 @@ function View({ route }: { route: Route }) {
               {strings.nav.library}
             </Link>
           </div>
-        </div>
+        </Stage>
       );
     case 'library':
       return (
@@ -160,7 +162,14 @@ function View({ route }: { route: Route }) {
             to={(section) => ({ view: 'settings', section })}
           />
           <h2>{strings.settings.sections[route.section]}</h2>
-          <p className="empty">{strings.settings.empty}</p>
+          {route.section === 'preferences' && !webgl2Supported() ? (
+            <p className="notice">
+              <Pill tone="warn">{strings.settings.visualsLimitedPill}</Pill>
+              {strings.settings.visualsLimited}
+            </p>
+          ) : (
+            <p className="empty">{strings.settings.empty}</p>
+          )}
         </>
       );
     case 'ui':

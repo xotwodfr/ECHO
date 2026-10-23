@@ -34,7 +34,9 @@ const ALLOW = [
 
 describe('DS-01: no raw design values outside tokens.css', () => {
   it('scans the component code', () => {
-    expect(files.map((f) => f.name)).toEqual(expect.arrayContaining(['main.css', 'ui/ui.css']));
+    expect(files.map((f) => f.name)).toEqual(
+      expect.arrayContaining(['main.css', 'ui/ui.css', 'stage/stage.css', 'stage/shaders.ts']),
+    );
   });
 
   for (const f of files) {
@@ -62,7 +64,9 @@ describe('DS-01: no raw design values outside tokens.css', () => {
 // DS-02 (inspection part): the shell has no gradients, glows, blur, monospace or tracked capitals,
 // and the only shadow is --shadow-float, on floating surfaces.
 describe('DS-02: shell light effects', () => {
-  const css = files.filter((f) => f.name.endsWith('.css'));
+  // The Stage is the other zone (DESIGN_SYSTEM.md §1): its light effects are §7's to define, so its
+  // stylesheet is the one exemption. DS-01 still applies to it.
+  const css = files.filter((f) => f.name.endsWith('.css') && !f.name.startsWith('stage/'));
   const BANNED = [
     /gradient\(/,
     /backdrop-filter/,

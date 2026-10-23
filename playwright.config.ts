@@ -11,7 +11,16 @@ export default defineConfig({
   reporter: process.env.CI ? 'github' : 'list',
   use: { baseURL: `http://127.0.0.1:${port}` },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      use: {
+        ...devices['Desktop Chrome'],
+        // WebGL 2 in software, the same everywhere (TECHNICAL_ARCHITECTURE.md §8).
+        launchOptions: {
+          args: ['--use-gl=angle', '--use-angle=swiftshader-webgl', '--enable-unsafe-swiftshader'],
+        },
+      },
+    },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
   ],
   webServer: {

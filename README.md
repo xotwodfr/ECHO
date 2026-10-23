@@ -5,8 +5,9 @@ lyric field in an audio-reactive room lit by the album cover.
 
 **Status:** M1 (foundation) closed with an accepted SEC-10 exception
 ([`docs/reviews/M1-SEC-10-exception.md`](docs/reviews/M1-SEC-10-exception.md)); M2 in progress
-(tasks 1–3 done: the shell frame, deep-linkable views, the UI components and a dock that plays a
-fixture library on a virtual clock, [`docs/reviews/M2.md`](docs/reviews/M2.md)).
+(tasks 1–4 done: the shell frame, deep-linkable views, the UI components, a dock that plays a
+fixture library on a virtual clock, and the WebGL Stage with its CSS fallback,
+[`docs/reviews/M2.md`](docs/reviews/M2.md)).
 There is no real audio yet: development builds play invented fixture albums silently, and the
 production image has no library until the Navidrome provider (M5). The server serves the client and
 a health check.

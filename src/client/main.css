@@ -166,6 +166,15 @@ button {
   flex: none;
 }
 
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0 0 var(--sp-4);
+  color: var(--muted);
+}
+
 .empty {
   color: var(--muted);
   margin: 0 0 var(--sp-4);
@@ -181,8 +190,11 @@ button {
   list-style: none;
 }
 
-/* Dock (§5, §9.2): meta | transport over the scrubber | volume, queue, provider. */
+/* Dock (§5, §9.2): meta | transport over the scrubber | volume, queue, provider. Its own layer:
+   on Listen it overlaps the full-bleed Stage, which is positioned. */
 .dock {
+  position: relative;
+  z-index: 1;
   grid-area: 2 / 1 / 3 / -1;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
@@ -273,11 +285,6 @@ button {
 .shell[data-view="listen"] .dock {
   background: transparent;
   border-top-color: transparent;
-}
-
-.stage {
-  height: 100%;
-  background: var(--ground);
 }
 
 .stage-chrome {

@@ -1,6 +1,5 @@
 import type {
   AppError,
-  FeatureSource,
   PlaybackProvider,
   ProviderCapabilities,
   ProviderState,
@@ -8,6 +7,7 @@ import type {
   Unsubscribe,
 } from '../../shared/types.ts';
 import { type Clock, realClock } from './clock.ts';
+import { SILENT_FEATURES } from './features.ts';
 
 // FakeProvider (IMPLEMENTATION_PLAN.md M2 task 3): a PlaybackProvider that "plays" fixture tracks
 // on a clock instead of audio, so the shell is usable without a server. It stands in for the
@@ -23,20 +23,6 @@ export const FAKE_CAPABILITIES: ProviderCapabilities = {
   artPaletteAllowed: true,
   syncedLyricsAllowed: true,
   requiresAttribution: null,
-};
-
-/** No audio to analyse: the "unavailable" features of VISUALIZER_SPEC.md §3.4. */
-const SILENT: FeatureSource = {
-  sample: () => ({
-    available: false,
-    sub: 0,
-    bass: 0,
-    mid: 0,
-    high: 0,
-    onset: 0,
-    intensity: 0.6,
-    bassImpulse: 0,
-  }),
 };
 
 type Events = { state: ProviderState; ended: undefined; error: AppError };
@@ -144,7 +130,7 @@ export class FakeProvider implements PlaybackProvider {
   }
 
   features() {
-    return SILENT;
+    return SILENT_FEATURES; // no audio, so nothing to analyse
   }
 
   private start() {

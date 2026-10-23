@@ -67,3 +67,20 @@ for (const vp of [
     await expect(page).toHaveScreenshot(`queue-${vp.width}.png`, shot);
   });
 }
+
+// The Listen stage in Still mode (reduced motion): one fixed frame of the room on the fallback
+// palette, rendered by SwiftShader (playwright.config.ts). Ambient frames need the deterministic
+// ?frame&seed mode (M2 task 6).
+for (const vp of VIEWPORTS) {
+  test(`Listen stage, Still, at ${vp.width}`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
+      timeout: 15_000,
+    });
+    await expect(page.locator('.stage')).toHaveAttribute('data-mode', 'still');
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveScreenshot(`listen-still-${vp.width}.png`, shot);
+  });
+}

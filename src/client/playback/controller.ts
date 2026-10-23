@@ -9,6 +9,7 @@ import type {
 } from '../../shared/types.ts';
 import { strings } from '../strings.ts';
 import { type Clock, realClock } from './clock.ts';
+import { SILENT_FEATURES } from './features.ts';
 import * as Q from './queue.ts';
 
 // PlaybackController (PLAYBACK_ARCHITECTURE.md §1, §3): the only thing the UI talks to. It owns
@@ -173,6 +174,8 @@ export function createPlaybackController(opts: {
   return {
     player,
     queue,
+    /** The active provider's features (Stage loop step 2). */
+    features: () => provider?.features() ?? SILENT_FEATURES,
     /** Text for the dock's provider mark. */
     providerLabel: provider?.label ?? null,
 
