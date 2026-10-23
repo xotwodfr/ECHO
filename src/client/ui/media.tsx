@@ -8,7 +8,7 @@ import { Menu, type MenuItem } from './overlays.tsx';
 
 // Artwork, track rows and album tiles (DESIGN_SYSTEM.md §8, §9.3, §9.4).
 
-type ArtSize = 'row' | 'dock' | 'grid' | 'detail';
+type ArtSize = 'row' | 'dock' | 'grid' | 'detail' | 'cover';
 
 /**
  * Cover art (§8): never cropped, overlaid or animated; 4px radius up to 64px, 8px above. Missing

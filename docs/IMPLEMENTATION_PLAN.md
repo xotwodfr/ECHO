@@ -86,8 +86,8 @@ fallback room.
 
 **Dependencies:** M1.
 
-**Progress:** tasks 1–4 done (2026-10-23; record and open items in `docs/reviews/M2.md`).
-Tasks 5–7 not started.
+**Progress:** tasks 1–5 done (2026-10-23; record and open items in `docs/reviews/M2.md`).
+Tasks 6–7 not started.
 
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
@@ -102,6 +102,7 @@ Tasks 5–7 not started.
    context loss, the CSS fallback room. **Done** (bloom, energy, halation and the probe pass
    arrive with their consumers: M3–M5).
 5. Chrome auto-hide on the Stage (3 s idle), view modes (Lyrics/Cover/Visual) with placeholders.
+   **Done.**
 6. Deterministic mode `?frame&seed&fixture&tier`.
 7. **taste-skill check:** `node ~/.claude/skills/design-taste-frontend/scripts/inspect.mjs --app` on
    Library, Settings and `/__ui`. Fix every FAIL. Critique answers (app-screens §2.7) go in

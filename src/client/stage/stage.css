@@ -55,3 +55,90 @@
 .stage[data-renderer="css"] .stage-canvas {
   visibility: hidden;
 }
+
+/* View mode switch in the top chrome: the same pill as the shell's tabs. */
+.view-switch {
+  display: flex;
+  gap: var(--sp-1);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.view-switch button {
+  height: var(--search-h);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-hover) ease;
+}
+
+.view-switch button:hover {
+  color: var(--text);
+}
+
+.view-switch button[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+/* Lyrics (placeholder until the lyric field, M3): at the active line's anchor, 40% H. */
+.stage-lyrics {
+  position: absolute;
+  top: 40%;
+  left: 0;
+  right: 0;
+  translate: 0 -50%;
+  text-align: center;
+  pointer-events: none;
+}
+
+.stage-lyrics p {
+  margin: 0;
+  color: var(--muted);
+}
+
+/* Cover mode (DESIGN_SYSTEM.md §8): centred between the top chrome and the dock. */
+.stage-cover {
+  position: absolute;
+  inset: var(--sp-8) var(--gutter) calc(var(--dock) + var(--sp-5));
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.stage-cover-item {
+  grid-area: 1 / 1;
+  width: min(60vh, var(--art-cover-max), 100%);
+}
+
+.art--cover {
+  width: 100%;
+}
+
+/* Opacity only, never scale or travel: old out 420 ms, new in 640 ms after a 220 ms wait
+   (so they overlap by 200 ms). */
+.stage-cover-item[data-enter] {
+  animation: cover-in var(--dur-art) var(--ease-in-out)
+    calc(var(--dur-art-out) - var(--dur-art-overlap)) both;
+}
+
+.stage-cover-item[data-leaving] {
+  animation: cover-out var(--dur-art-out) var(--ease-exit) both;
+}
+
+@keyframes cover-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes cover-out {
+  to {
+    opacity: 0;
+  }
+}

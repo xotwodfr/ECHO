@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { COVER_OUT_MS } from './shell/StageViews.tsx';
+import { CHROME_IN_MS, CHROME_OUT_MS } from './stage/loop.ts';
 import { TOAST_EXIT_MS } from './ui/logic.ts';
 
 // Automated part of DS-01 and DS-02 (ACCEPTANCE_CRITERIA.md §7) over the client's component code.
@@ -58,6 +60,9 @@ describe('DS-01: no raw design values outside tokens.css', () => {
   it('JS durations that mirror a token stay equal to it', () => {
     const tokens = readFileSync(join(ROOT, 'tokens.css'), 'utf8');
     expect(tokens).toContain(`--dur-toast: ${TOAST_EXIT_MS}ms`);
+    expect(tokens).toContain(`--dur-pop: ${CHROME_IN_MS}ms`);
+    expect(tokens).toContain(`--dur-art: ${CHROME_OUT_MS}ms`);
+    expect(tokens).toContain(`--dur-art-out: ${COVER_OUT_MS}ms`);
   });
 });
 

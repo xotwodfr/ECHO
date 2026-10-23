@@ -5,6 +5,9 @@ import { parseColor } from '../../shared/oklab.ts';
 import type { FeatureSource } from '../../shared/types.ts';
 import {
   AMBIENT_FLOW_PER_S,
+  CHROME_IN_MS,
+  CHROME_OUT_MS,
+  chromeStep,
   createStageLoop,
   type Frame,
   type LoopEnv,
@@ -222,5 +225,16 @@ describe('blue noise', () => {
         ss += 2 * v(x, y) ** 2;
       }
     expect(s / ss).toBeLessThan(-0.1);
+  });
+});
+
+describe('chrome level (scrims follow the chrome)', () => {
+  it('returns in 160 ms and fades out over 640 ms, linearly, without overshoot', () => {
+    let c = 0;
+    for (let t = 0; t < CHROME_IN_MS; t += 16) c = chromeStep(c, 1, 16);
+    expect(c).toBeCloseTo(1, 1);
+    expect(chromeStep(c, 1, 1000)).toBe(1);
+    expect(chromeStep(1, 0, CHROME_OUT_MS / 2)).toBeCloseTo(0.5, 6);
+    expect(chromeStep(0.1, 0, 1000)).toBe(0);
   });
 });

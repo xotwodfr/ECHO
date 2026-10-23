@@ -1,16 +1,19 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
+import { useStore } from 'zustand';
 import type { Library } from '../library.ts';
-import { PlaybackContext } from '../playback/context.tsx';
+import { PlaybackContext, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
-import { webgl2Supported } from '../stage/status.ts';
+import { stageChrome, webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass, Pill } from '../ui/controls.tsx';
 import { ToastRegion } from '../ui/overlays.tsx';
 import { LIBRARY_TABS, type Route, SETTINGS_SECTIONS, type ViewStore } from '../view.ts';
+import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
 import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
 import { Stage } from './Stage.tsx';
+import { StageChrome, StageContent } from './StageViews.tsx';
 
 // The shell frame (DESIGN_SYSTEM.md §5): sidebar + canvas + dock, or the full-bleed Stage on Listen.
 
@@ -119,11 +122,8 @@ function View({ route }: { route: Route }) {
           <h1 className="visually-hidden" tabIndex={-1}>
             {strings.nav.listen}
           </h1>
-          <div className="stage-chrome">
-            <Link className={buttonClass('tertiary')} to={{ view: 'library', tab: 'albums' }}>
-              {strings.nav.library}
-            </Link>
-          </div>
+          <StageChrome />
+          <StageContent />
         </Stage>
       );
     case 'library':
@@ -205,6 +205,11 @@ const TITLES: Record<Route['view'], string> = {
 
 function Frame() {
   const route = useView((s) => s.route);
+  const playing = usePlayer((p) => p.status === 'playing');
+  // Spotify's artwork and metadata must stay visible while it plays (DESIGN_SYSTEM.md §8).
+  const attribution = usePlayer((p) => p.capabilities.requiresAttribution === 'spotify');
+  const chromeHidden = useStore(stageChrome, (s) => s.hidden);
+  useChromeIdle(route.view === 'listen' && playing);
   const main = useRef<HTMLElement>(null);
   const first = useRef(true);
 
@@ -237,7 +242,12 @@ function Frame() {
   }, []);
 
   return (
-    <div className="shell" data-view={route.view}>
+    <div
+      className="shell"
+      data-view={route.view}
+      data-chrome={route.view === 'listen' && chromeHidden ? 'hidden' : undefined}
+      data-attribution={attribution || undefined}
+    >
       {route.view !== 'listen' && <Sidebar route={route} />}
       <main className="canvas" ref={main}>
         <View route={route} />

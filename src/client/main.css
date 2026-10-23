@@ -288,8 +288,40 @@ button {
 }
 
 .stage-chrome {
+  position: relative;
   display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
   padding: var(--sp-5) var(--gutter);
+}
+
+/* Stage chrome auto-hide (PRODUCT_SPEC.md §6.1): top bar and dock controls fade out over 640 ms
+   after idle and return in 160 ms; progress stays at 40%. Hidden chrome takes no pointer input,
+   so a blind click never hits an invisible control (moving the pointer brings it back first).
+   Spotify's artwork and metadata never hide (data-attribution, DESIGN_SYSTEM.md §8). */
+.stage-chrome,
+.dock-meta,
+.dock-transport,
+.dock-scrub,
+.dock-right {
+  transition: opacity var(--dur-pop) var(--ease-out);
+}
+
+.shell[data-chrome="hidden"] :is(.stage-chrome, .dock-transport, .dock-right, .dock-scrub),
+.shell[data-chrome="hidden"]:not([data-attribution]) .dock-meta {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-art) var(--ease-in-out);
+}
+
+.shell[data-chrome="hidden"] .dock-scrub {
+  opacity: 0.4;
+}
+
+.shell[data-chrome="hidden"] .stage {
+  cursor: none;
 }
 
 /* S6 Album detail header (§8: cover 240px) */

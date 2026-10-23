@@ -1,6 +1,6 @@
-// Transport shortcuts from the keyboard map (PRODUCT_SPEC.md §7). Pure, so the rules are tested
-// as a table. The Stage view modes (L, V, C), offsets ([ ]), F, G-sequences and the ? sheet arrive
-// with the features they control.
+// Transport and Stage view shortcuts from the keyboard map (PRODUCT_SPEC.md §7). Pure, so the
+// rules are tested as a table. Offsets ([ ], M6), F, G-sequences and the ? sheet arrive with the
+// features they control.
 
 export type Shortcut =
   | 'toggle'
@@ -15,7 +15,10 @@ export type Shortcut =
   | 'mute'
   | 'shuffle'
   | 'repeat'
-  | 'queue';
+  | 'queue'
+  | 'viewCycle'
+  | 'viewCover'
+  | 'viewLyrics';
 
 /**
  * Where the key was pressed. `text`: shortcuts never fire (§7). `control`: a focused button,
@@ -46,7 +49,14 @@ export function shortcutFor(e: Key, target: KeyTarget, stage: boolean): Shortcut
   }
   if (mod) return null;
   const letters: Record<string, Shortcut> = { m: 'mute', s: 'shuffle', r: 'repeat', q: 'queue' };
-  return letters[e.key.toLowerCase()] ?? null;
+  // The view keys act on the Stage only, so they never change an invisible setting elsewhere.
+  const stageLetters: Record<string, Shortcut> = {
+    v: 'viewCycle',
+    c: 'viewCover',
+    l: 'viewLyrics',
+  };
+  const k = e.key.toLowerCase();
+  return letters[k] ?? (stage ? (stageLetters[k] ?? null) : null);
 }
 
 const CONTROLS =

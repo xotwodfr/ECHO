@@ -1,5 +1,11 @@
 import { type PlaybackController, positionNow } from '../playback/controller.ts';
-import { createStageLoop, type LoopEnv, type StageLoop, type StageMode } from './loop.ts';
+import {
+  chromeStep,
+  createStageLoop,
+  type LoopEnv,
+  type StageLoop,
+  type StageMode,
+} from './loop.ts';
 import { paletteUniforms, readPalette } from './palette.ts';
 import { StageRenderer, type Tier } from './renderer.ts';
 import { stageStatus } from './status.ts';
@@ -47,11 +53,14 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     renderer = new StageRenderer(canvas, tier);
   } catch {
     set({ renderer: 'css', reason: 'no-webgl2' });
-    return { dispose() {} };
+    return { dispose() {}, setChrome() {} }; // the CSS room has no scrims
   }
 
   let disposed = false;
   let loop: StageLoop | null = null;
+  // Scrims follow the chrome (DESIGN_SYSTEM.md §7.7): `chrome` eases towards `chromeTarget`.
+  let chrome = 1;
+  let chromeTarget = 1;
   const { controller: c } = opts;
 
   const resize = () => {
@@ -89,8 +98,10 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
           songTime: () => positionNow(c.player.getState(), performance.now()),
           features: c.features,
           palette: { step() {} }, // PaletteAnimator (OKLab transitions) in M4
-          render: (f) =>
-            renderer.render({ flow: f.flow, drift: f.drift, key: DEFAULT_KEY, chrome: 1, seed: 0 }),
+          render: (f) => {
+            chrome = loop?.mode === 'still' ? chromeTarget : chromeStep(chrome, chromeTarget, f.dt);
+            renderer.render({ flow: f.flow, drift: f.drift, key: DEFAULT_KEY, chrome, seed: 0 });
+          },
           isPlaying: () => c.player.getState().status === 'playing',
         },
         env,
@@ -115,6 +126,11 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     renderer,
     get loop() {
       return loop;
+    },
+    /** Chrome shown or hidden (PRODUCT_SPEC.md §6.1); the scrims fade with it. */
+    setChrome(visible: boolean) {
+      chromeTarget = visible ? 1 : 0;
+      if (loop?.mode === 'still') loop.renderOnce();
     },
     dispose() {
       disposed = true;

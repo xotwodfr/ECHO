@@ -84,3 +84,55 @@ for (const vp of VIEWPORTS) {
     await expect(page).toHaveScreenshot(`listen-still-${vp.width}.png`, shot);
   });
 }
+
+// Task 5: Cover mode, and the chrome hidden after idle. Still mode (reduced motion) for a fixed
+// room; the scrubber's time and fill depend on real elapsed time, so they are masked.
+async function playOnStage(page: Page, vp: { width: number; height: number }) {
+  await page.setViewportSize(vp);
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.goto('/library');
+  const tile = page.locator('.tile', { hasText: 'Harbour Lights' });
+  await tile.hover();
+  await tile.getByRole('button', { name: 'Play Harbour Lights' }).click();
+  await page
+    .getByRole('navigation', { name: 'Main' })
+    .getByRole('link', { name: 'Listen' })
+    .click();
+  await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
+    timeout: 15_000,
+  });
+  await page.evaluate(() => document.fonts.ready);
+}
+const timeMask = (page: Page) => [
+  page.locator('.scrubber-time'),
+  page.locator('.dock-scrub .slider'),
+];
+
+for (const vp of [
+  { width: 1440, height: 900 },
+  { width: 390, height: 844 },
+]) {
+  test(`Cover mode at ${vp.width}`, async ({ page }) => {
+    await playOnStage(page, vp);
+    await page
+      .getByRole('group', { name: 'Stage view' })
+      .getByRole('button', { name: 'Cover' })
+      .click();
+    await page
+      .getByRole('region', { name: 'Player' })
+      .getByRole('button', { name: 'Pause' })
+      .click();
+    await page.mouse.move(0, 0);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await expect(page.locator('.stage-cover-item')).toHaveCount(1);
+    await expect(page).toHaveScreenshot(`cover-${vp.width}.png`, { ...shot, mask: timeMask(page) });
+  });
+}
+
+test('chrome hidden after idle at 1440', async ({ page }) => {
+  await playOnStage(page, { width: 1440, height: 900 });
+  await page.mouse.move(700, 400);
+  await expect(page.locator('.shell')).toHaveAttribute('data-chrome', 'hidden', { timeout: 6000 });
+  await page.waitForTimeout(800); // the 640 ms fade
+  await expect(page).toHaveScreenshot('chrome-hidden-1440.png', { ...shot, mask: timeMask(page) });
+});

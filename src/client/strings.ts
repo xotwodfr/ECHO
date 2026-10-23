@@ -88,6 +88,11 @@ export const strings = {
     failed: 'Username or password is incorrect.',
   },
   gallery: { title: 'Components' },
+  stage: {
+    viewLabel: 'Stage view',
+    views: { lyrics: 'Lyrics', cover: 'Cover', visual: 'Visual' },
+    lyricsPlaceholder: 'Lyrics will appear here.',
+  },
   playback: {
     playingNext: (title: string) => `Playing “${title}” next`,
     added: (title: string) => `Added “${title}” to the queue`,

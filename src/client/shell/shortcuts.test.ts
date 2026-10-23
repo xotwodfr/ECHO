@@ -30,6 +30,15 @@ describe('shortcutFor (PRODUCT_SPEC.md §7)', () => {
     expect(shortcutFor(key(k, mods), 'other', false)).toBe(action);
   });
 
+  it('view keys only on the Stage: V cycles, C cover, L lyrics', () => {
+    expect(shortcutFor(key('v'), 'other', true)).toBe('viewCycle');
+    expect(shortcutFor(key('c'), 'other', true)).toBe('viewCover');
+    expect(shortcutFor(key('L', { shift: true }), 'other', true)).toBe('viewLyrics');
+    expect(shortcutFor(key('v'), 'control', true)).toBe('viewCycle');
+    for (const k of ['v', 'c', 'l']) expect(shortcutFor(key(k), 'other', false)).toBeNull();
+    expect(shortcutFor(key('c', { ctrl: true }), 'other', true)).toBeNull(); // copy
+  });
+
   it('volume on ↑/↓ only on the Stage', () => {
     expect(shortcutFor(key('ArrowUp'), 'other', true)).toBe('volumeUp');
     expect(shortcutFor(key('ArrowDown'), 'other', true)).toBe('volumeDown');

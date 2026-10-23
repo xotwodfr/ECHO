@@ -133,3 +133,13 @@ export function createStageLoop(parts: LoopParts, env: LoopEnv, initialMode: Sta
 }
 
 export type StageLoop = ReturnType<typeof createStageLoop>;
+
+/** Chrome (and with it the scrims) returns in 160 ms and fades out over 640 ms (task 5). */
+export const CHROME_IN_MS = 160;
+export const CHROME_OUT_MS = 640;
+
+/** Moves the scrims' chrome level (0..1) towards `target` by one frame of `dt` ms, linearly. */
+export function chromeStep(current: number, target: number, dt: number) {
+  if (current < target) return Math.min(target, current + dt / CHROME_IN_MS);
+  return Math.max(target, current - dt / CHROME_OUT_MS);
+}

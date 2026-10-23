@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
+import { nextView, type StageView, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
@@ -168,7 +169,11 @@ function useShortcuts(stage: boolean, toggleQueue: () => void) {
       shuffle: c.toggleShuffle,
       repeat: c.cycleRepeat,
       queue: toggleQueue,
+      viewCycle: () => setView(nextView(stageView.getState().view)),
+      viewCover: () => setView(stageView.getState().view === 'cover' ? 'lyrics' : 'cover'),
+      viewLyrics: () => setView(stageView.getState().view === 'lyrics' ? 'visual' : 'lyrics'),
     };
+    const setView = (v: StageView) => stageView.getState().set(v);
     const at = () => positionNow(c.player.getState(), performance.now());
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
