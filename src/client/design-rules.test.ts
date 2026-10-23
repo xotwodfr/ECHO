@@ -89,4 +89,11 @@ describe('DS-02: shell light effects', () => {
       for (const s of shadows) expect(s).toBe('var(--shadow-float)');
     });
   }
+
+  // Characters that render as emoji: emoji presentation by default, or forced by VS16. Text symbols
+  // such as ↔ are not emoji.
+  it('no emoji in component code or copy', () => {
+    for (const f of files)
+      expect(uncomment(f.text), f.name).not.toMatch(/\p{Emoji_Presentation}|️/u);
+  });
 });

@@ -84,9 +84,13 @@ rather than in Docker, use the loopback `ports:` line in the compose file and po
 ```sh
 pnpm check                 # typecheck (TS 7) + Biome + Vitest + production build
 pnpm test:e2e              # Playwright on Chromium and Firefox (first run: pnpm exec playwright install chromium firefox)
+scripts/e2e-container.sh   # the same suite as CI runs it: Playwright's Ubuntu image under Xvfb (Docker)
 pnpm audit --prod
 git config core.hooksPath .githooks          # gitleaks on every commit
 ```
+
+Headless Firefox has WebGL 2 only with a display, so on a machine without one its Stage tests skip;
+the container script (and CI) run them under Xvfb.
 
 CI (`.github/workflows/ci.yml`) runs all of the above, plus gitleaks over history and a Trivy scan of
 the image: fixable high/critical findings fail, and all findings are checked against the SEC-10

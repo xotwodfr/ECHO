@@ -17,7 +17,15 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         // WebGL 2 in software, the same everywhere (TECHNICAL_ARCHITECTURE.md §8).
         launchOptions: {
-          args: ['--use-gl=angle', '--use-angle=swiftshader-webgl', '--enable-unsafe-swiftshader'],
+          // Greyscale text antialiasing everywhere: subpixel (LCD) fringes depend on the host's
+          // font settings (Ubuntu CI has them, Arch does not) and would make pixel baselines and
+          // the DS-02 colour share machine-specific.
+          args: [
+            '--use-gl=angle',
+            '--use-angle=swiftshader-webgl',
+            '--enable-unsafe-swiftshader',
+            '--disable-lcd-text',
+          ],
         },
       },
     },

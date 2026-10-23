@@ -365,7 +365,7 @@
 }
 
 .scrubber-time[data-empty]::before,
-.scrubber-time[data-empty] > span {
+.scrubber-dash {
   grid-area: 1 / 1;
   justify-self: center;
 }

@@ -1,0 +1,105 @@
+{
+  "fps": 10,
+  "frames": [
+    {
+      "available": true,
+      "sub": 0.8,
+      "bass": 1,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 1,
+      "intensity": 0.5,
+      "bassImpulse": 1
+    },
+    {
+      "available": true,
+      "sub": 0.48,
+      "bass": 0.6,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.28,
+      "bass": 0.35,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.16,
+      "bass": 0.2,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.08,
+      "bass": 0.1,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.8,
+      "bass": 1,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 1,
+      "intensity": 0.5,
+      "bassImpulse": 1
+    },
+    {
+      "available": true,
+      "sub": 0.48,
+      "bass": 0.6,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.28,
+      "bass": 0.35,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.16,
+      "bass": 0.2,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    },
+    {
+      "available": true,
+      "sub": 0.08,
+      "bass": 0.1,
+      "mid": 0.3,
+      "high": 0.15,
+      "onset": 0,
+      "intensity": 0.5,
+      "bassImpulse": 0
+    }
+  ]
+}

@@ -103,8 +103,8 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       loop = createStageLoop(
         {
           songTime: () => frame?.ms ?? positionNow(c.player.getState(), performance.now()),
-          // Recorded Features fixtures (`fixture=`, §10) are not implemented: deterministic frames
-          // fix time and noise only. The M2 room does not read features.
+          // In deterministic mode with `fixture=`, the controller serves the recorded Features
+          // (§10), sampled at `frame.ms`. The M2 room does not read features yet (M3, M5).
           features: c.features,
           palette: { step() {} }, // PaletteAnimator (OKLab transitions) in M4
           render: (f) => {

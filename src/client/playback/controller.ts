@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import type {
+  FeatureSource,
   PlaybackProvider,
   PlaybackState,
   PlayContext,
@@ -42,6 +43,8 @@ export function createPlaybackController(opts: {
   random?: () => number;
   /** Short confirmations ("Added to queue"), shown as a toast by the shell. */
   notify?: (message: string) => void;
+  /** Deterministic mode's recorded Features (VISUALIZER_SPEC.md §10), in place of the provider's. */
+  features?: FeatureSource;
 }) {
   const { provider } = opts;
   const clock = opts.clock ?? realClock;
@@ -180,7 +183,7 @@ export function createPlaybackController(opts: {
     player,
     queue,
     /** The active provider's features (Stage loop step 2). */
-    features: () => provider?.features() ?? SILENT_FEATURES,
+    features: () => opts.features ?? provider?.features() ?? SILENT_FEATURES,
     /** Text for the dock's provider mark. */
     providerLabel: provider?.label ?? null,
 

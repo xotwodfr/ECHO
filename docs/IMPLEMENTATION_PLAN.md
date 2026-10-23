@@ -86,11 +86,13 @@ fallback room.
 
 **Dependencies:** M1.
 
-**Progress:** tasks 1–5 done (2026-10-23; record and open items in `docs/reviews/M2.md`). Task 6
-open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 run: Library and
-`/__ui` 0 FAIL; Settings 1 FAIL (`blank-gap` on the Preferences placeholder, content is M8),
-**deferred to M8 task 1 pending owner sign-off**, not passed. Of the completion criteria only
-A11Y-10 has passed in full (status table at the end of `docs/reviews/M2.md`).
+**Progress:** tasks 1–7 done (2026-10-23; record in `docs/reviews/M2.md`, "M2 close-out audit").
+Task 7's one remaining FAIL, Settings `blank-gap` on the Preferences placeholder, is **deferred to
+M8 task 1 with owner approval**: deferred, not passed. Criteria passed: DS-01 and DS-02 (both
+re-checked at M9), DS-06, VIS-07, A11Y-10. **M2 cannot close yet:** DS-04 needs M3's active line,
+DS-08 needs M7, PERF-04's analyser clause needs M5, and VIS-09 needs an owner-run 10-bit capture.
+The CI e2e job now runs in Playwright's pinned image under Xvfb (verified locally); no remote CI
+run has happened yet.
 
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
@@ -106,10 +108,12 @@ A11Y-10 has passed in full (status table at the end of `docs/reviews/M2.md`).
    arrive with their consumers: M3–M5).
 5. Chrome auto-hide on the Stage (3 s idle), view modes (Lyrics/Cover/Visual) with placeholders.
    **Done.**
-6. Deterministic mode `?frame&seed&fixture&tier`.
+6. Deterministic mode `?frame&seed&fixture&tier`. **Done** (`fixture` loads recorded Features,
+   format in `VISUALIZER_SPEC.md` §10; the real fixture tracks are M3 task 2).
 7. **taste-skill check:** `node ~/.claude/skills/design-taste-frontend/scripts/inspect.mjs --app` on
    Library, Settings and `/__ui`. Fix every FAIL. Critique answers (app-screens §2.7) go in
-   `docs/reviews/M2.md`. **Done except one deferred FAIL** (Settings `blank-gap`, see Progress).
+   `docs/reviews/M2.md`. **Done; one FAIL deferred to M8 with owner approval** (Settings
+   `blank-gap`, see Progress).
    The script audits one URL per run; on a machine without system Chromium, set `CHROME_PATH` to
    Playwright's Chromium. `edge-text` relies on a local skill patch (`LOCAL-PATCHES.md` in the
    skill) that measures clipped text where it is visible.

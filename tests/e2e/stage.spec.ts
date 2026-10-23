@@ -76,6 +76,10 @@ test.describe('with WebGL 2', () => {
       !(await hasWebGL2(page)),
       'this browser has no WebGL 2 here (the CSS room is tested above)',
     );
+    // Most tests here navigate again. A `goto` while the first page's font is still downloading
+    // aborts it, and Firefox logs that as a console error, which tests counting errors would see.
+    // `fonts.ready` is not enough: it resolves at once if the load has not started yet.
+    await page.evaluate(() => document.fonts.load('16px "Mona Sans"').then(() => undefined));
   });
 
   test('renders the room in Ambient mode, without errors', async ({ page }) => {
@@ -271,17 +275,25 @@ test.describe('with WebGL 2', () => {
     await ctx.close();
   });
 
-  // `fixture` is reserved for recorded Features (§10), which do not exist yet: it is kept in the
-  // URL and reported, never treated as a track, and the frame still renders.
-  test('?fixture is reserved: kept in the URL, reported, cues nothing', async ({ page }) => {
+  // `fixture` names recorded Features (§10), never a track. The M2 room does not read features, so
+  // the pixels are the same either way; this checks loading, reporting and the URL.
+  test('?fixture loads recorded Features: no errors, kept in the URL', async ({ page }) => {
     const errors: string[] = [];
     page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-    await page.goto('/?frame=1000&fixture=al-harbour-2&debug=1');
+    await page.goto('/?frame=1000&fixture=pulse&debug=1');
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });
-    expect(page.url()).toMatch(/\/\?frame=1000&fixture=al-harbour-2&debug=1$/);
-    expect(errors).toEqual([
-      'Deterministic mode: recorded Features fixtures are not implemented yet ("al-harbour-2")',
-    ]);
+    expect(page.url()).toMatch(/\/\?frame=1000&fixture=pulse&debug=1$/);
+    expect(errors).toEqual([]);
+  });
+
+  test('?fixture with an unknown name is reported, cues nothing, still renders', async ({
+    page,
+  }) => {
+    const errors: string[] = [];
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await page.goto('/?frame=1000&fixture=al-harbour-2');
+    await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });
+    expect(errors).toEqual(['Deterministic mode: no Features fixture "al-harbour-2"']);
     await expect(
       page.getByRole('region', { name: 'Player' }).getByText('Low Tide Radio'),
     ).toHaveCount(0);

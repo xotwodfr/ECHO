@@ -170,7 +170,7 @@ export function Scrubber(props: {
       data-empty={empty || undefined}
       aria-hidden={empty || undefined}
     >
-      {empty ? <span>—</span> : formatTime(ms)}
+      {empty ? <span className="scrubber-dash">—</span> : formatTime(ms)}
     </span>
   );
   return (
