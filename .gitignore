@@ -3,6 +3,7 @@ dist/
 test-results/
 playwright-report/
 specimen-shots/
+shell-shots/
 
 # secrets and local config: never commit (docs/SETTINGS_AND_SECURITY.md §3)
 secrets/

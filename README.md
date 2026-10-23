@@ -4,8 +4,9 @@ An immersive, self-hosted music player for Navidrome and Spotify, with a floatin
 lyric field in an audio-reactive room lit by the album cover.
 
 **Status:** M1 (foundation) closed with an accepted SEC-10 exception
-([`docs/reviews/M1-SEC-10-exception.md`](docs/reviews/M1-SEC-10-exception.md)); M2 in progress. The
-server serves an empty client and a health check.
+([`docs/reviews/M1-SEC-10-exception.md`](docs/reviews/M1-SEC-10-exception.md)); M2 in progress
+(task 1 done: the shell frame and deep-linkable views, [`docs/reviews/M2.md`](docs/reviews/M2.md)).
+There is no library data or playback yet. The server serves the client and a health check.
 Typeface: **Mona Sans**. The design and plan live in [`docs/`](docs/README.md), which is the source of
 truth.
 

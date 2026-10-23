@@ -6,12 +6,12 @@ test('health endpoint answers ok', async ({ request }) => {
   expect(await res.json()).toEqual({ status: 'ok' });
 });
 
-test('the empty client loads with tokens and no console errors', async ({ page }) => {
+test('the client loads with tokens and no console errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'ECHO' })).toBeVisible();
+  await page.goto('/library');
+  await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
   const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
   expect(bg).toBe('rgb(10, 11, 13)'); // --ground #0A0B0D
   expect(errors).toEqual([]);
@@ -19,8 +19,8 @@ test('the empty client loads with tokens and no console errors', async ({ page }
 
 // DS-03 / DS-10: the application renders in Mona Sans and never registers Geologica.
 test('the application uses Mona Sans and only Mona Sans', async ({ page }) => {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'ECHO' })).toBeVisible();
+  await page.goto('/library');
+  await expect(page.getByRole('heading', { name: 'Library', level: 1 })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
   const r = await page.evaluate(() => {
     const families = [...document.fonts].map((f) => f.family.replaceAll('"', ''));

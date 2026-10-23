@@ -14,6 +14,12 @@ app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
 // The built web client (vite build → dist/client), relative to the working directory.
 app.use('*', serveStatic({ root: './dist/client' }));
+// Deep links (`/library/album/…`) load the client, which reads the view from the URL. Only
+// extension-less paths fall back, so a missing file (or `/specimen.html` in the image) stays 404.
+app.get('*', async (c, next) => {
+  if (c.req.path.split('/').pop()?.includes('.')) return next();
+  return serveStatic({ path: './dist/client/index.html' })(c, next);
+});
 
 function logger(min: LogLevel) {
   return (level: LogLevel, msg: string, extra: Record<string, unknown> = {}) => {

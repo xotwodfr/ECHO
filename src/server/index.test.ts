@@ -15,3 +15,11 @@ describe('GET /api/v1/health', () => {
     expect(await res.json()).toEqual({ error: 'not_found' });
   });
 });
+
+describe('deep-link fallback', () => {
+  // Positive case (an extension-less path serves index.html) needs a built client: tests/e2e/shell.
+  it('never answers a missing file with the client', async () => {
+    expect((await app.request('/not-built.html')).status).toBe(404);
+    expect((await app.request('/assets/missing.js')).status).toBe(404);
+  });
+});

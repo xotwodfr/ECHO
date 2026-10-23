@@ -86,9 +86,12 @@ fallback room.
 
 **Dependencies:** M1.
 
+**Progress:** task 1 done (2026-10-23; record and open items in `docs/reviews/M2.md`). Tasks 2–7
+not started.
+
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
-   arithmetic comment in the album grid).
+   arithmetic comment in the album grid). **Done.**
 2. UI components with all states: Button variants, IconButton, Slider (scrubber, volume;
    `role="slider"`), Sheet, Menu, Dialog, Toast, Field, Toggle, Pill, track row, album tile,
    connection status row, and the sign-in form (S8) visuals.

@@ -1,32 +1,275 @@
+/* Shell frame (DESIGN_SYSTEM.md §5). Every value comes from tokens.css; the exceptions are 1px rules,
+   the 2px focus ring (§9), the 168px tile minimum (§5) and the breakpoints, which media queries
+   cannot read from custom properties. */
+
 body {
   margin: 0;
   background: var(--ground);
   color: var(--text);
   font-family: var(--font);
   font-size: var(--fs-body);
+  line-height: calc(20 / 14);
 }
 
-.foundation {
+h1 {
+  font-size: var(--fs-title);
+  line-height: calc(28 / 20);
+  font-weight: 600;
+  margin: 0 0 var(--sp-4);
+}
+
+h2 {
+  font-size: var(--fs-section);
+  line-height: calc(24 / 16);
+  font-weight: 500;
+  margin: var(--sp-5) 0 var(--sp-2);
+}
+
+h1:focus {
+  outline: none;
+}
+
+a,
+input {
+  color: inherit;
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Frame: sidebar | canvas over a full-width dock. No top bar (§5, recorded redraw). */
+.shell {
+  display: grid;
+  grid-template-columns: var(--sidebar) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) var(--dock);
+  height: 100dvh;
+}
+
+.sidebar {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-5) var(--sp-4);
+  border-right: 1px solid var(--line);
+}
+
+.wordmark {
+  margin: 0;
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-section);
+  font-weight: 600;
+}
+
+.sidebar ul {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar li {
+  display: flex;
+  align-items: center;
+  min-height: var(--nav-pitch);
+}
+
+.sidebar a,
+.tabs a {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  height: var(--sp-6);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-control);
+  color: var(--muted);
+  text-decoration: none;
+  transition: color var(--dur-hover) ease;
+}
+
+.sidebar a:hover,
+.tabs a:hover {
+  color: var(--text);
+}
+
+.sidebar a[aria-current="page"],
+.tabs a[aria-current="page"] {
+  color: var(--text);
+  background: var(--surface-3);
+}
+
+/* Search lives in the sidebar as a 32px field with a `/` hint. */
+.search-field {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.search-field input {
+  flex: 1;
+  min-width: 0;
+  height: var(--sp-6);
+  box-sizing: border-box;
+  padding: 0 var(--sp-6) 0 var(--sp-3);
+  border: 1px solid var(--control);
+  border-radius: var(--r-pill);
+  background: var(--surface-2);
+}
+
+.search-field input::placeholder {
+  color: var(--faint);
+}
+
+.search-field .hint {
+  position: absolute;
+  right: var(--sp-3);
+  top: 50%;
+  translate: 0 -50%;
+  color: var(--faint);
+  font: inherit;
+  font-size: var(--fs-small);
+}
+
+.shell .search-compact {
+  display: none;
+}
+
+.canvas {
+  grid-area: 1 / 2;
+  overflow: auto;
   padding: var(--gutter);
 }
 
-.foundation h1 {
-  font-size: var(--fs-title);
-  font-weight: 600;
-  margin: 0 0 var(--sp-3);
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  margin-bottom: var(--sp-5);
 }
 
-.foundation p {
+.tabs a {
+  flex: none;
+}
+
+.empty {
   color: var(--muted);
-  margin: 0 0 var(--sp-2);
+  margin: 0 0 var(--sp-4);
 }
 
-.foundation a {
+.tertiary {
   color: var(--text);
+  text-decoration: none;
+}
+
+.tertiary:hover {
+  text-decoration: underline;
+  text-decoration-thickness: 0.07em;
   text-underline-offset: 0.18em;
 }
 
-.foundation a:focus-visible {
-  outline: 2px solid var(--focus);
-  outline-offset: 2px;
+/* See AlbumGrid in shell/Shell.tsx for the column arithmetic. */
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: var(--gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dock {
+  grid-area: 2 / 1 / 3 / -1;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--gutter);
+  background: var(--surface-1);
+  border-top: 1px solid var(--line);
+}
+
+.dock-idle {
+  margin: 0;
+  color: var(--faint);
+}
+
+/* Stage (Listen): full-bleed, no sidebar; the dock sits over it, transparent. */
+.shell[data-view="listen"] .canvas {
+  grid-area: 1 / 1 / -1 / -1;
+  padding: 0;
+  overflow: hidden;
+}
+
+.shell[data-view="listen"] .dock {
+  background: transparent;
+  border-top-color: transparent;
+}
+
+.stage {
+  height: 100%;
+  background: var(--ground);
+}
+
+.stage-chrome {
+  display: flex;
+  padding: var(--sp-5) var(--gutter);
+}
+
+/* compact < 720px: the sidebar becomes a bottom bar of 4 destinations. */
+@media (max-width: 719.98px) {
+  .shell {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) var(--dock) auto;
+  }
+
+  .canvas {
+    grid-area: 1 / 1;
+  }
+
+  .sidebar {
+    grid-area: 3 / 1;
+    padding: var(--sp-2);
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .shell .wordmark,
+  .shell .search-wide {
+    display: none;
+  }
+
+  .shell .search-compact {
+    display: flex;
+  }
+
+  .sidebar ul {
+    flex-direction: row;
+    gap: var(--sp-1);
+  }
+
+  .sidebar li {
+    flex: 1;
+    min-height: var(--row-h);
+  }
+
+  .sidebar a {
+    justify-content: center;
+    height: var(--row-h);
+  }
+
+  .canvas > .search-field {
+    margin-bottom: var(--sp-4);
+  }
 }
