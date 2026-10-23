@@ -1,0 +1,47 @@
+:root {
+  color-scheme: dark;
+
+  /* neutral shell */
+  --ground: #0A0B0D;  --surface-1: #131417;  --surface-2: #1C1E22;  --surface-3: #272A2F;
+  --line: #202226;    --control: #666A71;
+  --text: #F2F1EE;    --muted: #B3B5B9;      --faint: #94979C;      --focus: #F2F1EE;
+  --positive: #7FD6A0; --warning: #E5A93B;   --negative: #EF6B6B;
+  --pill-pos-bg: #15261C;  --pill-pos-ink: #7FD6A0;
+  --pill-warn-bg: #2B2414; --pill-warn-ink: #E5A93B;
+  --pill-neg-bg: #2C1A1C;  --pill-neg-ink: #EF6B6B;
+  --pill-neutral-bg: #1C1E22; --pill-neutral-ink: #F2F1EE;
+  --fallback-accent: #E3B26B;
+
+  /* dynamic artwork palette (runtime-overwritten; these are the achromatic fallback) */
+  --art-room:      oklch(0.16 0.006 250);
+  --art-accent:    #E3B26B;
+  --art-highlight: oklch(0.92 0.04 80);
+  --art-glow:      oklch(0.68 0.10 75 / 0.35);
+  --art-shadow:    oklch(0.08 0.004 250);
+  --lyric-ink-active: oklch(0.95 0.006 80);
+
+  /* type */
+  --font: "Mona Sans", system-ui, sans-serif;   /* decided in M1 (§4.1) */
+  --fs-title: 20px; --fs-section: 16px; --fs-figure: 24px; --fs-body: 14px; --fs-small: 12px;
+  --ly-active: clamp(32px, min(6.2vh, 4.6vw), 88px);
+
+  /* space */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px;
+  --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
+  --gap: 16px; --gutter: 32px; --sidebar: 224px; --dock: 88px;
+
+  /* shape */
+  --r-pill: 999px; --r-control: 8px; --r-panel: 16px; --r-art: 4px; --r-art-lg: 8px;
+  --shadow-float: 0 12px 32px rgba(0,0,0,.45), 0 0 0 1px #2A2D33;
+
+  /* controls */
+  --control-h: 36px; --input-h: 40px; --row-h: 48px; --row-h-media: 64px; --nav-pitch: 34px;
+
+  /* motion */
+  --dur-press: 140ms; --dur-hover: 180ms; --dur-ui: 240ms; --dur-toast: 320ms;
+  --dur-art: 640ms; --dur-palette: 1200ms;
+  --ease-out: cubic-bezier(.16,1,.3,1);
+  --ease-in-out: cubic-bezier(.65,0,.35,1);
+  --ease-exit: cubic-bezier(.4,0,1,1);
+}
+.num { font-variant-numeric: tabular-nums; }

@@ -1,0 +1,32 @@
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+}
+
+.foundation {
+  padding: var(--gutter);
+}
+
+.foundation h1 {
+  font-size: var(--fs-title);
+  font-weight: 600;
+  margin: 0 0 var(--sp-3);
+}
+
+.foundation p {
+  color: var(--muted);
+  margin: 0 0 var(--sp-2);
+}
+
+.foundation a {
+  color: var(--text);
+  text-underline-offset: 0.18em;
+}
+
+.foundation a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}

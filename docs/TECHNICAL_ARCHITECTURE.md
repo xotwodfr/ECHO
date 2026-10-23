@@ -1,0 +1,488 @@
+# ECHO — Technical Architecture
+
+Status: **Draft 2** (revised after product-owner decisions, 2026-10-22) · Last reviewed 2026-10-22
+Related: [Playback](PLAYBACK_ARCHITECTURE.md) · [Lyrics integration](LYRICS_INTEGRATION.md) · [Settings & security](SETTINGS_AND_SECURITY.md) · [Visualizer](VISUALIZER_SPEC.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
+
+Claim labels: **[C]** confirmed in an official/primary source (`DESIGN_RESEARCH.md` §5), **[R]**
+reported, **[A]** an assumption ECHO will verify in the milestone named.
+
+---
+
+## 1. Decision summary
+
+| Area | Decision |
+|---|---|
+| Delivery shape | **Self-hosted web service + clients.** The ECHO server runs in Docker Compose on the owner's home server (Dell OptiPlex 7010, i7-3770, 24 GB) next to Navidrome, behind **Caddy** (HTTPS), reachable **from the public internet**. The MVP client is the **browser web app**. Desktop and mobile clients are post-MVP and use the same versioned API. |
+| Users | Built-in accounts: one **admin** plus invited users ("mainly me, maybe some others"). Each user connects their own Navidrome account and their own Spotify account. |
+| Language | TypeScript everywhere (server, web client, shared types) |
+| Web UI | React 19 for the shell **only**. The Stage (environment + lyric field) is an imperative engine that React mounts once. |
+| Rendering | three.js `WebGLRenderer` (WebGL2) used directly. **DOM** for lyrics, composited above the canvas. |
+| State (web) | Zustand vanilla stores, plus TanStack Query for server data |
+| Audio analysis | **On the client**, where the audio plays: Web Audio `AnalyserNode` on Navidrome streams (same-origin via ECHO). None for Spotify (DRM). |
+| Palette extraction | **On the server**, once per album, shared by every client and user (`VISUALIZER_SPEC.md` §6) |
+| Lyrics resolution | On the server, cached and shared (`LYRICS_INTEGRATION.md`) |
+| Backend | Node 24 LTS + Hono. **SQLite** database. Secrets encrypted at rest (AES-256-GCM) with a master key supplied as a Docker secret. |
+| API | `/api/v1`, documented with an OpenAPI file. Cookie sessions for the web client, revocable **device tokens** (bearer) for native clients |
+| Tests | Vitest, plus Playwright on **Chromium and Firefox** |
+| Licence | **AGPL-3.0** |
+
+---
+
+## 2. Delivery shape
+
+### 2.1 Why a self-hosted web service
+
+The deciding constraints are:
+
+1. **Where the owner runs things:** the backend lives on an always-on home server, and clients run on
+   whatever device the owner uses (laptop, gaming PC, later desktop/mobile apps). ECHO is therefore a
+   network service, not a local app.
+2. **Spotify playback requires Widevine (EME) in the client.** Google Chrome ships it. Firefox
+   downloads it when DRM is enabled [R]. Arch's `chromium` needs a Widevine package [R]. Tauri's
+   Linux/macOS webviews cannot play it [C: tauri#7400]. Stock Electron needs the castLabs fork with
+   VMP signing [C].
+3. **EME and the Spotify OAuth redirect both need HTTPS** off loopback: EME needs a secure context,
+   and Spotify requires HTTPS redirect URIs except for loopback [C]. Caddy, which the owner already
+   runs, provides it.
+
+```
+                 Internet
+                    │ HTTPS (Caddy, automatic certs)
+┌───────────────────▼──────────────────── OptiPlex 7010 (Docker Compose) ──────────────────┐
+│  caddy ── reverse_proxy ──► echo:8080 (Hono, Node 24)  ──► navidrome:4533 (compose net)  │
+│                              │ SQLite /data/echo.db                                       │
+│                              │ cache /data/cache                                          │
+│                              │ master key /run/secrets/echo_master_key                    │
+└──────────────────────────────┼────────────────────────────────────────────────────────────┘
+                               │ outbound HTTPS: accounts.spotify.com, api.spotify.com,
+                               │                 api.spicylyrics.org, lrclib.net, i.scdn.co
+        ┌──────────────────────┴───────────────┐
+   Browser client (laptop, gaming PC)     Future: desktop app, mobile app
+   Spotify Web Playback SDK runs here      (same /api/v1, device tokens)
+```
+
+- ECHO's container **publishes no host port**. Only Caddy reaches it, over the compose network.
+- ECHO reaches Navidrome over the compose network (`http://navidrome:4533`). That traffic never
+  leaves the host.
+- Public origin example: `https://echo.example.com` (configured as `ECHO_PUBLIC_ORIGIN`).
+
+### 2.2 Client support matrix (MVP)
+
+| Client | Navidrome | Spotify | Notes |
+|---|---|---|---|
+| Google Chrome (Linux/macOS/Windows) | ✅ | ✅ | Reference for visual baselines |
+| Chromium (Arch) | ✅ | ✅ with the Widevine package (AUR `chromium-widevine` or a link to Chrome's CDM) [R] | **First-class.** ECHO detects missing Widevine and shows the fix |
+| Firefox | ✅ | ✅ with "Play DRM-controlled content" enabled [R] | **First-class.** E2E suite runs on Firefox too |
+| Edge, Brave | ✅ | likely (Chromium) | Not tested in CI |
+| Safari | ⚠️ untested | ❌ not a target | |
+| Future native desktop | ✅ via API | Electron ECS required for in-app Spotify (signing burden) | post-MVP |
+| Future mobile | ✅ via API | **No in-app Spotify playback:** the Web Playback SDK is desktop-browser only. Mobile acts as a **Spotify Connect remote** for the official Spotify app (`PLAYBACK_ARCHITECTURE.md` §4.7) | post-MVP |
+
+Widevine detection: `navigator.requestMediaKeySystemAccess('com.widevine.alpha', [...])` at Spotify
+connect time, with per-browser guidance on failure.
+
+### 2.3 Server hardware notes
+
+The CPU is an **i7-3770** (Ivy Bridge, 4 cores / 8 threads, AVX but **no AVX2/FMA/BMI2**). Earlier
+drafts said "i3-3770, 4 threads"; M1 read the real box (DMI `Dell Inc. OptiPlex 7010`, `/proc/cpuinfo`,
+23 GiB RAM) and corrected it. It is ample for ECHO's server role: proxying, SQLite, lyric lookups, and
+palette extraction (one 128×128 image per album).
+
+**Verified on the box in M1 [C: `docs/reviews/M1.md`]**, inside the production image with the
+compose hardening (read-only rootfs, `cap_drop: ALL`, uid 1000), via `scripts/verify-hardware.ts`:
+
+| Check | Result |
+|---|---|
+| `better-sqlite3` 13.0.3 | loads, SQLite 3.53.4 |
+| `sharp` 0.35.5 (libvips 8.18.7, x86-64-v2 prebuilt) | loads; 1000² JPEG → 128² raw in ~13 ms median |
+| `node:crypto` Argon2id, `m=64 MiB, t=3, p=1` | **183 ms** median (t=2: 128 ms, t=4: 240 ms). Inside 150–250 ms, so t=3 stays |
+| `@node-rs/argon2` 2.2.2 (fallback, throwaway container) | loads; t=3 126 ms. Not used |
+| `node:sqlite` | loads, but stability **1.2 Release candidate** in Node 24.22 docs, so not adopted |
+Navidrome's own transcoding (ffmpeg → Opus) for remote listeners is the main CPU consumer and is
+Navidrome's job, not ECHO's.
+
+---
+
+## 3. Stack and exact versions
+
+Pinned **exactly** in `package.json`. Versions are the newest at least two weeks old on 2026-10-22
+[C: npm registry]. The packages marked "pin at M1" got their exact version in M1 with the same rule,
+which pnpm now enforces itself (`minimumReleaseAge: 20160` in `pnpm-workspace.yaml`). Client-only
+packages are `devDependencies` (Vite bundles them), so the production image carries only server
+dependencies.
+
+| Package | Version | Why it's here | Why not something smaller |
+|---|---|---|---|
+| node (runtime, Docker base `node:24.22.0-trixie-slim`, pinned by digest) | 24.22.0 | Server, tooling | Debian 13 since M1: bookworm left regular security support on 2026-07-11, and its zlib carried a critical scanner finding (`docs/reviews/M1.md`) |
+| typescript | 7.0.2 | Types | **Gate (M1):** fall back to 5.9.x if tooling breaks |
+| vite | 8.3.3 | Dev server, build | — |
+| react, react-dom | 19.3.0 | Web shell | Forms, lists, sheets, focus management |
+| three | 0.186.1 | WebGL2 renderer, render targets | Raw WebGL2 means rewriting context-loss, resize and RT plumbing |
+| postprocessing | 6.39.5 | Bloom at reduced resolution (Zlib) | Hand-written mip-chain bloom |
+| zustand | 5.0.15 | Vanilla stores readable from rAF loops | — |
+| @tanstack/react-query | 5.104.1 | Server-data caching and retries | — |
+| hono | 4.13.13 | HTTP server | — |
+| @hono/node-server | 2.1.3 | Node adapter | — |
+| @material/material-color-utilities | 0.4.0 | `QuantizerCelebi` + `Score` (Apache-2.0, AGPL-compatible) | node-vibrant lacks UI-tuned scoring |
+| better-sqlite3 | 13.0.3 | Synchronous, fast SQLite with prebuilt binaries | `node:sqlite` is stability 1.2 (release candidate) in Node 24.22 [C: M1]. Re-check when it reaches Stable |
+| sharp | 0.35.5 | Decode and resize cover art server-side for palette extraction | No pure-JS decoder handles JPEG/PNG/WebP robustly at this speed |
+| ~~@node-rs/argon2~~ → `node:crypto` `argon2()` | built in (Node ≥ 24.7) | Argon2id password hashing | **M1 decision:** `crypto.argon2` is present, inherits `node:crypto`'s Stable status, runs with no warning, and hashes in 183 ms on the OptiPlex, so per the rule above the package is not added. `@node-rs/argon2` 2.2.2 was verified to load as a fallback |
+| vitest | 5.0.3 | Unit tests | — |
+| @playwright/test | 1.64.0 | E2E + visual (Chromium, Firefox) | — |
+| @biomejs/biome | 2.5.15 | Lint and format | — |
+| pnpm (`packageManager`) | 12.11.2 | Installs with lockfile, build-script allow-list, release-age gate | — |
+| @types/node, @types/react, @types/react-dom, @types/better-sqlite3 | 24.19.1, 19.3.0, 19.3.0, 9.6.0 | Types only | — |
+
+**Not used** (considered and rejected):
+
+| Not used | Reason |
+|---|---|
+| @react-three/fiber, drei, @react-three/postprocessing | The environment is ~3 full-screen passes, not a scene graph. An imperative `StageRenderer` is smaller and keeps the frame loop out of React. |
+| motion / framer-motion | Lyric motion is a custom spring integrator on the song clock. Shell transitions are CSS. |
+| A router library | ~6 top-level views. A small history-aware view store handles deep links. |
+| culori | OKLab/OKLCH ↔ sRGB is ~40 lines of published math, tested |
+| Meyda / essentia.js | ECHO needs a few band energies plus flux onsets. essentia.js is AGPL (compatible now, but a large WASM payload for little gain). Meyda is unmaintained since 2024-07 [C] |
+| An ORM | ~8 tables, plain SQL migrations in `src/server/db/migrations/*.sql` |
+| A TOTP library | RFC 6238 is ~30 lines on `node:crypto` HMAC-SHA1, tested against the RFC vectors |
+| `@napi-rs/keyring` | The server is headless in Docker with no Secret Service. Replaced by encryption at rest (`SETTINGS_AND_SECURITY.md` §3) |
+| Redis / queues | Single-node, few users. In-process caches and timers. |
+
+---
+
+## 4. System components
+
+```
+┌──────────────────────────── Browser client ────────────────────────────────────────────┐
+│  React shell (Library, Search, Queue, Settings, Account, Admin, Dock)                   │
+│  Zustand stores: player · queue · palette · lyrics · settings · view · connection       │
+│  PlaybackController ── NavidromeProvider (<audio>×2 → Web Audio → AnalyserNode)         │
+│                     └─ SpotifyProvider  (Web Playback SDK, EME)                         │
+│  SongClock                                                                              │
+│  Stage engine (one rAF loop): FeatureSource · PaletteAnimator · LyricField · Renderer   │
+└──────────────▲──────────────────────────────────────────────────────────────────────────┘
+               │ HTTPS via Caddy · cookie session · /api/v1 · audio streams · covers
+┌──────────────┴────────────── ECHO server (Node 24, Hono, container) ─────────────────────┐
+│  auth/       login, TOTP, sessions, device tokens, invites, rate limiting                │
+│  users/      per-user settings, per-user connections                                     │
+│  navidrome/  per-user Subsonic signing, allow-listed proxy, streaming (Range), covers     │
+│  spotify/    PKCE start/callback, per-user refresh tokens, access-token minting          │
+│  lyrics/     resolver + sources + parsers + shared cache                                 │
+│  palette/    sharp decode → material quantiser → roles → shared cache                    │
+│  admin/      server settings (public origin, Spotify Client ID, Spicy key), users        │
+│  crypto/     master-key envelope encryption for secrets in SQLite                        │
+│  db/         better-sqlite3, migrations                                                  │
+└──────┬────────────────────┬────────────────────────┬─────────────────────────────────────┘
+       ▼                    ▼                        ▼
+  navidrome:4533     accounts/api.spotify.com   api.spicylyrics.org · lrclib.net
+```
+
+### 4.1 Why the stage is not React
+
+At 60 fps, a lyric field with ~60 line elements and ~400 word spans, plus uniforms, changes every
+frame. Rule:
+
+- `LyricField.mount(container, doc)` creates the lyric DOM imperatively. React never reconciles it.
+- Per-frame work writes only `transform`, `opacity`, `filter` and custom properties on existing nodes,
+  plus three.js uniforms.
+- The loop reads stores via `getState()`. No React subscription to per-frame values.
+
+### 4.2 The frame (client)
+
+1. `t = songClock.now()`
+2. `f = featureSource.sample(t, dt)` (`VISUALIZER_SPEC.md` §3)
+3. `paletteAnimator.step(dt)` → CSS vars (only when changed) + uniforms
+4. `lyricField.update(t, dt, f)` (`LYRICS_EXPERIENCE.md` §6)
+5. `stageRenderer.render(t, dt, f, palette)`
+6. `perfGovernor.record(frameTime)` (`VISUALIZER_SPEC.md` §8)
+
+The loop stops on `visibilitychange` → hidden. Audio continues.
+
+---
+
+## 5. Data model and data flow
+
+### 5.1 Shared types (`src/shared/types.ts`)
+
+```ts
+type ProviderId = 'navidrome' | 'spotify';
+
+interface Track {
+  key: string;                 // `${provider}:${providerTrackId}`
+  provider: ProviderId;
+  id: string;
+  title: string;
+  artists: { id?: string; name: string }[];
+  album: { id?: string; title: string; key: string };   // album key for palette cache
+  durationMs: number;
+  artwork: { url: string; width?: number; height?: number }[];
+  isrc?: string;
+  spotifyId?: string;
+  replayGain?: { trackGain?: number; albumGain?: number; trackPeak?: number; albumPeak?: number };
+}
+
+interface PlaybackState {
+  status: 'idle' | 'loading' | 'playing' | 'paused' | 'buffering' | 'ended' | 'error';
+  track: Track | null;
+  positionMs: number;
+  positionAt: number;          // performance.now() at observation
+  volume: number;              // 0..1 UI value
+  shuffle: boolean;
+  repeat: 'off' | 'all' | 'one';
+  capabilities: ProviderCapabilities;   // PLAYBACK_ARCHITECTURE.md §2
+  error?: AppError;
+}
+// LyricsDoc: LYRICS_INTEGRATION.md §5 (normative)
+```
+
+### 5.2 Song clock
+
+- `now()` = `positionMs + (performance.now() − positionAt)` while playing, frozen while paused, minus
+  `latencyMs`, plus the user's lyric offset (lyrics only).
+- **Navidrome:** re-anchor each frame from `audio.currentTime`. `latencyMs` comes from
+  `audioContext.outputLatency` (else `baseLatency`). Errors < 80 ms are slewed at 10% per frame; larger
+  errors snap.
+- **Spotify:** re-anchor on `player_state_changed` and on a `getCurrentState()` poll every 1000 ms.
+  Each sample is stamped on receipt (the SDK state has no timestamp [C]). Same 80 ms rule. No
+  observable latency, so the user offset is the only correction.
+- **Seek:** optimistic re-anchor, with the clock marked *seeking* until the provider confirms.
+
+### 5.3 Track change flow
+
+```
+provider emits track change
+  → playerStore.track = T (loading)
+  → in parallel:
+     ├─ palette: GET /api/v1/palette/:albumKey      (server computes on miss; VISUALIZER §6)
+     ├─ lyrics:  GET /api/v1/lyrics?trackKey=…       (LYRICS_INTEGRATION §4)
+     └─ features: featureSource.attach(T)            (Navidrome only)
+  → paletteAnimator.transitionTo(palette, 1200 ms)
+  → lyricField.swap(doc)                              (LYRICS_EXPERIENCE §9.7)
+```
+
+### 5.4 Client stores
+
+| Store | Holds | Written by | Read by |
+|---|---|---|---|
+| `playerStore` | `PlaybackState` | PlaybackController | Dock, Stage loop |
+| `queueStore` | queue (`PLAYBACK_ARCHITECTURE.md` §6) | Controller, Queue UI | Queue sheet |
+| `paletteStore` | current/target palette, transition | PaletteAnimator | Stage, Dock |
+| `lyricsStore` | `{ status, doc?, error? }` per track | Lyrics loader | Stage, transcript |
+| `settingsStore` | the user's preferences (mirrors `/api/v1/me/settings`) | Settings UI | everyone |
+| `viewStore` | view + params, history | navigation | shell |
+| `connectionStore` | per-provider status | providers, health | Dock, Settings |
+
+### 5.5 Database (SQLite, `/data/echo.db`)
+
+| Table | Key columns | Notes |
+|---|---|---|
+| `users` | id, username, password_hash (Argon2id), role (`admin`/`user`), totp_secret_enc, totp_enabled, created_at, disabled | `SETTINGS_AND_SECURITY.md` §4 |
+| `recovery_codes` | user_id, code_hash, used_at | TOTP recovery |
+| `sessions` | id_hash, user_id, kind (`web`/`device`), name, created_at, last_seen_at, expires_at, ip_hint | device tokens are `kind=device` |
+| `invites` | token_hash, created_by, expires_at, used_by | single-use |
+| `connections` | user_id, provider, config_json (non-secret), secret_enc, status, updated_at | per-user Navidrome/Spotify |
+| `user_settings` | user_id, json, version | preferences (`SETTINGS_AND_SECURITY.md` §7) |
+| `server_settings` | key, value_json, secret_enc | admin: public origin, Spotify Client ID, Spicy key |
+| `track_overrides` | user_id, track_key, offset_ms, pinned_source | lyric offset and pin |
+| `queue_state` | user_id, json, updated_at | per-user queue, so it follows the user across clients |
+| `audit_log` | at, user_id, event, detail | logins, failures, connection changes, admin actions |
+
+Caches live as files, not in the database (§7.3). Shared caches (palette, lyrics) are keyed by
+content (album or track key), not by user.
+
+---
+
+## 6. Backend
+
+### 6.1 Responsibilities
+
+The server **does:** authenticate users, hold and encrypt secrets, sign Navidrome requests per user,
+stream audio and covers same-origin (which also keeps Web Audio untainted), broker Spotify tokens per
+user, resolve and cache lyrics, extract and cache palettes, and store per-user settings and queue.
+
+The server **does not:** transcode audio (Navidrome does), analyse audio (the client does), or play
+audio itself.
+
+### 6.2 API surface (`/api/v1`, JSON unless noted; OpenAPI in `docs/api/openapi.yaml`, written in M5)
+
+| Method & path | Purpose |
+|---|---|
+| `POST /auth/login` → `{ totpRequired }` · `POST /auth/totp` · `POST /auth/logout` | Web login (cookie) |
+| `POST /auth/device` | Native-client login: credentials + TOTP → device token (bearer) |
+| `GET /me` · `GET/PUT /me/settings` · `GET/DELETE /me/sessions[/:id]` | Account, preferences, sessions and devices |
+| `POST /me/totp/setup` · `POST /me/totp/enable` · `POST /me/totp/disable` · `POST /me/password` | Account security |
+| `POST /invites/:token/accept` | Create an account from an invite |
+| `GET /health` | Liveness (unauthenticated, minimal) |
+| `PUT/POST/DELETE /me/connections/navidrome[/test]` | The user's own Navidrome account |
+| `GET /navidrome/rest/:method` | Allow-listed Subsonic proxy, signed with the user's credentials |
+| `GET /navidrome/stream/:id` · `GET /navidrome/cover/:id` | Streams (Range) and covers. Cookie, bearer, or a **signed URL** (§6.5) |
+| `GET /spotify/login` · `GET /spotify/callback` · `POST /spotify/token` · `DELETE /me/connections/spotify` | Per-user PKCE |
+| `GET /lyrics?trackKey=&title=&artist=&album=&durationMs=&isrc=&spotifyId=&navidromeId=` | Resolved `LyricsDoc` |
+| `PUT /me/tracks/:trackKey/override` | Lyric offset and pin |
+| `GET /palette/:albumKey?src=` | Palette (computed on miss) |
+| `GET/PUT /me/queue` | Queue persistence |
+| `GET/PUT /admin/settings` · `GET/POST/DELETE /admin/users` · `POST /admin/invites` · `GET /admin/audit` | Admin only |
+
+Versioning: breaking changes go to `/api/v2`. `/api/v1` stays until every first-party client has
+moved.
+
+### 6.3 Configuration and storage (container)
+
+| What | Where |
+|---|---|
+| Public origin, listen port, log level | env: `ECHO_PUBLIC_ORIGIN=https://echo.example.com`, `ECHO_PORT=8080`, `ECHO_LOG=info` |
+| Navidrome internal URL default | env: `ECHO_NAVIDROME_URL=http://navidrome:4533` (users can override per connection) |
+| Master key | Docker secret file `/run/secrets/echo_master_key` (32 random bytes, base64). **Required:** the server refuses to start without it |
+| Database | volume `/data/echo.db` (WAL mode) |
+| Caches | volume `/data/cache/{lyrics,palette}` |
+| Logs | stdout (Docker), redacted (`SETTINGS_AND_SECURITY.md` §9) |
+| Backups | back up `/data` **and** the master key, stored separately (`SETTINGS_AND_SECURITY.md` §11) |
+
+### 6.4 Compose and Caddy (reference config; finalised in M5)
+
+**M1 finding [C]:** on the owner's OptiPlex, Caddy runs as a **host systemd service**, not a
+container, and host port 8080 is already taken (Nextcloud). The `echo:8080` upstream below assumes a
+Caddy container on a shared `web` network. For a host Caddy, ECHO publishes on loopback only
+(`127.0.0.1:<free port>:8080`) and Caddy proxies to that. Both variants are in `compose.example.yaml`
+and `Caddyfile.example`; M5 picks one when deploying.
+
+```yaml
+# compose.yaml (excerpt)
+services:
+  echo:
+    image: ghcr.io/<owner>/echo:<version>      # or build: .
+    restart: unless-stopped
+    environment:
+      ECHO_PUBLIC_ORIGIN: https://echo.example.com
+      ECHO_NAVIDROME_URL: http://navidrome:4533
+    secrets: [echo_master_key]
+    volumes: [echo-data:/data]
+    networks: [web, music]                     # no "ports:", reachable only via Caddy
+    read_only: true
+    tmpfs: [/tmp]
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+  navidrome:
+    # existing service; must be on the "music" network
+secrets:
+  echo_master_key:
+    file: ./secrets/echo_master_key            # chmod 600, not in git
+volumes: { echo-data: {} }
+```
+
+```caddyfile
+echo.example.com {
+    encode zstd gzip
+    reverse_proxy echo:8080 {
+        flush_interval -1          # stream audio without buffering
+    }
+}
+```
+
+ECHO trusts `X-Forwarded-For`/`X-Forwarded-Proto` **only** from the Caddy container's address
+(configurable `ECHO_TRUSTED_PROXY`, default: the compose network's gateway range [A: pin exactly in
+M5]).
+
+**Running TypeScript on the server (M1):** the server's `.ts` files run directly on Node 24's
+built-in type stripping (`node src/server/index.ts`), so the server has no build step. tsconfig sets
+`erasableSyntaxOnly` and `allowImportingTsExtensions` so this stays possible. Only the web client is
+built (Vite).
+
+### 6.5 Streaming URLs for every kind of client
+
+- **Web client:** `<audio src="/api/v1/navidrome/stream/:id">` with the session cookie (same-origin).
+- **Native clients** (players that can't set headers): `GET /api/v1/navidrome/stream/:id?exp=…&sig=…`.
+  The signature is HMAC-SHA256 over `userId|id|exp`, keyed by a server key derived from the master
+  key. TTL 6 h (long enough for a track plus pause). Bound to one user and one track.
+- The signature parameters are redacted from logs (`SETTINGS_AND_SECURITY.md` §9).
+- Bandwidth: off-LAN clients request Navidrome transcoding (`format=opus&maxBitRate=…`), chosen by a
+  per-client quality setting: Auto (raw when the client reports a LAN/fast connection via a
+  throughput probe, else 192 kbps Opus), Raw, 320, 192, 128.
+
+---
+
+## 7. Repository layout (single package, AGPL-3.0)
+
+```
+echo/
+├── LICENSE                     ← AGPL-3.0
+├── docs/                       ← source of truth (incl. docs/api/openapi.yaml from M5)
+├── Dockerfile · compose.example.yaml · Caddyfile.example
+├── package.json · vite.config.ts
+├── src/
+│   ├── shared/                 ← types, LyricsDoc schema + validators
+│   ├── server/
+│   │   ├── index.ts            ← Hono app, proxy trust, host check, security headers
+│   │   ├── auth/  users/  admin/  crypto/  db/ (migrations/*.sql)
+│   │   ├── navidrome.ts  spotify.ts
+│   │   ├── lyrics/             ← resolver.ts, sources/*, parsers/*
+│   │   └── palette/            ← extract.ts (sharp + material), roles.ts, oklab.ts
+│   └── client/
+│       ├── main.tsx  tokens.css  fonts/
+│       ├── playback/  audio/  palette/ (animator.ts; oklab.ts shared with server via src/shared)
+│       ├── stage/ (engine, renderer, shaders, perf) · stage/lyrics/ (field, layout, springs, sweep, timing, lyricsConfig)
+│       ├── shell/ (library, search, queue, settings, account, admin, dock, first-run, login)
+│       └── ui/
+├── fixtures/                   ← lyrics, features, covers, Subsonic JSON
+└── tests/e2e/
+```
+
+`oklab.ts` lives in `src/shared` (the server uses it for extraction, the client for interpolation).
+
+---
+
+## 8. Testing strategy
+
+| Layer | Tool | What |
+|---|---|---|
+| Timing & lyrics | Vitest | parsers, `activeIndexAt`, depth/stack maths, springs at 30/60/144 Hz |
+| Clock | Vitest | anchoring, slew, seek, pause |
+| Palette | Vitest (server) | OKLab vs reference values; roles on 30 fixture covers; sharp decode |
+| Features | Vitest | envelopes, onsets on synthetic patterns, normalisation |
+| Auth & security | Vitest + `app.request()` | login, rate limits, TOTP (RFC 6238 vectors), sessions, device tokens, signed URLs, **user isolation**, proxy trust, CSRF/Origin, encryption round-trip |
+| E2E | Playwright **Chromium + Firefox** | first run, admin setup, invite, login + TOTP, connect a mock Navidrome, play, queue, search, settings, keyboard |
+| Visual | Playwright Chromium snapshots, deterministic `?frame&seed&fixture&tier`, SwiftShader flags `--use-gl=angle --use-angle=swiftshader-webgl --enable-unsafe-swiftshader` [C] | Stage and tokens. Firefox gets functional E2E, not pixel baselines |
+| Deployment | a compose-based smoke test (`compose.test.yaml`: Caddy with internal TLS + ECHO + mock Subsonic) | HTTPS, proxy trust, streaming through Caddy, `flush_interval` |
+| Manual | checklist | real Spotify (Premium + DRM), real Navidrome on the OptiPlex, GPU tiers on the laptop and the gaming PC, screen reader |
+
+---
+
+## 9. Cross-cutting rules
+
+- **Errors** are typed: `AppError { code, provider?, retriable, userMessage, detail? }`.
+- **Logging:** structured JSON to stdout, redacted (`SETTINGS_AND_SECURITY.md` §9).
+- **User isolation:** every data access is scoped by `userId` at the query level (helper
+  `forUser(userId)`). A test suite attempts cross-user access on every route (SEC-11).
+- **AGPL-3.0 network clause:** the web client's About screen links to the exact source of the
+  running version (`ECHO_SOURCE_URL` + commit). Required because remote users interact with it over
+  a network.
+- **Strings:** English, in `strings.ts`.
+
+---
+
+## 10. Packaging, deployment, updates
+
+| Stage | How |
+|---|---|
+| Development | `pnpm dev` (Vite + server, HMR) on a workstation, against the mock Subsonic server or the real Navidrome on the OptiPlex |
+| MVP deployment | Multi-stage `Dockerfile` (build on `node:24-trixie`, run on `node:24-trixie-slim` (Debian 13, changed in M1), non-root, read-only rootfs). Built locally or by CI and pushed to GHCR. `docker compose pull && docker compose up -d` |
+| Migrations | Run automatically at start inside a transaction. The server refuses to start on a failed migration and keeps the old schema |
+| Updates | Tagged images (`echo:0.x.y`). Release notes list migrations. No auto-update |
+| First start | The server prints a one-time **setup URL** (`https://echo.example.com/setup#<token>`, 30 min TTL) to the container log. Opening it creates the admin account (password + mandatory TOTP) |
+| Future native clients | Separate repos or packages consuming `/api/v1`. Desktop with in-app Spotify needs Electron ECS + EVS signing (`DESIGN_RESEARCH.md` §5.5) |
+
+---
+
+## 11. Risks and mitigations
+
+| Risk | Impact | Mitigation |
+|---|---|---|
+| Public exposure | Account takeover, data leaks | Argon2id, TOTP (mandatory for admin), rate limiting and lockout, secure cookies, CSP, minimal unauthenticated surface, audit log (`SETTINGS_AND_SECURITY.md`) |
+| Spotify dev-mode limits (≤ 5 Spotify users per app; owner needs Premium [C]) | At most 5 Spotify-connected ECHO users | One server-level Spotify app owned by the admin. The admin adds each user's Spotify account in the Developer Dashboard. ECHO shows the cap in Admin. |
+| Spotify policy gates G1/G2 enabled by owner decision | Policy risk (`PLAYBACK_ARCHITECTURE.md` §4.6) | Recorded decision. Single-flag kill switch per gate in Admin settings |
+| Spotify endpoint churn | Features break | Isolated adapter. Playback is core; Spotify library browsing is secondary |
+| Widevine missing (Chromium/Firefox) | No Spotify in that browser | Detection + guidance. Navidrome unaffected |
+| Ivy Bridge compatibility of native modules | Server won't start | **Verified in M1** on the real box (§2.3): all native modules load in the production image. Pure-JS fallbacks remain available for palette decode (jpeg-js/pngjs) if a future version drops x86-64-v2 |
+| Losing the master key | Stored secrets unrecoverable | Documented backup procedure. Users can re-enter credentials; nothing else is lost |
+| Integrated-GPU clients | Jank | Quality tiers + governor |
+| Fresh majors (TS 7, Vite 8, Vitest 5) | Tooling friction | Exact pins. **TS 7 gate passed in M1** (`tsc --noEmit`, Vite build, Vitest all on 7.0.2), so no 5.9 fallback |

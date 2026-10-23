@@ -1,0 +1,15 @@
+node_modules/
+dist/
+test-results/
+playwright-report/
+specimen-shots/
+
+# secrets and local config: never commit (docs/SETTINGS_AND_SECURITY.md §3)
+secrets/
+.env*
+!.env.example
+*.local.*
+
+# tool state
+.taste-skill/
+.remember/

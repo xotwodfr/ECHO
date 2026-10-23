@@ -1,0 +1,41 @@
+# ECHO, Docker Compose example (docs/TECHNICAL_ARCHITECTURE.md §6.4; finalised in M5).
+# Copy to compose.yaml and adjust. Contains no secrets.
+#
+# Before the first start:
+#   mkdir -p secrets && openssl rand -base64 32 > secrets/echo_master_key && chmod 600 secrets/echo_master_key
+#   (owned by uid 1000, the container user). Back the key up separately from /data
+#   (docs/SETTINGS_AND_SECURITY.md §11). The server reads it from M5 on.
+
+services:
+  echo:
+    build: .                                   # or image: ghcr.io/<owner>/echo:<version>
+    image: echo:local
+    restart: unless-stopped
+    environment:
+      ECHO_PUBLIC_ORIGIN: https://echo.example.com
+      ECHO_PORT: "8080"
+      ECHO_LOG: info
+    secrets: [echo_master_key]
+    volumes: [echo-data:/data]
+    networks: [web, music]                     # no "ports:", reachable only via Caddy
+    # Caddy on the host instead of in Docker? Drop the "web" network and publish on loopback
+    # only, then point Caddy at 127.0.0.1:<port>. Pick a free host port:
+    # ports: ["127.0.0.1:8085:8080"]
+    read_only: true
+    tmpfs: [/tmp]
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+secrets:
+  echo_master_key:
+    file: ./secrets/echo_master_key            # chmod 600, never in git
+
+volumes:
+  echo-data: {}
+
+networks:
+  web:                                         # shared with the Caddy container
+    external: true
+  music:                                       # shared with the existing Navidrome service
+    external: true

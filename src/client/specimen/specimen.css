@@ -1,0 +1,545 @@
+/* Stage type specimen. Stage rules: DESIGN_SYSTEM §6–§8. Review sheet: shell rules (§1, flat). */
+
+/* Two cover palettes inside the role boxes of DESIGN_SYSTEM §3.3; Sodium is the token default. */
+[data-palette="tide"] {
+  --art-room: oklch(0.19 0.06 235);
+  --art-accent: oklch(0.76 0.12 215);
+  --art-highlight: oklch(0.9 0.06 205);
+  --art-glow: oklch(0.66 0.12 215 / 0.35);
+  --art-shadow: oklch(0.08 0.03 240);
+  --lyric-ink-active: oklch(0.95 0.006 205);
+}
+
+[data-palette="ember"] {
+  --art-room: oklch(0.17 0.07 18);
+  --art-accent: oklch(0.74 0.15 25);
+  --art-highlight: oklch(0.9 0.07 45);
+  --art-glow: oklch(0.64 0.14 25 / 0.35);
+  --art-shadow: oklch(0.07 0.03 18);
+  --lyric-ink-active: oklch(0.95 0.006 45);
+}
+
+@property --p {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+.specimen {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  /* word sweep inks (LYRICS_EXPERIENCE §5.1) */
+  --unlit: var(--lyric-ink-active);
+  --lit-edge: var(--art-highlight);
+  --lit: color-mix(in oklab, var(--text) 82%, var(--art-highlight));
+}
+
+/* ---------- stage ---------- */
+
+.stage {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--art-room);
+  transition: background-color var(--dur-palette) var(--ease-in-out);
+}
+
+/* Static stand-in for the room light field (§7.4) plus the vignette (§7.6). The real room is WebGL (M2). */
+.room {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      ellipse 70% 55% at 50% 36%,
+      color-mix(in oklab, var(--art-accent) 16%, var(--art-room)),
+      transparent 70%
+    ),
+    radial-gradient(ellipse 120% 95% at 50% 42%, transparent 62%, var(--art-shadow) 100%);
+}
+
+.scrim-top,
+.scrim-bottom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.scrim-top {
+  top: 0;
+  height: 120px;
+  background: linear-gradient(color-mix(in oklab, var(--art-shadow) 50%, transparent), transparent);
+}
+
+.scrim-bottom {
+  bottom: 0;
+  height: 220px;
+  background: linear-gradient(transparent, color-mix(in oklab, var(--art-shadow) 72%, transparent));
+}
+
+.field {
+  position: absolute;
+  inset: 0;
+  font-size: var(--ly-active);
+}
+
+.line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  width: max-content;
+  transform-origin: 50% 50%;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  line-height: 1.12;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--lyric-ink-active);
+}
+
+[data-face="geologica"] .field .line,
+.line[data-line-face="geologica"] {
+  font-family: "Geologica", system-ui, sans-serif;
+  font-variation-settings: "SHRP" 30;
+}
+
+[data-face="mona"] .field .line,
+.line[data-line-face="mona"] {
+  font-family: "Mona Sans", system-ui, sans-serif;
+}
+
+.w {
+  display: inline-block;
+}
+
+.w.lit,
+.w.sweep {
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.w.lit {
+  background-image: linear-gradient(var(--lit), var(--lit));
+}
+
+/*
+ * Glow uses drop-shadow, not the text-shadow named in LYRICS_EXPERIENCE §5.2: a text-shadow is
+ * painted above a background-clip:text fill and would veil the sweep. Finding recorded for M3.
+ */
+.w.sweep {
+  background-image: linear-gradient(
+    90deg,
+    var(--lit) calc(var(--p) - 0.6em),
+    var(--lit-edge) var(--p),
+    var(--unlit) calc(var(--p) + 0.35em)
+  );
+  filter: drop-shadow(0 0 0.18em var(--art-glow));
+}
+
+/* ---------- dock (static) ---------- */
+
+.dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--dock);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 560px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--sp-5);
+  padding: 0 var(--sp-5);
+  box-sizing: border-box;
+}
+
+.dock-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+/* Missing artwork: album title in the face at 600, 18% of the square, 8% inset (DESIGN_SYSTEM §8). */
+.art {
+  flex: none;
+  width: var(--sp-8);
+  height: var(--sp-8);
+  box-sizing: border-box;
+  padding: calc(var(--sp-8) * 0.08); /* % padding would resolve against the parent's width */
+  border-radius: var(--r-art);
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: calc(var(--sp-8) * 0.18);
+  line-height: 1.15;
+  overflow: hidden;
+}
+
+.dock-text {
+  min-width: 0;
+}
+
+.dock-text p {
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-title {
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+
+.dock-artist {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.dock-transport {
+  display: grid;
+  gap: var(--sp-1);
+  justify-items: center;
+}
+
+.transport-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+
+.transport-row svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.ibtn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  color: var(--muted);
+}
+
+.play {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--r-pill);
+  background: var(--text);
+  color: var(--art-room);
+}
+
+.play svg {
+  fill: currentColor;
+  stroke: none;
+}
+
+.scrub-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+}
+
+.time {
+  font-size: var(--fs-small);
+  color: var(--muted);
+}
+
+.scrub {
+  position: relative;
+  flex: 1;
+  height: 4px;
+  border-radius: var(--r-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+
+.scrub-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--art-accent);
+}
+
+.dock-end {
+  justify-self: end;
+}
+
+.provider {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+/* ---------- controls ---------- */
+
+.controls {
+  position: absolute;
+  top: var(--sp-4);
+  right: var(--sp-4);
+  left: var(--sp-4);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.seg {
+  display: flex;
+  gap: var(--sp-1);
+  min-inline-size: 0;
+  margin: 0;
+  border: 0;
+  padding: var(--sp-1);
+  border-radius: var(--r-pill);
+  background: var(--surface-1);
+}
+
+.seg button {
+  min-height: 28px;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-hover) ease,
+    color var(--dur-hover) ease;
+}
+
+.seg button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.seg button[aria-pressed="true"] {
+  background: var(--surface-3);
+  color: var(--text);
+}
+
+.seg button:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.readout {
+  width: 100%;
+  margin: 0;
+  text-align: right;
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+/* ---------- review sheet (shell rules) ---------- */
+
+.sheet {
+  max-width: 1280px;
+  padding: var(--sp-7) var(--gutter) var(--sp-9);
+  box-sizing: border-box;
+}
+
+.sheet h1 {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-title);
+  font-weight: 600;
+}
+
+.sheet h2 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-section);
+  font-weight: 500;
+}
+
+.sheet h3 {
+  margin: var(--sp-5) 0 var(--sp-3);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.sheet p,
+.sheet li {
+  color: var(--muted);
+  max-width: 72ch;
+}
+
+.sheet strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.sheet code,
+.sheet kbd {
+  font-family: inherit;
+  color: var(--text);
+}
+
+.sheet kbd {
+  padding: 0 var(--sp-1);
+  border: 1px solid var(--control);
+  border-radius: var(--r-art);
+}
+
+.block {
+  margin-top: var(--sp-7);
+}
+
+.note {
+  font-size: var(--fs-small);
+}
+
+.tnum-table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.tnum-table th,
+.tnum-table td {
+  padding: var(--sp-2) var(--sp-5) var(--sp-2) 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+.tnum-table th {
+  font-size: var(--fs-small);
+  font-weight: 400;
+  color: var(--faint);
+}
+
+.wrap-group {
+  overflow-x: auto;
+}
+
+.wrap-row {
+  display: flex;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+
+.wrap-box {
+  flex: none;
+  padding: var(--sp-4) 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-control);
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: var(--sp-3);
+}
+
+.wrap-box .line.demo {
+  position: static;
+}
+
+.wrap-meta {
+  margin: 0;
+  font-size: var(--fs-small);
+}
+
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sp-6);
+}
+
+[data-col-face="geologica"] {
+  font-family: "Geologica", system-ui, sans-serif;
+}
+
+[data-col-face="mona"] {
+  font-family: "Mona Sans", system-ui, sans-serif;
+}
+
+.face-col p {
+  margin: 0 0 var(--sp-3);
+  color: var(--text);
+}
+
+.face-col .col-label {
+  font-size: var(--fs-small);
+  color: var(--faint);
+}
+
+.s-title {
+  font-size: var(--fs-title);
+  line-height: 28px;
+  font-weight: 600;
+}
+.s-section {
+  font-size: var(--fs-section);
+  line-height: 24px;
+  font-weight: 500;
+}
+.s-figure {
+  font-size: var(--fs-figure);
+  line-height: 30px;
+  font-weight: 400;
+}
+.s-body {
+  font-size: var(--fs-body);
+  line-height: 20px;
+}
+.face-col .s-small {
+  font-size: var(--fs-small);
+  line-height: 16px;
+  color: var(--muted);
+}
+.s-glyphs {
+  font-size: var(--sp-6);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+
+.probe-host {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  visibility: hidden;
+  font-size: 40px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---------- compact (DESIGN_SYSTEM §5: < 720px) ---------- */
+
+@media (max-width: 719px) {
+  .dock {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: var(--sp-3);
+    padding: 0 var(--sp-4);
+  }
+  .dock-transport {
+    position: static;
+  }
+  .scrub-row {
+    position: absolute;
+    left: var(--sp-4);
+    right: var(--sp-4);
+    top: calc(var(--sp-2) * -1);
+    width: auto;
+  }
+  .dock-end {
+    display: none;
+  }
+  .transport-row {
+    gap: var(--sp-2);
+  }
+  .pair {
+    grid-template-columns: 1fr;
+  }
+}

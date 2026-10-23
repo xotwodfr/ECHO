@@ -1,0 +1,23 @@
+# ECHO site block for Caddy (docs/TECHNICAL_ARCHITECTURE.md §6.4).
+# Add to your existing Caddyfile; replace echo.example.com with your domain.
+echo.example.com {
+	encode zstd gzip
+
+	# Caddy in Docker on the shared "web" network. With Caddy on the host, use the loopback
+	# port published in compose.example.yaml instead, e.g. 127.0.0.1:8085.
+	reverse_proxy echo:8080 {
+		flush_interval -1 # stream audio without buffering
+	}
+
+	# Never log query strings: signed stream URLs and OAuth callbacks carry secrets in them
+	# (docs/SETTINGS_AND_SECURITY.md §9). Cookie and Authorization headers are already redacted
+	# by Caddy's default logging.
+	log {
+		format filter {
+			wrap json
+			fields {
+				request>uri regexp \?.*$ ?«redacted»
+			}
+		}
+	}
+}
