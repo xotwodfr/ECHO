@@ -93,6 +93,8 @@ export const strings = {
     viewLabel: 'Stage view',
     views: { lyrics: 'Lyrics', cover: 'Cover', visual: 'Visual' },
     lyricsPlaceholder: 'Lyrics will appear here.',
+    unsynced: 'Lyrics aren’t time-synced for this track',
+    sheetLabel: 'Lyrics',
   },
   playback: {
     playingNext: (title: string) => `Playing “${title}” next`,

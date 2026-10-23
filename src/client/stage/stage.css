@@ -86,7 +86,8 @@
   color: var(--text);
 }
 
-/* Lyrics (placeholder until the lyric field, M3): at the active line's anchor, 40% H. */
+/* Lyrics without a document (no lyrics loader until M6, when Cover mode replaces this note,
+   §9.4): at 40% of the stage, where M2 placed it. */
 .stage-lyrics {
   position: absolute;
   top: 40%;
@@ -100,6 +101,232 @@
 .stage-lyrics p {
   margin: 0;
   color: var(--muted);
+}
+
+/* ---------- The lyric field (LYRICS_EXPERIENCE.md §3–§9) ---------- */
+
+@property --p {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+.ly-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  font-family: var(--font);
+  font-size: var(--ly-active);
+  --lit-base: color-mix(in oklab, var(--text) 82%, var(--art-highlight));
+  --lit-edge: var(--art-highlight);
+}
+
+.ly-scene,
+.ly-bucket,
+.ly-main {
+  position: absolute;
+  inset: 0;
+}
+
+.ly-scene {
+  transform-origin: 50% 40%;
+}
+
+/* Lines are measured here once per document and resize (§3.3), unscaled and invisible. */
+.ly-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  contain: layout;
+}
+
+/* One layout per line at active size; depth is transform, opacity, blur and colour only (§4.1). */
+.ly-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  transform-origin: 50% 50%;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  text-align: center;
+  text-wrap: balance;
+  /* Ink mixes toward the room with depth (--m) and the lit colour dies into ink as a line decays
+     (--f, §7). */
+  --unlit: color-mix(in oklab, var(--lyric-ink-active), var(--art-room) calc(var(--m, 0) * 100%));
+  --lit: color-mix(in oklab, var(--lit-base), var(--lyric-ink-active) calc(var(--f, 0) * 100%));
+  color: var(--unlit);
+}
+
+.ly-line[data-cjk] {
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.ly-line[data-side="left"] {
+  text-align: left;
+}
+
+/* The second voice of a duet is also told apart by colour (§5.6). */
+.ly-line[data-side="right"] {
+  text-align: right;
+  --lit-base: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--text) 82%, var(--art-highlight)) 75%,
+    var(--art-accent)
+  );
+}
+
+/* Backing vocals under their lead line, at 0.62× and 0.55× its opacity (§5.6). */
+.ly-bg {
+  opacity: 0.55;
+}
+
+.ly-vw,
+.ly-emph {
+  white-space: nowrap;
+}
+
+.ly-g {
+  display: inline-block;
+  transform-origin: 50% 80%;
+}
+
+/* The word sweep (§5.1): one gradient through background-clip:text, driven by --p on the sweeping
+   word only. Emphasised words carry it on their graphemes. */
+.ly-w:not(.ly-emph):is(.lit, .sweep),
+.ly-emph:is(.lit, .sweep) > .ly-g {
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.ly-w:not(.ly-emph).lit,
+.ly-emph.lit > .ly-g {
+  background-image: linear-gradient(var(--lit), var(--lit));
+}
+
+.ly-w:not(.ly-emph).sweep,
+.ly-emph.sweep > .ly-g {
+  background-image: linear-gradient(
+    90deg,
+    var(--lit) calc(var(--p) - 0.6em),
+    var(--lit-edge) var(--p),
+    var(--unlit) calc(var(--p) + 0.35em)
+  );
+}
+
+/* Right-to-left lines sweep from the right (§5.4). */
+.ly-line[dir="rtl"] .ly-w:not(.ly-emph).sweep,
+.ly-line[dir="rtl"] .ly-emph.sweep > .ly-g {
+  background-image: linear-gradient(
+    270deg,
+    var(--lit) calc(var(--p) - 0.6em),
+    var(--lit-edge) var(--p),
+    var(--unlit) calc(var(--p) + 0.35em)
+  );
+}
+
+/* Glow on the sweeping word (§5.2): a drop-shadow of the painted text, not a text-shadow, which
+   would paint over the background-clip fill and veil the sweep (M1 specimen finding). */
+.ly-w.glow {
+  filter: drop-shadow(
+    0 0 calc(var(--gr, 0.18) * 1em)
+      color-mix(in oklab, var(--art-glow-solid) calc(var(--ga) * 100%), transparent)
+  );
+}
+
+/* Interlude dots at the active anchor (§9.8). */
+.ly-dots {
+  position: absolute;
+  top: calc((100% - var(--dock)) * 0.4);
+  left: 50%;
+  display: flex;
+  gap: var(--ly-dot);
+  translate: -50% -50%;
+}
+
+.ly-dot {
+  width: var(--ly-dot);
+  height: var(--ly-dot);
+  border-radius: 50%;
+  background: var(--lyric-ink-active);
+}
+
+/* A track change: the outgoing field recedes (§9.7). */
+.ly-receding {
+  transition:
+    opacity var(--dur-art-out) var(--ease-exit),
+    scale var(--dur-art-out) var(--ease-exit),
+    filter var(--dur-art-out) var(--ease-exit);
+}
+
+/* z → 1: the far end of the depth functions (scale 0.70, blur from lyricsConfig). */
+.ly-receding.go {
+  opacity: 0;
+  scale: 0.7;
+  filter: blur(var(--far-blur));
+}
+
+/* Attribution (§11, LYRICS_INTEGRATION.md §8): bottom-left, with the chrome. */
+.stage-attribution {
+  position: absolute;
+  left: var(--gutter);
+  bottom: calc(var(--dock) + var(--sp-2));
+  margin: 0;
+  color: var(--faint);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  transition: opacity var(--dur-pop) var(--ease-out);
+}
+
+.shell[data-chrome="hidden"] .stage-attribution {
+  opacity: 0;
+  transition: opacity var(--dur-art) var(--ease-in-out);
+}
+
+/* Untimed lyrics (§9.3): a static sheet, styled as rank +1, scrolled by the reader. */
+.ly-sheet {
+  position: absolute;
+  inset: 0 0 var(--dock);
+  overflow-y: auto;
+  scrollbar-width: none;
+  outline: none;
+}
+
+.ly-sheet:focus-visible {
+  outline: var(--focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--focus-ring));
+}
+
+.ly-sheet-col {
+  max-width: min(64%, 22em);
+  margin: 0 auto;
+  padding: calc((100vh - var(--dock)) * 0.4 - 1em) var(--gutter) 40vh;
+  font-size: calc(var(--ly-active) * 0.62);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.022em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.ly-sheet-line {
+  margin: 0 0 0.6em;
+  color: color-mix(in oklab, var(--lyric-ink-active) 74%, transparent);
+}
+
+.ly-sheet-note {
+  display: block;
+  margin-top: var(--sp-2);
+  color: var(--faint);
+  font-size: var(--fs-small);
+  font-weight: 400;
+  line-height: var(--lh-small);
+  letter-spacing: 0;
 }
 
 /* Cover mode (DESIGN_SYSTEM.md §8): centred between the top chrome and the dock. */

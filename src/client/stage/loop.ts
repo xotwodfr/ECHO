@@ -22,8 +22,13 @@ export interface LoopParts {
   features(): FeatureSource;
   palette: { step(dt: number): void };
   render(frame: Frame): void;
-  /** Steps 4 (lyric field, M3) and 6 (governor, M9) slot in around render. */
+  /** Step 6 (governor, M9) slots in after render. */
   isPlaying(): boolean;
+  /**
+   * Something besides the room needs frames (the lyric field), so the loop keeps ticking in Still
+   * mode too. Still frames with `dt > 0` are for it alone: the room is drawn by `renderOnce`.
+   */
+  animating?(): boolean;
 }
 
 export interface LoopEnv {
@@ -61,24 +66,26 @@ export function createStageLoop(parts: LoopParts, env: LoopEnv, initialMode: Sta
       flow += AMBIENT_FLOW_PER_S * rate * (dt / 1000);
       drift += rate * (dt / 1000);
     }
-    // §4.2 order: 1 song time · 2 features · 3 palette · (4 lyric field, M3) · 5 render ·
-    // (6 governor, M9).
+    // §4.2 order: 1 song time · 2 features · 3 palette · 4 lyric field and 5 render (in `render`)
+    // · (6 governor, M9).
     const t = parts.songTime();
     const features = parts.features().sample(t, dt);
     parts.palette.step(dt);
     parts.render({ t, dt, features, flow, drift });
   }
 
+  const wanted = () => mode === 'ambient' || !!parts.animating?.();
+
   function tick(now: number) {
     raf = null;
-    if (!running || env.hidden()) return;
+    if (!running || env.hidden() || !wanted()) return;
     frame(now - last);
     last = now;
     raf = env.requestFrame(tick);
   }
 
   function schedule() {
-    if (raf !== null || !running || mode !== 'ambient' || env.hidden()) return;
+    if (raf !== null || !running || !wanted() || env.hidden()) return;
     last = env.now();
     raf = env.requestFrame(tick);
   }
@@ -92,7 +99,10 @@ export function createStageLoop(parts: LoopParts, env: LoopEnv, initialMode: Sta
   const offVisibility = env.onVisibilityChange(() => {
     if (env.hidden()) unschedule();
     else if (mode === 'ambient') schedule();
-    else renderOnce();
+    else {
+      renderOnce();
+      schedule();
+    }
   });
 
   /** One frame now, with no time passing (Still mode, resize, palette change, restore). */
@@ -112,12 +122,14 @@ export function createStageLoop(parts: LoopParts, env: LoopEnv, initialMode: Sta
       unschedule();
     },
     renderOnce,
+    /** Starts ticking if something now needs frames (a lyric document arrived in Still mode). */
+    wake: () => schedule(),
     get mode() {
       return mode;
     },
     setMode(next: StageMode) {
       mode = next;
-      if (mode === 'still') unschedule();
+      if (!wanted()) unschedule();
       renderOnce();
       schedule();
     },

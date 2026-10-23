@@ -69,7 +69,7 @@ const silent: FeatureSource = {
   }),
 };
 
-function setup(mode: 'ambient' | 'still' = 'ambient', playing = true) {
+function setup(mode: 'ambient' | 'still' = 'ambient', playing = true, animating = { on: false }) {
   const f = fakeEnv();
   const calls: string[] = [];
   const frames: Frame[] = [];
@@ -92,6 +92,7 @@ function setup(mode: 'ambient' | 'still' = 'ambient', playing = true) {
         frames.push(fr);
       },
       isPlaying: () => state.playing,
+      animating: () => animating.on,
     },
     f.env,
     mode,
@@ -170,6 +171,26 @@ describe('Stage loop (TECHNICAL_ARCHITECTURE.md §4.2)', () => {
     const n = frames.length;
     advance(16);
     expect(frames).toHaveLength(n);
+  });
+
+  it('still with the lyric field showing: ticks for it, stops when it goes; time bases hold', () => {
+    const lyrics = { on: true };
+    const { loop, advance, frames, pending } = setup('still', true, lyrics);
+    loop.start();
+    advance(16);
+    advance(16);
+    expect(frames.map((f) => f.dt)).toEqual([0, 16, 16]);
+    expect(frames.at(-1)?.flow).toBe(0); // the room's clocks do not run in Still
+    lyrics.on = false;
+    advance(16);
+    expect(pending()).toBe(0);
+    const n = frames.length;
+    advance(16);
+    expect(frames).toHaveLength(n);
+    lyrics.on = true;
+    loop.wake(); // a document arrived
+    advance(16);
+    expect(frames).toHaveLength(n + 1);
   });
 
   it('stop and dispose leave nothing scheduled', () => {

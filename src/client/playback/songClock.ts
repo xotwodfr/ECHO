@@ -31,6 +31,7 @@ export function createSongClock(
   let est = Number.NaN;
   let at = 0;
   let key: string | null = null;
+  let held = Number.NaN; // the value while not playing
   return {
     now(): number {
       const s = state();
@@ -39,6 +40,17 @@ export function createSongClock(
       const a = playing || s.status === 'paused' ? audio() : null;
       const target = a ? a.positionMs : positionNow(s, t);
       const trackKey = s.track?.key ?? null;
+      // Not playing: time holds still. Only a new position (a seek while paused, another track)
+      // moves it; the output latency estimate drifts a little and must not (LYR-17).
+      if (!playing) {
+        if (Number.isNaN(held) || trackKey !== key || target !== est)
+          held = Math.max(0, target - (a?.latencyMs ?? 0));
+        est = target;
+        at = t;
+        key = trackKey;
+        return held;
+      }
+      held = Number.NaN;
       if (playing) est += t - at;
       const error = target - est;
       if (!playing || trackKey !== key || !(Math.abs(error) < SNAP_MS)) est = target;

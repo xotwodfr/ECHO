@@ -133,9 +133,10 @@ documents, synthetic guide audio and recorded features. This is the signature, b
 
 **Dependencies:** M2.
 
-**Progress:** tasks 1–4 done (2026-10-23; record in `docs/reviews/M3.md`). LYR-01 and LYR-04
-pass; the unit parts of LYR-05, LYR-20 and LYR-21 pass, and their remaining parts need tasks 6–7.
-The listening test waits for the lyric field (task 7).
+**Progress:** tasks 1–7 done (2026-10-23; record in `docs/reviews/M3.md`). LYR-01, -04, -06,
+-09, -10, -12, -14, -17, -18 and -20 pass. LYR-05 is open on a sub-pixel spring overshoot for task 11
+to decide. The other M3 criteria pass their unit and browser checks and wait for their V baselines,
+taken after the tuning session (task 11). The listening test needs a person.
 
 **Tasks:**
 1. Write the fixture `LyricsDoc`s (original text; `LYRICS_EXPERIENCE.md` §16, with

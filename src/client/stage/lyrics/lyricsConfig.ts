@@ -42,7 +42,20 @@ export const LYRICS = {
     approachZFloor: 0.65,
   },
   sweep: { edgeAhead: 0.35, edgeBehind: 0.6, holdGapMs: 300, minWordMs: 60 }, // §5.1
-  glow: { radius: 0.18, radiusMax: 0.26, alpha: 0.35, alphaMax: 0.55, decayMs: 220 }, // §5.2
+  glow: {
+    radius: 0.18, // §5.2
+    radiusMax: 0.26,
+    alpha: 0.35,
+    alphaMax: 0.55,
+    decayMs: 220,
+    decayFastMs: 120, // words < 150 ms (§9.9)
+    riseMs: 90,
+    slewPerS: 1.5, // photosensitivity (§12.5): alpha never changes faster
+    paused: 0.6, // §9.6: dims to 60% over 600 ms, restores over 300 ms
+    pauseMs: 600,
+    resumeMs: 300,
+  },
+  wash: { ms: 420 }, // §9.2 line-timed lines
   handover: { leadMinMs: 120, leadMaxMs: 300, coalesceMs: 350 }, // §5.3, §9.9
   emphasis: { minMs: 1000, minG: 2, maxG: 7, anticipateMs: 400, releaseMs: 250, swellMax: 0.08 }, // §5.5
   springs: {
@@ -53,9 +66,18 @@ export const LYRICS = {
     impulse: [2.0, 0.5],
   },
   stagger: { baseMs: 50, decay: 1.05 }, // §6.3
-  decay: { tauMs: 520, rise: 0.05, zEnd: 0.35, blurMax: 6, maxPast: 2 }, // §7
+  decay: { tauMs: 520, rise: 0.05, zEnd: 0.35, blurMax: 6, maxPast: 2, gapH: 0.035, dropMs: 120 }, // §7
   background: { budget: [24, 12, 6, 0], minDist: 0.16, ampX: 0.022, ampY: 0.018, rise: 0.004 }, // §8
-  interlude: { minGapMs: 7000, cycleMs: 4000, leaveMs: 500 }, // §9.8
+  interlude: {
+    minGapMs: 7000,
+    cycleMs: 4000,
+    leaveMs: 500,
+    enterMs: 750,
+    fadeMs: 250,
+    dotEm: 0.22,
+    dotStepMs: 80,
+  }, // §9.8
+  build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 }, // §9.5, §9.6, §9.7
   lineTimed: { endGapMs: 100, lastLineMs: 6000 }, // §9.2
   beat: { scaleMax: 0.012, zLean: 0.025, kickPx: 2, quietMs: 300 }, // §12
 } as const;

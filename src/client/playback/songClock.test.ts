@@ -110,6 +110,22 @@ describe('SongClock (TECHNICAL_ARCHITECTURE.md §5.2)', () => {
     expect(r.clock.now()).toBe(4850);
   });
 
+  it('holds still while paused even if the latency estimate drifts; a paused seek moves it', () => {
+    const r = rig();
+    r.set({ status: 'paused' });
+    r.audio({ positionMs: 5000, latencyMs: 20 });
+    expect(r.clock.now()).toBe(4980);
+    r.step(500);
+    r.audio({ positionMs: 5000, latencyMs: 27 });
+    expect(r.clock.now()).toBe(4980);
+    r.audio({ positionMs: 9000, latencyMs: 27 });
+    expect(r.clock.now()).toBe(8973);
+    r.set({ status: 'playing', positionMs: 9000, positionAt: r.t });
+    r.step(FRAME);
+    // Resumes from there: one frame on, 10% slewed back toward the (stale) element, less latency.
+    expect(r.clock.now()).toBeCloseTo(9000 + FRAME * 0.9 - 27, 1);
+  });
+
   it('is frozen while paused and snaps on a track change', () => {
     const r = rig();
     r.audio({ positionMs: 5000, latencyMs: 20 });

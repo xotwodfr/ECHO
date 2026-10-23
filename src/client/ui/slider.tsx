@@ -18,6 +18,8 @@ type SliderProps = {
   onInput?: (v: number) => void;
   /** Committed value: key press, click, or the end of a drag. */
   onChange: (v: number) => void;
+  /** A drag ended without a value (pointer cancelled). */
+  onCancel?: () => void;
   variant: 'scrubber' | 'volume';
   /** Buffered end (scrubber), same unit as the value. */
   buffered?: number;
@@ -40,6 +42,7 @@ export function Slider({
   valueText,
   onInput,
   onChange,
+  onCancel,
   variant,
   buffered,
   bubble,
@@ -125,7 +128,10 @@ export function Slider({
         setDrag(null);
         onChange(drag);
       }}
-      onPointerCancel={() => setDrag(null)}
+      onPointerCancel={() => {
+        setDrag(null);
+        onCancel?.();
+      }}
     >
       <span className="slider-rail">
         {buffered !== undefined && <span className="slider-buffered" />}
@@ -158,11 +164,17 @@ export function Scrubber(props: {
   durationMs: number | undefined;
   bufferedMs?: number;
   onSeek: (ms: number) => void;
+  /** The time being dragged to, null when the drag ends (the lyric field's scrub mode). */
+  onScrub?: (ms: number | null) => void;
   disabled?: boolean;
   disabledReason?: string;
   force?: 'hover' | 'focus' | 'drag';
 }) {
-  const [live, setLive] = useState<number | null>(null);
+  const [live, setLiveState] = useState<number | null>(null);
+  const setLive = (ms: number | null) => {
+    setLiveState(ms);
+    props.onScrub?.(ms);
+  };
   const empty = props.durationMs === undefined;
   const time = (ms: number) => (
     <span
@@ -188,9 +200,10 @@ export function Scrubber(props: {
         bubble={formatTime}
         onInput={setLive}
         onChange={(v) => {
-          setLive(null);
           props.onSeek(v);
+          setLive(null);
         }}
+        onCancel={() => setLive(null)}
         disabled={props.disabled}
         disabledReason={props.disabledReason}
         force={props.force}

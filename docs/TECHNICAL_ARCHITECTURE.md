@@ -420,7 +420,7 @@ echo/
 │   └── client/
 │       ├── main.tsx  tokens.css  fonts/
 │       ├── playback/  audio/  palette/ (animator.ts; oklab.ts shared with server via src/shared)
-│       ├── stage/ (engine, renderer, shaders, perf) · stage/lyrics/ (field, layout, springs, sweep, timing, lyricsConfig)
+│       ├── stage/ (engine, renderer, shaders, perf) · stage/lyrics/ (field, model, layout, background, springs, timing, lyricsConfig)
 │       ├── shell/ (library, search, queue, settings, account, admin, dock, first-run, login)
 │       └── ui/
 ├── fixtures/                   ← lyrics, features, covers, Subsonic JSON

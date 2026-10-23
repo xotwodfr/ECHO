@@ -90,6 +90,7 @@ export interface FieldState {
   handoverAt: number; // the next hand-over (∞ when none)
   phase: number; // φ: progress through the active line or the gap, 0..1 (§4.3)
   dots: boolean; // interlude dots (§9.8)
+  from: number; // when the current span began (a hand-over, or the end of the line before a gap)
 }
 
 export function fieldAt(tl: Timeline, t: number): FieldState {
@@ -100,7 +101,7 @@ export function fieldAt(tl: Timeline, t: number): FieldState {
   const from = s.line >= 0 ? (tl.lines[s.line] as LyricLine).start : s.from;
   const span = handoverAt - from;
   const phase = handoverAt === Infinity ? 0 : span > 0 ? clamp((t - from) / span, 0, 1) : 1;
-  return { active: s.line, next: s.next, handoverAt, phase, dots: t < s.dotsUntil };
+  return { active: s.line, next: s.next, handoverAt, phase, dots: t < s.dotsUntil, from: s.from };
 }
 
 export const activeIndexAt = (tl: Timeline, t: number) => fieldAt(tl, t).active;

@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import type { LyricsDoc } from '../../shared/types.ts';
 import type { StageMode } from './loop.ts';
 
 // What the Stage is showing, for the shell (data attributes, the Settings notice). Kept out of the
@@ -44,3 +45,17 @@ export const nextView = (v: StageView): StageView =>
 
 /** Whether the Stage chrome is hidden after idle (PRODUCT_SPEC.md §6.1). */
 export const stageChrome = createStore<{ hidden: boolean }>()(() => ({ hidden: false }));
+
+/**
+ * The current track's lyrics (TECHNICAL_ARCHITECTURE.md §5.4 `lyricsStore`). M3 fills it from the
+ * fixture documents of the guide tracks; the lyrics loader writes it from M6.
+ */
+export const lyricsStore = createStore<{ trackKey: string | null; doc: LyricsDoc | null }>()(
+  () => ({ trackKey: null, doc: null }),
+);
+
+/** The scrubber's time while it is dragged (LYRICS_EXPERIENCE.md §9.6 scrub mode), else null. */
+export const scrubStore = createStore<{ ms: number | null }>()(() => ({ ms: null }));
+
+/** Where the lyric field draws: set by the Lyrics view, mounted into by the engine. */
+export const lyricHost = createStore<{ el: HTMLElement | null }>()(() => ({ el: null }));

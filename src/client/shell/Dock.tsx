@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useState } from 'react';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
-import { nextView, type StageView, stageView } from '../stage/status.ts';
+import { nextView, type StageView, scrubStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
@@ -145,6 +145,7 @@ function DockScrubber() {
       positionMs={positionNow(s, performance.now())}
       durationMs={s.track?.durationMs}
       onSeek={c.seek}
+      onScrub={(ms) => scrubStore.setState({ ms })}
       disabled={!s.track || !s.capabilities.canSeek}
       disabledReason={s.track ? strings.dock.noSeek : strings.dock.idle}
     />

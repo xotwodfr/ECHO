@@ -101,6 +101,7 @@ Extraction and interpolation algorithms are in `VISUALIZER_SPEC.md` §6. This se
 | `--art-accent` | Highest chroma × population | L 0.70–0.82, C 0.06–0.18 | Lit-word core, progress fill, play glyph, now-playing row |
 | `--art-highlight` | Lightest cluster with C > 0.04, else accent lightened | L 0.86–0.94, C ≤ 0.10 | Lit-word sweep leading edge, bloom tint, halation |
 | `--art-glow` | Accent | L 0.60–0.72, C ≤ 0.14, **alpha ≤ 0.35** | Bloom and halation colour only |
+| `--art-glow-solid` | Derived: `--art-glow` without its alpha | as `--art-glow` | The active-word glow, which sets its own alpha within §7.2's caps (M3) |
 | `--art-shadow` | Room, pushed darker | L 0.06–0.10 | Vignette, scrims |
 | `--lyric-ink-*` | Derived (§3.4) | contrast-solved | Lyric text at each depth |
 
@@ -263,7 +264,7 @@ Every effect has a purpose. Anything not on this list does not ship.
 | # | Effect | Purpose | Limits |
 |---|---|---|---|
 | 7.1 | **Word illumination sweep:** a horizontal gradient `--lyric-ink-active` → `--art-highlight` → `--text`, moving across each word with its timestamp | Shows *exactly* where the voice is | Leading edge soft width = 0.35em. Sweep is the only animated gradient on text. |
-| 7.2 | **Active-word glow:** a text-shadow / SDF halo in `--art-glow` | Makes the sung word the brightest object in the room, like a lamp | Radius 0.18em, alpha ≤ 0.35 (≤ 0.55 at peak sustain); never on more than the current word + the previous word fading out |
+| 7.2 | **Active-word glow:** a drop-shadow halo in `--art-glow-solid` (a text-shadow would veil the sweep, `LYRICS_EXPERIENCE.md` §5.2) | Makes the sung word the brightest object in the room, like a lamp | Radius 0.18em, alpha ≤ 0.35 (≤ 0.55 at peak sustain); never on more than the current word + the previous word fading out |
 | 7.3 | **Halation:** a warm red-shifted edge glow around the active line's lit text (film optics) | Signature "filmed, not rendered" quality; separates text from the field | Composited in the environment pass at ½ res; strength 0.08–0.18 |
 | 7.4 | **Room light field:** the environment shader (`VISUALIZER_SPEC.md`) | Ambient light *from the cover*; carries energy without moving the text | Exposure capped by §3.4 rule 6 |
 | 7.5 | **Wavefront rings** (Reverb mode): expanding rings from onsets with exponential decay | Turns the idea (an echo) into the visual response to transients | ≤ 3 alive at once; alpha ≤ 0.22; disabled in reduced motion |
@@ -476,6 +477,7 @@ the fallback (achromatic) palette and are overwritten at runtime.
   --art-accent:    #E3B26B;
   --art-highlight: oklch(0.92 0.04 80);
   --art-glow:      oklch(0.68 0.10 75 / 0.35);
+  --art-glow-solid: oklch(from var(--art-glow) l c h);   /* lyric glow takes its own alpha (M3) */
   --art-shadow:    oklch(0.08 0.004 250);
   --lyric-ink-active: oklch(0.95 0.006 80);
 

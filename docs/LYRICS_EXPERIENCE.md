@@ -161,7 +161,9 @@ target_z(rank k) = lerp( z(k), z(k−1), drift )               (rank 1: toward 0
 - **Duets** (`oppositeAligned` or ≥ 2 distinct `agent`s): lines of the primary agent anchor at
   `x = 0.42 W` with `text-align: left` relative to a left edge at `0.18 W`. Opposite-aligned lines
   anchor right, ending at `0.82 W`. The field keeps this two-sided arrangement for the whole song
-  (decided once at document load), so lines never jump sides mid-song.
+  (decided once at document load), so lines never jump sides mid-song. Without any
+  `oppositeAligned` flag, the first agent goes left and the others right. Lines of a `group` agent
+  (everyone singing) stay centred (M3).
 - A small horizontal **parallax** (§8.4) applies to background lines only.
 
 ---
@@ -210,11 +212,15 @@ rests at the end of the previous word (a sustained "hold"), with no pre-lighting
 
 ### 5.2 Glow
 
-- The **currently sweeping word** gets a glow: `text-shadow: 0 0 R var(--art-glow)`, with
+- The **currently sweeping word** gets a glow: `filter: drop-shadow(0 0 R <glow colour>)`, with
   `R = 0.18em` and alpha 0.35 by default, modulated by vocal sustain (§12.3) up to `R = 0.26em`,
-  alpha 0.55.
+  alpha 0.55. A drop-shadow, not a `text-shadow`: a text-shadow paints over the
+  `background-clip: text` fill and veils the sweep (M1 specimen finding). The colour is
+  `--art-glow` without its alpha (`--art-glow-solid`), at the glow's own alpha.
 - When the word ends, its glow decays exponentially (τ = 220 ms) while the next word's glow rises
-  over 90 ms. At most two words glow at once.
+  over 90 ms. At most two words glow at once. §12.5's slew limit (1.5/s) takes precedence over both:
+  a rise to 0.35 takes at least 233 ms, and when two words are still fading, the older fades at that
+  limit and the next word's glow waits for it, so no glow is ever cut (M3).
 - Glow is never applied to the whole line, and never to non-active lines (prior art agrees: glow is
   for held words only).
 - **Halation** and **bloom** on the lit word happen in the WebGL composite (`VISUALIZER_SPEC.md`
@@ -290,8 +296,8 @@ exact for a constant target over `dt`, so it is stable at 30, 60, 120 and 144 Hz
 | Spring | f (Hz) | ζ | Settle (2%) | Used for |
 |---|---|---|---|---|
 | `line.normal` | 2.0 → 2.35 (adaptive, below) | 1.0 | ≈ 0.39–0.46 s | `y`, `z` of ranks −1…+3 at hand-over |
-| `line.slow` | 1.45 | 0.85 | ≈ 0.75 s | after seek, after interlude, first line, end of song |
-| `line.enter` | 1.1 | 0.95 | ≈ 0.85 s | background line entering the transition zone |
+| `line.slow` | 1.45 | 0.85 | ≈ 0.46 s | after seek, after interlude, first line, end of song |
+| `line.enter` | 1.1 | 0.95 | ≈ 0.76 s | background line entering the transition zone |
 | `emphasis.lift` | 1.2 | 0.75 | — | §5.5 |
 | `beat.impulse` | 2.0 | 0.5 | — | §12 (bass and onset kicks) |
 | `bg.drift` | — | — | — | not a spring: deterministic paths (§8.3) |
@@ -302,6 +308,10 @@ Adaptive line frequency (from the AMLL mapping: faster lyrics, stiffer spring):
 n    = clamp( (next.start − active.start − 100) / 700 , 0 , 1 )   // 0 = lines 100 ms apart, 1 = ≥ 800 ms
 f    = 2.0 + 0.35 · (1 − n)^0.2
 ```
+
+Settle times are for the exact solution from rest (M3 task 5, checked against RK4). Below ζ = 1 the
+overshoot stays inside the 2% band, so `slow` and `enter` settle sooner than the draft's estimates
+(0.75 s and 0.85 s).
 
 Equivalent AMLL stiffness at mass 1: k = (2πf)² ≈ 158–218. This matches AMLL's 170–220 range.
 
@@ -361,6 +371,10 @@ listener without competing with the active line.
   arranges the same way, and two songs differ.
 - Minimum distance between home centres: `0.16 H`. Each line is scaled per its depth before the
   check.
+- Lines are wide (up to `0.64 W × s(z)`), so a line's centre is kept in far enough that its whole
+  box stays on stage with a `0.02 W` margin. In practice most background lines overlap the reading
+  corridor (§3.2) and carry its caps (z ≥ 0.85, opacity ≤ 0.10); the caps ease in over `0.02 H`
+  outside the corridor, so they are complete at its edge and nothing pops (M3).
 - Depth by time distance: `z = 0.78 + 0.22 · clamp((line.start − t) / 60 000 ms, 0, 1)`. Lines due
   within a minute sit in the near background; lines further out sit deepest.
 - **Depth buckets** for blur (performance, §13): B1 `z ∈ [0.78, 0.86)` blur 4 px, B2 `[0.86, 0.94)`
@@ -401,7 +415,7 @@ dy(t) = A_y · ( sin(2π t / P₃ + θ₃) + 0.5·sin(2π t / P₄ + θ₄) ) �
 At each hand-over, the background line that becomes +3 leaves its home position and travels to the
 +3 slot on `line.enter` (f 1.1, ζ 0.95). It crosses from its bucket into the lyric layer's main
 container at the start of the move. Its blur animates from its bucket value to `b(z₊₃)` through the
-line's own `filter` for the ≈ 850 ms of the move, then stays static. If its home is inside the
+line's own `filter` for the ≈ 760 ms of the move, then stays static. If its home is inside the
 reading corridor's far edge, it rises from below the zone instead of crossing the active line.
 
 ---
@@ -689,14 +703,18 @@ export const LYRICS = {
   zone: { dz: 0.22, zMax: 0.72, zBackground: 0.78, gapH: 0.040, gapRefMs: 3200, gapClamp: [0.8, 1.5],
           gapShrinkMin: 0.5, bottom: 0.86, drift: 0.30, approachK: 0.35, clearH: 0.02, approachZFloor: 0.65 }, // §4.2, §4.3
   sweep: { edgeAhead: 0.35, edgeBehind: 0.60, holdGapMs: 300, minWordMs: 60 },  // §5.1
-  glow: { radius: 0.18, radiusMax: 0.26, alpha: 0.35, alphaMax: 0.55, decayMs: 220 }, // §5.2
+  glow: { radius: 0.18, radiusMax: 0.26, alpha: 0.35, alphaMax: 0.55, decayMs: 220, decayFastMs: 120,
+          riseMs: 90, slewPerS: 1.5, paused: 0.6, pauseMs: 600, resumeMs: 300 },   // §5.2, §9.6, §9.9, §12.5
+  wash: { ms: 420 },                                                              // §9.2
   handover: { leadMinMs: 120, leadMaxMs: 300, coalesceMs: 350 },                  // §5.3, §9.9
   emphasis: { minMs: 1000, minG: 2, maxG: 7, anticipateMs: 400, releaseMs: 250, swellMax: 0.08 }, // §5.5
   springs: { normal: [2.0, 2.35, 1.0], slow: [1.45, 0.85], enter: [1.1, 0.95], lift: [1.2, 0.75], impulse: [2.0, 0.5] }, // §6.1
   stagger: { baseMs: 50, decay: 1.05 },             // §6.3
-  decay: { tauMs: 520, rise: 0.05, zEnd: 0.35, blurMax: 6, maxPast: 2 },          // §7
+  decay: { tauMs: 520, rise: 0.05, zEnd: 0.35, blurMax: 6, maxPast: 2, gapH: 0.035, dropMs: 120 }, // §7
   background: { budget: [24, 12, 6, 0], minDist: 0.16, ampX: 0.022, ampY: 0.018, rise: 0.004 }, // §8
-  interlude: { minGapMs: 7000, cycleMs: 4000, leaveMs: 500 },   // §9.8
+  interlude: { minGapMs: 7000, cycleMs: 4000, leaveMs: 500, enterMs: 750, fadeMs: 250, dotEm: 0.22,
+               dotStepMs: 80 },                                                   // §9.8
+  build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 },                        // §9.5, §9.6, §9.7
   lineTimed: { endGapMs: 100, lastLineMs: 6000 },   // §9.2
   beat: { scaleMax: 0.012, zLean: 0.025, kickPx: 2, quietMs: 300 },               // §12
 } as const;

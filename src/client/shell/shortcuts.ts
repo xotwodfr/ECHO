@@ -59,8 +59,9 @@ export function shortcutFor(e: Key, target: KeyTarget, stage: boolean): Shortcut
   return letters[k] ?? (stage ? (stageLetters[k] ?? null) : null);
 }
 
+// A focused static lyric sheet (role="document", LYRICS_EXPERIENCE.md §9.3) scrolls with the arrows.
 const CONTROLS =
-  'button, a[href], select, summary, [role="slider"], [role="menuitem"], [role="switch"]';
+  'button, a[href], select, summary, [role="slider"], [role="menuitem"], [role="switch"], [role="document"]';
 
 export function keyTarget(el: EventTarget | null): KeyTarget {
   if (

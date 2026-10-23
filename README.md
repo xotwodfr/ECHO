@@ -7,10 +7,11 @@ lyric field in an audio-reactive room lit by the album cover.
 ([`docs/reviews/M1-SEC-10-exception.md`](docs/reviews/M1-SEC-10-exception.md)). M2 (the shell, the
 WebGL Stage, the UI components) is built; four of its criteria wait on later milestones
 ([`docs/reviews/M2.md`](docs/reviews/M2.md)). M3, the floating lyrics, is in progress
-([`docs/reviews/M3.md`](docs/reviews/M3.md)).
+([`docs/reviews/M3.md`](docs/reviews/M3.md)): the lyric field renders for the fixture lyrics.
 There is no music yet: development builds play invented fixture albums silently (the "Guide Tones"
-album plays synthetic guide tones for the lyric fixtures), and the production image has no library
-until the Navidrome provider (M5). The server serves the client and a health check.
+album plays synthetic guide tones with the floating lyrics of the lyric fixtures; any fixture at any
+moment: `/?fixture=ballad-word&frame=60000`), and the production image has no library until the
+Navidrome provider (M5). The server serves the client and a health check.
 Typeface: **Mona Sans**. The design and plan live in [`docs/`](docs/README.md), which is the source of
 truth.
 

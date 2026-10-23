@@ -17,6 +17,7 @@
   --art-accent:    #E3B26B;
   --art-highlight: oklch(0.92 0.04 80);
   --art-glow:      oklch(0.68 0.10 75 / 0.35);
+  --art-glow-solid: oklch(from var(--art-glow) l c h);   /* lyric glow takes its own alpha (M3) */
   --art-shadow:    oklch(0.08 0.004 250);
   --lyric-ink-active: oklch(0.95 0.006 80);
 

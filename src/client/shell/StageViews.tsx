@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
+import type { LyricsDoc } from '../../shared/types.ts';
 import { usePlayer } from '../playback/context.tsx';
-import { STAGE_VIEWS, stageView } from '../stage/status.ts';
+import { lyricHost, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { Link } from './link.tsx';
 
 // What sits on the Stage above the room (PRODUCT_SPEC.md §6.1): the top chrome, and the view mode's
-// content. Lyrics is a placeholder until the lyric field (M3).
+// content. The lyric field itself is drawn by the Stage engine into the host element below.
 
 /** Top chrome: back to the Library, and the view mode switch (V cycles it from the keyboard). */
 export function StageChrome() {
@@ -40,9 +41,58 @@ export function StageContent() {
   const track = usePlayer((p) => p.track);
   if (view === 'visual' || !track) return null; // Visual: the environment only
   if (view === 'cover') return <CoverView />;
+  return <LyricsView />;
+}
+
+/** Lyrics (LYRICS_EXPERIENCE.md): the floating field, the static sheet when untimed (§9.3). */
+function LyricsView() {
+  const doc = useStore(lyricsStore, (s) => s.doc);
+  if (!doc)
+    return (
+      <div className="stage-lyrics" aria-hidden="true">
+        <p>{strings.stage.lyricsPlaceholder}</p>
+      </div>
+    );
   return (
-    <div className="stage-lyrics" aria-hidden="true">
-      <p>{strings.stage.lyricsPlaceholder}</p>
+    <>
+      {doc.sync === 'none' ? <LyricSheet doc={doc} /> : <LyricHost />}
+      {doc.sync !== 'none' && <p className="stage-attribution">{doc.attribution.text}</p>}
+    </>
+  );
+}
+
+/** The engine mounts the lyric field into this element (TECHNICAL_ARCHITECTURE.md §4.1). */
+function LyricHost() {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    lyricHost.setState({ el: ref.current });
+    return () => lyricHost.setState({ el: null });
+  }, []);
+  return <div ref={ref} />;
+}
+
+/**
+ * Untimed lyrics (§9.3): a static sheet in a centred column, scrollable by wheel, touch and, once
+ * focused, the arrow and page keys. A note under the first line says it is not time-synced.
+ */
+function LyricSheet({ doc }: { doc: LyricsDoc }) {
+  const lines = doc.lines.filter((l) => l.text.trim());
+  return (
+    // biome-ignore lint/a11y/noNoninteractiveTabindex: §11, the sheet is focusable for scrolling
+    <div className="ly-sheet" role="document" tabIndex={0} aria-label={strings.stage.sheetLabel}>
+      <div className="ly-sheet-col">
+        {lines.map((l, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: lines are static and may repeat
+          <p key={i} className="ly-sheet-line" dir="auto">
+            {l.text}
+            {i === 0 && (
+              <span className="ly-sheet-note">
+                {strings.stage.unsynced} · {doc.attribution.text}
+              </span>
+            )}
+          </p>
+        ))}
+      </div>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import './ui/ui.css';
 import './stage/stage.css';
 import { createPlaybackController } from './playback/controller.ts';
 import { Shell } from './shell/Shell.tsx';
+import { lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { createViewStore } from './view.ts';
 
@@ -32,6 +33,15 @@ const controller = createPlaybackController({
   notify: (message) => toastStore.getState().show(message),
   features,
 });
+
+// Lyrics: the guide tracks sing their fixture documents (LYRICS_EXPERIENCE.md §16) until the
+// lyrics loader arrives (M6).
+const showLyrics = (track: ReturnType<typeof controller.player.getState>['track']) =>
+  lyricsStore.setState({
+    trackKey: track?.key ?? null,
+    doc: fixtures?.fixtureLyrics(track) ?? null,
+  });
+controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
 
 // `fixture=<lyric fixture>` also cues its guide track (LYRICS_EXPERIENCE.md §16).
 const cueId = frame?.track ?? (frame?.fixture ? fixtures?.guideTrackId(frame.fixture) : undefined);
