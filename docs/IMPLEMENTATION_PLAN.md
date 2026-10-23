@@ -86,8 +86,8 @@ fallback room.
 
 **Dependencies:** M1.
 
-**Progress:** tasks 1 and 2 done (2026-10-23; record and open items in `docs/reviews/M2.md`).
-Tasks 3–7 not started.
+**Progress:** tasks 1–3 done (2026-10-23; record and open items in `docs/reviews/M2.md`).
+Tasks 4–7 not started.
 
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
@@ -96,7 +96,7 @@ Tasks 3–7 not started.
    `role="slider"`), Sheet, Menu, Dialog, Toast, Field, Toggle, Pill, track row, album tile,
    connection status row, and the sign-in form (S8) visuals. **Done** (on `/__ui`).
 3. Dock with a `FakeProvider` (implements `PlaybackProvider` on a virtual clock) and fixture library
-   data, so the shell is navigable without a server.
+   data, so the shell is navigable without a server. **Done** (development builds).
 4. Stage engine: loop order (`TECHNICAL_ARCHITECTURE.md` §4.2), visibility stop, `StageRenderer`
    (room pass, composite with vignette, scrims, tone map, **blue-noise dither**), DPR cap, resize,
    context loss, the CSS fallback room.

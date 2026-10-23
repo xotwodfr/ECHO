@@ -1,9 +1,13 @@
 import { lazy, Suspense, useEffect, useRef } from 'react';
+import type { Library } from '../library.ts';
+import { PlaybackContext } from '../playback/context.tsx';
+import type { PlaybackController } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
-import { AlbumGrid } from '../ui/media.tsx';
 import { ToastRegion } from '../ui/overlays.tsx';
 import { LIBRARY_TABS, type Route, SETTINGS_SECTIONS, type ViewStore } from '../view.ts';
+import { Dock } from './Dock.tsx';
+import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
 
 // The shell frame (DESIGN_SYSTEM.md §5): sidebar + canvas + dock, or the full-bleed Stage on Listen.
@@ -131,23 +135,17 @@ function View({ route }: { route: Route }) {
             current={route.tab}
             to={(tab) => ({ view: 'library', tab })}
           />
-          <p className="empty">{strings.library.empty}</p>
-          {route.tab === 'albums' && <AlbumGrid />}
+          <LibraryContent tab={route.tab} />
         </>
       );
     case 'album':
-      return (
-        <>
-          <h1 tabIndex={-1}>{strings.album.title}</h1>
-          <p className="empty">{strings.album.missing}</p>
-        </>
-      );
+      return <AlbumView id={route.id} />;
     case 'search':
       return (
         <>
           <h1 tabIndex={-1}>{strings.nav.search}</h1>
           <SearchField className="search-compact" />
-          <p className="empty">{route.q ? strings.search.none(route.q) : strings.search.prompt}</p>
+          <SearchResults q={route.q} />
         </>
       );
     case 'settings':
@@ -235,18 +233,22 @@ function Frame() {
       <main className="canvas" ref={main}>
         <View route={route} />
       </main>
-      <section className="dock" aria-label={strings.dock.label}>
-        <p className="dock-idle">{strings.dock.idle}</p>
-      </section>
+      <Dock stage={route.view === 'listen'} />
       <ToastRegion />
     </div>
   );
 }
 
-export function Shell({ store }: { store: ViewStore }) {
+export function Shell(props: {
+  store: ViewStore;
+  controller: PlaybackController;
+  library: Library | null;
+}) {
   return (
-    <ViewContext.Provider value={store}>
-      <Frame />
+    <ViewContext.Provider value={props.store}>
+      <PlaybackContext.Provider value={{ controller: props.controller, library: props.library }}>
+        <Frame />
+      </PlaybackContext.Provider>
     </ViewContext.Provider>
   );
 }

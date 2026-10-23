@@ -785,6 +785,11 @@
   animation: fade-out var(--trace-ms) linear var(--trace-at) forwards;
 }
 
+/* The trace follows the song: it holds while playback is paused. */
+.decay-trace[data-paused] {
+  animation-play-state: paused;
+}
+
 /* The 3-bar now-playing glyph; static under reduced motion. */
 .np-bars {
   display: inline-flex;

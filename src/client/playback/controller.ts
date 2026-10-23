@@ -1,0 +1,235 @@
+import { createStore } from 'zustand/vanilla';
+import type {
+  PlaybackProvider,
+  PlaybackState,
+  PlayContext,
+  ProviderCapabilities,
+  QueueState,
+  Track,
+} from '../../shared/types.ts';
+import { strings } from '../strings.ts';
+import { type Clock, realClock } from './clock.ts';
+import * as Q from './queue.ts';
+
+// PlaybackController (PLAYBACK_ARCHITECTURE.md §1, §3): the only thing the UI talks to. It owns
+// playerStore and queueStore and drives one provider. Providers never touch the stores.
+
+const NO_CAPABILITIES: ProviderCapabilities = {
+  canSeek: false,
+  canSetVolume: false,
+  canReorderQueue: false,
+  canRemoveFromQueue: false,
+  canCrossfade: false,
+  audioFeatures: false,
+  artPaletteAllowed: false,
+  syncedLyricsAllowed: false,
+  requiresAttribution: null,
+};
+
+/** Previous restarts the track when more than this has played (§3). */
+export const RESTART_AFTER_MS = 3000;
+
+/** The position now, extrapolated from the last observation while playing. */
+export function positionNow(s: PlaybackState, now: number) {
+  const live = s.status === 'playing' ? s.positionMs + (now - s.positionAt) : s.positionMs;
+  return Math.min(Math.max(0, live), s.track?.durationMs ?? 0);
+}
+
+export function createPlaybackController(opts: {
+  provider: (PlaybackProvider & { label?: string }) | null;
+  clock?: Clock;
+  random?: () => number;
+  /** Short confirmations ("Added to queue"), shown as a toast by the shell. */
+  notify?: (message: string) => void;
+}) {
+  const { provider } = opts;
+  const clock = opts.clock ?? realClock;
+  const random = opts.random ?? Math.random;
+  const notify = opts.notify ?? (() => {});
+
+  const player = createStore<PlaybackState>()(() => ({
+    status: 'idle',
+    track: null,
+    positionMs: 0,
+    positionAt: clock.now(),
+    volume: 1,
+    shuffle: false,
+    repeat: 'off',
+    capabilities: provider?.capabilities ?? NO_CAPABILITIES,
+  }));
+  const queue = createStore<QueueState>()(Q.emptyQueue);
+  /** The whole list being played, for repeat-all to wrap around. */
+  let source: { tracks: Track[]; context: PlayContext } | null = null;
+  let loading = false;
+
+  provider?.on('state', (s) => {
+    if (!s.buffering) loading = false;
+    const status: PlaybackState['status'] = s.buffering
+      ? loading
+        ? 'loading'
+        : 'buffering'
+      : s.paused
+        ? player.getState().status === 'ended'
+          ? 'ended'
+          : 'paused'
+        : 'playing';
+    player.setState({ track: s.track, positionMs: s.positionMs, positionAt: s.positionAt, status });
+  });
+  provider?.on('ended', () => void onEnded());
+  provider?.on('error', (e) => player.setState({ status: 'error', error: e }));
+
+  const isActive = () => ['playing', 'loading', 'buffering'].includes(player.getState().status);
+
+  function load(q: QueueState, autoplay: boolean) {
+    queue.setState(q, true);
+    if (!provider || !q.now) return;
+    loading = true;
+    player.setState({ status: 'loading', track: q.now, positionMs: 0, positionAt: clock.now() });
+    void provider.load(q.now, { autoplay });
+  }
+
+  /** Repeat-all: start the source list again (reshuffled if shuffle is on). */
+  function wrap(): QueueState | null {
+    if (!source || !provider) return null;
+    const s = player.getState().shuffle;
+    const start = s ? Math.floor(random() * source.tracks.length) : 0;
+    return Q.startContext(
+      queue.getState(),
+      source.tracks,
+      start,
+      source.context,
+      provider.id,
+      s,
+      random,
+    );
+  }
+
+  async function onEnded() {
+    const { repeat } = player.getState();
+    if (repeat === 'one') {
+      await provider?.seek(0);
+      await provider?.play();
+      return;
+    }
+    const next = Q.advance(queue.getState()) ?? (repeat === 'all' ? wrap() : null);
+    if (next) return load(next, true);
+    // End of queue (§3): stop on the last track; the playing indicators clear.
+    player.setState({ status: 'ended' });
+  }
+
+  // Seeks are optimistic and one in flight; the latest request wins (§3).
+  let seeking = false;
+  let pendingSeek: number | null = null;
+  async function sendSeek(ms: number) {
+    seeking = true;
+    await provider?.seek(ms);
+    seeking = false;
+    if (pendingSeek !== null) {
+      const next = pendingSeek;
+      pendingSeek = null;
+      await sendSeek(next);
+    }
+  }
+
+  function seek(ms: number) {
+    const s = player.getState();
+    if (!provider || !s.track || !s.capabilities.canSeek) return;
+    const to = Math.min(Math.max(0, ms), s.track.durationMs);
+    player.setState({ positionMs: to, positionAt: clock.now() });
+    if (seeking) pendingSeek = to;
+    else void sendSeek(to);
+  }
+
+  return {
+    player,
+    queue,
+    /** Text for the dock's provider mark. */
+    providerLabel: provider?.label ?? null,
+
+    /**
+     * Play a list (album, playlist, results) from `index`. `'shuffle'` turns shuffle on and starts
+     * from a random track (the Detail "Shuffle" button).
+     */
+    playList(tracks: Track[], index: number | 'shuffle', context: PlayContext) {
+      if (index === 'shuffle') {
+        player.setState({ shuffle: true });
+        index = Math.floor(random() * tracks.length);
+      }
+      if (!provider || !tracks[index]) return;
+      source = { tracks, context };
+      const { shuffle } = player.getState();
+      load(
+        Q.startContext(queue.getState(), tracks, index, context, provider.id, shuffle, random),
+        true,
+      );
+    },
+
+    toggle() {
+      const s = player.getState();
+      if (!provider || !s.track) return;
+      if (isActive()) return void provider.pause();
+      if (s.status === 'ended') {
+        player.setState({ status: 'paused' });
+        void provider.seek(0);
+      }
+      void provider.play();
+    },
+
+    next() {
+      const next =
+        Q.advance(queue.getState()) ?? (player.getState().repeat === 'all' ? wrap() : null);
+      if (next) load(next, isActive());
+    },
+
+    previous() {
+      const s = player.getState();
+      if (!s.track) return;
+      const prev = positionNow(s, clock.now()) > RESTART_AFTER_MS ? null : Q.back(queue.getState());
+      if (prev) return load(prev, isActive());
+      seek(0);
+    },
+
+    seek,
+
+    setVolume(v: number) {
+      const volume = Math.min(1, Math.max(0, v));
+      player.setState({ volume });
+      void provider?.setVolume(volume);
+    },
+
+    toggleShuffle() {
+      const shuffle = !player.getState().shuffle;
+      player.setState({ shuffle });
+      queue.setState(Q.setShuffle(queue.getState(), shuffle, random), true);
+    },
+
+    cycleRepeat() {
+      const order = { off: 'all', all: 'one', one: 'off' } as const;
+      player.setState({ repeat: order[player.getState().repeat] });
+    },
+
+    /** "Play next": before anything already queued. `label` names it in the notice. */
+    playNext(tracks: Track[], label: string) {
+      let q = queue.getState();
+      for (const t of [...tracks].reverse()) q = Q.playNext(q, t);
+      queue.setState(q);
+      notify(strings.playback.playingNext(label));
+    },
+
+    /** "Add to queue": after everything already queued. */
+    addToQueue(tracks: Track[], label: string) {
+      let q = queue.getState();
+      for (const t of tracks) q = Q.addToQueue(q, t);
+      queue.setState(q);
+      notify(strings.playback.added(label));
+    },
+
+    /** Play an upcoming track now (`index` into `upcoming()`), skipping the ones before it. */
+    jump(index: number) {
+      const next = Q.jump(queue.getState(), index);
+      if (next) load(next, true);
+    },
+  };
+}
+
+export type PlaybackController = ReturnType<typeof createPlaybackController>;

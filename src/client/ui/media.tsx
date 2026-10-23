@@ -51,7 +51,7 @@ export interface TrackRowProps {
   selected?: boolean;
   nowPlaying?: boolean;
   /** The decay trace (§2.3): only on the most recently played row of a list. */
-  decay?: { durationMs: number; elapsedMs: number };
+  decay?: { durationMs: number; elapsedMs: number; paused?: boolean };
   onPlay: () => void;
   menu?: MenuItem[];
   force?: Force;
@@ -89,6 +89,7 @@ export function TrackRow(p: TrackRowProps) {
         <span
           className="decay-trace"
           aria-hidden="true"
+          data-paused={p.decay.paused || undefined}
           style={
             {
               '--trace-ms': `${p.decay.durationMs}ms`,

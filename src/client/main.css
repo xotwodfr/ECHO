@@ -181,18 +181,86 @@ button {
   list-style: none;
 }
 
+/* Dock (§5, §9.2): meta | transport over the scrubber | volume, queue, provider. */
 .dock {
   grid-area: 2 / 1 / 3 / -1;
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-areas: "meta transport right" "meta scrub right";
+  align-content: center;
   align-items: center;
+  column-gap: var(--sp-5);
   padding: 0 var(--gutter);
   background: var(--surface-1);
   border-top: var(--rule) solid var(--line);
 }
 
-.dock-idle {
+.dock-meta {
+  grid-area: meta;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.dock-text {
+  min-width: 0;
+}
+
+.dock-title,
+.dock-sub {
   margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.dock-title {
+  font-weight: 500;
+}
+
+.dock[data-status="idle"] .dock-title {
   color: var(--faint);
+  font-weight: 400;
+}
+
+.dock-sub {
+  color: var(--muted);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+.dock-sub a {
+  text-decoration: none;
+}
+
+.dock-sub a:hover {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.18em;
+}
+
+.dock-transport {
+  grid-area: transport;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.dock-scrub {
+  grid-area: scrub;
+  min-width: 0;
+}
+
+.dock-right {
+  grid-area: right;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
 }
 
 /* Stage (Listen): full-bleed, no sidebar; the dock sits over it, transparent. */
@@ -215,6 +283,74 @@ button {
 .stage-chrome {
   display: flex;
   padding: var(--sp-5) var(--gutter);
+}
+
+/* S6 Album detail header (§8: cover 240px) */
+.detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-5);
+  margin-bottom: var(--sp-6);
+}
+
+.detail-meta {
+  /* Wraps under the cover when there is no room for a readable title beside it. */
+  flex: 1 1 16em;
+  min-width: 0;
+}
+
+.detail-meta h1 {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-figure);
+  line-height: var(--lh-figure);
+  overflow-wrap: break-word;
+}
+
+.detail-artist,
+.detail-facts {
+  margin: 0;
+}
+
+.detail-artist {
+  font-size: var(--fs-section);
+  line-height: var(--lh-section);
+}
+
+.detail-facts {
+  margin-top: var(--sp-1);
+  color: var(--muted);
+}
+
+.detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-top: var(--sp-5);
+}
+
+.artist-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.artist-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  height: var(--row-h);
+  align-items: center;
+  border-bottom: var(--rule) solid var(--line);
+}
+
+.artist-count {
+  color: var(--faint);
+}
+
+.results + .results {
+  margin-top: var(--sp-6);
 }
 
 /* /__ui component gallery (development page) */
@@ -346,5 +482,32 @@ button {
 
   .canvas > .search-field {
     margin-bottom: var(--sp-4);
+  }
+
+  /* Compact dock: the scrubber across the top; art, title, play, next and the queue below.
+     Shuffle, repeat and volume live with the device (and return on wider screens). */
+  .dock {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "scrub scrub scrub" "meta transport right";
+    column-gap: var(--sp-3);
+    padding: 0 var(--sp-4);
+  }
+
+  .dock .art--dock {
+    width: var(--art-row);
+  }
+
+  .dock .dock-secondary,
+  .dock .dock-prev,
+  .dock .volume,
+  .dock .provider-mark {
+    display: none;
+  }
+}
+
+/* Medium (720–1279px): the volume slider gives way; mute stays. */
+@media (min-width: 720px) and (max-width: 1279.98px) {
+  .dock .volume .slider {
+    display: none;
   }
 }
