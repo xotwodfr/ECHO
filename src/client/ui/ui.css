@@ -354,6 +354,22 @@
   line-height: var(--lh-small);
 }
 
+/* No track: the dash keeps the width of "0:00", so the track does not jump when a track loads. */
+.scrubber-time[data-empty] {
+  display: inline-grid;
+}
+
+.scrubber-time[data-empty]::before {
+  content: "0:00";
+  visibility: hidden;
+}
+
+.scrubber-time[data-empty]::before,
+.scrubber-time[data-empty] > span {
+  grid-area: 1 / 1;
+  justify-self: center;
+}
+
 .volume {
   display: flex;
   align-items: center;

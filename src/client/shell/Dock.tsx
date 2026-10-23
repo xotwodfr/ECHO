@@ -143,7 +143,7 @@ function DockScrubber() {
   return (
     <Scrubber
       positionMs={positionNow(s, performance.now())}
-      durationMs={s.track?.durationMs ?? 0}
+      durationMs={s.track?.durationMs}
       onSeek={c.seek}
       disabled={!s.track || !s.capabilities.canSeek}
       disabledReason={s.track ? strings.dock.noSeek : strings.dock.idle}

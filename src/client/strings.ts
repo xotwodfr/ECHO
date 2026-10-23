@@ -64,6 +64,7 @@ export const strings = {
     next: 'Next',
     shuffle: 'Shuffle',
     seek: 'Seek',
+    noTrack: 'No track',
     volume: 'Volume',
     mute: 'Mute',
     close: 'Close',

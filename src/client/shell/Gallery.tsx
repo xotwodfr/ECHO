@@ -221,6 +221,15 @@ export default function Gallery() {
               disabledReason="This server can't seek in converted audio."
             />
           </Cell>
+          <Cell caption="Scrubber · No track" wide>
+            <Scrubber
+              positionMs={0}
+              durationMs={undefined}
+              onSeek={noop}
+              disabled
+              disabledReason="Nothing playing"
+            />
+          </Cell>
         </div>
         <div className="ui-row">
           <Cell caption="Volume · Interactive">

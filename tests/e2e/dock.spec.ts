@@ -38,6 +38,10 @@ test('idle: nothing playing, transport disabled and saying why', async ({ page }
     await expect(b).toHaveAccessibleDescription('Nothing playing');
   }
   await expect(seek(page)).toHaveAttribute('aria-disabled', 'true');
+  // No track is not a zero-length track: dashes, not 0:00, and no "0 seconds of 0 seconds".
+  await expect(seek(page)).toHaveAttribute('aria-valuetext', 'No track');
+  await expect(dock(page).locator('.scrubber-time')).toHaveText(['—', '—']);
+  await expect(dock(page).locator('.scrubber-time').first()).toHaveAttribute('aria-hidden', 'true');
   await dock(page).getByRole('button', { name: 'Queue' }).click();
   await expect(page.getByRole('dialog', { name: 'Queue' })).toContainText('Nothing queued.');
 });
@@ -73,7 +77,8 @@ test('play an album: loading, then time moves on the clock; pause freezes it', a
   await expect(dock(page).locator('.provider-mark')).toHaveText('Fixtures');
   await page.clock.runFor(10_000);
   await expect(seek(page)).toHaveAttribute('aria-valuetext', '10 seconds of 3 minutes 41 seconds');
-  await expect(dock(page).locator('.scrubber-time').first()).toHaveText('0:10');
+  await expect(dock(page).locator('.scrubber-time')).toHaveText(['0:10', '3:41']);
+  await expect(dock(page).locator('.scrubber-time').first()).not.toHaveAttribute('aria-hidden');
   await dock(page).getByRole('button', { name: 'Pause' }).click();
   await page.clock.runFor(10_000);
   await expect(seek(page)).toHaveAttribute('aria-valuetext', /^10 seconds of/);

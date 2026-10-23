@@ -149,10 +149,13 @@ export function Slider({
 const SEEK_STEP_MS = 5000; // ←/→ (§9.2)
 const SEEK_BIG_STEP_MS = 15000; // Shift+←/→
 
-/** The dock's scrubber (§9.2): elapsed and total time either side, seek on release. */
+/**
+ * The dock's scrubber (§9.2): elapsed and total time either side, seek on release. No duration
+ * means no track: both times are a grey dash, not `0:00` (a real zero-length track).
+ */
 export function Scrubber(props: {
   positionMs: number;
-  durationMs: number;
+  durationMs: number | undefined;
   bufferedMs?: number;
   onSeek: (ms: number) => void;
   disabled?: boolean;
@@ -160,18 +163,28 @@ export function Scrubber(props: {
   force?: 'hover' | 'focus' | 'drag';
 }) {
   const [live, setLive] = useState<number | null>(null);
+  const empty = props.durationMs === undefined;
+  const time = (ms: number) => (
+    <span
+      className="scrubber-time num"
+      data-empty={empty || undefined}
+      aria-hidden={empty || undefined}
+    >
+      {empty ? <span>—</span> : formatTime(ms)}
+    </span>
+  );
   return (
     <div className="scrubber">
-      <span className="scrubber-time num">{formatTime(live ?? props.positionMs)}</span>
+      {time(live ?? props.positionMs)}
       <Slider
         variant="scrubber"
         label={strings.ui.seek}
         value={props.positionMs}
-        max={props.durationMs}
+        max={props.durationMs ?? 0}
         step={SEEK_STEP_MS}
         bigStep={SEEK_BIG_STEP_MS}
         buffered={props.bufferedMs}
-        valueText={(v) => scrubberText(v, props.durationMs)}
+        valueText={(v) => (empty ? strings.ui.noTrack : scrubberText(v, props.durationMs ?? 0))}
         bubble={formatTime}
         onInput={setLive}
         onChange={(v) => {
@@ -182,7 +195,7 @@ export function Scrubber(props: {
         disabledReason={props.disabledReason}
         force={props.force}
       />
-      <span className="scrubber-time num">{formatTime(props.durationMs)}</span>
+      {time(props.durationMs ?? 0)}
     </div>
   );
 }

@@ -190,12 +190,26 @@ test.describe('scrubber', () => {
 
   test('disabled: not focusable, explains why, ignores keys', async ({ page }) => {
     await open(page);
-    const s = section(page, 'Scrubber and volume').locator('.slider[aria-disabled="true"]');
+    const s = section(page, 'Scrubber and volume')
+      .getByRole('figure', { name: 'Scrubber · Disabled' })
+      .locator('.slider[aria-disabled="true"]');
     await expect(s).toHaveAttribute('tabindex', '-1');
     await expect(s).toHaveAccessibleDescription("This server can't seek in converted audio.");
     await s.focus();
     await page.keyboard.press('ArrowRight');
     await expect(s).toHaveAttribute('aria-valuenow', '102000');
+  });
+
+  test('no track: dashes instead of 0:00, says so, not focusable', async ({ page }) => {
+    await open(page);
+    const cell = section(page, 'Scrubber and volume').getByRole('figure', {
+      name: 'Scrubber · No track',
+    });
+    const s = cell.getByRole('slider', { name: 'Seek' });
+    await expect(s).toHaveAttribute('aria-valuetext', 'No track');
+    await expect(s).toHaveAttribute('tabindex', '-1');
+    await expect(s).toHaveAccessibleDescription('Nothing playing');
+    await expect(cell.locator('.scrubber-time')).toHaveText(['—', '—']);
   });
 });
 

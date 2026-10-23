@@ -87,9 +87,10 @@ fallback room.
 **Dependencies:** M1.
 
 **Progress:** tasks 1–5 done (2026-10-23; record and open items in `docs/reviews/M2.md`). Task 6
-open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 open on two FAILs:
-Library 0 FAIL; Settings `blank-gap` (the empty Preferences stub, content is M8); `/__ui`
-`edge-text` (a verified probe false positive on ellipsis-truncated text).
+open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 run: Library and
+`/__ui` 0 FAIL; Settings 1 FAIL (`blank-gap` on the Preferences placeholder, content is M8),
+**deferred to M8 task 1 pending owner sign-off**, not passed. Of the completion criteria only
+A11Y-10 has passed in full (status table at the end of `docs/reviews/M2.md`).
 
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
@@ -108,8 +109,10 @@ Library 0 FAIL; Settings `blank-gap` (the empty Preferences stub, content is M8)
 6. Deterministic mode `?frame&seed&fixture&tier`.
 7. **taste-skill check:** `node ~/.claude/skills/design-taste-frontend/scripts/inspect.mjs --app` on
    Library, Settings and `/__ui`. Fix every FAIL. Critique answers (app-screens §2.7) go in
-   `docs/reviews/M2.md`. **Run; two FAILs open** (see Progress). The script audits one URL per
-   run; on a machine without system Chromium, set `CHROME_PATH` to Playwright's Chromium.
+   `docs/reviews/M2.md`. **Done except one deferred FAIL** (Settings `blank-gap`, see Progress).
+   The script audits one URL per run; on a machine without system Chromium, set `CHROME_PATH` to
+   Playwright's Chromium. `edge-text` relies on a local skill patch (`LOCAL-PATCHES.md` in the
+   skill) that measures clipped text where it is visible.
 
 **Tests and verification:** V snapshots of every component state and the Listen stage (Ambient,
 Still) at 4 viewports. E for context loss and hidden tab on Chromium and Firefox. Squint-test
@@ -311,6 +314,8 @@ the **pre-share security review**.
 
 **Tasks:**
 1. Preferences views (`SETTINGS_AND_SECURITY.md` §7.1), with per-device keys in `localStorage`.
+   Then re-run `inspect.mjs --app` on every Settings view: this closes the Settings `blank-gap`
+   FAIL deferred from M2 task 7.
 2. Account: password change (revokes other sessions), TOTP enable/disable, recovery codes regenerate,
    Sessions & devices with revocation, connections status rows and tests.
 3. Admin: users (invite, disable, delete, unlock, promote), audit log viewer, server settings.
