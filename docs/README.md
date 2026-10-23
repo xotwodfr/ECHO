@@ -5,11 +5,12 @@ is a floating, word-synchronised lyric field in an audio-reactive environment li
 cover. Design direction: **Reverb Chamber**, a dark acoustic room where sound arrives as light,
 peaks and decays.
 
-**Project status (2026-10-23):** M1 (foundation) implemented and committed locally: scaffold,
+**Project status (2026-10-23):** M1 (foundation) **closed** with one explicit exception: scaffold,
 container (Debian 13 base), hardware verification on the OptiPlex, and the typeface decision
-(**Mona Sans**). **M1 is not closed:** SEC-10 needs the owner to accept or reject a documented
-exception for unfixed base-image findings. Status of every M1 criterion:
-[reviews/M1.md](reviews/M1.md).
+(**Mona Sans**). **SEC-10 is an accepted exception, not a pass** (43 unfixed HIGH base-image
+findings, time-boxed to M9: [reviews/M1-SEC-10-exception.md](reviews/M1-SEC-10-exception.md)).
+Remote CI has not run yet (no repository URL). Status of every M1 criterion:
+[reviews/M1.md](reviews/M1.md). **M2 (main player shell and visual system) is in progress.**
 
 These documents are the **source of truth**. When implementation and docs disagree, fix one of them
 in the same change. Never leave them diverged.

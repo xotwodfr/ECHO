@@ -415,7 +415,10 @@ connection remains (SEC-06).
   at runtime; this also removes their bundled dependencies' CVEs). Rebuilt monthly or on Node security releases. Image scan (Trivy) in CI;
   high or critical findings fail the build. CI applies this to **fixable** findings
   (`--ignore-unfixed`). Unfixed findings are reported separately, and any remaining ones need an
-  explicit, owner-accepted, time-boxed exception recorded in the milestone review (SEC-10).
+  explicit, owner-accepted, time-boxed exception recorded in the milestone review (SEC-10). A
+  second CI step checks all findings against the current exception
+  (`docs/reviews/M1-SEC-10-exception.md`, until M9) and fails on anything outside it. An exception
+  never counts as a pass. Each monthly rebuild reassesses it.
 - `pnpm audit --prod` and gitleaks in CI.
 - The container runs as uid 1000 with a read-only root filesystem, `/tmp` tmpfs, `cap_drop: ALL`,
   `no-new-privileges`, and no published ports.

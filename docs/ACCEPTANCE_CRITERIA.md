@@ -172,7 +172,7 @@ is not done until all of its criteria pass.
 | SEC-07 | Spotify PKCE: `state` is single-use, bound to the session user, and validated in constant time. The verifier never reaches a client. Refresh tokens never leave the server | U + I | M7 |
 | SEC-08 | Security headers and CSP as specified (`SETTINGS_AND_SECURITY.md` §5.4), with no CSP violations during the full E2E run | E + M | M8 |
 | SEC-09 | Container runs non-root, read-only rootfs, `cap_drop: ALL`, `no-new-privileges`, no published ports | I (compose + `docker inspect`) | M8 |
-| SEC-10 | `pnpm audit --prod` and Trivy show no high or critical findings. Install scripts restricted per `SETTINGS_AND_SECURITY.md` §12 | I (CI) | M1, M9 |
+| SEC-10 | `pnpm audit --prod` and Trivy show no high or critical findings. Install scripts restricted per `SETTINGS_AND_SECURITY.md` §12. *M1 closed on an owner-accepted, time-boxed exception for 43 unfixed HIGH base-image findings (`reviews/M1-SEC-10-exception.md`, expires at the M9 re-check). An exception lets a milestone close but is recorded as an exception, never as a pass; this criterion is unchanged* | I (CI) | M1, M9 |
 | SEC-11 | **Isolation:** user B cannot read or modify user A's connections, settings, queue, overrides, sessions or streams (incl. signed URLs) through any route | U (suite) | M8 |
 | SEC-12 | Login: generic errors with equal timing for unknown users. Per-IP and per-account limits and lockout behave as specified (`SETTINGS_AND_SECURITY.md` §4.4). Lockouts are audited | U | M5 |
 | SEC-13 | TOTP: RFC 6238 test vectors pass. ±1 step tolerance. Replay of a used step is rejected. Admin cannot exist or log in without TOTP. Recovery codes are single-use | U + E | M5 |

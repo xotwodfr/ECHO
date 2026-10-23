@@ -3,7 +3,9 @@
 An immersive, self-hosted music player for Navidrome and Spotify, with a floating, word-synchronised
 lyric field in an audio-reactive room lit by the album cover.
 
-**Status:** milestone M1 (foundation). The server serves an empty client and a health check.
+**Status:** M1 (foundation) closed with an accepted SEC-10 exception
+([`docs/reviews/M1-SEC-10-exception.md`](docs/reviews/M1-SEC-10-exception.md)); M2 in progress. The
+server serves an empty client and a health check.
 Typeface: **Mona Sans**. The design and plan live in [`docs/`](docs/README.md), which is the source of
 truth.
 
@@ -74,4 +76,5 @@ git config core.hooksPath .githooks          # gitleaks on every commit
 ```
 
 CI (`.github/workflows/ci.yml`) runs all of the above, plus gitleaks over history and a Trivy scan of
-the image.
+the image: fixable high/critical findings fail, and all findings are checked against the SEC-10
+exception with `scripts/sec10-exception-check.sh <trivy-json>`.
