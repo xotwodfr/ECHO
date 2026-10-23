@@ -5,6 +5,8 @@ import harbourLights from './covers/harbour-lights.svg';
 import longExposure from './covers/long-exposure.svg';
 import paperSatellites from './covers/paper-satellites.svg';
 import signalNoise from './covers/signal-noise.svg';
+import { GUIDE_ALBUM_ID, guideNames } from './guide.ts';
+import { lyricFixtures } from './lyrics.ts';
 
 // Fixture library (M2 task 3): invented albums, artists and covers drawn for ECHO, so the shell can
 // be used without a server. Development builds only: compiled out of the image (ECHO_SPECIMEN=0).
@@ -89,5 +91,14 @@ export const fixtureLibrary = createLibrary([
       ['Slow Mornings', ms(3, 51)],
       ['Small Hours', ms(5, 2)],
     ],
+  ),
+  // M3: guide tones for the lyric fixtures (`guide.ts`), played as real audio.
+  album(
+    GUIDE_ALBUM_ID,
+    'Guide Tones',
+    'ECHO Fixtures',
+    2026,
+    undefined,
+    guideNames.map((n) => [n, lyricFixtures[n]?.durationMs ?? 0]),
   ),
 ]);

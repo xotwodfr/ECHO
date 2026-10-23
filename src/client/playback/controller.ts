@@ -12,6 +12,7 @@ import { strings } from '../strings.ts';
 import { type Clock, realClock } from './clock.ts';
 import { SILENT_FEATURES } from './features.ts';
 import * as Q from './queue.ts';
+import { createSongClock, positionNow } from './songClock.ts';
 
 // PlaybackController (PLAYBACK_ARCHITECTURE.md §1, §3): the only thing the UI talks to. It owns
 // playerStore and queueStore and drives one provider. Providers never touch the stores.
@@ -31,11 +32,7 @@ const NO_CAPABILITIES: ProviderCapabilities = {
 /** Previous restarts the track when more than this has played (§3). */
 export const RESTART_AFTER_MS = 3000;
 
-/** The position now, extrapolated from the last observation while playing. */
-export function positionNow(s: PlaybackState, now: number) {
-  const live = s.status === 'playing' ? s.positionMs + (now - s.positionAt) : s.positionMs;
-  return Math.min(Math.max(0, live), s.track?.durationMs ?? 0);
-}
+export { positionNow };
 
 export function createPlaybackController(opts: {
   provider: (PlaybackProvider & { label?: string }) | null;
@@ -67,6 +64,11 @@ export function createPlaybackController(opts: {
   let loading = false;
   /** The volume to return to when unmuting. */
   let unmuted = 1;
+  const songClock = createSongClock(
+    () => player.getState(),
+    () => provider?.audioClock?.() ?? null,
+    () => clock.now(),
+  );
 
   provider?.on('state', (s) => {
     if (!s.buffering) loading = false;
@@ -182,6 +184,8 @@ export function createPlaybackController(opts: {
   return {
     player,
     queue,
+    /** Song time for the Stage and the lyric field: smooth, re-anchored on audio, latency-corrected. */
+    songTime: () => songClock.now(),
     /** The active provider's features (Stage loop step 2). */
     features: () => opts.features ?? provider?.features() ?? SILENT_FEATURES,
     /** Text for the dock's provider mark. */

@@ -48,13 +48,14 @@ test('idle: nothing playing, transport disabled and saying why', async ({ page }
 
 test('the library shows the fixture albums', async ({ page }) => {
   await start(page);
-  await expect(page.locator('.album-grid .tile')).toHaveCount(6);
+  await expect(page.locator('.album-grid .tile')).toHaveCount(7); // with M3's Guide Tones
   await expect(
     page.locator('.tile', { hasText: 'Copper Rain' }).locator('.art-fallback'),
   ).toBeVisible();
   await page.getByRole('link', { name: 'Artists' }).click();
   await expect(page.locator('.artist-list li')).toHaveText([
     /Ada Varga\s*1 album/,
+    /ECHO Fixtures\s*1 album/,
     /Field Ensemble\s*1 album/,
     /Lowfield\s*2 albums/,
     /Mira Sole\s*1 album/,

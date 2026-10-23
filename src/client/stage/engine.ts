@@ -1,4 +1,4 @@
-import { type PlaybackController, positionNow } from '../playback/controller.ts';
+import type { PlaybackController } from '../playback/controller.ts';
 import type { FrameParams } from '../view.ts';
 import {
   AMBIENT_FLOW_PER_S,
@@ -102,7 +102,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       resize();
       loop = createStageLoop(
         {
-          songTime: () => frame?.ms ?? positionNow(c.player.getState(), performance.now()),
+          songTime: () => frame?.ms ?? c.songTime(),
           // In deterministic mode with `fixture=`, the controller serves the recorded Features
           // (§10), sampled at `frame.ms`. The M2 room does not read features yet (M3, M5).
           features: c.features,

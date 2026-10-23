@@ -438,7 +438,12 @@ features from a recorded fixture track (a JSON of per-frame Features), fixed noi
 governor disabled. Used by Playwright visual snapshots and by design review screenshots
 (`IMPLEMENTATION_PLAN.md` M2–M4).
 
-Fixture format (development builds; `src/client/fixtures/features/<name>.json`):
+`fixture` names a hand-authored track (`src/client/fixtures/feature-tracks.ts`: `ballad`, `pop`,
+`techno`, `silence`; pure functions of song time), a recording, or a lyric fixture
+(`LYRICS_EXPERIENCE.md` §16), which supplies its paired track and, when `track` is absent, cues its
+guide track at `<ms>`.
+
+Recording format (development builds; `src/client/fixtures/features/<name>.json`):
 `{ "fps": <n>, "frames": [<Features>, …] }`, one Features object (§3.4) per frame at `fps`. Song
 time `t` reads frame `floor(t · fps / 1000)`; before the first frame or after the last, the end
 frame holds. Every level is in 0..1. An unknown or invalid fixture is reported on the console and

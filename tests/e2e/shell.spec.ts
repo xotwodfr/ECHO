@@ -23,7 +23,8 @@ const DEEP_LINKS = [
   { url: '/library', heading: 'Library', nav: 'Library', tab: 'Albums' },
   { url: '/library/starred', heading: 'Library', nav: 'Library', tab: 'Starred' },
   { url: '/library/album/al-42', heading: 'Album', nav: 'Library' },
-  { url: '/search?q=static', heading: 'Search', text: 'No results for “static”.' },
+  // A query nothing in the fixture library matches ("static" became a guide track in M3).
+  { url: '/search?q=xylophone', heading: 'Search', text: 'No results for “xylophone”.' },
   { url: '/settings', heading: 'Settings', nav: 'Settings', tab: 'Preferences' },
   { url: '/settings/account', heading: 'Settings', nav: 'Settings', tab: 'Account' },
 ];

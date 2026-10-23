@@ -1,6 +1,11 @@
-import { FakeProvider } from '../playback/fake.ts';
+import { GUIDE_ALBUM_ID, guideNames } from './guide.ts';
+import { FixtureProvider } from './provider.ts';
 
 // Everything the fixture build adds, behind one dynamic import so the image leaves it out.
 export { loadFeatureFixture } from './features.ts';
 export { fixtureLibrary } from './library.ts';
-export const createFixtureProvider = () => new FakeProvider();
+
+/** The guide track of a lyric fixture (`?fixture=ballad-word` cues it), if there is one. */
+export const guideTrackId = (fixture: string) =>
+  guideNames.includes(fixture) ? `${GUIDE_ALBUM_ID}-${guideNames.indexOf(fixture) + 1}` : undefined;
+export const createFixtureProvider = () => new FixtureProvider();

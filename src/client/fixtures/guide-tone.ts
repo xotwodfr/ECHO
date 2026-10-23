@@ -50,7 +50,7 @@ export function guideTone(doc: LyricsDoc, rate = 16_000): Float32Array {
 }
 
 /** 16-bit PCM mono WAV. */
-export function wav(samples: Float32Array, rate: number): Uint8Array {
+export function wav(samples: Float32Array, rate: number): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(44 + samples.length * 2);
   const v = new DataView(bytes.buffer);
   const ascii = (at: number, s: string) => {

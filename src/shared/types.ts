@@ -145,6 +145,8 @@ export interface PlaybackProvider {
   on(event: 'error', cb: (e: AppError) => void): Unsubscribe;
 
   features(): FeatureSource;
+  /** Providers playing an <audio> element: its position and the output latency (TECHNICAL_ARCHITECTURE.md §5.2). */
+  audioClock?(): { positionMs: number; latencyMs: number } | null;
 }
 
 export interface QueueState {

@@ -1,8 +1,11 @@
 import type { FeatureSource, Features } from '../../shared/types.ts';
+import { featureTracks } from './feature-tracks.ts';
+import { guideFeatures } from './guide.ts';
 
-// Recorded Features for deterministic mode (VISUALIZER_SPEC.md §10): `?fixture=<name>` loads
-// `features/<name>.json`, `{ "fps": n, "frames": [Features, …] }`, one entry per frame at `fps`.
-// Development builds only, like the rest of `fixtures/`.
+// Features fixtures for deterministic mode (VISUALIZER_SPEC.md §10): `?fixture=<name>` loads a
+// hand-authored track from `feature-tracks.ts`, or a recording `features/<name>.json`,
+// `{ "fps": n, "frames": [Features, …] }`, one entry per frame at `fps`. Development builds only,
+// like the rest of `fixtures/`.
 
 export interface FeatureTrack {
   fps: number;
@@ -41,8 +44,13 @@ export const featureSource = (track: FeatureTrack): FeatureSource => ({
 
 const files = import.meta.glob<{ default: unknown }>('./features/*.json');
 
-/** Loads `features/<name>.json`, or explains on the console why it cannot (and returns null). */
+/**
+ * A hand-authored track (`feature-tracks.ts`), the one a lyric fixture plays with (`guide.ts`), or
+ * `features/<name>.json`; otherwise explains on the console why it cannot (and returns null).
+ */
 export async function loadFeatureFixture(name: string): Promise<FeatureSource | null> {
+  const authored = featureTracks[name] ?? featureTracks[guideFeatures[name] ?? ''];
+  if (authored) return authored;
   const load = files[`./features/${name}.json`];
   if (!load) {
     console.error(`Deterministic mode: no Features fixture "${name}"`);

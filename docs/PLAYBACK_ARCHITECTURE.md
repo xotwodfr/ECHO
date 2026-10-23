@@ -63,6 +63,9 @@ interface PlaybackProvider {
   on(event: 'error', cb: (e: AppError) => void): Unsubscribe;
 
   features(): FeatureSource;                // AnalyserFeatures | AmbientFeatures
+  // Providers playing an <audio> element (Navidrome): audio.currentTime and the output latency,
+  // read by the SongClock every frame (TECHNICAL_ARCHITECTURE.md §5.2). Spotify has neither.
+  audioClock?(): { positionMs: number; latencyMs: number } | null;
 }
 ```
 

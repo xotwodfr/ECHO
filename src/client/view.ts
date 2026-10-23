@@ -20,8 +20,8 @@ export interface FrameParams {
   /** A library track id, cued paused at `ms` so the dock shows it (development builds). */
   track?: string;
   /**
-   * A recorded Features fixture (§10: a JSON of per-frame Features). Reserved: kept in the URL,
-   * but no recordings exist before M3, so nothing loads it yet.
+   * A Features fixture (§10), or a lyric fixture (LYRICS_EXPERIENCE.md §16), which also cues its
+   * guide track when `track` is absent.
    */
   fixture?: string;
   tier?: Tier;
