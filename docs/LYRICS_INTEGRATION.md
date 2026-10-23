@@ -115,11 +115,16 @@ sheet.
 ```ts
 type SyncLevel = 'word' | 'line' | 'none';
 
+interface Attribution {                // §8: the stage renders `text`; `links` mark the linked parts
+  text: string;
+  links?: { label: string; href: string }[];
+}
+
 interface LyricsDoc {
   version: 1;
   trackKey: string;
   sync: SyncLevel;
-  source: 'navidrome' | 'spicy' | 'lrclib' | 'navidrome-plain';
+  source: 'navidrome' | 'spicy' | 'lrclib' | 'navidrome-plain' | 'fixture';  // fixture: M3 mock docs, development builds only
   attribution: Attribution;            // §8
   language?: string;                   // BCP-47 when known
   offsetMs: number;                    // source-declared offset (LRC [offset:], OpenSubsonic offset); 0 if none

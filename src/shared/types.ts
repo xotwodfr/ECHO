@@ -1,5 +1,5 @@
 // Shared types (TECHNICAL_ARCHITECTURE.md §5.1, PLAYBACK_ARCHITECTURE.md §2 and §6,
-// VISUALIZER_SPEC.md §3.4). Written as specified there; LyricsDoc arrives with M3/M6.
+// VISUALIZER_SPEC.md §3.4, LYRICS_INTEGRATION.md §5). Written as specified there.
 
 export type ProviderId = 'navidrome' | 'spotify';
 
@@ -78,6 +78,47 @@ export interface PlayContext {
   kind: 'album' | 'playlist' | 'artist' | 'search' | 'starred';
   id?: string;
   title: string;
+}
+
+export type SyncLevel = 'word' | 'line' | 'none';
+
+/** Rendered on the stage; removing it is a defect (LYRICS_INTEGRATION.md §8). */
+export interface Attribution {
+  text: string;
+  links?: { label: string; href: string }[];
+}
+
+export interface LyricWord {
+  text: string; // as displayed, without trailing space
+  start: number; // ms
+  end: number;
+  isPartOfWord: boolean; // true → no space before the next word (syllables)
+}
+
+export interface LyricLine {
+  text: string; // full display text (words joined)
+  start: number; // ms from track start (sync != 'none'); 0 for static
+  end?: number; // optional for line-timed sources
+  agent?: string;
+  oppositeAligned?: boolean;
+  words?: LyricWord[]; // present iff sync === 'word'
+  background?: { text: string; start?: number; end?: number; words?: LyricWord[] }[];
+}
+
+export interface LyricsDoc {
+  version: 1;
+  trackKey: string;
+  sync: SyncLevel;
+  source: 'navidrome' | 'spicy' | 'lrclib' | 'navidrome-plain' | 'fixture'; // fixture: M3, dev only
+  attribution: Attribution;
+  language?: string; // BCP-47 when known
+  offsetMs: number; // source-declared offset; 0 if none
+  durationMs?: number;
+  agents?: { id: string; name?: string; kind: 'person' | 'group' | 'other' }[];
+  lines: LyricLine[];
+  translations?: { lang: string; lines: string[] }[]; // same indexing as lines
+  romanisation?: { lines: LyricLine[] };
+  fetchedAt: string; // ISO
 }
 
 export type Unsubscribe = () => void;
