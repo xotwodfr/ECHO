@@ -297,6 +297,17 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect(s().status).toBe('playing');
   });
 
+  it('cue loads a track paused at a position, and time stays there (deterministic mode)', () => {
+    const { clock, c, s, at } = setup();
+    c.cue(album, 1, ctx, 42_000);
+    expect(s()).toMatchObject({ status: 'loading', track: { id: 't2' }, positionMs: 42_000 });
+    clock.advance(100);
+    expect(s().status).toBe('paused');
+    clock.advance(5000);
+    expect(at()).toBe(42_000);
+    expect(titles(Q.upcoming(c.queue.getState()))).toEqual(titles(album.slice(2)));
+  });
+
   it('hasNext: false at the end unless repeat-all can wrap', () => {
     const { clock, c } = setup();
     c.playList(album, 4, ctx);

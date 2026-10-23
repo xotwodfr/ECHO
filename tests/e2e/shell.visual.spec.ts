@@ -68,9 +68,23 @@ for (const vp of [
   });
 }
 
+// The Listen stage's Ambient room from deterministic mode (VISUALIZER_SPEC.md §10): drawn once, in
+// Still, with Ambient's time bases at 47 s, and the track cued paused there so the dock is fixed.
+for (const vp of VIEWPORTS) {
+  test(`Listen stage, Ambient frame, at ${vp.width}`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await page.goto('/?frame=47000&seed=1&track=al-harbour-2');
+    await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
+    await page.evaluate(() => document.fonts.ready);
+    await expect(page).toHaveScreenshot(`listen-frame-${vp.width}.png`, shot);
+  });
+}
+
 // The Listen stage in Still mode (reduced motion): one fixed frame of the room on the fallback
-// palette, rendered by SwiftShader (playwright.config.ts). Ambient frames need the deterministic
-// ?frame&seed mode (M2 task 6).
+// palette, rendered by SwiftShader (playwright.config.ts).
 for (const vp of VIEWPORTS) {
   test(`Listen stage, Still, at ${vp.width}`, async ({ page }) => {
     await page.setViewportSize(vp);

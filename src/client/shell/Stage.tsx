@@ -2,11 +2,12 @@ import { type ReactNode, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import { usePlayback } from '../playback/context.tsx';
 import { stageChrome, stageStatus } from '../stage/status.ts';
+import type { FrameParams } from '../view.ts';
 
 // S1 Listen's stage: React mounts the engine once and never reconciles what it draws
 // (TECHNICAL_ARCHITECTURE.md §4.1). The engine and three.js load with the first visit.
 
-export function Stage({ children }: { children: ReactNode }) {
+export function Stage({ children, frame }: { children: ReactNode; frame?: FrameParams }) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const controller = usePlayback();
@@ -19,7 +20,7 @@ export function Stage({ children }: { children: ReactNode }) {
     let cancelled = false;
     void import('../stage/engine.ts').then(({ mountStage }) => {
       if (cancelled || !root.current || !canvas.current) return;
-      const h = mountStage(root.current, canvas.current, { controller });
+      const h = mountStage(root.current, canvas.current, { controller, frame });
       h.setChrome(!stageChrome.getState().hidden);
       handle.current = h;
     });
@@ -28,7 +29,7 @@ export function Stage({ children }: { children: ReactNode }) {
       handle.current?.dispose();
       handle.current = null;
     };
-  }, [controller]);
+  }, [controller, frame]);
 
   // The scrims fade with the chrome (DESIGN_SYSTEM.md §7.7).
   useEffect(() => handle.current?.setChrome(!chromeHidden), [chromeHidden]);

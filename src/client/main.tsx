@@ -18,12 +18,27 @@ const controller = createPlaybackController({
   notify: (message) => toastStore.getState().show(message),
 });
 
+const store = createViewStore(window);
+
+// Deterministic mode (VISUALIZER_SPEC.md §10): `track` cues that track paused at the frame time.
+const { route } = store.getState();
+const frame = route.view === 'listen' ? route.frame : undefined;
+if (frame?.fixture)
+  console.error(
+    `Deterministic mode: recorded Features fixtures are not implemented yet ("${frame.fixture}")`,
+  );
+if (frame?.track) {
+  const id = frame.track;
+  const album = fixtures?.fixtureLibrary.albums.find((a) => a.tracks.some((t) => t.id === id));
+  if (album) {
+    const index = album.tracks.findIndex((t) => t.id === id);
+    const context = { kind: 'album', id: album.id, title: album.title } as const;
+    controller.cue(album.tracks, index, context, frame.ms);
+  } else console.error(`Deterministic mode: no track "${id}"`);
+}
+
 const root = document.getElementById('root');
 if (root)
   createRoot(root).render(
-    <Shell
-      store={createViewStore(window)}
-      controller={controller}
-      library={fixtures?.fixtureLibrary ?? null}
-    />,
+    <Shell store={store} controller={controller} library={fixtures?.fixtureLibrary ?? null} />,
   );

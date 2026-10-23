@@ -118,7 +118,7 @@ function View({ route }: { route: Route }) {
   switch (route.view) {
     case 'listen':
       return (
-        <Stage>
+        <Stage frame={route.frame}>
           <h1 className="visually-hidden" tabIndex={-1}>
             {strings.nav.listen}
           </h1>

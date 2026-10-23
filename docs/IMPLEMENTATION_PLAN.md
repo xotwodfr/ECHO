@@ -86,8 +86,8 @@ fallback room.
 
 **Dependencies:** M1.
 
-**Progress:** tasks 1–5 done (2026-10-23; record and open items in `docs/reviews/M2.md`).
-Tasks 6–7 not started.
+**Progress:** tasks 1–5 done (2026-10-23; record and open items in `docs/reviews/M2.md`). Task 6
+open: `frame`, `seed` and `tier` work; `fixture` is not implemented. Task 7 not started.
 
 **Tasks:**
 1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid

@@ -1,5 +1,7 @@
 import { type PlaybackController, positionNow } from '../playback/controller.ts';
+import type { FrameParams } from '../view.ts';
 import {
+  AMBIENT_FLOW_PER_S,
   chromeStep,
   createStageLoop,
   type LoopEnv,
@@ -32,6 +34,8 @@ export interface StageOptions {
   /** Quality tier (§8.1). The governor and first-run heuristic arrive in M9; M2 starts at T1. */
   tier?: Tier;
   env?: LoopEnv;
+  /** Deterministic mode (§10): one frame at `frame.ms`, no loop. */
+  frame?: FrameParams;
 }
 
 /**
@@ -39,11 +43,14 @@ export interface StageOptions {
  * CSS room when WebGL 2 is unavailable or the context is lost, and recovers on restore (§5.6, §9).
  */
 export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: StageOptions) {
-  const tier = opts.tier ?? 'T1';
+  const { frame } = opts;
+  const tier = frame?.tier ?? opts.tier ?? 'T1';
   const env = opts.env ?? browserEnv;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  // Still under reduced motion and at T3; otherwise Ambient. Reverb needs audio features (M5).
-  const modeNow = (): StageMode => (reduced.matches || tier === 'T3' ? 'still' : 'ambient');
+  // Still under reduced motion, at T3 and in deterministic mode (one frame, no loop); otherwise
+  // Ambient. Reverb needs audio features (M5).
+  const modeNow = (): StageMode =>
+    frame || reduced.matches || tier === 'T3' ? 'still' : 'ambient';
   const set = (patch: Partial<ReturnType<typeof stageStatus.getState>>) =>
     stageStatus.setState(patch);
   set({ renderer: 'pending', reason: null, mode: modeNow() });
@@ -95,12 +102,17 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       resize();
       loop = createStageLoop(
         {
-          songTime: () => positionNow(c.player.getState(), performance.now()),
+          songTime: () => frame?.ms ?? positionNow(c.player.getState(), performance.now()),
+          // Recorded Features fixtures (`fixture=`, §10) are not implemented: deterministic frames
+          // fix time and noise only. The M2 room does not read features.
           features: c.features,
           palette: { step() {} }, // PaletteAnimator (OKLab transitions) in M4
           render: (f) => {
             chrome = loop?.mode === 'still' ? chromeTarget : chromeStep(chrome, chromeTarget, f.dt);
-            renderer.render({ flow: f.flow, drift: f.drift, key: DEFAULT_KEY, chrome, seed: 0 });
+            // Deterministic: the room as Ambient draws it after `ms` of playback at full rate.
+            const flow = frame ? (AMBIENT_FLOW_PER_S * frame.ms) / 1000 : f.flow;
+            const drift = frame ? frame.ms / 1000 : f.drift;
+            renderer.render({ flow, drift, key: DEFAULT_KEY, chrome, seed: frame?.seed ?? 0 });
           },
           isPlaying: () => c.player.getState().status === 'playing',
         },

@@ -226,4 +226,64 @@ test.describe('with WebGL 2', () => {
     expect(differ / pairs).toBeGreaterThan(0.25); // noise, not bands
     expect(big / pairs).toBeLessThan(0.01); // and subtle
   });
+
+  // Task 6: deterministic mode (VISUALIZER_SPEC.md §10), one frame at a song time and seed.
+  test('?frame&seed: one frame, no loop, the same pixels on every load', async ({ page }) => {
+    await countFrames(page);
+    const shot = async (url: string) => {
+      await page.goto(url);
+      await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });
+      return page.locator('.stage-canvas').screenshot();
+    };
+    const a = await shot('/?frame=30000&seed=3');
+    expect(page.url()).toMatch(/\/\?frame=30000&seed=3$/); // the URL keeps the params
+    await expect(stage(page)).toHaveAttribute('data-mode', 'still');
+    await page.waitForTimeout(300);
+    const n = await frames(page);
+    await page.waitForTimeout(700);
+    expect(await frames(page)).toBe(n); // no loop
+    expect((await shot('/?frame=30000&seed=3')).equals(a)).toBe(true);
+    expect((await shot('/?frame=60000&seed=3')).equals(a)).toBe(false); // time moves the room
+    expect((await shot('/?frame=30000&seed=4')).equals(a)).toBe(false); // the seed changes the noise
+  });
+
+  test('?track cues that track paused at the frame time; ?tier sets the tier', async ({
+    browser,
+  }) => {
+    const ctx = await browser.newContext({
+      deviceScaleFactor: 2,
+      viewport: { width: 1024, height: 640 },
+    });
+    const page = await ctx.newPage();
+    await page.goto('/?frame=72000&track=al-harbour-2&tier=T0');
+    await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });
+    const player = page.getByRole('region', { name: 'Player' });
+    await expect(player.getByText('Low Tide Radio')).toBeVisible();
+    await expect(player.getByRole('button', { name: 'Play' })).toBeVisible(); // paused
+    await expect(player.getByRole('slider', { name: 'Seek' })).toHaveAttribute(
+      'aria-valuenow',
+      '72000',
+    );
+    // T0 caps the backing store at 1.5× (T1 would give 1280×800).
+    expect(
+      await page.locator('.stage-canvas').evaluate((c: HTMLCanvasElement) => [c.width, c.height]),
+    ).toEqual([1536, 960]);
+    await ctx.close();
+  });
+
+  // `fixture` is reserved for recorded Features (§10), which do not exist yet: it is kept in the
+  // URL and reported, never treated as a track, and the frame still renders.
+  test('?fixture is reserved: kept in the URL, reported, cues nothing', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+    await page.goto('/?frame=1000&fixture=al-harbour-2&debug=1');
+    await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });
+    expect(page.url()).toMatch(/\/\?frame=1000&fixture=al-harbour-2&debug=1$/);
+    expect(errors).toEqual([
+      'Deterministic mode: recorded Features fixtures are not implemented yet ("al-harbour-2")',
+    ]);
+    await expect(
+      page.getByRole('region', { name: 'Player' }).getByText('Low Tide Radio'),
+    ).toHaveCount(0);
+  });
 });

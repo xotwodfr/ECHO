@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import type { Tier } from './stage/renderer.ts';
 
 // viewStore (TECHNICAL_ARCHITECTURE.md §5.4): the current view and its params, kept in sync with
 // browser history so every view is a deep link. No router library (§3, "Not used").
@@ -8,8 +9,28 @@ export const SETTINGS_SECTIONS = ['preferences', 'account'] as const;
 export type LibraryTab = (typeof LIBRARY_TABS)[number];
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
+/**
+ * Deterministic mode (VISUALIZER_SPEC.md §10), `/?frame=<ms>&seed=<n>&fixture=<name>&tier=<T0..T3>`
+ * plus ECHO's `track=<id>`: one Stage frame at song time `ms`, for visual snapshots and
+ * design-review screenshots.
+ */
+export interface FrameParams {
+  ms: number;
+  seed: number;
+  /** A library track id, cued paused at `ms` so the dock shows it (development builds). */
+  track?: string;
+  /**
+   * A recorded Features fixture (§10: a JSON of per-frame Features). Reserved: kept in the URL,
+   * but no recordings exist before M3, so nothing loads it yet.
+   */
+  fixture?: string;
+  tier?: Tier;
+  /** Query params this mode does not use, kept in the URL as they came (`a=1&b=2`). */
+  other?: string;
+}
+
 export type Route =
-  | { view: 'listen' }
+  | { view: 'listen'; frame?: FrameParams }
   | { view: 'library'; tab: LibraryTab }
   | { view: 'album'; id: string }
   | { view: 'search'; q: string }
@@ -19,6 +40,33 @@ export type Route =
 
 const isOneOf = <T extends string>(list: readonly T[], v: string | undefined): v is T =>
   list.includes(v as T);
+
+const TIER_NAMES: readonly Tier[] = ['T0', 'T1', 'T2', 'T3'];
+const FRAME_KEYS = ['frame', 'seed', 'track', 'fixture', 'tier'];
+const isWhole = (v: string | null): v is string => v !== null && /^\d+$/.test(v);
+
+/**
+ * The deterministic-mode params, or undefined when `frame` is missing or malformed. A malformed
+ * `seed` or `tier`, or an empty `track` or `fixture`, is dropped; other params are kept.
+ */
+export function parseFrame(search: string): FrameParams | undefined {
+  const p = new URLSearchParams(search);
+  const frame = p.get('frame');
+  const seed = p.get('seed');
+  const track = p.get('track');
+  const fixture = p.get('fixture');
+  const tier = p.get('tier') ?? undefined;
+  if (!isWhole(frame)) return undefined;
+  const other = String(new URLSearchParams([...p].filter(([k]) => !FRAME_KEYS.includes(k))));
+  return {
+    ms: Number(frame),
+    seed: isWhole(seed) ? Number(seed) : 0,
+    ...(track && { track }),
+    ...(fixture && { fixture }),
+    ...(isOneOf(TIER_NAMES, tier) && { tier }),
+    ...(other && { other }),
+  };
+}
 
 export function parseRoute(pathname: string, search = ''): Route {
   const notFound: Route = { view: 'notFound', path: pathname + search };
@@ -30,7 +78,10 @@ export function parseRoute(pathname: string, search = ''): Route {
     return notFound;
   }
   const [head, a, b, ...rest] = decoded;
-  if (!head) return { view: 'listen' };
+  if (!head) {
+    const frame = parseFrame(search);
+    return frame ? { view: 'listen', frame } : { view: 'listen' };
+  }
   if (head === '__ui' && a === undefined) return { view: 'ui' };
   if (head === 'library') {
     if (a === undefined) return { view: 'library', tab: 'albums' };
@@ -50,8 +101,16 @@ export function parseRoute(pathname: string, search = ''): Route {
 /** The canonical URL (path + query) of a route. Defaults are left out: `/library`, `/settings`. */
 export function routePath(route: Route): string {
   switch (route.view) {
-    case 'listen':
-      return '/';
+    case 'listen': {
+      const f = route.frame;
+      if (!f) return '/';
+      const q = new URLSearchParams({ frame: String(f.ms) });
+      if (f.seed) q.set('seed', String(f.seed));
+      if (f.track) q.set('track', f.track);
+      if (f.fixture) q.set('fixture', f.fixture);
+      if (f.tier) q.set('tier', f.tier);
+      return f.other ? `/?${q}&${f.other}` : `/?${q}`;
+    }
     case 'library':
       return route.tab === 'albums' ? '/library' : `/library/${route.tab}`;
     case 'album':

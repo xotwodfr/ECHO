@@ -83,12 +83,17 @@ export function createPlaybackController(opts: {
 
   const isActive = () => ['playing', 'loading', 'buffering'].includes(player.getState().status);
 
-  function load(q: QueueState, autoplay: boolean) {
+  function load(q: QueueState, autoplay: boolean, startMs = 0) {
     queue.setState(q, true);
     if (!provider || !q.now) return;
     loading = true;
-    player.setState({ status: 'loading', track: q.now, positionMs: 0, positionAt: clock.now() });
-    void provider.load(q.now, { autoplay });
+    player.setState({
+      status: 'loading',
+      track: q.now,
+      positionMs: startMs,
+      positionAt: clock.now(),
+    });
+    void provider.load(q.now, { autoplay, startMs });
   }
 
   /** Repeat-all: start the source list again (reshuffled if shuffle is on). */
@@ -194,6 +199,17 @@ export function createPlaybackController(opts: {
       load(
         Q.startContext(queue.getState(), tracks, index, context, provider.id, shuffle, random),
         true,
+      );
+    },
+
+    /** Load `tracks[index]` paused at `startMs` (deterministic mode, VISUALIZER_SPEC.md §10). */
+    cue(tracks: Track[], index: number, context: PlayContext, startMs: number) {
+      if (!provider || !tracks[index]) return;
+      source = { tracks, context };
+      load(
+        Q.startContext(queue.getState(), tracks, index, context, provider.id, false, random),
+        false,
+        startMs,
       );
     },
 

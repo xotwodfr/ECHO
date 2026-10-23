@@ -83,6 +83,59 @@ describe('parseRoute / routePath', () => {
   });
 });
 
+describe('deterministic mode (?frame&seed&track&fixture&tier)', () => {
+  it('parses every param and writes them back in canonical order', () => {
+    const route = parseRoute('/', '?tier=T2&fixture=ballad&track=al-harbour-2&seed=7&frame=12000');
+    expect(route).toEqual({
+      view: 'listen',
+      frame: { ms: 12000, seed: 7, track: 'al-harbour-2', fixture: 'ballad', tier: 'T2' },
+    });
+    expect(routePath(route)).toBe('/?frame=12000&seed=7&track=al-harbour-2&fixture=ballad&tier=T2');
+  });
+
+  it('keeps track and fixture apart: a track id is not a Features fixture', () => {
+    expect(parseRoute('/', '?frame=1&track=al-harbour-2')).toEqual({
+      view: 'listen',
+      frame: { ms: 1, seed: 0, track: 'al-harbour-2' },
+    });
+    expect(parseRoute('/', '?frame=1&fixture=ballad')).toEqual({
+      view: 'listen',
+      frame: { ms: 1, seed: 0, fixture: 'ballad' },
+    });
+  });
+
+  it('keeps unrelated params, in their order, after its own', () => {
+    const route = parseRoute('/', '?debug=1&frame=5&x=a%20b&x=2');
+    expect(route).toEqual({
+      view: 'listen',
+      frame: { ms: 5, seed: 0, other: 'debug=1&x=a+b&x=2' },
+    });
+    expect(routePath(route)).toBe('/?frame=5&debug=1&x=a+b&x=2');
+  });
+
+  it('defaults seed to 0 and leaves defaults out of the URL', () => {
+    const route = parseRoute('/', '?frame=0');
+    expect(route).toEqual({ view: 'listen', frame: { ms: 0, seed: 0 } });
+    expect(routePath(route)).toBe('/?frame=0');
+  });
+
+  it('ignores a malformed frame; drops a malformed seed or tier and an empty track or fixture', () => {
+    for (const q of ['?frame=', '?frame=-5', '?frame=1.5', '?frame=abc', '?frame=1e3', '?seed=3'])
+      expect(parseRoute('/', q)).toEqual({ view: 'listen' });
+    for (const q of ['?track=al-harbour-2', '?fixture=ballad'])
+      expect(parseRoute('/', q)).toEqual({ view: 'listen' }); // no frame, no mode
+    const route = parseRoute('/', '?frame=10&seed=x&tier=T9&track=&fixture=');
+    expect(route).toEqual({ view: 'listen', frame: { ms: 10, seed: 0 } });
+    expect(routePath(route)).toBe('/?frame=10');
+  });
+
+  it('survives the store canonicalising the URL on load, unrelated params included', () => {
+    const f = fakeHost('/?frame=500&seed=2&track=al-harbour-2&fixture=ballad&debug=1');
+    createViewStore(f.host);
+    expect(f.url()).toBe('/?frame=500&seed=2&track=al-harbour-2&fixture=ballad&debug=1');
+  });
+});
+
 describe('createViewStore', () => {
   it('starts from a deep link', () => {
     const { host } = fakeHost('/library/album/al-42');
