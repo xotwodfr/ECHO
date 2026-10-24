@@ -49,6 +49,8 @@ export function createPlaybackController(opts: {
   random?: () => number;
   /** Short confirmations ("Added to queue"), shown as a toast by the shell. */
   notify?: (message: string) => void;
+  /** Settings → Playback → ReplayGain; `auto`: album gain in album context, else track gain. */
+  replayGain?: () => 'off' | 'track' | 'album' | 'auto';
   /** Deterministic mode's recorded Features (VISUALIZER_SPEC.md §10), in place of the provider's. */
   features?: FeatureSource;
 }) {
@@ -60,6 +62,11 @@ export function createPlaybackController(opts: {
   const clock = opts.clock ?? realClock;
   const random = opts.random ?? Math.random;
   const notify = opts.notify ?? (() => {});
+  const gainFor = (q: QueueState) => {
+    const mode = opts.replayGain?.() ?? 'auto';
+    if (mode !== 'auto') return mode;
+    return q.contextSource?.kind === 'album' ? 'album' : 'track';
+  };
 
   const player = createStore<PlaybackState>()(() => ({
     status: 'idle',
@@ -189,7 +196,7 @@ export function createPlaybackController(opts: {
     void provider.load(q.now, {
       autoplay,
       startMs,
-      replayGain: q.contextSource?.kind === 'album' ? 'album' : 'track',
+      replayGain: gainFor(q),
     });
   }
 

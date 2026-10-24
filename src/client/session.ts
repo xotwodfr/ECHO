@@ -10,7 +10,14 @@ export type SessionState =
   | { status: 'offline' }
   | { status: 'setup' }
   | { status: 'anonymous' }
-  | { status: 'signedIn'; username: string; role: 'admin' | 'user'; navidrome: boolean };
+  | {
+      status: 'signedIn';
+      username: string;
+      role: 'admin' | 'user';
+      navidrome: boolean;
+      /** "Require TOTP for all" is on and this user has none yet: Account is all they can use. */
+      mustEnrolTotp?: boolean;
+    };
 
 export const sessionStore = createStore<SessionState>()(() => ({ status: 'unknown' }));
 

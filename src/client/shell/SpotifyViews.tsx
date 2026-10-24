@@ -90,6 +90,7 @@ export function SpotifyConnection() {
 
 interface AdminSettings {
   lyrics: { spicyKeySaved: boolean };
+  auth: { requireTotpForAll: boolean };
   spotify: {
     clientId: string | null;
     gates: { artPalette: boolean; syncedLyrics: boolean };
@@ -183,6 +184,11 @@ export function AdminServerSection() {
         label={a.syncedLyrics}
         checked={s.spotify.gates.syncedLyrics}
         onChange={(v) => void put({ spotify: { gates: { syncedLyrics: v } } })}
+      />
+      <Toggle
+        label={strings.admin.requireTotp}
+        checked={s.auth.requireTotpForAll}
+        onChange={(v) => void put({ auth: { requireTotpForAll: v } })}
       />
       {note && <p role="status">{note}</p>}
     </section>

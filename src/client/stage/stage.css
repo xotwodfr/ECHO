@@ -117,7 +117,7 @@
   overflow: hidden;
   pointer-events: none;
   font-family: var(--font);
-  font-size: var(--ly-active);
+  font-size: calc(var(--ly-active) * var(--ly-scale, 1)); /* Settings → Lyrics → size */
   --lit-base: color-mix(in oklab, var(--text) 82%, var(--art-highlight));
   --lit-edge: var(--art-highlight);
 }
@@ -314,7 +314,7 @@
   max-width: min(64%, 22em);
   margin: 0 auto;
   padding: calc((100vh - var(--dock)) * 0.4 - 1em) var(--gutter) 40vh;
-  font-size: calc(var(--ly-active) * 0.62);
+  font-size: calc(var(--ly-active) * var(--ly-scale, 1) * 0.62);
   font-weight: 600;
   line-height: 1.12;
   letter-spacing: -0.022em;

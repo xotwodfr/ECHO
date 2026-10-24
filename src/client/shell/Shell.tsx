@@ -3,17 +3,27 @@ import { useStore } from 'zustand';
 import type { Library } from '../library.ts';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
-import { stageChrome, webgl2Supported } from '../stage/status.ts';
+import { sessionStore } from '../session.ts';
+import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
-import { buttonClass, Pill } from '../ui/controls.tsx';
+import { buttonClass } from '../ui/controls.tsx';
 import { ToastRegion } from '../ui/overlays.tsx';
-import { LIBRARY_TABS, type Route, SETTINGS_SECTIONS, type ViewStore } from '../view.ts';
+import {
+  LIBRARY_TABS,
+  type Route,
+  SETTINGS_SECTIONS,
+  type SettingsSection,
+  type ViewStore,
+} from '../view.ts';
+import { InviteView } from './AccountViews.tsx';
+import { AdminSection } from './AdminViews.tsx';
 import { AccountSection, LoginView, SetupView } from './AuthViews.tsx';
 import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
 import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
 import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
+import { PreferencesSection } from './SettingsViews.tsx';
 import { Stage } from './Stage.tsx';
 import { StageChrome, StageContent } from './StageViews.tsx';
 
@@ -116,6 +126,37 @@ function Tabs<T extends string>(props: {
   );
 }
 
+/** Settings: Preferences, Account and, for admins, Admin (SETTINGS_AND_SECURITY.md §7.3). */
+function SettingsView({ section }: { section: SettingsSection }) {
+  const session = useStore(sessionStore);
+  const admin = session.status === 'signedIn' && session.role === 'admin';
+  const sections = SETTINGS_SECTIONS.filter((x) => x !== 'admin' || admin);
+  return (
+    <>
+      <h1 tabIndex={-1}>{strings.nav.settings}</h1>
+      <Tabs
+        label={strings.settings.sectionsLabel}
+        items={sections}
+        names={strings.settings.sections}
+        current={section}
+        to={(s) => ({ view: 'settings', section: s })}
+      />
+      <h2>{strings.settings.sections[section]}</h2>
+      {section === 'account' ? (
+        <AccountSection />
+      ) : section === 'admin' ? (
+        admin ? (
+          <AdminSection />
+        ) : (
+          <p className="empty">{strings.settings.adminOnly}</p>
+        )
+      ) : (
+        <PreferencesSection />
+      )}
+    </>
+  );
+}
+
 function View({ route }: { route: Route }) {
   switch (route.view) {
     case 'listen':
@@ -153,33 +194,13 @@ function View({ route }: { route: Route }) {
         </>
       );
     case 'settings':
-      return (
-        <>
-          <h1 tabIndex={-1}>{strings.nav.settings}</h1>
-          <Tabs
-            label={strings.settings.sectionsLabel}
-            items={SETTINGS_SECTIONS}
-            names={strings.settings.sections}
-            current={route.section}
-            to={(section) => ({ view: 'settings', section })}
-          />
-          <h2>{strings.settings.sections[route.section]}</h2>
-          {route.section === 'account' ? (
-            <AccountSection />
-          ) : route.section === 'preferences' && !webgl2Supported() ? (
-            <p className="notice">
-              <Pill tone="warn">{strings.settings.visualsLimitedPill}</Pill>
-              {strings.settings.visualsLimited}
-            </p>
-          ) : (
-            <p className="empty">{strings.settings.empty}</p>
-          )}
-        </>
-      );
+      return <SettingsView section={route.section} />;
     case 'login':
       return <LoginView />;
     case 'setup':
       return <SetupView />;
+    case 'invite':
+      return <InviteView />;
     case 'ui':
       if (Gallery)
         return (
@@ -210,6 +231,7 @@ const TITLES: Record<Route['view'], string> = {
   ui: strings.gallery.title,
   login: strings.auth.signIn,
   setup: strings.auth.setupTitle,
+  invite: strings.account.inviteTitle,
   notFound: strings.notFound.title,
 };
 
@@ -252,7 +274,7 @@ function Frame() {
   }, []);
 
   // Signing in and setting up stand alone: no sidebar, no player.
-  if (route.view === 'login' || route.view === 'setup')
+  if (route.view === 'login' || route.view === 'setup' || route.view === 'invite')
     return (
       <main className="auth-page" ref={main}>
         <View route={route} />

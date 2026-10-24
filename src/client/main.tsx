@@ -13,6 +13,7 @@ import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
 import { SpotifyProvider } from './playback/spotify.ts';
+import { loadPrefs, prefsStore } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { confirmReplace } from './shell/ReplaceQueue.tsx';
 import { Shell } from './shell/Shell.tsx';
@@ -39,17 +40,35 @@ if (frame?.fixture) {
   if (!fixtures) console.error('Deterministic mode: this build has no Features fixtures');
 }
 
+// Lyric preferences that live outside the engine: the announce opt-in and the size (a CSS
+// variable on :root; the field re-measures on resize).
+const applyLyricPrefs = () => {
+  const l = prefsStore.getState().lyrics;
+  lyricPrefs.setState({ announce: l.announceLines });
+  if (document.documentElement.style.getPropertyValue('--ly-scale') !== String(l.sizeScale)) {
+    document.documentElement.style.setProperty('--ly-scale', String(l.sizeScale));
+    window.dispatchEvent(new Event('resize'));
+  }
+};
+prefsStore.subscribe((s, prev) => s.lyrics !== prev.lyrics && applyLyricPrefs());
+
 // Development builds let e2e flip the Settings → Lyrics preferences that have no UI yet (M8).
 if (__ECHO_FIXTURES__) Object.assign(window, { __echoLyricPrefs: lyricPrefs });
 
 // Deterministic frames never ask the server who is signed in: the same frame on every load.
 const session = frame ? null : await loadSession();
-if (!fixtures && session && route.view !== 'login' && route.view !== 'setup') {
+if (!fixtures && session && !['login', 'setup', 'invite'].includes(route.view)) {
   if (session.status === 'setup') store.getState().navigate({ view: 'setup' }, { replace: true });
   if (session.status === 'anonymous')
     store.getState().navigate({ view: 'login' }, { replace: true });
 }
+// "Require TOTP for all" and no TOTP yet: Account is the only thing the server allows.
+if (session?.status === 'signedIn' && session.mustEnrolTotp)
+  store.getState().navigate({ view: 'settings', section: 'account' }, { replace: true });
 const ownLibrary = session?.status === 'signedIn' && session.navidrome;
+// Preferences (Settings → Preferences): the server's for a signed-in user, this device's own.
+if (session?.status === 'signedIn') await loadPrefs();
+const prefs = () => prefsStore.getState();
 
 // Spotify joins once the user has connected it (M7); its SDK loads on the first Spotify play.
 const spotifyState =
@@ -62,7 +81,18 @@ const baseLibrary = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLi
 const library = spotify ? combineLibraries(baseLibrary, createSpotifyLibrary()) : baseLibrary;
 
 const controller = createPlaybackController({
-  provider: ownLibrary ? new NavidromeProvider() : (fixtures?.createFixtureProvider() ?? null),
+  provider: ownLibrary
+    ? new NavidromeProvider(undefined, {
+        transcodeOffset: true,
+        get scrobble() {
+          return prefs().playback.scrobble;
+        },
+        get quality() {
+          return prefs().playback.quality;
+        },
+      })
+    : (fixtures?.createFixtureProvider() ?? null),
+  replayGain: () => prefs().playback.replayGain,
   spotify,
   confirmReplace,
   notify: (message) => toastStore.getState().show(message),

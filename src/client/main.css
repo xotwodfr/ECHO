@@ -616,6 +616,131 @@ button {
   gap: var(--sp-3);
 }
 
+/* Settings → Preferences (SETTINGS_AND_SECURITY.md §7.3): groups of self-saving controls. */
+.prefs {
+  display: grid;
+  gap: var(--sp-6);
+  max-width: var(--form-w);
+}
+
+.pref-group {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.pref-group h3 {
+  margin: 0;
+  font-size: var(--fs-section);
+}
+
+.pref-choice {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.pref-label {
+  padding: 0;
+  color: var(--text);
+}
+
+.pref-slider {
+  display: grid;
+  gap: var(--sp-1);
+}
+
+.pref-slider .pref-label {
+  margin: 0;
+}
+
+/* The offset slider spans the column (the volume variant's width is the dock's). */
+.pref-slider .slider--volume {
+  width: 100%;
+}
+
+.pref-choice .view-switch {
+  flex-wrap: wrap;
+}
+
+.keymap {
+  display: grid;
+  gap: var(--sp-2);
+  margin: 0;
+}
+
+.keymap div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--sp-3);
+}
+
+.keymap dt,
+.keymap dd {
+  margin: 0;
+}
+
+.keymap kbd {
+  font: inherit;
+  color: var(--text);
+}
+
+/* Account and Admin lists: a name with its facts, actions on the right. */
+.sessions,
+.admin-users,
+.admin-invites {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sessions li,
+.admin-users li {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--rule) solid var(--line);
+}
+
+.sessions .field-hint,
+.admin-users .field-hint {
+  margin: var(--sp-1) 0 0;
+}
+
+.admin-user-name {
+  font-weight: 500;
+}
+
+.invite-link code {
+  font: inherit;
+  word-break: break-all;
+  color: var(--text);
+}
+
+.audit {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-small);
+}
+
+.audit th,
+.audit td {
+  padding: var(--sp-2) var(--sp-3) var(--sp-2) 0;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: var(--rule) solid var(--line);
+}
+
+.audit th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 /* Keys and codes in the shell's own face: no monospace in the shell (DS-02). */
 .recovery-codes code,
 .totp-key code {

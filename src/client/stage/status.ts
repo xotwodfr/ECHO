@@ -1,5 +1,6 @@
 import { createStore } from 'zustand/vanilla';
 import type { LyricsDoc } from '../../shared/types.ts';
+import { prefsStore } from '../prefs.ts';
 import type { StageMode } from './loop.ts';
 
 // What the Stage is showing, for the shell (data attributes, the Settings notice). Kept out of the
@@ -72,6 +73,13 @@ export const lyricsStore = createStore<LyricsState>()(() => ({
   offsetMs: 0,
   pinnedSource: null,
 }));
+
+/**
+ * How much later the words show (ms): the track's own offset plus Settings → Lyrics → global
+ * offset. It shifts the lyric clock only, never the visual features (LYRICS_EXPERIENCE.md §9.13).
+ */
+export const lyricOffset = () =>
+  lyricsStore.getState().offsetMs + prefsStore.getState().lyrics.globalOffsetMs;
 
 /** The scrubber's time while it is dragged (LYRICS_EXPERIENCE.md §9.6 scrub mode), else null. */
 export const scrubStore = createStore<{ ms: number | null }>()(() => ({ ms: null }));

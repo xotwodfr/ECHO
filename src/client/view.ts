@@ -5,7 +5,7 @@ import type { Tier } from './stage/renderer.ts';
 // browser history so every view is a deep link. No router library (§3, "Not used").
 
 export const LIBRARY_TABS = ['albums', 'artists', 'playlists', 'starred'] as const;
-export const SETTINGS_SECTIONS = ['preferences', 'account'] as const;
+export const SETTINGS_SECTIONS = ['preferences', 'account', 'admin'] as const;
 export type LibraryTab = (typeof LIBRARY_TABS)[number];
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
@@ -40,6 +40,7 @@ export type Route =
   | { view: 'ui' }
   | { view: 'login' }
   | { view: 'setup' } // the one-time admin setup; its token travels in the fragment
+  | { view: 'invite' } // redeeming an invite; its token travels in the fragment too
   | { view: 'notFound'; path: string };
 
 const isOneOf = <T extends string>(list: readonly T[], v: string | undefined): v is T =>
@@ -91,6 +92,7 @@ export function parseRoute(pathname: string, search = ''): Route {
   if (head === '__ui' && a === undefined) return { view: 'ui' };
   if (head === 'login' && a === undefined) return { view: 'login' };
   if (head === 'setup' && a === undefined) return { view: 'setup' };
+  if (head === 'invite' && a === undefined) return { view: 'invite' };
   if (head === 'library') {
     if (a === undefined) return { view: 'library', tab: 'albums' };
     if (isOneOf(LIBRARY_TABS, a) && b === undefined) return { view: 'library', tab: a };
@@ -134,6 +136,8 @@ export function routePath(route: Route): string {
       return '/login';
     case 'setup':
       return '/setup';
+    case 'invite':
+      return '/invite';
     case 'notFound':
       return route.path;
   }

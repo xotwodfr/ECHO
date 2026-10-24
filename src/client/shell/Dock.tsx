@@ -8,7 +8,14 @@ import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context
 import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
 import { type SpotifyProvider, spotifyStore } from '../playback/spotify.ts';
-import { lyricsStore, nextView, type StageView, scrubStore, stageView } from '../stage/status.ts';
+import {
+  lyricOffset,
+  lyricsStore,
+  nextView,
+  type StageView,
+  scrubStore,
+  stageView,
+} from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
@@ -159,10 +166,7 @@ function DockScrubber() {
       durationMs={s.track?.durationMs}
       onSeek={c.seek}
       onScrub={(ms) => scrubStore.setState({ ms })}
-      preview={(ms) => {
-        const l = lyricsStore.getState();
-        return lineAt(l.doc, ms - l.offsetMs);
-      }}
+      preview={(ms) => lineAt(lyricsStore.getState().doc, ms - lyricOffset())}
       disabled={!s.track || !s.capabilities.canSeek}
       disabledReason={s.track ? strings.dock.noSeek : strings.dock.idle}
     />

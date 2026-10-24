@@ -74,7 +74,7 @@ describe('parseRoute / routePath', () => {
     '/library/genres',
     '/library/album',
     '/library/album/x/extra',
-    '/settings/admin',
+    '/settings/server',
     '/search/x',
     '/__ui/x',
     '/library/album/%E0%A4%A',

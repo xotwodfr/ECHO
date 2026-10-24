@@ -20,14 +20,25 @@ const PASSWORD = 'correct horse battery staple';
  * spec would trip the login rate limit (10 a minute per address, SETTINGS_AND_SECURITY.md §4.4).
  */
 export async function signedInWithNavidrome(page: Page, prefix = 'u') {
+  const user = await signedIn(page, prefix);
+  await page.goto('/settings/account');
+  await page.getByLabel('Navidrome username').fill('ada');
+  await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  return user;
+}
+
+export const E2E_PASSWORD = PASSWORD;
+
+/** A fresh user (or admin) straight into the database, signed in on `page`; no connections. */
+export async function signedIn(page: Page, prefix = 'u', role: 'user' | 'admin' = 'user') {
   const user = `${prefix}-${randomBytes(4).toString('hex')}`;
   const db = new Database(join(tmpdir(), 'echo-e2e', 'data', 'echo.db'));
   const id = Number(
     db
-      .prepare(
-        "INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, 'user', 0)",
-      )
-      .run(user, await hashSecret(PASSWORD)).lastInsertRowid,
+      .prepare('INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, 0)')
+      .run(user, await hashSecret(PASSWORD), role).lastInsertRowid,
   );
   const token = createSession(db, id, 'web', Date.now());
   db.close();
@@ -41,11 +52,6 @@ export async function signedInWithNavidrome(page: Page, prefix = 'u') {
     },
     [SESSION_COOKIE, token],
   );
-  await page.goto('/settings/account');
-  await page.getByLabel('Navidrome username').fill('ada');
-  await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
-  await page.getByRole('button', { name: 'Connect', exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
   return user;
 }
 

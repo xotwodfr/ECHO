@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
 import { pinLyricsSource } from '../lyrics/loader.ts';
 import { usePlayer, useTicker } from '../playback/context.tsx';
+import { prefsStore } from '../prefs.ts';
 import { lyricHost, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
@@ -54,6 +55,7 @@ export function StageContent() {
  */
 function LyricsView() {
   const { doc, state, since, tried } = useStore(lyricsStore);
+  const showUnsynced = useStore(prefsStore, (p) => p.lyrics.showUnsynced);
   useTicker(state === 'waiting', 100);
   if (state === 'missing') return <MissingLyrics tried={tried} />;
   if (state === 'waiting') {
@@ -78,6 +80,8 @@ function LyricsView() {
         <p>{strings.stage.lyricsPlaceholder}</p>
       </div>
     );
+  // Settings → Lyrics → "Show unsynced lyrics" off: an untimed sheet gives way to the cover.
+  if (doc.sync === 'none' && !showUnsynced) return <CoverView />;
   return (
     <>
       {doc.sync === 'none' ? <LyricSheet doc={doc} /> : <LyricHost />}

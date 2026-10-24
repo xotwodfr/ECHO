@@ -1,5 +1,6 @@
 import { paletteStore } from '../palette/live.ts';
 import type { PlaybackController } from '../playback/controller.ts';
+import { prefsStore } from '../prefs.ts';
 import type { FrameParams } from '../view.ts';
 import { contrastAt, type Inks, peaksOf, type Solve, solveStep } from './contrast.ts';
 import {
@@ -13,7 +14,14 @@ import { createLyricField, type LyricField } from './lyrics/field.ts';
 import { paletteUniforms, readPalette } from './palette.ts';
 import { type FrameInput, StageRenderer, type Tier } from './renderer.ts';
 import { createReverb } from './reverb.ts';
-import { lyricHost, lyricPrefs, lyricsStore, scrubStore, stageStatus } from './status.ts';
+import {
+  lyricHost,
+  lyricOffset,
+  lyricPrefs,
+  lyricsStore,
+  scrubStore,
+  stageStatus,
+} from './status.ts';
 
 // The Stage engine (TECHNICAL_ARCHITECTURE.md §4): mounted once by React, then imperative. Loaded
 // lazily with three.js when the Stage first opens (PERF-05: three.js loads with the Stage).
@@ -47,6 +55,14 @@ const browserEnv: LoopEnv = {
   },
 };
 
+/** Settings → Visuals → Quality (per device): a fixed tier, or `auto` (T1 until the M9 governor). */
+const TIERS: Record<string, Tier | undefined> = {
+  high: 'T0',
+  balanced: 'T1',
+  low: 'T2',
+  minimal: 'T3',
+};
+
 export interface StageOptions {
   controller: PlaybackController;
   /** Quality tier (§8.1). The governor and first-run heuristic arrive in M9; M2 starts at T1. */
@@ -63,13 +79,23 @@ export interface StageOptions {
  */
 export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: StageOptions) {
   const { frame } = opts;
-  const tier = frame?.tier ?? opts.tier ?? 'T1';
+  const tier = frame?.tier ?? opts.tier ?? TIERS[prefsStore.getState().visuals.quality] ?? 'T1';
   const env = opts.env ?? browserEnv;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
-  // Still under reduced motion, at T3 and in deterministic mode (one frame, no loop); otherwise
-  // Ambient. Reverb needs audio features (M5).
-  const modeNow = (): StageMode =>
-    frame || reduced.matches || tier === 'T3' ? 'still' : 'ambient';
+  // Settings → Visuals: motion (system, full, reduced, off) and the mode (SETTINGS_AND_SECURITY.md
+  // §7.1). Still under reduced motion, at T3 and in deterministic mode (one frame, no loop);
+  // otherwise Ambient, which becomes Reverb while audio features flow, unless Ambient is chosen.
+  const visuals = () => prefsStore.getState().visuals;
+  const stillWanted = () => {
+    const v = visuals();
+    return (
+      v.mode === 'still' ||
+      v.motion === 'off' ||
+      v.motion === 'reduced' ||
+      (v.motion === 'system' && reduced.matches)
+    );
+  };
+  const modeNow = (): StageMode => (frame || stillWanted() || tier === 'T3' ? 'still' : 'ambient');
   const set = (patch: Partial<ReturnType<typeof stageStatus.getState>>) =>
     stageStatus.setState(patch);
   set({ renderer: 'pending', reason: null, mode: modeNow() });
@@ -94,8 +120,8 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   let field: LyricField | null = null;
   const playing = () => c.player.getState().status === 'playing';
 
-  // Reverb's state (§4.3–§4.5) at the default intensity; Settings → Visuals sets it in M8.
-  const reverb = createReverb('expressive');
+  // Reverb's state (§4.3–§4.5) at the intensity chosen in Settings → Visuals (Expressive default).
+  let reverb = createReverb(visuals().intensity);
 
   // The contrast solver's state (DESIGN_SYSTEM.md §3.4): inks are re-read when the palette moves.
   let solve: Solve = { exposure: 0, scrim: 0 };
@@ -133,7 +159,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         const key = field?.update({
           // The user's offset for this track shifts the lyric clock only, never the features
           // (LYRICS_EXPERIENCE.md §9.13): +150 ms shows the words 150 ms later.
-          t: f.t - lyricsStore.getState().offsetMs,
+          t: f.t - lyricOffset(),
           dt: f.dt,
           driftS: drift,
           playing: playing(),
@@ -144,7 +170,8 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
         if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;
         // Reverb (§4): the moving room with live (or recorded) features; Ambient without them.
-        const reverbOn = loop.mode === 'ambient' && !frame && f.features.available;
+        const reverbOn =
+          loop.mode === 'ambient' && !frame && f.features.available && visuals().mode !== 'ambient';
         if (reverbOn !== (stageStatus.getState().mode === 'reverb'))
           set({ mode: reverbOn ? 'reverb' : modeNow() });
         const rv = reverbOn
@@ -232,6 +259,11 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     loop.setMode(loopMode());
     set({ mode: modeNow() });
   };
+  const offVisuals = prefsStore.subscribe((s, prev) => {
+    if (s.visuals === prev.visuals) return;
+    if (s.visuals.intensity !== prev.visuals.intensity) reverb = createReverb(s.visuals.intensity);
+    onReducedChange();
+  });
   const onLost = () => {
     drawing = false;
     roomOk = false;
@@ -289,6 +321,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       offDoc();
       offPalette();
       offPrefs();
+      offVisuals();
       field?.dispose();
       observer.disconnect();
       reduced.removeEventListener('change', onReducedChange);

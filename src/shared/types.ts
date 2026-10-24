@@ -137,7 +137,7 @@ export interface PlaybackProvider {
   /** `replayGain`: album gain in album context, else track gain (PLAY-05, ReplayGain `auto`). */
   load(
     track: Track,
-    opts: { startMs?: number; autoplay: boolean; replayGain?: 'album' | 'track' },
+    opts: { startMs?: number; autoplay: boolean; replayGain?: 'album' | 'track' | 'off' },
   ): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;

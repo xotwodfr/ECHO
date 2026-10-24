@@ -63,18 +63,24 @@ export class NavidromeProvider implements PlaybackProvider {
   private waiting = false;
   private scrobbled: 'none' | 'now' | 'done' = 'none';
   private retries = 0;
-  private gainMode: 'album' | 'track' = 'track';
+  private gainMode: 'album' | 'track' | 'off' = 'track';
   private listeners: { [K in keyof Events]: Set<(e: Events[K]) => void> } = {
     state: new Set(),
     ended: new Set(),
     error: new Set(),
   };
 
-  private readonly opts: { transcodeOffset: boolean; scrobble: boolean };
+  /** Read on each use, so Settings → Playback changes apply to the next stream (getters welcome). */
+  private readonly opts: {
+    transcodeOffset: boolean;
+    scrobble: boolean;
+    /** Settings → Playback → Quality (per device): `auto` and `raw` play the file when possible. */
+    quality?: 'auto' | 'raw' | '320' | '192' | '128';
+  };
 
   constructor(
     els: [HTMLAudioElement, HTMLAudioElement] = [new Audio(), new Audio()],
-    opts: { transcodeOffset: boolean; scrobble: boolean } = {
+    opts: NavidromeProvider['opts'] = {
       transcodeOffset: true,
       scrobble: true,
     },
@@ -180,8 +186,13 @@ export class NavidromeProvider implements PlaybackProvider {
 
   /** The stream URL, and whether it is a transcode (which cannot seek). */
   private srcFor(track: NavidromeTrack, offsetS: number) {
-    const raw = !!track.contentType && this.el.canPlayType(track.contentType) !== '';
-    const q = new URLSearchParams(raw ? { format: 'raw' } : { format: 'opus', maxBitRate: '192' });
+    const quality = this.opts.quality ?? 'auto';
+    const playable = !!track.contentType && this.el.canPlayType(track.contentType) !== '';
+    const raw = playable && (quality === 'auto' || quality === 'raw');
+    const bitRate = quality === 'auto' || quality === 'raw' ? '192' : quality;
+    const q = new URLSearchParams(
+      raw ? { format: 'raw' } : { format: 'opus', maxBitRate: bitRate },
+    );
     if (!raw && offsetS > 0) q.set('timeOffset', String(Math.floor(offsetS)));
     return {
       src: `/api/v1/navidrome/stream/${encodeURIComponent(track.id)}?${q}`,
@@ -189,9 +200,10 @@ export class NavidromeProvider implements PlaybackProvider {
     };
   }
 
-  private applyGain(t: NavidromeTrack, mode: 'album' | 'track') {
+  private applyGain(t: NavidromeTrack, mode: 'album' | 'track' | 'off') {
     const rg = t.replayGain;
     const v = this.voices[this.cur] as (typeof this.voices)[number];
+    if (mode === 'off') return v.setReplayGain(undefined, undefined); // Settings → Playback
     // Album gain keeps an album's own dynamics between its tracks; track gain evens out a mix.
     if (mode === 'album' && rg?.albumGain !== undefined)
       v.setReplayGain(rg.albumGain, rg.albumPeak);
@@ -200,7 +212,12 @@ export class NavidromeProvider implements PlaybackProvider {
 
   async load(
     track: Track,
-    opts: { startMs?: number; autoplay: boolean; retry?: boolean; replayGain?: 'album' | 'track' },
+    opts: {
+      startMs?: number;
+      autoplay: boolean;
+      retry?: boolean;
+      replayGain?: 'album' | 'track' | 'off';
+    },
   ) {
     const t = track as NavidromeTrack;
     // The next track is already buffered in the other voice: hand over at once (gapless, §5.6).
