@@ -70,6 +70,23 @@ describe('redaction (SEC-04)', () => {
     expect(out).toContain('«redacted»');
   });
 
+  it('a secret is masked in its JSON-escaped and URL-encoded forms too (security review)', () => {
+    const odd = fake('pa"ss\\wörd', 'with spaces & more');
+    const secrets = createSecretSet();
+    secrets.add(odd);
+    const lines: string[] = [];
+    const log = createLogger('debug', { write: (l) => lines.push(l), secrets: secrets.values });
+    log('warn', 'x', {
+      raw: odd,
+      url: `https://h/x?q=${encodeURIComponent(odd)}`,
+      form: new URLSearchParams({ q: odd }).toString(),
+    });
+    const out = lines.join('');
+    expect(out).not.toContain(JSON.stringify(odd).slice(1, -1));
+    expect(out).not.toContain(encodeURIComponent(odd));
+    expect(out).not.toContain(new URLSearchParams({ q: odd }).toString().slice(2));
+  });
+
   it('ordinary text and the deliberate setup URL survive', () => {
     expect(redact('listening on 8080, 3 albums, track t1')).toBe(
       'listening on 8080, 3 albums, track t1',

@@ -448,6 +448,8 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     const id = c.req.param('id');
     const exp = now() + SIGNED_TTL_MS;
     const u = user(c).id;
+    // Signed only for a user with a Navidrome: the URL plays from their own server.
+    if (!stored(u)) return c.json({ code: 'navidrome.not_connected' }, 409);
     return c.json({
       url: `/api/v1/navidrome/stream/${encodeURIComponent(id)}?uid=${u}&exp=${exp}&sig=${sign(u, id, exp)}`,
       expiresAt: exp,

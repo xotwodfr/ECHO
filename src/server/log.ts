@@ -54,9 +54,20 @@ export function createSecretSet(max = 2000) {
   };
 }
 
+/** A secret as it can appear in a log line: raw, JSON-escaped, or URL-encoded (security review). */
+const forms = (s: string) => [
+  ...new Set([
+    s,
+    JSON.stringify(s).slice(1, -1),
+    encodeURIComponent(s),
+    encodeURIComponent(s).replace(/%20/g, '+'),
+  ]),
+];
+
 export function redact(text: string, secrets: Iterable<string> = []): string {
   let out = text;
-  for (const s of secrets) if (out.includes(s)) out = out.split(s).join(MASK);
+  for (const s of secrets)
+    for (const f of forms(s)) if (out.includes(f)) out = out.split(f).join(MASK);
   for (const re of PATTERNS) out = out.replace(re, `$1${MASK}`);
   return out;
 }

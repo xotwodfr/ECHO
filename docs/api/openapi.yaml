@@ -294,6 +294,7 @@ paths:
       summary: A signed stream URL for clients that can send neither cookie nor header (6 h, one track, one user)
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: object, properties: { url: { type: string }, expiresAt: { type: integer } } } } } }
+        '409': { description: 'navidrome.not_connected: the user has no Navidrome' }
 
   /navidrome/cover/{id}:
     parameters:
