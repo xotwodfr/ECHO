@@ -89,14 +89,25 @@ export function createApp(deps: AppDeps) {
 
   // Liveness only: unauthenticated and minimal (docs/TECHNICAL_ARCHITECTURE.md §6.2).
   // CSP violation reports from browsers (report-uri): unauthenticated, small, and only ever
-  // logged (SEC-08). One budget for everyone, 60 a minute: constant memory, however many
-  // addresses send them (security review).
-  const budget = { windowStart: 0, used: 0 };
+  // logged (SEC-08). Per minute: 10 per address (so one source cannot crowd out the rest), in a
+  // map of at most 1000 addresses cleared every minute (bounded memory), 300 in all as a
+  // backstop; what is dropped is counted and logged (security review).
+  const csp = { windowStart: 0, total: 0, dropped: 0, perIp: new Map<string, number>() };
   app.post('/api/v1/csp-report', async (c) => {
     const t = Date.now();
-    if (t - budget.windowStart >= 60_000) Object.assign(budget, { windowStart: t, used: 0 });
-    if (budget.used >= 60) return c.body(null, 204);
-    budget.used++;
+    if (t - csp.windowStart >= 60_000) {
+      if (csp.dropped) log('warn', 'csp reports dropped', { count: csp.dropped });
+      Object.assign(csp, { windowStart: t, total: 0, dropped: 0 });
+      csp.perIp.clear();
+    }
+    const mine = csp.perIp.get(c.var.ip) ?? 0;
+    const room = csp.perIp.has(c.var.ip) || csp.perIp.size < 1000;
+    if (!room || mine >= 10 || csp.total >= 300) {
+      csp.dropped++;
+      return c.body(null, 204);
+    }
+    csp.perIp.set(c.var.ip, mine + 1);
+    csp.total++;
     const text = (await c.req.text()).slice(0, 8192);
     let report: unknown = text;
     try {
