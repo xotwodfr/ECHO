@@ -226,14 +226,16 @@ describe('the lyrics cache key includes the ISRC (security review)', () => {
     t.deps.lyrics.spotifyIdFor = async (_u, _s, i) => (i.isrc === 'GBAYE0601498' ? ID_A : ID_B);
     const app = createApp(t.deps);
     const cookie = `__Host-echo_session=${createSession(db, uid, 'web', t.clock.t)}`;
-    const get = (isrc: string) =>
-      call(
+    const get = async (isrc: string) => {
+      const r = await call(
         app,
         'GET',
         `/api/v1/lyrics?trackKey=navidrome:t1&title=T&artist=A&durationMs=200000&isrc=${isrc}`,
         undefined,
         cookie,
-      ).then((r: Response) => r.json());
+      );
+      return r.json();
+    };
     expect((await get('XXAAA0000001')).doc.lines[0].text).toBe(ID_B); // the forged one
     expect((await get('GBAYE0601498')).doc.lines[0].text).toBe(ID_A); // not served ID_B's
     expect(seen).toEqual([ID_B, ID_A]);
