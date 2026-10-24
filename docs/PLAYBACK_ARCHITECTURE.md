@@ -267,8 +267,7 @@ failure has its own message (unreachable/DNS, TLS error, 401, wrong URL path, no
 
 Song fields used: `id`, `title`, `artist`/`artists`, `album`, `albumId`, `duration`, `suffix`,
 `contentType`, `bitRate`, `replayGain` (`trackGain`, `albumGain`, `trackPeak`, `albumPeak` [C:
-OpenSubsonic responses]), `isrc` (OpenSubsonic field when tags provide it [A: verify on a real
-server in M5]), `musicBrainzId`.
+OpenSubsonic responses]), `isrc` (an OpenSubsonic **array** when tags provide it [C: Navidrome v0.64.0 `responses.go`; M6]), `musicBrainzId`.
 
 ### 5.5 Streaming and seeking
 

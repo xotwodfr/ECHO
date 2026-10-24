@@ -324,7 +324,7 @@ conflict:
 | Q-SP-4 | Is `streaming` sufficient for the SDK, or are `user-read-email`/`user-read-private` required? | M7 |
 | Q-SP-6 | Exact CSP hosts the SDK needs | M7 |
 | Q-SP-7 | Does Spotify offer token revocation for PKCE clients? | M8 |
-| Q-LI-4 | Does Navidrome fill OpenSubsonic `cueLine` from enhanced LRC/TTML files? Does it expose `isrc`? | M5/M6 |
+| Q-LI-4 | Does Navidrome fill OpenSubsonic `cueLine` from enhanced LRC/TTML files? Does it expose `isrc`? | **Answered (M6):** yes to both in v0.64.0 — cues from enhanced LRC (with `[bg:]`) and TTML; `isrc` as an array. The owner's server (0.64.0) advertises songLyrics v1+v2, not `apiKeyAuthentication` |
 | Q-LI-5 | Spicy Lyrics' actual rate limits (the owner has a key; limits are unpublished) | M6 |
 | Q-VZ-2 | Does `audio.currentTime` advance coarsely enough in Chrome/Firefox on Linux to need the slew logic? | M5 |
 | Q-AC-1 | Exact model of the owner's laptop (performance floor) | M9 |
