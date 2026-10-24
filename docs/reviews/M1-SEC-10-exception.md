@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | **Accepted exception. SEC-10 is not passed.** |
+| Status | **Retired at the M9 re-check (2026-10-24): no findings left.** The runtime moved to `gcr.io/distroless/nodejs24-debian13`; Trivy 0.75.0 (DB 2026-10-24) reports 0 HIGH/CRITICAL in OS and Node packages, so SEC-10 passes strictly (`M9.md`). Kept for the record. |
 | Decision | Accepted by the product owner, 2026-10-23, to close M1 and proceed to M2 |
 | Owner | The product owner (decision, reassessment, renewal or rejection) |
 | Scope | Exactly the 43 findings listed below, identified by severity, CVE, package and installed version. Machine-readable copy: [`M1-SEC-10-exception.txt`](M1-SEC-10-exception.txt) |

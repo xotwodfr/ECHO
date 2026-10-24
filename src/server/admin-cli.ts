@@ -4,7 +4,8 @@ import { createSealer, loadMasterKey, type Sealer } from './crypto.ts';
 import { type Db, openDb } from './db/db.ts';
 
 // echo-admin (SETTINGS_AND_SECURITY.md §3.2, §11; IMPLEMENTATION_PLAN.md M8 task 10), run inside
-// the container: `docker compose exec echo echo-admin <command>`.
+// the container (distroless: no shell, node is the entrypoint):
+//   docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts <command>
 //
 //   backup [file]                        a consistent copy of the database (VACUUM INTO), default
 //                                        /data/backups/echo-<time>.db; the master key is NOT in it

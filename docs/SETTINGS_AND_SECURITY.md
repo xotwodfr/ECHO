@@ -85,7 +85,7 @@ signed URLs). Every call must fail (`ACCEPTANCE_CRITERIA.md` SEC-11).
 - **Per-value encryption:** AES-256-GCM via `node:crypto`, a random 96-bit nonce per write, and
   **AAD** = `table|rowId|column`, so a ciphertext can't be moved to another row or column. Stored as
   `v1:<nonce>:<ciphertext+tag>` (base64url). A key id prefix allows rotation.
-- **Rotation:** `docker compose exec echo echo-admin rotate-master-key --new-key-file …` re-encrypts
+- **Rotation:** `docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts rotate-master-key --new-key-file …` re-encrypts
   all values in one transaction, then the old key file is replaced.
 - No secret is ever written to the cache directory, logs, or the client bundle. `.gitignore` covers
   `secrets/`, `.env*` and `*.local.*`. The repo runs **gitleaks** in pre-commit and CI.
@@ -400,17 +400,17 @@ connection remains (SEC-06).
 
 ## 11. Backups and key management
 
-- Back up the database with `docker compose exec echo echo-admin backup` (a consistent online
+- Back up the database with `docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts backup` (a consistent online
   copy, `VACUUM INTO`, written to `/data/backups/echo-<time>.db`), and copy that file out with the
   owner's normal backups. The cache can be skipped.
 - Back up `secrets/echo_master_key` **separately** (password manager or offline). A DB backup
   without the key exposes no secrets.
 - **Restore:** put the backup in place as `/data/echo.db` on a fresh container with the same
-  master key; `echo-admin verify` reports how many sealed values open. Without the key (verified
+  master key; `admin-cli.ts verify` reports how many sealed values open. Without the key (verified
   in the M8 drill, `src/server/admin-cli.test.ts`): passwords, sessions, settings and queues work;
   Navidrome and Spotify connections show "needs re-entry"; TOTP secrets are unreadable, so users
   sign in with a recovery code and enrol again; the admin re-enters the Spicy key.
-- **Rotation:** `echo-admin rotate-master-key --new-key-file <file>` re-seals every secret with
+- **Rotation:** `admin-cli.ts rotate-master-key --new-key-file <file>` re-seals every secret with
   the new key in one transaction; then replace the `echo_master_key` secret with that file and
   restart at once.
 
@@ -422,14 +422,15 @@ connection remains (SEC-06).
   `sharp` (`allowBuilds` + `strictDepBuilds` in `pnpm-workspace.yaml`; pnpm 12 renamed
   `onlyBuiltDependencies`). Argon2 is built into Node, so `@node-rs/argon2` is not a dependency.
   New versions must be ≥ 14 days old (`minimumReleaseAge`).
-- Base image pinned by digest: `node:24.22.0-trixie-slim` (Debian 13, current stable; moved from
-  bookworm in M1, see `docs/reviews/M1.md`). npm and corepack are removed from the runtime stage (never used
-  at runtime; this also removes their bundled dependencies' CVEs). Rebuilt monthly or on Node security releases. Image scan (Trivy) in CI;
+- Base images pinned by digest. Build: `node:24.22.0-trixie` (Debian 13). Runtime (since M9):
+  **`gcr.io/distroless/nodejs24-debian13`**, with no shell, package manager, util-linux, ncurses or
+  perl. This removed every HIGH finding of the former `node:24.22.0-trixie-slim` runtime, and SEC-10
+  passed strictly at the M9 re-check (`docs/reviews/M9.md`). Rebuilt monthly or on Node security releases. Image scan (Trivy) in CI;
   high or critical findings fail the build. CI applies this to **fixable** findings
   (`--ignore-unfixed`). Unfixed findings are reported separately, and any remaining ones need an
   explicit, owner-accepted, time-boxed exception recorded in the milestone review (SEC-10). A
   second CI step checks all findings against the current exception
-  (`docs/reviews/M1-SEC-10-exception.md`, until M9) and fails on anything outside it. An exception
+  (`docs/reviews/M1-SEC-10-exception.md`, retired at M9 with no findings left) and fails on anything outside it. An exception
   never counts as a pass. Each monthly rebuild reassesses it.
 - `pnpm audit --prod` and gitleaks in CI.
 - The container runs as uid 1000 with a read-only root filesystem, `/tmp` tmpfs, `cap_drop: ALL`,

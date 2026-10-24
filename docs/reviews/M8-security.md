@@ -74,7 +74,8 @@ Each item names its pass condition.
    Caddy on the host).
 7. **Caddy log:** play a track, then check that the access log has no `sig=` and no query strings
    (`Caddyfile.example` filter).
-8. **Backup drill on the box (DEP-03 M):** `echo-admin backup`, restore into a fresh container
-   with the key, and with a wrong key; `echo-admin verify` reports as expected.
+8. **Backup drill on the box (DEP-03 M):** `docker compose exec echo /nodejs/bin/node
+   src/server/admin-cli.ts backup`, restore into a fresh container with the key, and with a wrong
+   key; `admin-cli.ts verify` reports as expected (the runtime is distroless since M9: no shell).
 
 When all eight pass, SEC-19 passes and the domain may be shared.
