@@ -14,6 +14,8 @@ describe('loadConfig', () => {
       devFixtures: false,
       lrclibUrl: 'https://lrclib.net',
       spicyUrl: 'https://api.spicylyrics.org',
+      spotifyAccountsUrl: 'https://accounts.spotify.com',
+      spotifyApiUrl: 'https://api.spotify.com',
     });
   });
 
@@ -45,6 +47,8 @@ describe('loadConfig', () => {
       devFixtures: false,
       lrclibUrl: 'https://lrclib.net',
       spicyUrl: 'https://api.spicylyrics.org',
+      spotifyAccountsUrl: 'https://accounts.spotify.com',
+      spotifyApiUrl: 'https://api.spotify.com',
     });
   });
 

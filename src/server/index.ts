@@ -32,6 +32,7 @@ import {
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 import { queueRoutes } from './queue.ts';
+import { type SpotifyDeps, spotifyRoutes } from './spotify.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -41,6 +42,7 @@ export interface AppDeps {
   auth: AuthDeps;
   navidrome: NavidromeDeps;
   lyrics: LyricsDeps;
+  spotify: SpotifyDeps;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -89,6 +91,7 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', lyricsRoutes(deps.lyrics, requireUser(deps.auth)));
+  app.route('/api/v1', spotifyRoutes(deps.spotify, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -191,6 +194,14 @@ if (import.meta.main) {
     auth,
     navidrome,
     lyrics,
+    spotify: {
+      db: auth.db,
+      sealer: auth.sealer,
+      now: Date.now,
+      accountsUrl: config.spotifyAccountsUrl,
+      apiUrl: config.spotifyApiUrl,
+      publicOrigin: config.publicOrigin,
+    },
     devFixtures: config.devFixtures,
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });

@@ -338,6 +338,56 @@ paths:
         '400': { description: Not a secret key, not a Client ID, or an unknown gate; nothing was saved }
         '403': { description: Not an admin }
 
+  /spotify/login:
+    get:
+      summary: Start the PKCE sign-in (SETTINGS_AND_SECURITY.md §6.2); redirects to Spotify's authorize page
+      responses:
+        '302': { description: To accounts.spotify.com/authorize with the S256 challenge and a state bound to this session (10 min) }
+        '409': { description: 'spotify.not_configured (no Client ID) or spotify.seats_full (5 of 5)' }
+  /spotify/callback:
+    get:
+      summary: Spotify's redirect back; exchanges the code and seals the refresh token
+      parameters:
+        - { name: code, in: query, schema: { type: string } }
+        - { name: state, in: query, required: true, schema: { type: string } }
+        - { name: error, in: query, schema: { type: string } }
+      responses:
+        '302': { description: 'To /settings/account?spotify=connected | premium_required | not_on_user_list | seats_full | denied | bad_state | failed | not_configured' }
+  /spotify/token:
+    post:
+      summary: The current user's short-lived access token for the SDK and the Web API (never the refresh token)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { accessToken: { type: string }, expiresAt: { type: integer, description: Unix ms } } } } } }
+        '401': { description: spotify.expired (sign-in expired; reconnect) }
+        '404': { description: spotify.not_connected }
+        '503': { description: spotify.unavailable (Spotify did not answer) }
+  /spotify/status:
+    get:
+      summary: The Spotify app's configuration, the gates, and this user's connection
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  configured: { type: boolean }
+                  clientId: { type: [string, 'null'] }
+                  gates: { type: object, properties: { artPalette: { type: boolean }, syncedLyrics: { type: boolean } } }
+                  seatsFull: { type: boolean, description: True when this user has no seat and all 5 are taken }
+                  connection:
+                    type: [object, 'null']
+                    properties:
+                      status: { enum: [connected, expired, premium_required, not_on_user_list] }
+                      displayName: { type: [string, 'null'] }
+                      product: { type: [string, 'null'] }
+  /spotify/connection:
+    delete:
+      summary: Disconnect Spotify (deletes the sealed refresh token and frees the seat)
+      responses:
+        '200': { description: Disconnected }
+
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: __Host-echo_session }
