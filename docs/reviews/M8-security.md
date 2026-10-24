@@ -54,7 +54,26 @@ old code:
 From M7, also in scope: Spotify-ID mappings and lyric cache keys carry the lookup basis
 (`a81268f`).
 
-## Live half (owner, after deployment)
+## Live half — run 2026-10-24 on https://echo.folk3s.com
+
+Deployed (M5 task 12) as the container `echo` (`/home/folkes/docker/echo`), loopback port 3077,
+behind Caddy (host service) and the Cloudflare tunnel `folk3s`; TLS ends at Cloudflare.
+
+| # | Check | Result |
+|---|---|---|
+| 1 | TLS (`testssl.sh` 3.2) | **Grade B: capped because Cloudflare's edge offers TLS 1.0/1.1.** Chain OK, TLS 1.3 offered, no known protocol vulnerabilities. BREACH "potentially" (compression): no response reflects attacker input next to a secret, so accepted. **Fix (owner): Cloudflare → SSL/TLS → Edge Certificates → Minimum TLS Version = 1.2**, then re-run |
+| 2 | Headers | §5.4 set on HTML and API responses through Cloudflare, HSTS included ✅ |
+| 3 | Unauthenticated surface | §5.5 routes answer; `/me`, `/me/queue`, `/me/settings`, `/me/sessions`, `/admin/*`, `/spotify/status`, the proxy, lyrics and unsigned streams → 401 ✅ |
+| 4 | Cookie flags | after the owner's first sign-in |
+| 5 | Rate limit | 10 × 401 then 429 from one address ✅. ECHO sees the real client (`Cf-Connecting-Ip` via Caddy), not a Cloudflare address ✅ |
+| 6 | Container | uid 1000, read-only rootfs, `CapDrop [ALL]`, no-new-privileges, port bound to 127.0.0.1 only, healthy ✅ |
+| 7 | Caddy log | Caddy has no access log, so no query string is ever written ✅ |
+| 8 | Backup drill on the box | after setup (needs data) |
+| — | Cross-site POST | 403 ✅ |
+
+SEC-19 passes once the TLS grade is A and checks 4 and 8 are done.
+
+## Live half (owner, after deployment): the procedure
 
 Each item names its pass condition.
 
