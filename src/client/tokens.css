@@ -47,6 +47,7 @@
   --spotify-logo: 80px; /* Spotify Design Guidelines: the full logo is never under 70px wide */
   --scrub-track: 4px; --scrub-thumb: 12px; --scrub-hit: 24px; --volume-w: 96px;
   --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
+  --tile-min-compact: 132px; /* phones: two covers per row at 390 px (M9) */
   --target-min: 24px; /* WCAG 2.5.8: the smallest target (A11Y-07) */
   --sheet-w: 400px; --signin-w: 360px;
   --primary-hover: #FFFFFF;

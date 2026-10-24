@@ -82,7 +82,7 @@ test.describe('chrome auto-hide', () => {
     await page.waitForTimeout(3500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome');
     await page.keyboard.press('Escape');
-    await page.getByRole('link', { name: 'Library' }).first().click();
+    await page.getByRole('link', { name: 'Library', exact: true }).first().click();
     await page.waitForTimeout(3500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome');
   });
@@ -177,7 +177,7 @@ test.describe('view modes', () => {
     await expect(pressed).toHaveText('Visual');
     await page.keyboard.press('l');
     await expect(pressed).toHaveText('Lyrics');
-    await page.getByRole('link', { name: 'Library' }).first().click();
+    await page.getByRole('link', { name: 'Library', exact: true }).first().click();
     await page.keyboard.press('v');
     await page
       .getByRole('navigation', { name: 'Main' })
@@ -190,7 +190,7 @@ test.describe('view modes', () => {
     // Signal / Noise playing, Glass Weather queued next: Next changes the cover on the Stage.
     await playOnStage(page, 'Signal / Noise');
     // In-app navigation (a page load would reset playback).
-    await page.getByRole('link', { name: 'Library' }).first().click();
+    await page.getByRole('link', { name: 'Library', exact: true }).first().click();
     await page.locator('.tile', { hasText: 'Glass Weather' }).getByRole('link').click();
     await page.getByRole('button', { name: 'Add to queue' }).click();
     await page

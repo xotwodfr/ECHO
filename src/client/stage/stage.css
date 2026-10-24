@@ -69,6 +69,7 @@
 .view-switch button {
   height: var(--search-h);
   padding: 0 var(--sp-3);
+  white-space: nowrap; /* a label never breaks; the row wraps instead (M9 critique) */
   border: 0;
   border-radius: var(--r-control);
   background: transparent;
@@ -96,6 +97,23 @@
   translate: 0 -50%;
   text-align: center;
   pointer-events: none;
+}
+
+.stage-idle {
+  position: absolute;
+  top: 40%;
+  left: 0;
+  right: 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-4);
+  translate: 0 -50%;
+  text-align: center;
+}
+
+.stage-idle p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .stage-lyrics p {

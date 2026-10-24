@@ -98,7 +98,7 @@ test('switching to a fixture album without audio stops the guide tone', async ({
   // In-app navigation: a page load would lose the element under test.
   await page
     .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Library' })
+    .getByRole('link', { name: 'Library', exact: true })
     .click();
   await page.locator('.tile', { hasText: 'Harbour Lights' }).getByRole('link').first().click();
   await page.getByRole('button', { name: 'Play Ferry at Six' }).click();

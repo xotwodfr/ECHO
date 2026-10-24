@@ -393,6 +393,8 @@ export const strings = {
     viewLabel: 'Stage view',
     views: { lyrics: 'Lyrics', cover: 'Cover', visual: 'Visual' },
     lyricsPlaceholder: 'Lyrics will appear here.',
+    idle: 'Nothing playing. Pick an album to start.',
+    idleAction: 'Open the Library',
     unsynced: 'Lyrics aren’t time-synced for this track',
     sheetLabel: 'Lyrics',
     transcriptLabel: 'Lyrics',

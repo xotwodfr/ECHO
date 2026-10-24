@@ -59,7 +59,7 @@ test('no WebGL 2: the CSS room, and Settings says visuals are limited', async ({
   expect(
     await page.locator('.stage-room-css').evaluate((el) => getComputedStyle(el).backgroundImage),
   ).toMatch(/radial-gradient.*radial-gradient/);
-  await page.getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
   await page
     .getByRole('navigation', { name: 'Main' })
     .getByRole('link', { name: 'Settings' })
@@ -193,7 +193,7 @@ test.describe('with WebGL 2', () => {
     await countFrames(page);
     await openStage(page);
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
-    await page.getByRole('link', { name: 'Library' }).click();
+    await page.getByRole('link', { name: 'Library', exact: true }).click();
     await expect(stage(page)).toHaveCount(0);
     await page.waitForTimeout(100);
     const a = await frames(page);

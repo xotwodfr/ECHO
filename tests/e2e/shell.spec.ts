@@ -61,7 +61,7 @@ test('the root is the Stage: full-bleed, no sidebar, a way back to the Library',
   const vp = page.viewportSize();
   const stage = await page.locator('.stage').boundingBox();
   expect(stage).toEqual({ x: 0, y: 0, width: vp?.width, height: vp?.height });
-  await page.getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
   await expect(h1(page)).toHaveText('Library');
 });
 
@@ -75,7 +75,7 @@ test('an unknown address shows "Page not found" and keeps the address', async ({
   await page.goto('/no/such/view?x=1');
   await expect(h1(page)).toHaveText('Page not found');
   await expect(page).toHaveURL(/\/no\/such\/view\?x=1$/);
-  await page.getByRole('main').getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Library', exact: true }).click();
   await expect(h1(page)).toHaveText('Library');
 });
 
@@ -91,7 +91,7 @@ test('back and forward move through views without reloading', async ({ page }) =
   await page.evaluate(() => {
     (window as unknown as { marker: number }).marker = 1;
   });
-  await page.getByRole('link', { name: 'Library' }).click();
+  await page.getByRole('link', { name: 'Library', exact: true }).click();
   await page.getByRole('link', { name: 'Artists' }).click();
   await mainNav(page).getByRole('link', { name: 'Settings' }).click();
   await page.getByRole('link', { name: 'Account' }).click();
@@ -121,8 +121,8 @@ test('back and forward move through views without reloading', async ({ page }) =
 test('re-selecting the current view adds no history entry', async ({ page }) => {
   await page.goto('/library');
   const before = await page.evaluate(() => history.length);
-  await mainNav(page).getByRole('link', { name: 'Library' }).click();
-  await mainNav(page).getByRole('link', { name: 'Library' }).click();
+  await mainNav(page).getByRole('link', { name: 'Library', exact: true }).click();
+  await mainNav(page).getByRole('link', { name: 'Library', exact: true }).click();
   expect(await page.evaluate(() => history.length)).toBe(before);
 });
 

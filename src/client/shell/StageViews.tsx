@@ -42,7 +42,17 @@ export function StageChrome() {
 export function StageContent() {
   const view = useStore(stageView, (s) => s.view);
   const track = usePlayer((p) => p.track);
-  if (view === 'visual' || !track) return null; // Visual: the environment only
+  // Nothing playing: one sentence and one action (DESIGN_SYSTEM.md §10; M9 critique).
+  if (!track)
+    return (
+      <div className="stage-idle">
+        <p>{strings.stage.idle}</p>
+        <Link className={buttonClass('secondary')} to={{ view: 'library', tab: 'albums' }}>
+          {strings.stage.idleAction}
+        </Link>
+      </div>
+    );
+  if (view === 'visual') return null; // Visual: the environment only
   if (view === 'cover') return <CoverView />;
   return <LyricsView />;
 }

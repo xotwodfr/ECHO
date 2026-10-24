@@ -519,6 +519,11 @@ button {
 
 /* compact < 720px: the sidebar becomes a bottom bar of 4 destinations. Breakpoint: see the top. */
 @media (max-width: 719.98px) {
+  /* Two columns of covers on a phone, not one cover per screen (M9 critique). */
+  .album-grid {
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-min-compact), 1fr));
+  }
+
   .shell {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr) var(--dock) auto;
@@ -784,6 +789,7 @@ button {
 
 /* Album order above the grid (PRODUCT_SPEC.md §6.3). */
 .album-sort {
+  flex-wrap: wrap;
   margin-bottom: var(--sp-5);
 }
 
