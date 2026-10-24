@@ -2,6 +2,12 @@
 // user volume → output. One AudioContext, created on the first user gesture (autoplay policy).
 // The fixture provider and the Navidrome provider use it.
 
+/** ReplayGain in dB as a linear gain, limited so the peak stays under full scale; unknown: unity. */
+export function replayGainLinear(db: number | undefined, peak: number | undefined) {
+  const g = db === undefined ? 1 : 10 ** (db / 20);
+  return peak && peak > 0 ? Math.min(g, 1 / peak) : g;
+}
+
 export function createAudioPath(el: HTMLAudioElement) {
   let ctx: AudioContext | null = null;
   let volumeNode: GainNode | null = null;
@@ -38,8 +44,7 @@ export function createAudioPath(el: HTMLAudioElement) {
      * Unknown gain plays at unity.
      */
     setReplayGain(db: number | undefined, peak: number | undefined) {
-      const g = db === undefined ? 1 : 10 ** (db / 20);
-      replayGain = peak && peak > 0 ? Math.min(g, 1 / peak) : g;
+      replayGain = replayGainLinear(db, peak);
       if (gainNode) gainNode.gain.value = replayGain;
     },
     /** The analyser tap (VISUALIZER_SPEC.md §3.1), once the graph exists. */

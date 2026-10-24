@@ -106,7 +106,11 @@ export function createPlaybackController(opts: {
       positionMs: startMs,
       positionAt: clock.now(),
     });
-    void provider.load(q.now, { autoplay, startMs });
+    void provider.load(q.now, {
+      autoplay,
+      startMs,
+      replayGain: q.contextSource?.kind === 'album' ? 'album' : 'track',
+    });
   }
 
   /** Repeat-all: start the source list again (reshuffled if shuffle is on). */

@@ -47,3 +47,13 @@ describe('queue trimming (64 KB bodies)', () => {
     expect(f.now?.id).toBe('t0');
   });
 });
+
+describe('ReplayGain (PLAY-05)', () => {
+  it('dB to linear, limited by the peak; unknown gain is unity', async () => {
+    const { replayGainLinear } = await import('./audio.ts');
+    expect(replayGainLinear(undefined, undefined)).toBe(1);
+    expect(replayGainLinear(-6, 0.5)).toBeCloseTo(0.501, 3);
+    expect(replayGainLinear(6, 0.9)).toBeCloseTo(1 / 0.9, 9); // +6 dB would clip a 0.9 peak
+    expect(replayGainLinear(3, undefined)).toBeCloseTo(1.413, 3);
+  });
+});

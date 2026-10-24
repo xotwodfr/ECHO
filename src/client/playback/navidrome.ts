@@ -54,6 +54,7 @@ export class NavidromeProvider implements PlaybackProvider {
   private waiting = false;
   private scrobbled: 'none' | 'now' | 'done' = 'none';
   private retries = 0;
+  private gainMode: 'album' | 'track' = 'track';
   private listeners: { [K in keyof Events]: Set<(e: Events[K]) => void> } = {
     state: new Set(),
     ended: new Set(),
@@ -103,7 +104,14 @@ export class NavidromeProvider implements PlaybackProvider {
         const at = (this.offsetS + el.currentTime) * 1000;
         const play = this.wantPlay;
         setTimeout(
-          () => this.track === t && void this.load(t, { startMs: at, autoplay: play, retry: true }),
+          () =>
+            this.track === t &&
+            void this.load(t, {
+              startMs: at,
+              autoplay: play,
+              retry: true,
+              replayGain: this.gainMode,
+            }),
           500 * 2 ** this.retries,
         );
         this.retries++;
@@ -143,7 +151,10 @@ export class NavidromeProvider implements PlaybackProvider {
     };
   }
 
-  async load(track: Track, opts: { startMs?: number; autoplay: boolean; retry?: boolean }) {
+  async load(
+    track: Track,
+    opts: { startMs?: number; autoplay: boolean; retry?: boolean; replayGain?: 'album' | 'track' },
+  ) {
     const t = track as NavidromeTrack;
     const { el } = this.audio;
     this.track = t;
@@ -153,8 +164,13 @@ export class NavidromeProvider implements PlaybackProvider {
     if (!opts.retry) {
       this.scrobbled = 'none';
       this.retries = 0;
+      this.gainMode = opts.replayGain ?? 'track';
     }
-    this.audio.setReplayGain(t.replayGain?.trackGain, t.replayGain?.trackPeak);
+    const rg = t.replayGain;
+    // Album gain keeps an album's own dynamics between its tracks; track gain evens out a mix.
+    if (opts.replayGain === 'album' && rg?.albumGain !== undefined)
+      this.audio.setReplayGain(rg.albumGain, rg.albumPeak);
+    else this.audio.setReplayGain(rg?.trackGain, rg?.trackPeak);
     const load = ++this.loads;
     const { src, transcode } = this.srcFor(t, this.startMs / 1000);
     this.transcode = transcode;
@@ -211,7 +227,13 @@ export class NavidromeProvider implements PlaybackProvider {
     }
     // A live transcode cannot seek: reload it from the new position (§5.5).
     if (!this.opts.transcodeOffset) return;
-    await this.load(this.track, { startMs: ms, autoplay: !this.audio.el.paused || this.wantPlay });
+    // The same play: scrobble state, retries and the gain mode carry over.
+    await this.load(this.track, {
+      startMs: ms,
+      autoplay: !this.audio.el.paused || this.wantPlay,
+      retry: true,
+      replayGain: this.gainMode,
+    });
   }
 
   async setVolume(v: number) {

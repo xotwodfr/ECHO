@@ -130,7 +130,11 @@ export interface PlaybackProvider {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
 
-  load(track: Track, opts: { startMs?: number; autoplay: boolean }): Promise<void>;
+  /** `replayGain`: album gain in album context, else track gain (PLAY-05, ReplayGain `auto`). */
+  load(
+    track: Track,
+    opts: { startMs?: number; autoplay: boolean; replayGain?: 'album' | 'track' },
+  ): Promise<void>;
   play(): Promise<void>;
   pause(): Promise<void>;
   seek(ms: number): Promise<void>;

@@ -230,6 +230,19 @@ describe('PlaybackController (§3 transport rules)', () => {
     return { clock, provider, c, notes, at, flush, s: () => c.player.getState() };
   };
 
+  it('ReplayGain auto: album gain in album context, track gain otherwise (PLAY-05)', () => {
+    const { provider, c } = setup();
+    const modes: (string | undefined)[] = [];
+    const load = provider.load.bind(provider);
+    provider.load = (t, o) => {
+      modes.push(o.replayGain);
+      return load(t, o);
+    };
+    c.playList(album, 0, ctx);
+    c.playList(album, 0, { kind: 'search', title: 'x' });
+    expect(modes).toEqual(['album', 'track']);
+  });
+
   it('a stream that still fails after its reloads is skipped, with a toast (REL-02)', () => {
     const { clock, provider, c, s, notes } = setup();
     c.playList(album, 0, ctx);
