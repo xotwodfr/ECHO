@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Hono, type MiddlewareHandler } from 'hono';
+import type { LyricsDoc } from '../../shared/types.ts';
 import type { AuthEnv } from '../auth/routes.ts';
 import type { Db } from '../db/db.ts';
 import type { LyricsCache } from './cache.ts';
@@ -18,6 +19,23 @@ export interface LyricsDeps {
   sourcesFor: (userId: number) => Source[];
   /** The user's Navidrome URL: a Navidrome track key means something only on its own server. */
   scopeFor: (userId: number) => string;
+  /** Gate G2 (PLAYBACK_ARCHITECTURE.md §4.6): timed lyrics for Spotify tracks. Default on. */
+  spotifySyncAllowed?: () => boolean;
+}
+
+/** G2 off: the words without their times (LYRICS_INTEGRATION.md §4.4), an untimed sheet. */
+export function untimed(doc: LyricsDoc): LyricsDoc {
+  return {
+    ...doc,
+    sync: 'none',
+    lines: doc.lines.map((l) => ({
+      text: l.text,
+      start: 0,
+      ...(l.agent && { agent: l.agent }),
+      ...(l.oppositeAligned && { oppositeAligned: true }),
+      ...(l.background && { background: l.background.map((b) => ({ text: b.text })) }),
+    })),
+  };
 }
 
 const KEY = /^[\w:.-]{1,200}$/;
@@ -31,10 +49,7 @@ interface Override {
 
 export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<AuthEnv>) {
   const app = new Hono<AuthEnv>();
-  const inflight = new Map<
-    string,
-    Promise<{ doc: import('../../shared/types.ts').LyricsDoc | null; tried: Tried[] }>
-  >();
+  const inflight = new Map<string, Promise<{ doc: LyricsDoc | null; tried: Tried[] }>>();
 
   const override = (userId: number, trackKey: string): Override => {
     const row = deps.db
@@ -86,8 +101,12 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       .slice(0, 16);
     const key = `${scope}${trackKey}|${meta}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}`;
 
+    // The cache keeps the full document; G2 applies on the way out, so switching it takes effect
+    // on the next request (SP-04).
+    const deliver = (doc: LyricsDoc) =>
+      provider === 'spotify' && !(deps.spotifySyncAllowed?.() ?? true) ? untimed(doc) : doc;
     const hit = await deps.cache.get(key);
-    if (hit && 'doc' in hit) return c.json({ doc: hit.doc, override: ov });
+    if (hit && 'doc' in hit) return c.json({ doc: deliver(hit.doc), override: ov });
     if (hit) return c.json({ error: 'not_found', tried: hit.negative, override: ov }, 404);
 
     // Listeners of the same track at the same moment share one lookup.
@@ -104,7 +123,7 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
     const { doc, tried } = await p;
     if (doc) {
       await deps.cache.put(key, doc);
-      return c.json({ doc, override: ov });
+      return c.json({ doc: deliver(doc), override: ov });
     }
     // A miss is remembered only when every source answered; errors and timeouts may pass.
     if (tried.length && tried.every((t) => ['notFound', 'mismatch', 'invalid'].includes(t.outcome)))

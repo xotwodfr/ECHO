@@ -193,6 +193,12 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         }),
       );
     }
+    // Spotify covers (ECHO_SPOTIFY_IMAGE_URL in E2E): any i.scdn.co path, one real image.
+    if (req.url?.startsWith('/image/')) {
+      const png = await fixtureCover('neon-magenta');
+      res.writeHead(200, { 'content-type': 'image/png' });
+      return res.end(png);
+    }
     if (req.url === '/v1/me') {
       res.writeHead(faults.spotifyMeStatus, { 'content-type': 'application/json' });
       return res.end(

@@ -237,11 +237,12 @@ paths:
   /palette/{albumKey}:
     parameters:
       - { name: albumKey, in: path, required: true, schema: { type: string, pattern: '^[\w:.-]{1,200}$' } }
+      - { name: art, in: query, description: 'Spotify albums (spotify:album:…) only: the cover, an https://i.scdn.co URL, read into memory and never stored (gate G1)', schema: { type: string } }
     get:
-      summary: The album's palette (docs/VISUALIZER_SPEC.md §6), computed on a miss and cached per Navidrome server
+      summary: The album's palette (docs/VISUALIZER_SPEC.md §6), computed on a miss and cached per Navidrome server, or per Spotify cover for 30 days; the fallback while G1 is off
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Palette' } } } }
-        '400': { description: Bad album key }
+        '400': { description: Bad album key, or a Spotify cover URL that is not https://i.scdn.co }
         '401': { description: No session (development servers answer for generated covers) }
 
   /me/queue:

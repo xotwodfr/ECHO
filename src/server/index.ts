@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
 import { getConnInfo } from '@hono/node-server/conninfo';
@@ -5,7 +6,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
-import { adminRoutes, spicyKey } from './admin.ts';
+import { adminRoutes, spicyKey, spotifySettings } from './admin.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
@@ -30,7 +31,9 @@ import {
   navidromeUrlOf,
 } from './navidrome/routes.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
+import { fallbackPalette } from './palette/extract.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
+import { fetchSpotifyCover, spotifyArt } from './palette/spotify.ts';
 import { queueRoutes } from './queue.ts';
 import { type SpotifyDeps, spotifyRoutes } from './spotify.ts';
 
@@ -76,6 +79,21 @@ export function createApp(deps: AppDeps) {
     const user = token ? resolveSession(deps.auth.db, token, deps.auth.now()) : null;
     // Signed in, or a development server answering for its generated covers (E2E).
     if (!user && !deps.devFixtures) return c.json({ error: 'unauthenticated' }, 401);
+    if (key.startsWith('spotify:album:')) {
+      if (!user) return c.json({ error: 'unauthenticated' }, 401);
+      // Gate G1 (PLAYBACK_ARCHITECTURE.md §4.6): off means the fallback, at once, uncached.
+      if (!spotifySettings(deps.auth.db).gates.artPalette) {
+        c.header('Cache-Control', 'no-store');
+        return c.json(fallbackPalette());
+      }
+      const art = spotifyArt(c.req.query('art'));
+      if (!art) return c.json({ error: 'bad_art_url' }, 400);
+      // Scoped by the image itself: a request naming another picture cannot repaint this album
+      // for everyone else.
+      const scope = createHash('sha256').update(art).digest('hex').slice(0, 16);
+      c.header('Cache-Control', 'private, no-cache'); // G1 may be switched off at any time
+      return c.json(await deps.palette.get(key, { userId: user.id, scope, art }));
+    }
     // A Navidrome album id means something only on its own server: scope it to the user's.
     const scope = key.startsWith('navidrome:')
       ? user
@@ -154,8 +172,11 @@ if (import.meta.main) {
     dir: join(config.dataDir, 'cache', 'palette'),
     // The user's own Navidrome; generated covers for fixtures and, in development, the fixture
     // library's drawings.
-    load: async (key, { userId }) => {
+    load: async (key, ctx) => {
+      const { userId } = ctx;
       if (key.startsWith('fixture:')) return fixtureCover(key.slice(8));
+      if (key.startsWith('spotify:album:'))
+        return ctx.art ? fetchSpotifyCover(ctx.art, config.spotifyImageUrl) : null;
       const fromNavidrome =
         userId !== null && key.startsWith('navidrome:') ? await cover(userId, key.slice(10)) : null;
       return fromNavidrome ?? (config.devFixtures ? libraryCover(key) : null);
@@ -179,6 +200,7 @@ if (import.meta.main) {
     cache: lyricsCache,
     resolver: createResolver(),
     scopeFor: (userId) => navidromeUrlOf(auth.db, userId),
+    spotifySyncAllowed: () => spotifySettings(auth.db).gates.syncedLyrics,
     sourcesFor: (userId) => {
       const client = () => navidromeClientFor(navidrome, userId);
       return [

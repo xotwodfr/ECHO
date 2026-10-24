@@ -171,3 +171,22 @@ describe('the shared cache cannot be poisoned (security review)', () => {
     expect(seen).toHaveLength(2);
   });
 });
+
+describe('gate G2 (SP-04): timed lyrics for Spotify tracks', () => {
+  const SQ = 'trackKey=spotify:4cOdK2wGLETKBW3PvgPWqT&title=Song&artist=Band&durationMs=200000';
+  it('on: Spotify tracks get the timed document; off: untimed, from the same cache entry', async () => {
+    const lr = src('lrclib', () => ({ kind: 'found', candidate: candidate('lrclib') }));
+    const s = setup([lr.s]);
+    let allowed = true;
+    s.deps.lyrics.spotifySyncAllowed = () => allowed;
+    const on = await (await s.get(SQ)).json();
+    expect(on.doc).toMatchObject({ sync: 'line', lines: [{ text: 'hello', start: 1000 }] });
+    allowed = false; // the admin switches G2 off: the next request has it, no restart
+    const off = await (await s.get(SQ)).json();
+    expect(off.doc).toMatchObject({ sync: 'none', lines: [{ text: 'hello', start: 0 }] });
+    expect(lr.calls.n).toBe(1);
+    // Navidrome tracks are not Spotify playback: G2 does not touch them.
+    const nd = await (await s.get(Q)).json();
+    expect(nd.doc.sync).toBe('line');
+  });
+});

@@ -89,6 +89,7 @@ export default defineConfig({
         ECHO_SPICY_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_ACCOUNTS_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_API_URL: `http://127.0.0.1:${mockPort}`,
+        ECHO_SPOTIFY_IMAGE_URL: `http://127.0.0.1:${mockPort}`,
       },
       url: `http://127.0.0.1:${port}/api/v1/health`,
       reuseExistingServer: !process.env.CI,

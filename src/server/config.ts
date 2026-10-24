@@ -18,6 +18,7 @@ export interface Config {
   spicyUrl: string; // S2
   spotifyAccountsUrl: string; // PKCE and tokens (overridable for E2E mocks)
   spotifyApiUrl: string;
+  spotifyImageUrl: string; // where i.scdn.co covers are fetched from (overridable for E2E mocks)
 }
 
 type Env = Record<string, string | undefined>;
@@ -53,6 +54,7 @@ export function loadConfig(env: Env = process.env): Config {
       '',
     ),
     spotifyApiUrl: (env.ECHO_SPOTIFY_API_URL || 'https://api.spotify.com').replace(/\/+$/, ''),
+    spotifyImageUrl: (env.ECHO_SPOTIFY_IMAGE_URL || 'https://i.scdn.co').replace(/\/+$/, ''),
   };
 }
 

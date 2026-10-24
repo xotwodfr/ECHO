@@ -16,6 +16,7 @@ describe('loadConfig', () => {
       spicyUrl: 'https://api.spicylyrics.org',
       spotifyAccountsUrl: 'https://accounts.spotify.com',
       spotifyApiUrl: 'https://api.spotify.com',
+      spotifyImageUrl: 'https://i.scdn.co',
     });
   });
 
@@ -49,6 +50,7 @@ describe('loadConfig', () => {
       spicyUrl: 'https://api.spicylyrics.org',
       spotifyAccountsUrl: 'https://accounts.spotify.com',
       spotifyApiUrl: 'https://api.spotify.com',
+      spotifyImageUrl: 'https://i.scdn.co',
     });
   });
 

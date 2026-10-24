@@ -24,15 +24,45 @@ export const SP_TRACKS = ['Signal Fires', 'Long Wave', 'Dial Tone'].map((name, i
   type: 'track',
 }));
 export const SP_PLAYLIST = { id: id('nightdrive'), name: 'Night Drive' };
+/** Named like the mock Navidrome's album the mock LRCLIB knows, so Spotify tracks get lyrics. */
+export const SP_GLASS = {
+  id: id('glassweather'),
+  name: 'Glass Weather',
+  artists: [{ id: id('mirasole'), name: 'Mira Sole' }],
+  images: [{ url: 'https://i.scdn.co/image/glass-weather-300', width: 300, height: 300 }],
+  release_date: '2023-01-01',
+};
+export const SP_GLASS_TRACKS = [1, 2].map((n) => ({
+  id: id(`gw${n}track`),
+  name: `Glass Weather ${n}`,
+  duration_ms: (20 + (n - 1) * 5) * 1000,
+  artists: SP_GLASS.artists,
+  type: 'track',
+}));
 
-const albumFull = () => ({ ...SP_ALBUM, tracks: { items: SP_TRACKS, next: null } });
-const sdkTrack = (t: (typeof SP_TRACKS)[number]) => ({
+type SpTrack = (typeof SP_TRACKS)[number];
+const ALBUMS = [
+  { album: SP_ALBUM, tracks: SP_TRACKS },
+  { album: SP_GLASS, tracks: SP_GLASS_TRACKS },
+];
+const albumFull = (a = ALBUMS[0] as (typeof ALBUMS)[number]) => ({
+  ...a.album,
+  tracks: { items: a.tracks, next: null },
+});
+const albumOfTrack = (t: SpTrack) =>
+  (ALBUMS.find((a) => a.tracks.includes(t)) ?? ALBUMS[0])?.album as typeof SP_ALBUM;
+const ALL_TRACKS = ALBUMS.flatMap((a) => a.tracks);
+const sdkTrack = (t: SpTrack) => ({
   id: t.id,
   uri: `spotify:track:${t.id}`,
   name: t.name,
   duration_ms: t.duration_ms,
   artists: t.artists.map((a) => ({ name: a.name, uri: `spotify:artist:${a.id}` })),
-  album: { name: SP_ALBUM.name, uri: `spotify:album:${SP_ALBUM.id}`, images: SP_ALBUM.images },
+  album: {
+    name: albumOfTrack(t).name,
+    uri: `spotify:album:${albumOfTrack(t).id}`,
+    images: albumOfTrack(t).images,
+  },
 });
 
 /** The stand-in SDK, as page script. `window.__fakeSpotify` lets a test drive it. */
@@ -111,8 +141,9 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
   const p = url.pathname;
   if (method === 'GET' && p === '/v1/me') return json({ id: 'mock-user', product: 'premium' });
   if (method === 'GET' && p === '/v1/me/albums')
-    return json({ items: [{ album: albumFull() }], next: null });
-  if (method === 'GET' && p === `/v1/albums/${SP_ALBUM.id}`) return json(albumFull());
+    return json({ items: ALBUMS.map((a) => ({ album: albumFull(a) })), next: null });
+  const album = ALBUMS.find((a) => p === `/v1/albums/${a.album.id}`);
+  if (method === 'GET' && album) return json(albumFull(album));
   if (method === 'GET' && p === '/v1/me/playlists')
     return json({
       items: [
@@ -152,8 +183,10 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
   if (method === 'PUT' && p === '/v1/me/player/play') {
     const offset = body?.offset?.position ?? 0;
     const list = body?.context_uri
-      ? SP_TRACKS
-      : (body.uris as string[]).map((u) => SP_TRACKS.find((t) => u.endsWith(t.id)) ?? SP_TRACKS[0]);
+      ? (ALBUMS.find((a) => body.context_uri.endsWith(a.album.id))?.tracks ?? SP_TRACKS)
+      : (body.uris as string[]).map(
+          (u) => ALL_TRACKS.find((t) => u.endsWith(t.id)) ?? SP_TRACKS[0],
+        );
     await page.evaluate(
       ([tracks, o, ms]) => (window as never as Fake).__fakeSpotify.play(tracks, o, ms),
       [

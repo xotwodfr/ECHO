@@ -1,6 +1,13 @@
 import { expect, type Page, test } from '@playwright/test';
-import { fakeSpotify, SP_ALBUM, SP_TRACKS } from './fake-spotify.ts';
-import { connectSpotify, playAlbum, releaseSpotify, signedInWithNavidrome } from './helpers.ts';
+import { fakeSpotify, SP_ALBUM, SP_GLASS, SP_TRACKS } from './fake-spotify.ts';
+import {
+  clearLyricsCache,
+  connectSpotify,
+  playAlbum,
+  releaseSpotify,
+  serverSetting,
+  signedInWithNavidrome,
+} from './helpers.ts';
 
 // M7 with a fake Spotify (fake-spotify.ts) and the mock accounts service: connecting (SEC-07's
 // flow end to end), the device and transport (PLAY-08 as far as a fake can show it), one provider
@@ -227,4 +234,43 @@ test('REL-04: not_ready, Premium missing and sign-in expiry each show their stat
   await fire('authentication_error');
   await expect(dock(page).getByText('Spotify sign-in expired.')).toBeVisible();
   await expect(dock(page).getByRole('link', { name: 'Reconnect' })).toBeVisible();
+});
+
+test('SP-04: G1 and G2 on give art colour and timed lyrics; switched off, the next track falls back', async ({
+  page,
+  browserName,
+}) => {
+  // The gates are server-wide: one browser flips them, so the other's tests never see a race.
+  test.skip(browserName !== 'chromium', 'gates are shared server state');
+  clearLyricsCache();
+  await ready(page);
+  const palette = () =>
+    page.waitForResponse((r) => r.url().includes('/api/v1/palette/spotify%3Aalbum%3A'));
+  try {
+    const first = palette();
+    await page.goto(`/library/album/${encodeURIComponent(`spotify:${SP_GLASS.id}`)}`);
+    await page
+      .locator('.detail-actions')
+      .getByRole('button', { name: 'Play', exact: true })
+      .click();
+    const on = await first;
+    expect(on.url()).toContain(encodeURIComponent('https://i.scdn.co/image/glass-weather-300'));
+    expect((await on.json()).source).toBe('art');
+    await page
+      .getByRole('navigation', { name: 'Main' })
+      .getByRole('link', { name: 'Listen' })
+      .click();
+    await expect(page.getByRole('list', { name: 'Lyrics' })).toContainText('Glass Weather 1');
+    await expect(page.locator('.ly-sheet')).toHaveCount(0);
+
+    serverSetting('spotify.gates.artPalette', false);
+    serverSetting('spotify.gates.syncedLyrics', false);
+    const second = palette();
+    await page.keyboard.press('Control+ArrowRight'); // Next
+    expect((await (await second).json()).source).toBe('fallback');
+    await expect(page.locator('.ly-sheet')).toContainText('Glass Weather 2');
+  } finally {
+    serverSetting('spotify.gates.artPalette', true);
+    serverSetting('spotify.gates.syncedLyrics', true);
+  }
 });

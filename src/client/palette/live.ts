@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import type { Track } from '../../shared/types.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { upcoming } from '../playback/queue.ts';
 import { createPaletteAnimator, ROLES, type Roles, VARS } from './animator.ts';
@@ -15,16 +16,27 @@ export const paletteStore = createStore<{ version: number; albumKey: string | nu
   albumKey: null,
 }));
 
-type Fetch = (albumKey: string) => Promise<Roles | null>;
+type Fetch = (albumKey: string, art?: string) => Promise<Roles | null>;
 
-const fetchPalette: Fetch = async (albumKey) => {
+const fetchPalette: Fetch = async (albumKey, art) => {
   try {
-    const res = await fetch(`/api/v1/palette/${encodeURIComponent(albumKey)}`);
+    // Spotify albums name their cover: the server reads it into memory (gate G1, SP-03).
+    const q = art ? `?art=${encodeURIComponent(art)}` : '';
+    const res = await fetch(`/api/v1/palette/${encodeURIComponent(albumKey)}${q}`);
     return res.ok ? ((await res.json()) as Roles) : null;
   } catch {
     return null; // offline or no server (the fixture-only dev shell): keep what is on screen
   }
 };
+
+/** A Spotify track's cover for the server to read: the smallest of at least 128 px (it decodes at 128). */
+function artOf(t: Track): string | undefined {
+  if (t.provider !== 'spotify') return undefined;
+  const fit = [...t.artwork]
+    .filter((a) => (a.width ?? 0) >= 128)
+    .sort((a, b) => (a.width ?? 0) - (b.width ?? 0));
+  return (fit[0] ?? t.artwork[0])?.url;
+}
 
 export function startPalette(
   c: PlaybackController,
@@ -39,10 +51,12 @@ export function startPalette(
   const fallback = initial; // tokens.css: the achromatic fallback
   const anim = createPaletteAnimator(initial);
   const cache = new Map<string, Promise<Roles | null>>();
-  const get = (key: string) => {
+  const get = (key: string, art?: string) => {
     let p = cache.get(key);
     if (!p) {
-      p = load(key);
+      p = load(key, art);
+      // Spotify palettes are asked again on every track: gate G1 can change (SP-04).
+      if (key.startsWith('spotify:')) void p.finally(() => cache.delete(key));
       cache.set(key, p);
     }
     return p;
@@ -66,9 +80,9 @@ export function startPalette(
     if (!frame) last = 0;
   };
 
-  async function show(albumKey: string | null) {
+  async function show(albumKey: string | null, art?: string) {
     paletteStore.setState({ albumKey });
-    const roles = albumKey ? ((await get(albumKey)) ?? fallback) : fallback;
+    const roles = albumKey ? ((await get(albumKey, art)) ?? fallback) : fallback;
     if (paletteStore.getState().albumKey !== albumKey) return; // a newer track won
     // The same colours again (another track of the album, or fallback after fallback): nothing
     // to animate, nothing to write.
@@ -87,13 +101,17 @@ export function startPalette(
 
   const onTrack = () => {
     const track = c.player.getState().track;
-    void show(opts.albumKey ?? track?.album.key ?? null);
+    void show(opts.albumKey ?? track?.album.key ?? null, track ? artOf(track) : undefined);
     // Prefetch the next track's palette, so it is ready when the track changes.
     const next = upcoming(c.queue.getState())[0];
-    if (next && next.album.key !== track?.album.key) void get(next.album.key);
+    if (next && next.album.key !== track?.album.key) void get(next.album.key, artOf(next));
   };
+  // Another album, or for Spotify any other track (gate G1 may have changed, SP-04).
   const off = c.player.subscribe(
-    (s, prev) => s.track?.album.key !== prev.track?.album.key && onTrack(),
+    (s, prev) =>
+      (s.track?.album.key !== prev.track?.album.key ||
+        (s.track?.provider === 'spotify' && s.track.key !== prev.track?.key)) &&
+      onTrack(),
   );
   onTrack();
 
