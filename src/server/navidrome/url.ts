@@ -78,20 +78,23 @@ export function isPrivateAddress(ip: string): boolean {
   const b = ipv6Bytes(ip);
   if (!b) return true; // unparseable: refuse
   const zero = (from: number, to: number) => b.slice(from, to).every((x) => x === 0);
-  // IPv4 inside IPv6, in every form an address can hide behind: mapped (::ffff:0:0/96),
-  // compatible (::/96, which also covers :: and ::1), and 6to4 (2002::/16).
+  // IPv4-mapped (::ffff:a.b.c.d): judged by the IPv4 it carries.
   if (zero(0, 10) && b[10] === 0xff && b[11] === 0xff) return isPrivateAddress(v4Of(b, 12));
-  if (zero(0, 12)) return true;
-  if (b[0] === 0x20 && b[1] === 0x02) return isPrivateAddress(v4Of(b, 2));
+  // Otherwise an allowlist, not a blocklist: only global unicast (2000::/3) is public. That
+  // refuses ::/96, SIIT ::ffff:0:0:0/96, NAT64 64:ff9b::/96 and 64:ff9b:1::/48, unique local,
+  // link-local and multicast without naming each.
+  if (((b[0] as number) & 0xe0) !== 0x20) return true;
   const w0 = ((b[0] as number) << 8) | (b[1] as number);
   const w1 = ((b[2] as number) << 8) | (b[3] as number);
+  if (w0 === 0x2002) return isPrivateAddress(v4Of(b, 2)); // 6to4 carries an IPv4
+  // The special-use blocks inside 2000::/3 (IANA IPv6 special-purpose registry).
   return (
-    (w0 & 0xfe00) === 0xfc00 || // fc00::/7 unique local (incl. fd00:ec2::254 metadata)
-    (w0 & 0xffc0) === 0xfe80 || // fe80::/10 link-local
-    (w0 & 0xff00) === 0xff00 || // multicast
-    (w0 === 0x0064 && w1 === 0xff9b) || // 64:ff9b::/96 NAT64: maps onto IPv4 we cannot see
     (w0 === 0x2001 && w1 === 0x0000) || // 2001::/32 Teredo: tunnels to an IPv4 we cannot see
-    (w0 === 0x2001 && w1 === 0x0db8) // documentation
+    (w0 === 0x2001 && w1 === 0x0db8) || // 2001:db8::/32 documentation
+    (w0 === 0x2001 && w1 === 0x0002 && zero(4, 6)) || // 2001:2::/48 benchmarking
+    (w0 === 0x2001 && (w1 & 0xfff0) === 0x0010) || // 2001:10::/28 ORCHID
+    (w0 === 0x2001 && (w1 & 0xfff0) === 0x0020) || // 2001:20::/28 ORCHIDv2
+    (w0 === 0x3fff && (w1 & 0xf000) === 0) // 3fff::/20 documentation
   );
 }
 
