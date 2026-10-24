@@ -56,6 +56,22 @@ const browserEnv: LoopEnv = {
   },
 };
 
+const perf: { frameMs: number[]; lyricsMs: number[]; tier: Tier } = {
+  frameMs: [],
+  lyricsMs: [],
+  tier: 'T1',
+};
+function recordPerf(frameMs: number, lyricsMs: number, tier: Tier) {
+  perf.frameMs.push(frameMs);
+  perf.lyricsMs.push(lyricsMs);
+  perf.tier = tier;
+  if (perf.frameMs.length > 600) {
+    perf.frameMs.shift();
+    perf.lyricsMs.shift();
+  }
+  (window as unknown as { __echoPerf?: typeof perf }).__echoPerf = perf;
+}
+
 /** Settings → Visuals → Quality (per device): a fixed tier, or `auto` (T1 until the M9 governor). */
 const TIERS: Record<string, Tier | undefined> = {
   high: 'T0',
@@ -164,77 +180,92 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       features: c.features,
       palette: { step() {} }, // the shell's PaletteAnimator writes :root; see offPalette below
       render: (f) => {
-        // Deterministic: the room as Ambient draws it after `ms` of playback at full rate.
-        const flow = frame ? (AMBIENT_FLOW_PER_S * frame.ms) / 1000 : f.flow;
-        const drift = frame ? frame.ms / 1000 : f.drift;
-        const scrub = scrubStore.getState().ms !== null;
-        const key = field?.update({
-          // The user's offset for this track shifts the lyric clock only, never the features
-          // (LYRICS_EXPERIENCE.md §9.13): +150 ms shows the words 150 ms later.
-          t: f.t - lyricOffset(),
-          dt: f.dt,
-          driftS: drift,
-          playing: playing(),
-          mode: frame ? 'still' : scrub ? 'scrub' : 'run',
-          features: f.features,
-          reduced: reduced.matches || visuals().motion === 'reduced',
-        });
-        // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
-        if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;
-        // The governor (§8.2) on frames that draw the room.
-        const next = governor?.sample({
-          dtMs: f.dt,
-          trackMs: env.now() - trackStartedAt,
-          scrubbing: scrub,
-        });
-        if (next) {
-          tier = next;
-          renderer.setTier(next);
-          loop.setMode(loopMode()); // T3 is Still
-          if (!manualTier) rememberAt = env.now() + 20_000;
-        }
-        if (rememberAt && env.now() >= rememberAt) {
-          rememberTier(tier);
-          rememberAt = 0;
-        }
-        // Reverb (§4): the moving room with live (or recorded) features; Ambient without them.
-        const reverbOn =
-          loop.mode === 'ambient' && !frame && f.features.available && visuals().mode !== 'ambient';
-        if (reverbOn !== (stageStatus.getState().mode === 'reverb'))
-          set({ mode: reverbOn ? 'reverb' : modeNow() });
-        const rv = reverbOn
-          ? reverb.step(f.features, f.dt, key ? [key.x, key.y] : DEFAULT_KEY)
-          : null;
-        renderer.setReverb(rv);
-        chrome = loop.mode === 'still' ? chromeTarget : chromeStep(chrome, chromeTarget, f.dt);
-        const input = {
-          flow: rv ? rv.flow : flow,
-          drift,
-          key: key ? [key.x, key.y] : DEFAULT_KEY,
-          chrome,
-          seed: frame?.seed ?? 0,
-        } satisfies FrameInput;
-        renderer.render(input);
-        // Development: A11Y-08 records the stage's luminance grid while asked to.
-        if (
-          __ECHO_FIXTURES__ &&
-          (window as { __echoLuma?: { t: number; grid: number[] }[] }).__echoLuma
-        ) {
-          const grid = renderer.lumaGrid();
-          if (grid)
-            (window as unknown as { __echoLuma: { t: number; grid: number[] }[] }).__echoLuma.push({
-              t: env.now(),
-              grid: [...grid],
-            });
-        }
-        // Contrast (DESIGN_SYSTEM.md §3.4): probe every 250 ms while running. A single frame (Still
-        // mode, deterministic frames) probes until the solver settles, so it is drawn compliant.
-        const now = env.now();
-        if (loop.mode === 'still') {
-          for (let i = 0; i < 12 && contrastStep(PROBE_MS); i++) renderer.render(input);
-        } else if (now - lastProbe >= PROBE_MS) {
-          contrastStep(Math.min(now - lastProbe, 1000));
-          lastProbe = now;
+        const t0 = performance.now();
+        let lyricsMs = 0;
+        try {
+          // Deterministic: the room as Ambient draws it after `ms` of playback at full rate.
+          const flow = frame ? (AMBIENT_FLOW_PER_S * frame.ms) / 1000 : f.flow;
+          const drift = frame ? frame.ms / 1000 : f.drift;
+          const scrub = scrubStore.getState().ms !== null;
+          const tl = performance.now();
+          const key = field?.update({
+            // The user's offset for this track shifts the lyric clock only, never the features
+            // (LYRICS_EXPERIENCE.md §9.13): +150 ms shows the words 150 ms later.
+            t: f.t - lyricOffset(),
+            dt: f.dt,
+            driftS: drift,
+            playing: playing(),
+            mode: frame ? 'still' : scrub ? 'scrub' : 'run',
+            features: f.features,
+            reduced: reduced.matches || visuals().motion === 'reduced',
+          });
+          lyricsMs = performance.now() - tl;
+          // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
+          if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;
+          // The governor (§8.2) on frames that draw the room.
+          const next = governor?.sample({
+            dtMs: f.dt,
+            trackMs: env.now() - trackStartedAt,
+            scrubbing: scrub,
+          });
+          if (next) {
+            tier = next;
+            renderer.setTier(next);
+            loop.setMode(loopMode()); // T3 is Still
+            if (!manualTier) rememberAt = env.now() + 20_000;
+          }
+          if (rememberAt && env.now() >= rememberAt) {
+            rememberTier(tier);
+            rememberAt = 0;
+          }
+          // Reverb (§4): the moving room with live (or recorded) features; Ambient without them.
+          const reverbOn =
+            loop.mode === 'ambient' &&
+            !frame &&
+            f.features.available &&
+            visuals().mode !== 'ambient';
+          if (reverbOn !== (stageStatus.getState().mode === 'reverb'))
+            set({ mode: reverbOn ? 'reverb' : modeNow() });
+          const rv = reverbOn
+            ? reverb.step(f.features, f.dt, key ? [key.x, key.y] : DEFAULT_KEY)
+            : null;
+          renderer.setReverb(rv);
+          chrome = loop.mode === 'still' ? chromeTarget : chromeStep(chrome, chromeTarget, f.dt);
+          const input = {
+            flow: rv ? rv.flow : flow,
+            drift,
+            key: key ? [key.x, key.y] : DEFAULT_KEY,
+            chrome,
+            seed: frame?.seed ?? 0,
+          } satisfies FrameInput;
+          renderer.render(input);
+          // Development: A11Y-08 records the stage's luminance grid while asked to.
+          if (
+            __ECHO_FIXTURES__ &&
+            (window as { __echoLuma?: { t: number; grid: number[] }[] }).__echoLuma
+          ) {
+            const grid = renderer.lumaGrid();
+            if (grid)
+              (
+                window as unknown as { __echoLuma: { t: number; grid: number[] }[] }
+              ).__echoLuma.push({
+                t: env.now(),
+                grid: [...grid],
+              });
+          }
+          // Contrast (DESIGN_SYSTEM.md §3.4): probe every 250 ms while running. A single frame (Still
+          // mode, deterministic frames) probes until the solver settles, so it is drawn compliant.
+          const now = env.now();
+          if (loop.mode === 'still') {
+            for (let i = 0; i < 12 && contrastStep(PROBE_MS); i++) renderer.render(input);
+          } else if (now - lastProbe >= PROBE_MS) {
+            contrastStep(Math.min(now - lastProbe, 1000));
+            lastProbe = now;
+          }
+        } finally {
+          // Development and E2E builds: per-frame costs for the performance checks (PERF-03,
+          // LYR-26), the last 600 frames.
+          if (__ECHO_FIXTURES__ && !frame) recordPerf(performance.now() - t0, lyricsMs, tier);
         }
       },
       isPlaying: playing,

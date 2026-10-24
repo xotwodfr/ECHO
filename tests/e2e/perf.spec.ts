@@ -80,3 +80,36 @@ test('PERF-06: no heap growth over 20 MB across 20 track changes', async ({ page
   const growth = (await heap()) - before;
   expect(growth).toBeLessThan(20 * 1024 * 1024);
 });
+
+test('PERF-03, LYR-26: Stage main-thread work and the lyric update per frame at T0', async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page, 'perf');
+  // T0, fixed: Settings → Visuals → Quality = High on this device.
+  await page.evaluate(() => localStorage.setItem('echo.visuals.quality', '"high"'));
+  await playAlbum(page, 'al-1'); // its first track has word-synced lyrics (mock Navidrome)
+  await expect(page.getByRole('list', { name: 'Lyrics' })).toBeAttached();
+  await page.waitForTimeout(8000);
+  const p = await page.evaluate(() => {
+    const perf = (
+      window as unknown as { __echoPerf: { frameMs: number[]; lyricsMs: number[]; tier: string } }
+    ).__echoPerf;
+    const q = (xs: number[], f: number) =>
+      [...xs].sort((a, b) => a - b)[Math.floor(xs.length * f)] as number;
+    return {
+      tier: perf.tier,
+      frames: perf.frameMs.length,
+      frameMedian: q(perf.frameMs, 0.5),
+      frameP95: q(perf.frameMs, 0.95),
+      lyricsMedian: q(perf.lyricsMs, 0.5),
+      lyricsP95: q(perf.lyricsMs, 0.95),
+    };
+  });
+  console.log(`stage perf on this machine: ${JSON.stringify(p)}`);
+  expect(p.tier).toBe('T0');
+  // SwiftShader draws T0 in software, so frames are few here; the main-thread costs per frame are
+  // what this measures. The reference clients' GPU numbers (PERF-01) are the owner's runs.
+  expect(p.frames).toBeGreaterThan(30);
+  expect(p.lyricsMedian).toBeLessThanOrEqual(2.5); // LYR-26
+  expect(p.frameMedian).toBeLessThanOrEqual(4); // PERF-03
+});
