@@ -38,7 +38,8 @@ export interface Where {
 
 const aad = (w: Where) => Buffer.from(`${w.table}|${w.rowId}|${w.column}`, 'utf8');
 
-export function createSealer(master: Buffer) {
+/** `remember` sees every plaintext opened, so the log redactor can mask it word for word (§9). */
+export function createSealer(master: Buffer, opts: { remember?: (plain: string) => void } = {}) {
   const key = subkey(master, 'secrets');
   return {
     /** `v1:<nonce>:<ciphertext+tag>`, base64url. */
@@ -58,9 +59,12 @@ export function createSealer(master: Buffer) {
         aad(where),
       );
       d.setAuthTag(body.subarray(body.length - 16));
-      return Buffer.concat([d.update(body.subarray(0, body.length - 16)), d.final()]).toString(
-        'utf8',
-      );
+      const plain = Buffer.concat([
+        d.update(body.subarray(0, body.length - 16)),
+        d.final(),
+      ]).toString('utf8');
+      opts.remember?.(plain);
+      return plain;
     },
   };
 }

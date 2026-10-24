@@ -11,10 +11,11 @@ import { adminRoutes, spicyKey, spotifySettings } from './admin.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
-import { LOG_LEVELS, type LogLevel, loadConfig } from './config.ts';
+import { loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
+import { accessLog, createLogger, createSecretSet, type Log } from './log.ts';
 import { createLyricsCache } from './lyrics/cache.ts';
 import { createResolver } from './lyrics/resolve.ts';
 import { type LyricsDeps, lyricsRoutes } from './lyrics/routes.ts';
@@ -59,6 +60,8 @@ export interface AppDeps {
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
+  /** The redacting logger (log.ts); silent when absent (tests). */
+  log?: Log;
   /** The TCP peer; tests stand in for the Node socket. */
   socketAddress?: (c: Context) => string;
 }
@@ -69,6 +72,13 @@ export function createApp(deps: AppDeps) {
     '*',
     hardening(deps.http, deps.socketAddress ?? ((c) => getConnInfo(c).remote.address ?? '')),
   );
+  const log: Log = deps.log ?? (() => {});
+  app.use('/api/*', accessLog(log));
+  // Errors go through the redactor too (Hono's default prints them raw).
+  app.onError((err, c) => {
+    log('error', 'unhandled', { route: c.req.routePath, error: err });
+    return c.json({ error: 'internal' }, 500);
+  });
   app.use(
     '/api/*',
     bodyLimit({ maxSize: BODY_LIMIT, onError: (c) => c.json({ error: 'too_large' }, 413) }),
@@ -137,22 +147,17 @@ export function createApp(deps: AppDeps) {
   return app;
 }
 
-function logger(min: LogLevel) {
-  return (level: LogLevel, msg: string, extra: Record<string, unknown> = {}) => {
-    if (LOG_LEVELS.indexOf(level) < LOG_LEVELS.indexOf(min)) return;
-    console.log(JSON.stringify({ at: new Date().toISOString(), level, msg, ...extra }));
-  };
-}
-
 if (import.meta.main) {
   let config: ReturnType<typeof loadConfig>;
   try {
     config = loadConfig();
   } catch (err) {
-    logger('error')('error', 'invalid configuration', { detail: (err as Error).message });
+    createLogger('error')('error', 'invalid configuration', { detail: (err as Error).message });
     process.exit(1);
   }
-  const log = logger(config.logLevel);
+  // Every secret the server decrypts is remembered, so the logger masks it word for word (§9).
+  const secrets = createSecretSet();
+  const log = createLogger(config.logLevel, { secrets: secrets.values });
   let master: Buffer;
   try {
     master = loadMasterKey(config.masterKeyFile);
@@ -162,7 +167,7 @@ if (import.meta.main) {
   }
   const auth: AuthDeps = {
     db: openDb(join(config.dataDir, 'echo.db')),
-    sealer: createSealer(master),
+    sealer: createSealer(master, { remember: (p) => secrets.add(p) }),
     limiter: createLoginLimiter(),
     now: Date.now,
     setup: { token: null, expiresAt: 0, pending: null },
@@ -252,6 +257,7 @@ if (import.meta.main) {
     spotify: spotifyDeps,
     spotifyTokens,
     devFixtures: config.devFixtures,
+    log,
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>
