@@ -290,6 +290,11 @@ the **pre-share security review**.
 
 **Dependencies:** M5–M7.
 
+**Progress:** tasks 1–11 built and tested (2026-10-24; record in `docs/reviews/M8.md`, review in
+`docs/reviews/M8-security.md`). Open: the live half of the pre-share review (SEC-19) and the on-box
+backup drill (DEP-03), both after deployment (M5 task 12). The domain is not to be shared before
+SEC-19 passes. The Settings `blank-gap` deferral from M2 is closed (0 FAIL).
+
 **Tasks:**
 1. Preferences views (`SETTINGS_AND_SECURITY.md` §7.1), with per-device keys in `localStorage`.
    Then re-run `inspect.mjs --app` on every Settings view: this closes the Settings `blank-gap`
