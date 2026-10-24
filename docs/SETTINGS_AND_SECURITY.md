@@ -222,7 +222,7 @@ Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=()
 Static assets · `GET /health` · `GET /session` (signed in or not, and whether setup is open; M5) · `POST /auth/login` · `POST /auth/totp` · `POST /auth/device` ·
 `GET /setup` + `POST /setup` (only while no admin exists) · `GET /invite` + `POST /invite` +
 `POST /invite/totp` (a valid unused invite token; M8) · `POST /csp-report` (browser CSP reports, logged
-only, rate limited; M8) ·
+only, at most 60 a minute; M8) ·
 `GET /spotify/callback` (bound to an existing PKCE `state` and the session cookie) · signed stream
 URLs (`TECHNICAL_ARCHITECTURE.md` §6.5). Everything else → `401`.
 

@@ -450,6 +450,28 @@ describe('device tokens (API-02)', () => {
     await call(w.app, 'DELETE', `/api/v1/me/sessions/${phone.id}`, undefined, w.admin);
     expect((await bearer('/me')).status).toBe(401);
   });
+
+  it('SEC-14: a device token slides while used and ends after 60 idle days', async () => {
+    const w = await withAdmin();
+    w.nextStep();
+    const r = await call(w.app, 'POST', '/api/v1/auth/device', {
+      username: 'ada',
+      password: PASSWORD,
+      name: 'Tablet',
+      code: codeAt(w.secret, w.clock.t),
+    });
+    const { token } = (await r.json()) as { token: string };
+    const me = () =>
+      w.app.request('http://localhost/api/v1/me', {
+        headers: { host: 'localhost', authorization: `Bearer ${token}` },
+      });
+    w.clock.t += 59 * 86_400_000; // used again within 60 days: it slides
+    expect((await me()).status).toBe(200);
+    w.clock.t += 59 * 86_400_000;
+    expect((await me()).status).toBe(200);
+    w.clock.t += 61 * 86_400_000; // then 61 idle days
+    expect((await me()).status).toBe(401);
+  });
 });
 
 describe('re-authentication is rate limited (security review)', () => {

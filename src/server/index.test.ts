@@ -198,7 +198,7 @@ describe('gate G1 (SP-03, SP-04): palettes from Spotify cover art', () => {
 });
 
 describe('POST /api/v1/csp-report (SEC-08)', () => {
-  it('logs and records a browser report without a session or Origin; rate limited', async () => {
+  it('logs and records a browser report without a session or Origin; at most 60 a minute', async () => {
     const { mkdtempSync, readFileSync } = await import('node:fs');
     const file = join(mkdtempSync(join(tmpdir(), 'echo-csp-')), 'r.jsonl');
     const lines: string[] = [];
@@ -223,8 +223,8 @@ describe('POST /api/v1/csp-report (SEC-08)', () => {
     expect((await post()).status).toBe(204);
     expect(readFileSync(file, 'utf8')).toContain('evil.example');
     expect(lines[0]).toContain('csp violation');
-    for (let i = 0; i < 25; i++) await post();
-    expect(readFileSync(file, 'utf8').trim().split('\n')).toHaveLength(20);
+    for (let i = 0; i < 70; i++) await post();
+    expect(readFileSync(file, 'utf8').trim().split('\n')).toHaveLength(60);
     // The policy points browsers at it.
     const res = await app.request('http://localhost/api/v1/health', {
       headers: { host: 'localhost' },

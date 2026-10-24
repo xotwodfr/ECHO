@@ -88,14 +88,15 @@ export function createApp(deps: AppDeps) {
   );
 
   // Liveness only: unauthenticated and minimal (docs/TECHNICAL_ARCHITECTURE.md §6.2).
-  // CSP violation reports from browsers (report-uri): unauthenticated, small, rate limited, and
-  // only ever logged (SEC-08).
-  const reports = new Map<string, number[]>();
+  // CSP violation reports from browsers (report-uri): unauthenticated, small, and only ever
+  // logged (SEC-08). One budget for everyone, 60 a minute: constant memory, however many
+  // addresses send them (security review).
+  const budget = { windowStart: 0, used: 0 };
   app.post('/api/v1/csp-report', async (c) => {
     const t = Date.now();
-    const recent = (reports.get(c.var.ip) ?? []).filter((x) => t - x < 60_000);
-    if (recent.length >= 20) return c.body(null, 204);
-    reports.set(c.var.ip, [...recent, t]);
+    if (t - budget.windowStart >= 60_000) Object.assign(budget, { windowStart: t, used: 0 });
+    if (budget.used >= 60) return c.body(null, 204);
+    budget.used++;
     const text = (await c.req.text()).slice(0, 8192);
     let report: unknown = text;
     try {

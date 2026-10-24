@@ -25,7 +25,7 @@ paths:
 
   /csp-report:
     post:
-      summary: 'Content-Security-Policy violation reports from browsers (report-uri): logged, never stored; 20 a minute per address'
+      summary: 'Content-Security-Policy violation reports from browsers (report-uri): logged, never stored; at most 60 a minute in all'
       security: []
       requestBody:
         content: { application/csp-report: { schema: { type: object } }, application/json: { schema: { type: object } } }
