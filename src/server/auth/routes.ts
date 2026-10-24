@@ -111,7 +111,10 @@ export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
 export function authRoutes(deps: AuthDeps) {
   const { db, sealer, limiter, now } = deps;
   const app = new Hono<{ Variables: Vars }>();
-  const challenges = new Map<string, { userId: number; expiresAt: number; tries: number }>();
+  const challenges = new Map<
+    string,
+    { userId: number; username: string; expiresAt: number; tries: number }
+  >();
 
   // ---- first start (§4.1) ----
 
@@ -202,7 +205,12 @@ export function authRoutes(deps: AuthDeps) {
       );
     if (user.totp_enabled) {
       const challenge = randomBytes(32).toString('base64url');
-      challenges.set(challenge, { userId: user.id, expiresAt: t + CHALLENGE_TTL, tries: 0 });
+      challenges.set(challenge, {
+        userId: user.id,
+        username,
+        expiresAt: t + CHALLENGE_TTL,
+        tries: 0,
+      });
       return c.json({ totpRequired: true, challenge });
     }
     audit(db, t, user.id, 'login.ok');
@@ -213,9 +221,11 @@ export function authRoutes(deps: AuthDeps) {
   app.post('/auth/totp', async (c) => {
     const b = await body(c);
     const t = now();
+    if (!limiter.ipAllows(c.var.ip, t)) return c.json({ error: 'rate_limited' }, 429);
     const key = str(b.challenge, 64) ?? '';
     const ch = challenges.get(key);
-    if (!ch || t >= ch.expiresAt || ch.tries >= 5) {
+    // A lockout (from passwords or from second factors) also ends challenges already issued.
+    if (!ch || t >= ch.expiresAt || ch.tries >= 5 || limiter.lockedFor(ch.username, t)) {
       challenges.delete(key);
       return c.json({ error: 'challenge_expired' }, 401);
     }
@@ -233,10 +243,14 @@ export function authRoutes(deps: AuthDeps) {
         column: 'totp_secret_enc',
       });
       const step = verifyTotp(secret, code, t, u.totp_last_step);
-      if (step !== null) {
-        db.prepare('UPDATE users SET totp_last_step = ? WHERE id = ?').run(step, ch.userId);
-        ok = true;
-      }
+      // Recorded atomically: of two concurrent requests with the same code, one wins.
+      ok =
+        step !== null &&
+        db
+          .prepare(
+            'UPDATE users SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)',
+          )
+          .run(step, ch.userId, step).changes === 1;
     } else if (RECOVERY.test(code)) {
       const rows = db
         .prepare(
@@ -245,16 +259,24 @@ export function authRoutes(deps: AuthDeps) {
         .all(ch.userId) as { rowid: number; code_hash: string }[];
       for (const r of rows)
         if (await verifySecret(code, r.code_hash)) {
-          db.prepare('UPDATE recovery_codes SET used_at = ? WHERE rowid = ?').run(t, r.rowid);
-          audit(db, t, ch.userId, 'login.recovery_code_used');
-          ok = true;
+          // Spent atomically: a concurrent request with the same code finds it used.
+          ok =
+            db
+              .prepare('UPDATE recovery_codes SET used_at = ? WHERE rowid = ? AND used_at IS NULL')
+              .run(t, r.rowid).changes === 1;
+          if (ok) audit(db, t, ch.userId, 'login.recovery_code_used');
           break;
         }
     }
     if (!ok) {
+      // Counted per account, apart from passwords: a correct password does not reset it, so new
+      // challenges do not buy new guesses.
+      if (limiter.failSecond(ch.username, t))
+        audit(db, t, ch.userId, 'login.locked', { factor: 'totp' });
       audit(db, t, ch.userId, 'login.totp_failed');
       return c.json({ error: 'bad_code' }, 401);
     }
+    limiter.succeedSecond(ch.username);
     challenges.delete(key);
     audit(db, t, ch.userId, 'login.ok');
     setSessionCookie(c, createSession(db, ch.userId, 'web', t, { ipHint: ipHint(c.var.ip) }));

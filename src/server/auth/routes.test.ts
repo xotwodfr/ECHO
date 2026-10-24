@@ -175,6 +175,50 @@ describe('login (§4.4, §4.5)', () => {
     expect(await late.json()).toEqual({ error: 'challenge_expired' });
   });
 
+  it('wrong codes count across challenges: five lock the account, and a correct password does not reset it', async () => {
+    const t = await withAdmin();
+    const challenge = async () =>
+      ((await (await login(t.app)).json()) as { challenge: string }).challenge;
+    const c1 = await challenge();
+    for (let i = 0; i < 4; i++)
+      await call(t.app, 'POST', '/api/v1/auth/totp', { challenge: c1, code: '000000' });
+    const c2 = await challenge(); // a fresh challenge after a correct password
+    await call(t.app, 'POST', '/api/v1/auth/totp', { challenge: c2, code: '000000' }); // fifth
+    t.clock.t += STEP_S * 1000;
+    // Locked: no new challenge, and the open one is refused even with a valid code.
+    expect((await login(t.app)).status).toBe(401);
+    const late = await call(t.app, 'POST', '/api/v1/auth/totp', {
+      challenge: c2,
+      code: codeAt(t.secret, t.clock.t),
+    });
+    expect(late.status).toBe(401);
+    const events = t.deps.auth.db.prepare('SELECT event FROM audit_log').pluck().all();
+    expect(events).toContain('login.locked');
+    t.clock.t += 15 * 60_000;
+    expect((await login(t.app)).status).toBe(200);
+  });
+
+  it('the same recovery code or TOTP code sent twice at once is accepted once', async () => {
+    const t = await withAdmin();
+    const challenge = async () =>
+      ((await (await login(t.app)).json()) as { challenge: string }).challenge;
+    const code = t.recoveryCodes[1] as string;
+    const [a, b] = [await challenge(), await challenge()];
+    const both = await Promise.all([
+      call(t.app, 'POST', '/api/v1/auth/totp', { challenge: a, code }),
+      call(t.app, 'POST', '/api/v1/auth/totp', { challenge: b, code }),
+    ]);
+    expect(both.map((r) => r.status).sort()).toEqual([200, 401]);
+    t.clock.t += STEP_S * 1000;
+    const totp = codeAt(t.secret, t.clock.t);
+    const [x, y] = [await challenge(), await challenge()];
+    const twice = await Promise.all([
+      call(t.app, 'POST', '/api/v1/auth/totp', { challenge: x, code: totp }),
+      call(t.app, 'POST', '/api/v1/auth/totp', { challenge: y, code: totp }),
+    ]);
+    expect(twice.map((r) => r.status).sort()).toEqual([200, 401]);
+  });
+
   it('a user without TOTP gets a session straight away; unknown users get the same answer as wrong passwords', async () => {
     const t = testDeps();
     t.deps.auth.db
