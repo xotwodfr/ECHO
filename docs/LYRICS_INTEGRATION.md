@@ -34,6 +34,11 @@ allow.
   Spicy Lyrics is in scope for M6. Operators of other ECHO servers create their own at
   `developers.spicylyrics.org`. Without a key, Spicy Lyrics is disabled and S1/S3 carry the
   experience.
+- **Response envelope (re-checked against the live docs, M6):** every answer, errors included, is
+  `{ Body, Status, Type }`. `Body.Type` is `Syllable` / `Line` / `Static`; `Body.source` is
+  `spicy_lyrics` (community), `apple_music`, `spotify` or `unknown`; `UploadAttribution` (with
+  `Uploader` and an optional `Maker`, each with a profile `url`) exists only for community syncs.
+  Errors carry `Body.error` codes (`lyrics_not_found`, `rate_limited`, `key_revoked`, …).
 - **Rate limits:** no published numbers. Responses carry `RateLimit-*` headers and `Retry-After` on
   `429` [C]. ECHO honours them (§6) and makes **at most one request per track play** (cache first).
 - **Spotify ID requirement:** for Spotify tracks the ID is native. For Navidrome tracks, see §4.3.
@@ -216,10 +221,10 @@ Shown on the stage (bottom-left, 12px `--faint`, visible with chrome) and in the
 
 | Source | Text | Links |
 |---|---|---|
-| Spicy Lyrics | "Lyrics from Spicy Lyrics · uploaded by {UploadAttribution}" when present, else "Lyrics from Spicy Lyrics", plus songwriters if `SongWriters` is provided | "Spicy Lyrics" → spicylyrics.org, uploader → their profile when provided (terms §6 [C]) |
+| Spicy Lyrics, `source: spicy_lyrics` (a community sync) | "Lyrics from Spicy Lyrics · synced by {Maker} · uploaded by {Uploader}" (Maker only when present), plus "Written by …" when `SongWriters` is provided | "Spicy Lyrics" → spicylyrics.org; uploader and maker → their `url` (the API's attribution rule, part of the terms §6 [C: live docs 2026-10-24]) |
+| Spicy Lyrics, `source: apple_music` / `spotify` | "Lyrics from Apple Music via Spicy Lyrics" (or Spotify); no uploader or maker: those fields are absent for commercial sources and an empty credit is a defect | "Spicy Lyrics" → spicylyrics.org |
 | LRCLIB | "Lyrics from LRCLIB" | lrclib.net |
 | Navidrome | "Lyrics from your library" | — |
-| Any doc whose `source` field from Spicy is `apple_music`/`spotify` | the Spicy line plus the upstream label ("via Apple Music") | — |
 
 Attribution is part of `LyricsDoc.attribution` and rendered by the stage. Removing it is a defect
 (`ACCEPTANCE_CRITERIA.md` LI-05).
