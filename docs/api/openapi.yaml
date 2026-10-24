@@ -485,7 +485,7 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                lyrics: { type: object, additionalProperties: false, properties: { useSpotifyForLookup: { type: boolean } } }
+                lyrics: { type: object, additionalProperties: false, properties: { useSpotifyForLookup: { type: boolean }, disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off } } }
       responses:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/UserSettings' } } } }
         '400': { description: An unknown key or a wrong type }
@@ -684,7 +684,7 @@ components:
       type: object
       properties:
         offsetMs: { type: integer, minimum: -10000, maximum: 10000 }
-        pinnedSource: { enum: [navidrome, spicy, lrclib, navidrome-plain, null] }
+        pinnedSource: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain, null] }
     LyricsDoc:
       type: object
       description: docs/LYRICS_INTEGRATION.md §5 (version 1)
@@ -693,7 +693,7 @@ components:
         version: { const: 1 }
         trackKey: { type: string }
         sync: { enum: [word, line, none] }
-        source: { enum: [navidrome, spicy, lrclib, navidrome-plain, fixture] }
+        source: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain, fixture] }
         attribution: { type: object, properties: { text: { type: string }, links: { type: array, items: { type: object, properties: { label: { type: string }, href: { type: string } } } } } }
         offsetMs: { type: integer }
         lines: { type: array, items: { type: object } }
@@ -710,7 +710,7 @@ components:
       type: object
       properties:
         version: { const: 2 }
-        lyrics: { type: object, properties: { useSpotifyForLookup: { type: boolean, default: false } } }
+        lyrics: { type: object, properties: { useSpotifyForLookup: { type: boolean, default: false }, disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off, default: [] } } }
     AdminSettings:
       type: object
       properties:

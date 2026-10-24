@@ -6,6 +6,7 @@ import {
   parseOpenSubsonic,
   parsePlain,
   parseSpicy,
+  parseYrc,
   repair,
   type SpicyBody,
 } from './parse.ts';
@@ -272,5 +273,32 @@ describe('validation and repair (§5)', () => {
     expect(() => repair({ sync: 'line', offsetMs: 0, lines: [{ text: ' ', start: 0 }] })).toThrow(
       LyricsInvalid,
     );
+  });
+});
+
+describe('NetEase YRC', () => {
+  it('word-timed lines; syllables join, punctuation sticks; JSON and credit lines dropped', () => {
+    const p = parseYrc(
+      [
+        '{"t":0,"c":[{"tx":"作词: "},{"tx":"Someone"}]}',
+        '[100,900](100,300,0)作词 : (400,600,0)Someone',
+        "[27360,1290](27360,240,0)I've (27600,90,0)been (27690,360,0)try(28050,600,0)na",
+        '[34620,1050](34620,120,0)to (34740,900,0)love(35640,30,0), ',
+      ].join('\n'),
+    );
+    expect(p.sync).toBe('word');
+    expect(p.lines.map((l) => l.text)).toEqual(["I've been tryna", 'to love,']);
+    expect(p.lines[0]).toMatchObject({ start: 27360, end: 28650 });
+    expect(p.lines[0]?.words?.map((w) => [w.text, w.start, w.end, w.isPartOfWord])).toEqual([
+      ["I've", 27360, 27600, false],
+      ['been', 27600, 27690, false],
+      ['try', 27690, 28050, true],
+      ['na', 28050, 28650, false],
+    ]);
+    expect(p.lines[1]?.words?.[1]).toMatchObject({ text: 'love', isPartOfWord: true });
+  });
+
+  it('nothing timed is invalid', () => {
+    expect(() => parseYrc('{"t":0,"c":[]}')).toThrow(LyricsInvalid);
   });
 });

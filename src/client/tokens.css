@@ -57,6 +57,7 @@
   --dur-art: 640ms; --dur-palette: 1200ms;
   --dur-pop: 160ms; --dur-scrub: 150ms; --dur-loop: 1000ms;   /* added in M2 */
   --dur-art-out: 420ms; --dur-art-overlap: 200ms;   /* Cover crossfade, §8 (M2) */
+  --dur-lift: 700ms;   /* a sung word rising, LYRICS_EXPERIENCE §5.1 */
   --ease-out: cubic-bezier(.16,1,.3,1);
   --ease-in-out: cubic-bezier(.65,0,.35,1);
   --ease-exit: cubic-bezier(.4,0,1,1);

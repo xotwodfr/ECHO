@@ -122,6 +122,43 @@ function parseWordTags(body: string): LyricWord[] | null {
   return words;
 }
 
+// ---- NetEase YRC ------------------------------------------------------------------------------
+
+const YRC_LINE = /^\[(\d+),(\d+)\](.*)$/;
+const YRC_WORD = /\((\d+),(\d+),\d+\)([^(]*)/g;
+/** Credit lines NetEase puts in the lyric itself ("作词 : …", "Producer: …"). */
+export const CREDIT =
+  /^\s*(作词|作曲|编曲|制作人|制作|混音|母带|和声|监制|出品|吉他|贝斯|鼓|键盘|弦乐|录音|词|曲)\s*[:：]/;
+
+/** NetEase word-timed lyrics: `[lineStart,lineDur](wordStart,wordDur,0)word…`; JSON lines are credits. */
+export function parseYrc(text: string): Parsed {
+  const lines: LyricLine[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const m = YRC_LINE.exec(raw.trim());
+    if (!m) continue;
+    const marks = [...(m[3] as string).matchAll(YRC_WORD)];
+    const words: LyricWord[] = marks
+      .map((w, i) => ({
+        text: (w[3] as string).trim(),
+        start: Number(w[1]),
+        end: Number(w[1]) + Math.max(1, Number(w[2])),
+        isPartOfWord: !/\s$/.test(w[3] as string) && i + 1 < marks.length,
+      }))
+      .filter((w) => w.text);
+    const last = words.at(-1);
+    if (!last) continue;
+    last.isPartOfWord = false;
+    const lineText = words
+      .map((w) => (w.isPartOfWord ? w.text : `${w.text} `))
+      .join('')
+      .trim();
+    if (CREDIT.test(lineText)) continue;
+    lines.push({ text: lineText, start: Number(m[1]), end: Number(m[1]) + Number(m[2]), words });
+  }
+  if (!lines.length) throw new LyricsInvalid('no YRC lines');
+  return { sync: 'word', offsetMs: 0, lines: lines.sort((a, b) => a.start - b.start) };
+}
+
 // ---- OpenSubsonic -----------------------------------------------------------------------------
 
 interface OsCue {

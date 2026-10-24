@@ -119,12 +119,7 @@ function LyricsView() {
 
 const WAIT_DOTS_MS = 600;
 const WAIT_TEXT_MS = 1500;
-const SOURCE_NAMES: Record<string, string> = {
-  navidrome: 'Your library',
-  spicy: 'Spicy Lyrics',
-  lrclib: 'LRCLIB',
-  'navidrome-plain': 'Your library (plain text)',
-};
+const SOURCE_NAMES = strings.prefs.sourceNames;
 
 /** The attribution line (LYRICS_INTEGRATION.md §8), its named parts linked; it cannot be hidden. */
 function AttributionText({ attribution }: { attribution: LyricsDoc['attribution'] }) {

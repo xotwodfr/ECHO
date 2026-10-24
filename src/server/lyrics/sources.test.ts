@@ -7,6 +7,7 @@ import {
   lrclibSource,
   navidromePlainSource,
   navidromeSource,
+  neteaseSource,
   spicyAttribution,
   spicySource,
 } from './sources.ts';
@@ -98,6 +99,115 @@ describe('S3 LRCLIB', () => {
         signal,
       ),
     ).toMatchObject({ kind: 'error', retriable: true });
+  });
+});
+
+describe('S3 LRCLIB search fallback', () => {
+  it('an exact miss searches; the synced record nearest in length wins, outside 3 s none', async () => {
+    const urls: string[] = [];
+    const f = (async (url: string) => {
+      urls.push(url);
+      if (url.includes('/api/get')) return new Response('{}', { status: 404 });
+      return Response.json([
+        {
+          trackName: 'Harbour Lights 1',
+          artistName: 'Lowfield',
+          duration: 230,
+          syncedLyrics: '[00:01.00]Far',
+        },
+        {
+          trackName: 'Harbour Lights 1',
+          artistName: 'Lowfield',
+          duration: 201,
+          plainLyrics: 'Plain',
+        },
+        {
+          trackName: 'Harbour Lights 1',
+          artistName: 'Lowfield',
+          duration: 199,
+          syncedLyrics: '[00:01.00]Near',
+        },
+      ]);
+    }) as unknown as typeof fetch;
+    const o = await lrclibSource({
+      baseUrl: 'https://lrclib.test',
+      userAgent: 'u',
+      fetch: f,
+    }).fetch(input, signal);
+    expect(urls[1]).toBe(
+      'https://lrclib.test/api/search?track_name=Harbour+Lights+1&artist_name=Lowfield',
+    );
+    expect(o).toMatchObject({
+      kind: 'found',
+      candidate: { sync: 'line', lines: [{ text: 'Near' }] },
+    });
+  });
+});
+
+describe('S5 NetEase Cloud Music', () => {
+  const route = (lyric: unknown, songs?: unknown[]) => {
+    const urls: string[] = [];
+    const f = (async (url: string) => {
+      urls.push(url);
+      if (url.includes('/api/search/get'))
+        return Response.json({
+          result: {
+            songs: songs ?? [
+              {
+                id: 1,
+                name: 'Harbour Lights 1',
+                duration: 260_000,
+                artists: [{ name: 'Lowfield' }],
+              },
+              { id: 2, name: 'Other Song', duration: 200_000, artists: [{ name: 'Lowfield' }] },
+              {
+                id: 3,
+                name: 'Harbour Lights 1',
+                duration: 201_000,
+                artists: [{ name: 'Lowfield' }],
+              },
+            ],
+          },
+        });
+      return Response.json(lyric);
+    }) as unknown as typeof fetch;
+    return { f, urls };
+  };
+
+  it('searches, keeps the title match of the right length, and reads word-timed YRC', async () => {
+    const { f, urls } = route({ yrc: { lyric: '[1000,800](1000,400,0)Hello (1400,400,0)there' } });
+    const o = await neteaseSource({ baseUrl: 'https://ne.test', fetch: f }).fetch(input, signal);
+    expect(urls[1]).toBe('https://ne.test/api/song/lyric/v1?id=3&lv=1&yv=1');
+    expect(o).toMatchObject({
+      kind: 'found',
+      candidate: {
+        source: 'netease',
+        sync: 'word',
+        reportedDurationMs: 201_000,
+        matched: { title: 'Harbour Lights 1', artist: 'Lowfield' },
+        lines: [{ text: 'Hello there' }],
+      },
+    });
+  });
+
+  it('no YRC: line-timed LRC without credits; instrumentals and no match are not found', async () => {
+    const lrc = route({
+      lrc: { lyric: '[00:00.00] 作词 : Someone\n[00:01.00]One\n[00:02.00]Two' },
+    });
+    const o = await neteaseSource({ baseUrl: 'x', fetch: lrc.f }).fetch(input, signal);
+    expect(o).toMatchObject({
+      kind: 'found',
+      candidate: { sync: 'line', lines: [{ text: 'One' }, { text: 'Two' }] },
+    });
+    const inst = route({ lrc: { lyric: '[00:00.00]纯音乐，请欣赏' } });
+    expect(await neteaseSource({ baseUrl: 'x', fetch: inst.f }).fetch(input, signal)).toEqual({
+      kind: 'notFound',
+    });
+    const none = route({}, [{ id: 9, name: 'Something Else', duration: 200_000 }]);
+    expect(await neteaseSource({ baseUrl: 'x', fetch: none.f }).fetch(input, signal)).toEqual({
+      kind: 'notFound',
+    });
+    expect(none.urls).toHaveLength(1);
   });
 });
 

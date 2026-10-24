@@ -42,12 +42,14 @@ const cand = (
 const TIMEOUT: Record<SourceId, number> = {
   navidrome: 1500,
   spicy: 4000,
+  netease: 4000,
   lrclib: 4000,
   'navidrome-plain': 1500,
 };
 const RETRY: Record<SourceId, number | null> = {
   navidrome: 300,
   spicy: 500,
+  netease: 500,
   lrclib: 500,
   'navidrome-plain': null,
 };

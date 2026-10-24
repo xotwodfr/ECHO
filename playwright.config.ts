@@ -92,6 +92,7 @@ export default defineConfig({
         ECHO_NAVIDROME_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_LRCLIB_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPICY_URL: `http://127.0.0.1:${mockPort}`,
+        ECHO_NETEASE_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_ACCOUNTS_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_API_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_IMAGE_URL: `http://127.0.0.1:${mockPort}`,

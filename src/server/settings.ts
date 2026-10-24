@@ -12,6 +12,13 @@ const oneOf =
   (...xs: (string | number)[]): Check =>
   (v) =>
     xs.includes(v as string | number);
+const subsetOf =
+  (...xs: string[]): Check =>
+  (v) =>
+    Array.isArray(v) &&
+    v.length <= xs.length &&
+    v.every((x) => xs.includes(x)) &&
+    new Set(v).size === v.length;
 const bool: Check = (v) => typeof v === 'boolean';
 const intIn =
   (min: number, max: number, step = 1): Check =>
@@ -31,6 +38,10 @@ const SCHEMA = {
     showUnsynced: { check: bool, default: true },
     announceLines: { check: bool, default: false },
     useSpotifyForLookup: { check: bool, default: false },
+    disabledSources: {
+      check: subsetOf('navidrome', 'spicy', 'netease', 'lrclib', 'navidrome-plain'),
+      default: [] as string[],
+    },
   },
   visuals: {
     mode: { check: oneOf('auto', 'reverb', 'ambient', 'still'), default: 'auto' },
@@ -49,7 +60,9 @@ type Widen<T> = T extends string
     ? number
     : T extends boolean
       ? boolean
-      : T;
+      : T extends readonly (infer E)[]
+        ? Widen<E>[]
+        : T;
 export type UserSettings = { version: 2 } & {
   [S in Section]: { [K in keyof Values<(typeof SCHEMA)[S]>]: Widen<Values<(typeof SCHEMA)[S]>[K]> };
 };

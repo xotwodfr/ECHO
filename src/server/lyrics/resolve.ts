@@ -8,11 +8,18 @@ import type { Candidate, LookupInput, Outcome, Source, SourceId } from './source
 // pin, then sync level, then precedence. It answers as soon as no pending source could do better,
 // and within 4.5 s regardless; a better candidate that arrives later is passed to `onLate`.
 
-export const PRECEDENCE: SourceId[] = ['navidrome', 'spicy', 'lrclib', 'navidrome-plain'];
+export const PRECEDENCE: SourceId[] = [
+  'navidrome',
+  'spicy',
+  'netease',
+  'lrclib',
+  'navidrome-plain',
+];
 /** The best a source can return, so the resolver knows when waiting is pointless. */
 const CEILING: Record<SourceId, SyncLevel> = {
   navidrome: 'word',
   spicy: 'word',
+  netease: 'word',
   lrclib: 'line',
   'navidrome-plain': 'none',
 };

@@ -208,6 +208,11 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         JSON.stringify({ id: 'mock-user', display_name: 'Ada', product: faults.spotifyProduct }),
       );
     }
+    // LRCLIB's search and NetEase (ECHO_NETEASE_URL in E2E) know nothing: the exact lookup decides.
+    if (req.url?.startsWith('/api/search')) {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(req.url.startsWith('/api/search/get') ? '{"result":{"songs":[]}}' : '[]');
+    }
     // A mock LRCLIB (ECHO_LRCLIB_URL in E2E): "Glass Weather" tracks have synced lyrics.
     if (req.url?.startsWith('/api/get')) {
       const q = new URL(req.url, 'http://mock').searchParams;

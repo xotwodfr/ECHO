@@ -238,6 +238,23 @@
   );
 }
 
+/* Words rise a little as they are sung, so the eye follows the voice and not only the colour
+   (Apple Music's lift). Off under reduced motion; the measuring copy never moves. */
+.ly-scene .ly-lead .ly-w:not(.ly-wash) {
+  display: inline-block;
+  transform: translateY(0.05em);
+  transition: transform var(--dur-lift) var(--ease-out);
+}
+
+.ly-scene .ly-lead .ly-w:not(.ly-wash):is(.sweep, .lit),
+.ly-field.ly-reduced .ly-scene .ly-lead .ly-w:not(.ly-wash) {
+  transform: none;
+}
+
+.ly-field:is(.ly-reduced, .ly-instant) .ly-scene .ly-lead .ly-w {
+  transition: none;
+}
+
 /* Right-to-left lines sweep from the right (§5.4). */
 .ly-line[dir="rtl"] .ly-w:not(.ly-emph).sweep,
 .ly-line[dir="rtl"] .ly-emph.sweep > .ly-g {

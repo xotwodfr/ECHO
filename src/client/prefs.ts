@@ -20,6 +20,7 @@ export interface Prefs {
     showUnsynced: boolean;
     announceLines: boolean;
     useSpotifyForLookup: boolean;
+    disabledSources: string[];
   };
   visuals: {
     mode: 'auto' | 'reverb' | 'ambient' | 'still';
@@ -45,6 +46,7 @@ export const DEFAULT_PREFS: Prefs = {
     showUnsynced: true,
     announceLines: false,
     useSpotifyForLookup: false,
+    disabledSources: [],
   },
   visuals: {
     mode: 'auto',

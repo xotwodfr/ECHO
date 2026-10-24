@@ -418,6 +418,8 @@ export function createLyricField(
     /** One frame (§4.2 step 4). Returns the key light's position (stage uv, y down), if any. */
     update(f: FieldFrame) {
       if (!model) return null;
+      host.classList.toggle('ly-reduced', !!f.reduced);
+      host.classList.toggle('ly-instant', f.mode !== 'run'); // scrub and still frames snap
       model.update({ ...f, W, H });
       render(f.dt);
       const a = model.active;

@@ -133,6 +133,23 @@ export function PreferencesSection() {
           checked={p.lyrics.announceLines}
           onChange={(v) => save('lyrics', 'announceLines', v)}
         />
+        <fieldset className="pref-choice">
+          <legend className="pref-label">{t.sources}</legend>
+          {Object.entries(t.sourceNames).map(([id, name]) => {
+            const off = p.lyrics.disabledSources;
+            return (
+              <Toggle
+                key={id}
+                label={name}
+                checked={!off.includes(id)}
+                onChange={(on) =>
+                  save('lyrics', 'disabledSources', on ? off.filter((x) => x !== id) : [...off, id])
+                }
+              />
+            );
+          })}
+          <p className="field-hint">{t.sourcesHint}</p>
+        </fieldset>
       </section>
 
       <section className="pref-group" aria-labelledby="pref-visuals">

@@ -65,6 +65,17 @@ describe('GET /api/v1/lyrics', () => {
     expect(nd.calls.n).toBe(1);
   });
 
+  it('a source turned off in Settings never answers from the shared cache', async () => {
+    const ne = src('netease', () => ({ kind: 'found', candidate: candidate('netease') }));
+    const lr = src('lrclib', () => ({ kind: 'found', candidate: candidate('lrclib') }));
+    let sources = [ne.s, lr.s];
+    const s = setup([]);
+    s.deps.lyrics.sourcesFor = () => sources;
+    expect(await (await s.get(Q)).json()).toMatchObject({ doc: { source: 'netease' } });
+    sources = [lr.s];
+    expect(await (await s.get(Q)).json()).toMatchObject({ doc: { source: 'lrclib' } });
+  });
+
   it('every source saying "not found" is cached as a miss; an error is not', async () => {
     const missing = src('lrclib', () => ({ kind: 'notFound' }));
     const s = setup([missing.s]);

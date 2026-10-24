@@ -207,6 +207,10 @@ written once more to settle at `--p: 100%`.
 **Sweep across syllables:** syllables of one word (`isPartOfWord`) share a visual word. The sweep
 moves through each syllable span with its own timing and no gap, so the light reads as continuous.
 
+**Lift:** unsung words of the lead line sit 0.05em low; a word rises to its baseline when the sweep
+reaches it, over `--dur-lift` (700 ms, `--ease-out`), a CSS transition on the class the sweep
+already sets (no per-frame writes). Scrub and still frames snap; reduced motion has no lift.
+
 **Gaps inside a line:** if the next word starts more than 300 ms after the previous ends, the light
 rests at the end of the previous word (a sustained "hold"), with no pre-lighting of the next word.
 

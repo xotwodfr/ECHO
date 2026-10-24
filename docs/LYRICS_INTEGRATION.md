@@ -14,7 +14,8 @@ assumption to verify in the named milestone.
 |---|---|---|---|---|---|---|
 | S1 | **Navidrome / OpenSubsonic** `getLyricsBySongId` (`enhanced=true`) | line; word/syllable via `cueLine` (songLyrics v2) [C: spec]. **Navidrome 0.64 fills cues from enhanced LRC (inline `<mm:ss.xx>` markers, plus a non-standard `[bg:]` line for backing vocals) and from TTML (timed spans, agents, backing vocals as `bg`-role agents), embedded or sidecar** [C: Navidrome v0.64.0 `model/lyrics_lrc.go`, `model/lyrics_ttml.go`; M6] | Navidrome song id | Navidrome credentials (server-side) | The user's own files (embedded tags, sidecar `.lrc`) | **First choice** for Navidrome tracks |
 | S2 | **Spicy Lyrics API** `GET https://api.spicylyrics.org/v1/lyrics/{trackId}` [C] | `Syllable` (word/syllable + background vocals + duet alignment), `Line`, `Static` [C] | **Spotify track ID only** (22 base62 chars) [C] | `Authorization: Bearer <key>`. Secret keys `sl_sk_…` are server-side only. Publishable keys `sl_pk_…` need an origin allow-list [C] | Terms (2026-10-01) permit third-party players (§4), require attribution (§6), refetch or discard cached lyrics within 30 days (§7), forbid redistribution as a public source (§5), and grant no rights to lyrics (§8) [C] | Word-timed source for Spotify-identified tracks |
-| S3 | **LRCLIB** `GET https://lrclib.net/api/get?track_name&artist_name&album_name&duration` [C] | line (LRC). Some entries flag `hasWordSync` with a `lyricsfile` field [C: live response]; its format is undocumented [A] | metadata + duration | none | Server code MIT [C]. Data licence and rate limits not confirmed [A] | Open fallback for line-timed and plain lyrics |
+| S3 | **LRCLIB** `GET https://lrclib.net/api/get?track_name&artist_name&album_name&duration` [C] | line (LRC). Some entries flag `hasWordSync` with a `lyricsfile` field [C: live response]; its format is undocumented [A] | metadata + duration | none | Server code MIT [C]. Data licence and rate limits not confirmed [A] | Open fallback for line-timed and plain lyrics. When the exact lookup misses, `GET /api/search?track_name&artist_name` is tried: synced first, then nearest duration within 3 s |
+| S5 | **NetEase Cloud Music** `GET https://music.163.com/api/search/get?s&type=1`, then `/api/song/lyric/v1?id&lv=1&yv=1` [C: live response 2026-10-24] | word (YRC: `[lineStart,lineDur](wordStart,wordDur,0)word…`), else line (LRC) [C] | metadata, then NetEase song id; the search hit must match title and duration (±3 s) | none | Unofficial, undocumented API; terms for third-party use not confirmed [A]. Each user can turn it off (Settings → Lyrics → Lyric sources) | Keyless word-timed source; covers much of the Western catalogue [C: 5/5 test songs, 2026-10-24] |
 | S4 | Navidrome legacy `getLyrics?artist&title` | plain text | metadata | Navidrome | own files | Last fallback for Navidrome tracks |
 
 **Not used:** Musixmatch (commercial licence required for synced lyrics [R]); Apple TTML (no public
@@ -67,7 +68,7 @@ All eligible sources are queried **in parallel** (each with its own timeout, §6
 
 1. the candidate with the **highest sync level** (`word` > `line` > `none`) among those passing match
    validation (§4.2);
-2. at equal level, the **precedence**: S1 (the user's own files) > S2 > S3 > S4;
+2. at equal level, the **precedence**: S1 (the user's own files) > S2 > S5 > S3 > S4, over the sources the user has on;
 3. the user's per-track **pin** overrides both (Settings: "Use this source for this track", from the
    ⓘ menu on the stage).
 
@@ -227,6 +228,7 @@ Shown on the stage (bottom-left, 12px `--faint`, visible with chrome) and in the
 | Spicy Lyrics, `source: spicy_lyrics` (a community sync) | "Lyrics from Spicy Lyrics · synced by {Maker} · uploaded by {Uploader}" (Maker only when present), plus "Written by …" when `SongWriters` is provided | "Spicy Lyrics" → spicylyrics.org; uploader and maker → their `url` (the API's attribution rule, part of the terms §6 [C: live docs 2026-10-24]) |
 | Spicy Lyrics, `source: apple_music` / `spotify` | "Lyrics from Apple Music via Spicy Lyrics" (or Spotify); no uploader or maker: those fields are absent for commercial sources and an empty credit is a defect | "Spicy Lyrics" → spicylyrics.org |
 | LRCLIB | "Lyrics from LRCLIB" | lrclib.net |
+| NetEase | "Lyrics from NetEase Cloud Music" | music.163.com |
 | Navidrome | "Lyrics from your library" | — |
 
 Attribution is part of `LyricsDoc.attribution` and rendered by the stage. Removing it is a defect

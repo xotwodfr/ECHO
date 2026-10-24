@@ -77,6 +77,16 @@ export const strings = {
     offsetHint: 'Positive shows words later. [ and ] adjust one track on top of this.',
     showUnsynced: 'Show lyrics without timing',
     announce: 'Announce lyric lines to screen readers',
+    sources: 'Lyric sources',
+    sourcesHint:
+      'ECHO asks every source that is on and shows the best timing it finds: word by word first, then line by line.',
+    sourceNames: {
+      navidrome: 'Your library',
+      spicy: 'Spicy Lyrics',
+      netease: 'NetEase Cloud Music',
+      lrclib: 'LRCLIB',
+      'navidrome-plain': 'Your library (plain text)',
+    } as Record<string, string>,
     visuals: 'Visuals',
     mode: 'Stage visuals',
     modeNames: { auto: 'Auto', reverb: 'Reverb', ambient: 'Ambient', still: 'Still' },
@@ -118,7 +128,7 @@ export const strings = {
     about: 'About',
     aboutText: [
       'ECHO 0.1 — free software under the AGPL-3.0, self-hosted and non-commercial.',
-      'Spotify playback uses this server’s own Spotify app. Lyrics come from your library, Spicy Lyrics and LRCLIB, credited on the Stage.',
+      'Spotify playback uses this server’s own Spotify app. Lyrics come from your library, Spicy Lyrics, NetEase Cloud Music and LRCLIB, credited on the Stage.',
     ],
   },
   account: {

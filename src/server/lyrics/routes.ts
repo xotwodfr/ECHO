@@ -104,7 +104,10 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       )
       .digest('hex')
       .slice(0, 16);
-    const key = `${scope}${trackKey}|${meta}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}`;
+    // Sources the user turned off: their answers must not come back from the shared cache.
+    const sources = deps.sourcesFor(user.id);
+    const off = PRECEDENCE.filter((id) => !sources.some((s) => s.id === id));
+    const key = `${scope}${trackKey}|${meta}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}${off.length ? `|-${off.join(',')}` : ''}`;
 
     // The cache keeps the full document; G2 applies on the way out, so switching it takes effect
     // on the next request (SP-04).
@@ -125,7 +128,7 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
     }
     if (!p) {
       p = deps.resolver
-        .resolve(input, deps.sourcesFor(user.id), {
+        .resolve(input, sources, {
           ...(ov.pinnedSource && { pin: ov.pinnedSource }),
           onLate: (doc) => void deps.cache.put(key, doc),
         })

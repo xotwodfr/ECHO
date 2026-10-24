@@ -113,7 +113,7 @@ export interface LyricsDoc {
   version: 1;
   trackKey: string;
   sync: SyncLevel;
-  source: 'navidrome' | 'spicy' | 'lrclib' | 'navidrome-plain' | 'fixture'; // fixture: M3, dev only
+  source: 'navidrome' | 'spicy' | 'netease' | 'lrclib' | 'navidrome-plain' | 'fixture'; // fixture: M3, dev only
   attribution: Attribution;
   language?: string; // BCP-47 when known
   offsetMs: number; // source-declared offset; 0 if none

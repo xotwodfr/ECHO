@@ -24,6 +24,7 @@ import {
   lrclibSource,
   navidromePlainSource,
   navidromeSource,
+  neteaseSource,
   spicySource,
 } from './lyrics/sources.ts';
 import { createSpotifyIds } from './lyrics/spotifyId.ts';
@@ -274,12 +275,14 @@ if (import.meta.main) {
     spotifyIdFor: (userId, scope, input) => spotifyIds.idFor(userId, scope, input),
     sourcesFor: (userId) => {
       const client = () => navidromeClientFor(navidrome, userId);
+      const off: string[] = userSettings(auth.db, userId).lyrics.disabledSources;
       return [
         navidromeSource(client),
         spicySource({ baseUrl: config.spicyUrl, key: () => spicyKey(auth.db, auth.sealer) }),
+        neteaseSource({ baseUrl: config.neteaseUrl }),
         lrclibSource({ baseUrl: config.lrclibUrl, userAgent }),
         navidromePlainSource(client),
-      ];
+      ].filter((s) => !off.includes(s.id)); // Settings → Lyrics → Sources
     },
   };
   const app = createApp({
