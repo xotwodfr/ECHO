@@ -1,11 +1,14 @@
 // The <audio> → Web Audio path (VISUALIZER_SPEC.md §3.1): element → ReplayGain → analyser tap →
 // user volume → output. One AudioContext, created on the first user gesture (autoplay policy).
-// The fixture provider uses it from M3; the Navidrome provider reuses it in M5.
+// The fixture provider and the Navidrome provider use it.
 
 export function createAudioPath(el: HTMLAudioElement) {
   let ctx: AudioContext | null = null;
   let volumeNode: GainNode | null = null;
+  let gainNode: GainNode | null = null;
+  let tapNode: AnalyserNode | null = null;
   let volume = 1;
+  let replayGain = 1;
   const perceptual = (v: number) => v ** 3;
 
   return {
@@ -14,8 +17,10 @@ export function createAudioPath(el: HTMLAudioElement) {
     start() {
       if (!ctx) {
         ctx = new AudioContext({ latencyHint: 'playback' });
-        const replayGain = ctx.createGain(); // gain 1 until track metadata carries ReplayGain (M5)
+        gainNode = ctx.createGain();
+        gainNode.gain.value = replayGain;
         const tap = ctx.createAnalyser();
+        tapNode = tap;
         tap.fftSize = 2048;
         tap.smoothingTimeConstant = 0;
         tap.minDecibels = -100;
@@ -23,10 +28,23 @@ export function createAudioPath(el: HTMLAudioElement) {
         volumeNode = ctx.createGain();
         volumeNode.gain.value = perceptual(volume);
         el.volume = 1; // volume is applied in the graph, after the tap
-        ctx.createMediaElementSource(el).connect(replayGain);
-        replayGain.connect(tap).connect(volumeNode).connect(ctx.destination);
+        ctx.createMediaElementSource(el).connect(gainNode);
+        gainNode.connect(tap).connect(volumeNode).connect(ctx.destination);
       }
       if (ctx.state === 'suspended') void ctx.resume();
+    },
+    /**
+     * ReplayGain (PLAYBACK_ARCHITECTURE.md §5.6) in dB, limited so the peak stays under full scale.
+     * Unknown gain plays at unity.
+     */
+    setReplayGain(db: number | undefined, peak: number | undefined) {
+      const g = db === undefined ? 1 : 10 ** (db / 20);
+      replayGain = peak && peak > 0 ? Math.min(g, 1 / peak) : g;
+      if (gainNode) gainNode.gain.value = replayGain;
+    },
+    /** The analyser tap (VISUALIZER_SPEC.md §3.1), once the graph exists. */
+    analyser() {
+      return tapNode;
     },
     setVolume(v: number) {
       volume = v;

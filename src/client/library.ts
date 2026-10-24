@@ -1,7 +1,7 @@
 import type { Track } from '../shared/types.ts';
 
-// The library as the shell reads it. In M2 the only source is the fixture library (dev builds);
-// M5 replaces it with Navidrome data through TanStack Query.
+// The library as the shell reads it: the fixture library (development builds) or the signed-in
+// user's Navidrome (library-navidrome.ts), which loads album tracks on demand.
 
 export interface Album {
   id: string;
@@ -17,6 +17,12 @@ export interface Library {
   album(id: string): Album | undefined;
   /** Case-insensitive substring match on titles and artists (a stand-in for server search). */
   search(q: string): { tracks: Track[]; albums: Album[] };
+  /** Server libraries: fetches an album's tracks if they are not loaded yet. */
+  loadAlbum?(id: string): Promise<Album | undefined>;
+  /** Server libraries: called whenever more of the library has arrived. */
+  subscribe?(onChange: () => void): () => void;
+  /** Bumped on every change (with `subscribe`), so React can re-render. */
+  version?(): number;
 }
 
 export function createLibrary(albums: Album[]): Library {

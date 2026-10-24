@@ -291,6 +291,28 @@ export function authRoutes(deps: AuthDeps) {
     return c.json({ ok: true });
   });
 
+  /**
+   * Who this browser is, without a 401 (the client asks before it renders): signed in with a name
+   * and role, or not, and whether the one-time setup is open. Reveals nothing else.
+   */
+  app.get('/session', (c) => {
+    c.header('Cache-Control', 'no-store');
+    const token = getCookie(c, SESSION_COOKIE);
+    const user = token ? resolveSession(db, token, now()) : null;
+    if (user) {
+      const nd = db
+        .prepare("SELECT 1 FROM connections WHERE user_id = ? AND provider = 'navidrome'")
+        .get(user.id);
+      return c.json({
+        status: 'signedIn',
+        username: user.username,
+        role: user.role,
+        navidrome: !!nd,
+      });
+    }
+    return c.json({ status: hasAdmin(db) ? 'anonymous' : 'setup' });
+  });
+
   app.get('/me', requireUser(deps), (c) => {
     const { username, role } = (c as unknown as Context<AuthEnv>).var.user;
     return c.json({ username, role });

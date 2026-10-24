@@ -101,6 +101,67 @@ function problemOf(err: unknown): Problem {
   return { code: 'navidrome.failed', userMessage: 'Something went wrong talking to Navidrome.' };
 }
 
+/**
+ * A cover's bytes from the user's own Navidrome, for palette extraction (VISUALIZER_SPEC.md §6.1);
+ * null when the user has no connection or the answer is not a raster image.
+ */
+export function navidromeCovers(deps: NavidromeDeps) {
+  return async (userId: number, coverId: string, size = 256): Promise<Buffer | null> => {
+    const row = deps.db
+      .prepare(
+        "SELECT config_json, secret_enc FROM connections WHERE user_id = ? AND provider = 'navidrome'",
+      )
+      .get(userId) as { config_json: string; secret_enc: string } | undefined;
+    if (!row) return null;
+    const cfg = JSON.parse(row.config_json) as Stored;
+    const secret = deps.sealer.open(row.secret_enc, {
+      table: 'connections',
+      rowId: `${userId}|navidrome`,
+      column: 'secret_enc',
+    });
+    const creds: Credentials =
+      cfg.auth === 'apiKey' ? { apiKey: secret } : { username: cfg.username, password: secret };
+    const allow = deps.db
+      .prepare("SELECT value_json FROM server_settings WHERE key = 'navidrome.allowList'")
+      .get() as { value_json: string } | undefined;
+    try {
+      const target = await checkUrl(cfg.url, {
+        defaultUrl: deps.defaultUrl,
+        allowList: allow ? (JSON.parse(allow.value_json) as string[]) : [],
+        resolve: deps.resolve,
+      });
+      const res = await createClient(target, creds).request('getCoverArt', {
+        id: coverId,
+        size: String(size),
+      });
+      if (
+        res.statusCode !== 200 ||
+        !RASTER.test(
+          String(res.headers['content-type'] ?? '')
+            .split(';')[0]
+            ?.trim() ?? '',
+        )
+      ) {
+        res.resume();
+        return null;
+      }
+      const chunks: Buffer[] = [];
+      let n = 0;
+      for await (const c of res) {
+        n += (c as Buffer).length;
+        if (n > 8 * 1024 * 1024) {
+          res.destroy();
+          return null;
+        }
+        chunks.push(c as Buffer);
+      }
+      return Buffer.concat(chunks);
+    } catch {
+      return null;
+    }
+  };
+}
+
 export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHandler<AuthEnv>) {
   const { db, sealer, now } = deps;
   const app = new Hono<AuthEnv>();

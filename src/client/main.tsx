@@ -5,15 +5,19 @@ import './tokens.css';
 import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
+import { createNavidromeLibrary } from './library-navidrome.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
+import { NavidromeProvider } from './playback/navidrome.ts';
+import { loadSession } from './session.ts';
 import { Shell } from './shell/Shell.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { createViewStore } from './view.ts';
 
-// Development builds play the fixture library through the FakeProvider (M2 task 3). The image
-// (ECHO_SPECIMEN=0) has neither until the Navidrome provider arrives in M5.
+// A signed-in user with a Navidrome connection plays their own library (M5). Without one,
+// development builds play the fixture library (M2 task 3); the image (ECHO_SPECIMEN=0) has no
+// fixtures and sends visitors to sign in.
 const fixtures = __ECHO_FIXTURES__ ? await import('./fixtures/playback.ts') : null;
 
 const store = createViewStore(window);
@@ -32,8 +36,18 @@ if (frame?.fixture) {
 // Development builds let e2e flip the Settings → Lyrics preferences that have no UI yet (M8).
 if (__ECHO_FIXTURES__) Object.assign(window, { __echoLyricPrefs: lyricPrefs });
 
+// Deterministic frames never ask the server who is signed in: the same frame on every load.
+const session = frame ? null : await loadSession();
+if (!fixtures && session && route.view !== 'login' && route.view !== 'setup') {
+  if (session.status === 'setup') store.getState().navigate({ view: 'setup' }, { replace: true });
+  if (session.status === 'anonymous')
+    store.getState().navigate({ view: 'login' }, { replace: true });
+}
+const ownLibrary = session?.status === 'signedIn' && session.navidrome;
+const library = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null);
+
 const controller = createPlaybackController({
-  provider: fixtures?.createFixtureProvider() ?? null,
+  provider: ownLibrary ? new NavidromeProvider() : (fixtures?.createFixtureProvider() ?? null),
   notify: (message) => toastStore.getState().show(message),
   features,
 });
@@ -64,6 +78,4 @@ if (frame && cueId) {
 
 const root = document.getElementById('root');
 if (root)
-  createRoot(root).render(
-    <Shell store={store} controller={controller} library={fixtures?.fixtureLibrary ?? null} />,
-  );
+  createRoot(root).render(<Shell store={store} controller={controller} library={library} />);

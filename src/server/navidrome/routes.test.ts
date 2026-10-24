@@ -1,8 +1,13 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createSession } from '../auth/sessions.ts';
 import { createApp } from '../index.ts';
+import { createPaletteService } from '../palette/service.ts';
 import { call, testDeps } from '../testing.ts';
 import { type MockSubsonic, startMockSubsonic } from './mock.ts';
+import { navidromeCovers } from './routes.ts';
 
 // PLAYBACK_ARCHITECTURE.md §5 and SETTINGS_AND_SECURITY.md §6.1 against the mock Subsonic server.
 
@@ -270,5 +275,29 @@ describe('streams and covers (§5.5, §5.4)', () => {
     expect((await s.get(url.replace(/uid=\d+/, 'uid=99'), '')).status).toBe(401); // bound to the user
     s.clock.t += 6 * 3_600_000;
     expect((await s.get(url, '')).status).toBe(401); // expired
+  });
+});
+
+describe('palettes for Navidrome albums (VISUALIZER_SPEC.md §6.1)', () => {
+  it('come from the user’s own cover; without a session (and outside development) there is none', async () => {
+    const s = setup();
+    await s.connect(PASS);
+    const covers = navidromeCovers(s.deps.navidrome);
+    const palette = createPaletteService({
+      dir: mkdtempSync(join(tmpdir(), 'echo-pal-')),
+      load: async (key, { userId }) => (userId !== null ? covers(userId, key.slice(10)) : null),
+    });
+    const app = createApp({ ...s.deps, palette, devFixtures: false });
+    const signedIn = await app.request('http://localhost/api/v1/palette/navidrome:al-1', {
+      headers: { host: 'localhost', cookie: s.ada.cookie },
+    });
+    expect(await signedIn.json()).toMatchObject({ source: 'art' });
+    expect((mock.requests.at(-1) as URLSearchParams).get('size')).toBe('256');
+    const anon = await app.request('http://localhost/api/v1/palette/navidrome:al-2', {
+      headers: { host: 'localhost' },
+    });
+    expect(anon.status).toBe(401);
+    mock.coverType = 'image/svg+xml'; // not a raster: no palette from it
+    expect(await covers(s.ada.id, 'al-3')).toBeNull();
   });
 });

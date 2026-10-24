@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
 import type { PlaybackState, QueueState } from '../../shared/types.ts';
 import type { Library } from '../library.ts';
@@ -16,7 +16,15 @@ function usePlaybackContext() {
 }
 
 export const usePlayback = () => usePlaybackContext().controller;
-export const useLibrary = () => usePlaybackContext().library;
+const noop = () => () => {};
+const zero = () => 0;
+
+/** The library, re-rendering whenever a server library has loaded more. */
+export function useLibrary() {
+  const library = usePlaybackContext().library;
+  useSyncExternalStore(library?.subscribe ?? noop, library?.version ?? zero);
+  return library;
+}
 
 export function usePlayer<T>(select: (s: PlaybackState) => T): T {
   return useStore(usePlayback().player, select);

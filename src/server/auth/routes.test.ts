@@ -256,6 +256,23 @@ describe('login (§4.4, §4.5)', () => {
 });
 
 describe('sessions (§4.6)', () => {
+  it('GET /session says who is signed in without a 401', async () => {
+    const t = testDeps();
+    expect(await (await call(t.app, 'GET', '/api/v1/session')).json()).toEqual({ status: 'setup' });
+    const a = await withAdmin();
+    expect(await (await call(a.app, 'GET', '/api/v1/session')).json()).toEqual({
+      status: 'anonymous',
+    });
+    const me = await call(a.app, 'GET', '/api/v1/session', undefined, a.cookie);
+    expect(me.status).toBe(200);
+    expect(await me.json()).toEqual({
+      status: 'signedIn',
+      username: 'ada',
+      role: 'admin',
+      navidrome: false,
+    });
+  });
+
   it('everything but the allow-list needs a session; logout ends it', async () => {
     const t = await withAdmin();
     expect((await call(t.app, 'GET', '/api/v1/me')).status).toBe(401);

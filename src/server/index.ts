@@ -4,13 +4,15 @@ import { getConnInfo } from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
+import { getCookie } from 'hono/cookie';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
+import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
 import { LOG_LEVELS, type LogLevel, loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
-import { type NavidromeDeps, navidromeRoutes } from './navidrome/routes.ts';
+import { type NavidromeDeps, navidromeCovers, navidromeRoutes } from './navidrome/routes.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 
@@ -22,6 +24,8 @@ export interface AppDeps {
   auth: AuthDeps;
   navidrome: NavidromeDeps;
   http: HttpConfig;
+  /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
+  devFixtures?: boolean;
   /** The TCP peer; tests stand in for the Node socket. */
   socketAddress?: (c: Context) => string;
 }
@@ -48,8 +52,12 @@ export function createApp(deps: AppDeps) {
   app.get('/api/v1/palette/:albumKey', async (c) => {
     const key = c.req.param('albumKey');
     if (!ALBUM_KEY.test(key)) return c.json({ error: 'bad_album_key' }, 400);
+    const token = getCookie(c, SESSION_COOKIE);
+    const user = token ? resolveSession(deps.auth.db, token, deps.auth.now()) : null;
+    // Signed in, or a development server answering for its generated covers (E2E).
+    if (!user && !deps.devFixtures) return c.json({ error: 'unauthenticated' }, 401);
     c.header('Cache-Control', 'private, max-age=3600');
-    return c.json(await deps.palette.get(key));
+    return c.json(await deps.palette.get(key, { userId: user?.id ?? null }));
   });
 
   app.route('/api/v1', authRoutes(deps.auth));
@@ -104,22 +112,30 @@ if (import.meta.main) {
     log('warn', 'no admin yet: open the setup URL within 30 minutes', {
       url: `${config.publicOrigin ?? `http://localhost:${config.port}`}/setup#${setupToken}`,
     });
+  const navidrome: NavidromeDeps = {
+    db: auth.db,
+    sealer: auth.sealer,
+    now: Date.now,
+    defaultUrl: config.navidromeUrl,
+    streamKey: subkey(master, 'stream-url'),
+  };
+  const cover = navidromeCovers(navidrome);
   const palette = createPaletteService({
     dir: join(config.dataDir, 'cache', 'palette'),
-    // Navidrome covers arrive with accounts (M5).
-    load: async (key) =>
-      key.startsWith('fixture:') ? fixtureCover(key.slice(8)) : libraryCover(key),
+    // The user's own Navidrome; generated covers for fixtures and, in development, the fixture
+    // library's drawings.
+    load: async (key, { userId }) => {
+      if (key.startsWith('fixture:')) return fixtureCover(key.slice(8));
+      const fromNavidrome =
+        userId !== null && key.startsWith('navidrome:') ? await cover(userId, key.slice(10)) : null;
+      return fromNavidrome ?? (config.devFixtures ? libraryCover(key) : null);
+    },
   });
   const app = createApp({
     palette,
     auth,
-    navidrome: {
-      db: auth.db,
-      sealer: auth.sealer,
-      now: Date.now,
-      defaultUrl: config.navidromeUrl,
-      streamKey: subkey(master, 'stream-url'),
-    },
+    navidrome,
+    devFixtures: config.devFixtures,
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>

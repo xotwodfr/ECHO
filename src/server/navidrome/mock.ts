@@ -11,6 +11,7 @@ export interface MockOptions {
   username?: string;
   password?: string;
   apiKey?: string | null; // advertise and accept apiKeyAuthentication
+  port?: number; // 0 (any free port) by default
 }
 
 export interface Faults {
@@ -152,6 +153,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     const q = url.searchParams;
     requests.push(q);
     const method = url.pathname.replace(/^\/rest\//, '').replace(/\.view$/, '');
+    if (url.pathname === '/health') return res.end('ok'); // for the E2E web server
     const json = (body: unknown, status = 200) => {
       res.writeHead(status, { 'content-type': 'application/json' });
       res.end(JSON.stringify(body));
@@ -306,7 +308,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     }
   });
 
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
+  await new Promise<void>((r) => server.listen(opts.port ?? 0, '127.0.0.1', r));
   const { port } = server.address() as AddressInfo;
   return {
     get coverType() {

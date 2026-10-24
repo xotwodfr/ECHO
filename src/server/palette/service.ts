@@ -15,7 +15,11 @@ import {
 // A palette from an older algorithm (`version`) counts as a miss. Covers that cannot be loaded or
 // decoded get the fallback palette, which is not cached, so a later request can still succeed.
 
-export type CoverLoader = (albumKey: string) => Promise<Buffer | null>;
+/** The requesting user, for covers that come from their own connection (null: no session). */
+export interface LoadContext {
+  userId: number | null;
+}
+export type CoverLoader = (albumKey: string, ctx: LoadContext) => Promise<Buffer | null>;
 
 export function createPaletteService(opts: { dir: string; load: CoverLoader }) {
   const inflight = new Map<string, Promise<Palette>>();
@@ -31,8 +35,8 @@ export function createPaletteService(opts: { dir: string; load: CoverLoader }) {
     }
   }
 
-  async function compute(key: string): Promise<Palette> {
-    const image = await opts.load(key);
+  async function compute(key: string, ctx: LoadContext): Promise<Palette> {
+    const image = await opts.load(key, ctx);
     if (!image) return fallbackPalette();
     let palette: Palette;
     try {
@@ -50,12 +54,12 @@ export function createPaletteService(opts: { dir: string; load: CoverLoader }) {
   }
 
   return {
-    async get(key: string): Promise<Palette> {
+    async get(key: string, ctx: LoadContext = { userId: null }): Promise<Palette> {
       const hit = await cached(key);
       if (hit) return hit;
       let p = inflight.get(key);
       if (!p) {
-        p = compute(key).finally(() => inflight.delete(key));
+        p = compute(key, ctx).finally(() => inflight.delete(key));
         inflight.set(key, p);
       }
       return p;

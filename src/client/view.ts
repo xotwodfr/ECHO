@@ -38,6 +38,8 @@ export type Route =
   | { view: 'search'; q: string }
   | { view: 'settings'; section: SettingsSection }
   | { view: 'ui' }
+  | { view: 'login' }
+  | { view: 'setup' } // the one-time admin setup; its token travels in the fragment
   | { view: 'notFound'; path: string };
 
 const isOneOf = <T extends string>(list: readonly T[], v: string | undefined): v is T =>
@@ -87,6 +89,8 @@ export function parseRoute(pathname: string, search = ''): Route {
     return frame ? { view: 'listen', frame } : { view: 'listen' };
   }
   if (head === '__ui' && a === undefined) return { view: 'ui' };
+  if (head === 'login' && a === undefined) return { view: 'login' };
+  if (head === 'setup' && a === undefined) return { view: 'setup' };
   if (head === 'library') {
     if (a === undefined) return { view: 'library', tab: 'albums' };
     if (isOneOf(LIBRARY_TABS, a) && b === undefined) return { view: 'library', tab: a };
@@ -126,6 +130,10 @@ export function routePath(route: Route): string {
       return route.section === 'preferences' ? '/settings' : `/settings/${route.section}`;
     case 'ui':
       return '/__ui';
+    case 'login':
+      return '/login';
+    case 'setup':
+      return '/setup';
     case 'notFound':
       return route.path;
   }

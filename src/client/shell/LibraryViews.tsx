@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import { type Album, albumDurationMs } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
@@ -60,6 +61,12 @@ function Rows({
 
 function Albums({ albums }: { albums: Album[] }) {
   const c = usePlayback();
+  const library = useLibrary();
+  // A server library lists albums before their tracks: fetch them on the first play.
+  const play = async (a: Album) => {
+    const full = a.tracks.length ? a : ((await library?.loadAlbum?.(a.id)) ?? a);
+    c.playList(full.tracks, 0, albumContext(full));
+  };
   return (
     <AlbumGrid>
       {albums.map((a) => (
@@ -69,7 +76,7 @@ function Albums({ albums }: { albums: Album[] }) {
           title={a.title}
           artist={a.artist}
           cover={a.cover}
-          onPlay={() => c.playList(a.tracks, 0, albumContext(a))}
+          onPlay={() => void play(a)}
         />
       ))}
     </AlbumGrid>
@@ -106,6 +113,9 @@ export function AlbumView({ id }: { id: string }) {
   const library = useLibrary();
   const c = usePlayback();
   const a = library?.album(id);
+  useEffect(() => {
+    void library?.loadAlbum?.(id);
+  }, [library, id]);
   const s = strings.album;
   // While this album is what plays, its Play button controls it instead of restarting it.
   const status = usePlayer((p) => p.status);

@@ -31,6 +31,7 @@
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px;
   --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
   --gap: 16px; --gutter: 32px; --sidebar: 224px; --dock: 88px;
+  --form-w: 420px;   /* sign-in, setup and connection forms (M5) */
 
   /* shape */
   --r-pill: 999px; --r-control: 8px; --r-panel: 16px; --r-art: 4px; --r-art-lg: 8px;

@@ -550,3 +550,55 @@ button {
     display: none;
   }
 }
+
+/* Sign-in and first-start setup (SETTINGS_AND_SECURITY.md §4): one centred column, no shell. */
+.auth-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: var(--gutter);
+  background: var(--ground);
+}
+
+.auth {
+  display: grid;
+  gap: var(--sp-5);
+  width: min(100%, var(--form-w));
+}
+
+.auth .btn {
+  justify-self: start;
+}
+
+.recovery-codes {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  gap: var(--sp-2) var(--sp-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.connection {
+  display: grid;
+  gap: var(--sp-4);
+  max-width: var(--form-w);
+  margin-top: var(--sp-6);
+}
+
+.connection form {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.connection .actions {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+/* Keys and codes in the shell's own face: no monospace in the shell (DS-02). */
+.recovery-codes code,
+.totp-key code {
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}

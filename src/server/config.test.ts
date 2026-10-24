@@ -11,6 +11,7 @@ describe('loadConfig', () => {
       masterKeyFile: '/run/secrets/echo_master_key',
       trustedProxy: [],
       navidromeUrl: null,
+      devFixtures: false,
     });
   });
 
@@ -39,6 +40,7 @@ describe('loadConfig', () => {
       masterKeyFile: '/run/secrets/echo_master_key',
       trustedProxy: [],
       navidromeUrl: null,
+      devFixtures: false,
     });
   });
 

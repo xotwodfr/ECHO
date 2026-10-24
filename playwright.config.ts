@@ -7,20 +7,23 @@ import { defineConfig, devices } from '@playwright/test';
 // Host port 8080 is the documented container port; E2E uses its own port so it can run next to
 // anything already bound to 8080 on a workstation.
 const port = Number(process.env.E2E_PORT ?? 18787);
+const mockPort = port + 1;
 
 // The server refuses to start without a master key (SETTINGS_AND_SECURITY.md §3.2): E2E uses a
 // throwaway one, with its data, outside the repo.
 const e2eDir = join(tmpdir(), 'echo-e2e');
 const keyFile = join(e2eDir, 'master_key');
 mkdirSync(e2eDir, { recursive: true });
-if (!existsSync(keyFile)) writeFileSync(keyFile, randomBytes(32).toString('base64'), { mode: 0o600 });
+if (!existsSync(keyFile))
+  writeFileSync(keyFile, randomBytes(32).toString('base64'), { mode: 0o600 });
 
 export default defineConfig({
   testDir: 'tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',
-  use: { baseURL: `http://127.0.0.1:${port}` },
+  // localhost, not 127.0.0.1: Firefox keeps a Secure (__Host-) cookie over http only for localhost.
+  use: { baseURL: `http://localhost:${port}` },
   projects: [
     {
       name: 'chromium',
@@ -42,16 +45,27 @@ export default defineConfig({
     },
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
   ],
-  webServer: {
-    command: 'pnpm build && node src/server/index.ts',
-    env: {
-      ECHO_PORT: String(port),
-      ECHO_LOG: 'warn',
-      ECHO_MASTER_KEY_FILE: keyFile,
-      ECHO_DATA_DIR: join(e2eDir, 'data'),
+  webServer: [
+    // A mock Navidrome for the account and playback specs (src/server/navidrome/mock.ts).
+    {
+      command: `node scripts/mock-subsonic.ts ${mockPort}`,
+      url: `http://127.0.0.1:${mockPort}/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 30_000,
     },
-    url: `http://127.0.0.1:${port}/api/v1/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-  },
+    {
+      command: 'pnpm build && node src/server/index.ts',
+      env: {
+        ECHO_PORT: String(port),
+        ECHO_LOG: 'warn',
+        ECHO_MASTER_KEY_FILE: keyFile,
+        ECHO_DATA_DIR: join(e2eDir, 'data'),
+        ECHO_DEV_FIXTURES: '1',
+        ECHO_NAVIDROME_URL: `http://127.0.0.1:${mockPort}`,
+      },
+      url: `http://127.0.0.1:${port}/api/v1/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+    },
+  ],
 });

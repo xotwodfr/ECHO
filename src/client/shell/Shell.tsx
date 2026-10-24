@@ -8,6 +8,7 @@ import { strings } from '../strings.ts';
 import { buttonClass, Pill } from '../ui/controls.tsx';
 import { ToastRegion } from '../ui/overlays.tsx';
 import { LIBRARY_TABS, type Route, SETTINGS_SECTIONS, type ViewStore } from '../view.ts';
+import { AccountSection, LoginView, SetupView } from './AuthViews.tsx';
 import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
 import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
@@ -162,7 +163,9 @@ function View({ route }: { route: Route }) {
             to={(section) => ({ view: 'settings', section })}
           />
           <h2>{strings.settings.sections[route.section]}</h2>
-          {route.section === 'preferences' && !webgl2Supported() ? (
+          {route.section === 'account' ? (
+            <AccountSection />
+          ) : route.section === 'preferences' && !webgl2Supported() ? (
             <p className="notice">
               <Pill tone="warn">{strings.settings.visualsLimitedPill}</Pill>
               {strings.settings.visualsLimited}
@@ -172,6 +175,10 @@ function View({ route }: { route: Route }) {
           )}
         </>
       );
+    case 'login':
+      return <LoginView />;
+    case 'setup':
+      return <SetupView />;
     case 'ui':
       if (Gallery)
         return (
@@ -200,6 +207,8 @@ const TITLES: Record<Route['view'], string> = {
   search: strings.nav.search,
   settings: strings.nav.settings,
   ui: strings.gallery.title,
+  login: strings.auth.signIn,
+  setup: strings.auth.setupTitle,
   notFound: strings.notFound.title,
 };
 
@@ -240,6 +249,14 @@ function Frame() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // Signing in and setting up stand alone: no sidebar, no player.
+  if (route.view === 'login' || route.view === 'setup')
+    return (
+      <main className="auth-page" ref={main}>
+        <View route={route} />
+      </main>
+    );
 
   return (
     <div

@@ -31,6 +31,7 @@ export function testDeps(over: Partial<AppDeps> = {}) {
       streamKey: subkey(randomBytes(32), 'stream-url'),
     },
     http: { publicOrigin: null, trustedProxy: [] },
+    devFixtures: true,
     socketAddress: () => '203.0.113.7',
     ...over,
   };
