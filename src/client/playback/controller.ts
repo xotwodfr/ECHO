@@ -96,9 +96,28 @@ export function createPlaybackController(opts: {
 
   const isActive = () => ['playing', 'loading', 'buffering'].includes(player.getState().status);
 
+  /** The next track is buffered 20 s before this one ends, for a gapless hand-over (§5.6). */
+  let preloadTimer: ReturnType<Clock['setTimeout']> | null = null;
+  function schedulePreload(track: Track, startMs: number) {
+    if (preloadTimer) clock.clearTimeout(preloadTimer);
+    preloadTimer = null;
+    if (!provider?.preload) return;
+    preloadTimer = clock.setTimeout(
+      () => {
+        preloadTimer = null;
+        const q = queue.getState();
+        const next = Q.upcoming(q)[0];
+        if (q.now?.key === track.key && next && player.getState().repeat !== 'one')
+          void provider.preload?.(next);
+      },
+      Math.max(0, track.durationMs - startMs - 20_000),
+    );
+  }
+
   function load(q: QueueState, autoplay: boolean, startMs = 0) {
     queue.setState(q, true);
     if (!provider || !q.now) return;
+    schedulePreload(q.now, startMs);
     loading = true;
     player.setState({
       status: 'loading',

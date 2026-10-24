@@ -230,6 +230,24 @@ describe('PlaybackController (§3 transport rules)', () => {
     return { clock, provider, c, notes, at, flush, s: () => c.player.getState() };
   };
 
+  it('buffers the next track 20 s before the end, not under repeat-one (gapless, §5.6)', () => {
+    const { clock, provider, c } = setup();
+    const buffered: string[] = [];
+    (provider as unknown as { preload: (t: Track) => Promise<void> }).preload = async (t) => {
+      buffered.push(t.id);
+    };
+    c.playList(album, 0, ctx); // 200 s tracks
+    clock.advance(100 + 179_000);
+    expect(buffered).toEqual([]);
+    clock.advance(1000);
+    expect(buffered).toEqual(['t2']);
+    c.cycleRepeat(); // all
+    c.cycleRepeat(); // one
+    c.playList(album, 2, ctx);
+    clock.advance(200_000);
+    expect(buffered).toEqual(['t2']);
+  });
+
   it('ReplayGain auto: album gain in album context, track gain otherwise (PLAY-05)', () => {
     const { provider, c } = setup();
     const modes: (string | undefined)[] = [];

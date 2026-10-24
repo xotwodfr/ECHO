@@ -66,7 +66,10 @@ export class FakeProvider implements PlaybackProvider {
     this.emitState();
   }
 
-  load(track: Track, opts: { startMs?: number; autoplay: boolean }) {
+  load(
+    track: Track,
+    opts: { startMs?: number; autoplay: boolean; replayGain?: 'album' | 'track' },
+  ) {
     this.stopTimers();
     this.settleLoad?.(); // a newer load supersedes a pending one
     this.track = track;

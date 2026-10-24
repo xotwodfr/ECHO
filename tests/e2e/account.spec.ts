@@ -141,3 +141,33 @@ test('the server library: sorts, playlists, starred and search (LIB-01, SRCH-01)
   await expect(page.locator('.tile', { hasText: 'Glass Weather' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Glass Weather 3')).toBeVisible(); // tracks from search3
 });
+
+test('album tracks hand over without a gap (PLAY-04, two voices)', async ({ page }) => {
+  await page.goto('/login');
+  await page.getByLabel('Username').fill(USER);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/settings/account');
+  await page.getByLabel('Navidrome username').fill('ada');
+  await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/library/album/al-1');
+  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  const dock = page.getByRole('region', { name: 'Player' });
+  await expect(dock).toHaveAttribute('data-status', 'playing');
+  // Near the end of the 20 s first track; the second is already buffered (20 s before the end).
+  const seek = dock.getByRole('slider', { name: 'Seek' });
+  const box = await seek.boundingBox();
+  if (!box) throw new Error('seek');
+  await page.mouse.click(box.x + box.width * 0.9, box.y + box.height / 2);
+  await expect(dock).toContainText('Harbour Lights 2', { timeout: 10_000 });
+  await expect(dock).toHaveAttribute('data-status', 'playing');
+  const gaps = await page.evaluate(
+    () => (window as unknown as { __echoGaps?: number[] }).__echoGaps ?? [],
+  );
+  console.log(`PLAY-04 hand-over: ${gaps.map((g) => g.toFixed(1)).join(', ')} ms`);
+  expect(gaps.length).toBeGreaterThan(0);
+  expect(gaps.at(-1)).toBeLessThan(50);
+});

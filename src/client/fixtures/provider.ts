@@ -83,7 +83,10 @@ export class FixtureProvider implements PlaybackProvider {
     await this.fake.disconnect();
   }
 
-  async load(track: Track, opts: { startMs?: number; autoplay: boolean }) {
+  async load(
+    track: Track,
+    opts: { startMs?: number; autoplay: boolean; replayGain?: 'album' | 'track' },
+  ) {
     const name = guideFixtureOf(track);
     const doc = name ? lyricFixtures[name] : undefined;
     if (!name || !doc) {

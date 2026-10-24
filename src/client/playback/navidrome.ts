@@ -10,12 +10,12 @@ import type {
 import { api } from '../api.ts';
 import { reportDown } from '../connection.ts';
 import { AnalyserFeatures } from './analyser.ts';
-import { type AudioPath, createAudioPath } from './audio.ts';
+import { createAudioGraph } from './audio.ts';
 
 // NavidromeProvider (PLAYBACK_ARCHITECTURE.md §5): the signed-in user's own Navidrome through
 // ECHO's proxy. Raw when the browser can play the file (native seeking over Range), else Opus 192
-// transcoded by Navidrome, sought by reloading with `timeOffset`. ReplayGain, scrobbling and the
-// Media Session. One <audio>; the A/B pair for gapless and crossfade is a follow-up.
+// transcoded by Navidrome, sought by reloading with `timeOffset`. ReplayGain, scrobbling, the Media
+// Session, and two voices (A/B) for gapless hand-overs; crossfade is a follow-up.
 
 export const NAVIDROME_CAPABILITIES: ProviderCapabilities = {
   canSeek: true,
@@ -40,7 +40,16 @@ export class NavidromeProvider implements PlaybackProvider {
   readonly capabilities = NAVIDROME_CAPABILITIES;
   readonly label = 'Navidrome';
 
-  private readonly audio: AudioPath;
+  private readonly graph = createAudioGraph();
+  /** Two voices (A/B): one plays, the other buffers the next track for a gapless hand-over (§5.6). */
+  private readonly voices: {
+    el: HTMLAudioElement;
+    setReplayGain(db?: number, peak?: number): void;
+  }[];
+  private cur = 0;
+  /** The track buffering in the other voice, if any. */
+  private next: { track: NavidromeTrack; src: string; transcode: boolean } | null = null;
+  private endedAt = 0;
   /** Live features from the analyser tap (VISUALIZER_SPEC.md §3), aligned to what is audible. */
   private readonly live: AnalyserFeatures;
   private track: NavidromeTrack | null = null;
@@ -64,38 +73,67 @@ export class NavidromeProvider implements PlaybackProvider {
   private readonly opts: { transcodeOffset: boolean; scrobble: boolean };
 
   constructor(
-    el: HTMLAudioElement = new Audio(),
+    els: [HTMLAudioElement, HTMLAudioElement] = [new Audio(), new Audio()],
     opts: { transcodeOffset: boolean; scrobble: boolean } = {
       transcodeOffset: true,
       scrobble: true,
     },
   ) {
     this.opts = opts;
-    this.audio = createAudioPath(el);
-    this.live = new AnalyserFeatures({
-      tap: () => this.audio.analyser(),
-      latencyMs: () => this.audio.latencyMs(),
-      playing: () => !el.paused,
+    this.voices = els.map((el) => {
+      el.preload = 'auto';
+      this.listen(el);
+      return this.graph.attach(el);
     });
-    el.preload = 'auto';
-    const sync = () => this.emitState();
+    this.live = new AnalyserFeatures({
+      tap: () => this.graph.analyser(),
+      latencyMs: () => this.graph.latencyMs(),
+      playing: () => !this.el.paused,
+    });
+  }
+
+  /** The playing voice's element. */
+  private get el() {
+    return (this.voices[this.cur] as (typeof this.voices)[number]).el;
+  }
+
+  /** Events count only from the playing voice; the buffering one stays silent. */
+  private listen(el: HTMLAudioElement) {
+    const mine = () => el === this.el;
+    const sync = () => mine() && this.emitState();
     for (const e of ['play', 'pause', 'seeked'] as const) el.addEventListener(e, sync);
     el.addEventListener('waiting', () => {
+      if (!mine()) return;
       this.waiting = true;
       this.emitState();
     });
     el.addEventListener('playing', () => {
+      if (!mine()) return;
       this.waiting = false;
+      this.retries = 0;
+      if (__ECHO_FIXTURES__ && this.endedAt) {
+        // PLAY-04: how long the hand-over took, for E2E.
+        const w = window as unknown as { __echoGaps?: number[] };
+        (w.__echoGaps ??= []).push(performance.now() - this.endedAt);
+        this.endedAt = 0;
+      }
       this.emitState();
       this.scrobble();
     });
-    el.addEventListener('timeupdate', () => this.scrobble());
+    el.addEventListener('timeupdate', () => mine() && this.scrobble());
     el.addEventListener('ended', () => {
+      if (!mine()) return;
+      this.endedAt = performance.now();
       this.emitState();
       this.emit('ended', undefined);
     });
     el.addEventListener('error', () => {
-      if (!el.error || !this.track) return;
+      if (!el.error) return;
+      if (!mine()) {
+        this.next = null; // the next track failed to buffer: it loads normally when its turn comes
+        return;
+      }
+      if (!this.track) return;
       // REL-02: a broken stream is reloaded at its position up to 3 times (0.5, 1, 2 s apart);
       // then the controller skips it. The server's reachability is checked meanwhile.
       reportDown('navidrome');
@@ -125,24 +163,23 @@ export class NavidromeProvider implements PlaybackProvider {
         detail: el.error.message,
       });
     });
-    el.addEventListener('playing', () => {
-      this.retries = 0;
-    });
   }
 
   async connect() {}
 
   async disconnect() {
-    const { el } = this.audio;
-    el.pause();
-    el.removeAttribute('src');
-    el.load();
+    for (const v of this.voices) {
+      v.el.pause();
+      v.el.removeAttribute('src');
+      v.el.load();
+    }
     this.track = null;
+    this.next = null;
   }
 
   /** The stream URL, and whether it is a transcode (which cannot seek). */
   private srcFor(track: NavidromeTrack, offsetS: number) {
-    const raw = !!track.contentType && this.audio.el.canPlayType(track.contentType) !== '';
+    const raw = !!track.contentType && this.el.canPlayType(track.contentType) !== '';
     const q = new URLSearchParams(raw ? { format: 'raw' } : { format: 'opus', maxBitRate: '192' });
     if (!raw && offsetS > 0) q.set('timeOffset', String(Math.floor(offsetS)));
     return {
@@ -151,12 +188,42 @@ export class NavidromeProvider implements PlaybackProvider {
     };
   }
 
+  private applyGain(t: NavidromeTrack, mode: 'album' | 'track') {
+    const rg = t.replayGain;
+    const v = this.voices[this.cur] as (typeof this.voices)[number];
+    // Album gain keeps an album's own dynamics between its tracks; track gain evens out a mix.
+    if (mode === 'album' && rg?.albumGain !== undefined)
+      v.setReplayGain(rg.albumGain, rg.albumPeak);
+    else v.setReplayGain(rg?.trackGain, rg?.trackPeak);
+  }
+
   async load(
     track: Track,
     opts: { startMs?: number; autoplay: boolean; retry?: boolean; replayGain?: 'album' | 'track' },
   ) {
     const t = track as NavidromeTrack;
-    const { el } = this.audio;
+    // The next track is already buffered in the other voice: hand over at once (gapless, §5.6).
+    if (!opts.retry && !opts.startMs && this.next?.track.key === t.key) {
+      const old = this.el;
+      this.cur = 1 - this.cur;
+      old.pause();
+      this.transcode = this.next.transcode;
+      this.next = null;
+      this.track = t;
+      this.loading = false;
+      this.offsetS = 0;
+      this.startMs = 0;
+      this.wantPlay = opts.autoplay;
+      this.scrobbled = 'none';
+      this.retries = 0;
+      this.gainMode = opts.replayGain ?? 'track';
+      this.applyGain(t, this.gainMode);
+      this.mediaSession(t);
+      if (this.wantPlay) await this.play();
+      else this.emitState();
+      return;
+    }
+    const el = this.el;
     this.track = t;
     this.loading = true;
     this.startMs = opts.startMs ?? 0;
@@ -166,11 +233,7 @@ export class NavidromeProvider implements PlaybackProvider {
       this.retries = 0;
       this.gainMode = opts.replayGain ?? 'track';
     }
-    const rg = t.replayGain;
-    // Album gain keeps an album's own dynamics between its tracks; track gain evens out a mix.
-    if (opts.replayGain === 'album' && rg?.albumGain !== undefined)
-      this.audio.setReplayGain(rg.albumGain, rg.albumPeak);
-    else this.audio.setReplayGain(rg?.trackGain, rg?.trackPeak);
+    this.applyGain(t, this.gainMode);
     const load = ++this.loads;
     const { src, transcode } = this.srcFor(t, this.startMs / 1000);
     this.transcode = transcode;
@@ -198,8 +261,8 @@ export class NavidromeProvider implements PlaybackProvider {
     if (!this.track) return;
     this.wantPlay = true;
     if (this.loading) return; // plays when the load completes
-    this.audio.start();
-    await this.audio.el.play().catch((e: unknown) => {
+    this.graph.start();
+    await this.el.play().catch((e: unknown) => {
       this.emitState();
       // NotAllowedError: no user gesture yet; the next click plays.
       if (e instanceof DOMException && e.name === 'NotAllowedError') return;
@@ -215,13 +278,13 @@ export class NavidromeProvider implements PlaybackProvider {
 
   async pause() {
     this.wantPlay = false;
-    this.audio.el.pause();
+    this.el.pause();
   }
 
   async seek(ms: number) {
     if (!this.track) return;
     if (!this.transcode) {
-      this.audio.el.currentTime = ms / 1000;
+      this.el.currentTime = ms / 1000;
       this.emitState();
       return;
     }
@@ -230,21 +293,25 @@ export class NavidromeProvider implements PlaybackProvider {
     // The same play: scrobble state, retries and the gain mode carry over.
     await this.load(this.track, {
       startMs: ms,
-      autoplay: !this.audio.el.paused || this.wantPlay,
+      autoplay: !this.el.paused || this.wantPlay,
       retry: true,
       replayGain: this.gainMode,
     });
   }
 
   async setVolume(v: number) {
-    this.audio.setVolume(v);
+    this.graph.setVolume(v);
   }
 
+  /** Buffers `next` in the other voice, so `load(next)` hands over without a gap (§5.6). */
   async preload(next: Track) {
-    // Warms the next stream's first bytes, so it starts without a gap in practice (§5.6).
-    const warm = new Audio();
-    warm.preload = 'auto';
-    warm.src = this.srcFor(next as NavidromeTrack, 0).src;
+    const t = next as NavidromeTrack;
+    if (t.key === this.track?.key || t.key === this.next?.track.key) return;
+    const { src, transcode } = this.srcFor(t, 0);
+    const other = (this.voices[1 - this.cur] as (typeof this.voices)[number]).el;
+    other.src = src;
+    other.load();
+    this.next = { track: t, src, transcode };
   }
 
   on<K extends keyof Events>(event: K, cb: (e: Events[K]) => void): Unsubscribe {
@@ -259,16 +326,16 @@ export class NavidromeProvider implements PlaybackProvider {
   audioClock() {
     if (this.loading || !this.track) return null;
     return {
-      positionMs: (this.offsetS + this.audio.el.currentTime) * 1000,
-      latencyMs: this.audio.latencyMs(),
+      positionMs: (this.offsetS + this.el.currentTime) * 1000,
+      latencyMs: this.graph.latencyMs(),
     };
   }
 
   /** Now playing at the start; a play once half the track or 4 minutes have played (§5.7). */
   private scrobble() {
     const t = this.track;
-    if (!t || !this.opts.scrobble || this.audio.el.paused) return;
-    const at = (this.offsetS + this.audio.el.currentTime) * 1000;
+    if (!t || !this.opts.scrobble || this.el.paused) return;
+    const at = (this.offsetS + this.el.currentTime) * 1000;
     const post = (submission: boolean) =>
       api(`/navidrome/rest/scrobble?id=${encodeURIComponent(t.id)}&submission=${submission}`, {
         method: 'POST',
@@ -301,7 +368,7 @@ export class NavidromeProvider implements PlaybackProvider {
   }
 
   private emitState() {
-    const { el } = this.audio;
+    const el = this.el;
     this.emit('state', {
       track: this.track,
       positionMs: this.loading ? this.startMs : (this.offsetS + el.currentTime) * 1000,
