@@ -24,21 +24,37 @@ test('Preferences save themselves, follow the user, and keep per-device keys loc
   await page.goto('/settings');
   const intensity = page.getByRole('group', { name: 'Reverb intensity' });
   await intensity.getByRole('button', { name: 'Subtle' }).click();
-  await page.getByRole('group', { name: 'Lyric size' }).getByRole('button', { name: 'Large', exact: true }).click();
+  await page
+    .getByRole('group', { name: 'Lyric size' })
+    .getByRole('button', { name: 'Large', exact: true })
+    .click();
   await page.getByRole('switch', { name: 'Show lyrics without timing' }).click();
-  await page.getByRole('group', { name: 'Streaming quality' }).getByRole('button', { name: '128 kbps' }).click();
+  await page
+    .getByRole('group', { name: 'Streaming quality' })
+    .getByRole('button', { name: '128 kbps' })
+    .click();
   await expect
-    .poll(async () => (await (await page.request.get('/api/v1/me/settings')).json()).visuals.intensity)
+    .poll(
+      async () => (await (await page.request.get('/api/v1/me/settings')).json()).visuals.intensity,
+    )
     .toBe('subtle');
   const server = await (await page.request.get('/api/v1/me/settings')).json();
   expect(server.lyrics).toMatchObject({ sizeScale: 1.15, showUnsynced: false });
   expect(server.playback.quality).toBeUndefined(); // per device: never on the server
   expect(await page.evaluate(() => localStorage.getItem('echo.playback.quality'))).toBe('"128"');
   await page.reload();
-  await expect(intensity.getByRole('button', { name: 'Subtle' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByRole('switch', { name: 'Show lyrics without timing' })).toHaveAttribute('aria-checked', 'false');
+  await expect(intensity.getByRole('button', { name: 'Subtle' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(page.getByRole('switch', { name: 'Show lyrics without timing' })).toHaveAttribute(
+    'aria-checked',
+    'false',
+  );
   // The lyric size reaches the Stage's CSS.
-  expect(await page.evaluate(() => document.documentElement.style.getPropertyValue('--ly-scale'))).toBe('1.15');
+  expect(
+    await page.evaluate(() => document.documentElement.style.getPropertyValue('--ly-scale')),
+  ).toBe('1.15');
   // Another device of the same user: the synced keys follow, the device key does not.
   const other = await context.browser()?.newContext({ baseURL: 'http://localhost:18787' });
   const p2 = (await other?.newPage()) as Page;
@@ -46,8 +62,12 @@ test('Preferences save themselves, follow the user, and keep per-device keys loc
   const cookies = await context.cookies();
   await other?.addCookies(cookies);
   await p2.goto('/settings');
-  await expect(p2.getByRole('group', { name: 'Reverb intensity' }).getByRole('button', { name: 'Subtle' })).toHaveAttribute('aria-pressed', 'true');
-  await expect(p2.getByRole('group', { name: 'Streaming quality' }).getByRole('button', { name: 'Auto' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    p2.getByRole('group', { name: 'Reverb intensity' }).getByRole('button', { name: 'Subtle' }),
+  ).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    p2.getByRole('group', { name: 'Streaming quality' }).getByRole('button', { name: 'Auto' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await other?.close();
 });
 
@@ -88,7 +108,9 @@ test('ACC-02: an admin invites; the invitee joins as a plain user who sees none 
   await page.getByRole('button', { name: 'Create invite' }).click();
   const link = await page.locator('.invite-link code').innerText();
   expect(link).toMatch(/\/invite#[\w-]{43}$/);
-  await expect(page.getByRole('region', { name: 'Users & invites' }).getByText(/expires/)).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Users & invites' }).getByText(/expires/),
+  ).toBeVisible();
 
   const ctx = await browser.newContext({ baseURL: 'http://localhost:18787' });
   const guest = await ctx.newPage();
@@ -98,7 +120,10 @@ test('ACC-02: an admin invites; the invitee joins as a plain user who sees none 
   await guest.getByLabel('Password', { exact: true }).fill(E2E_PASSWORD);
   await guest.getByRole('button', { name: 'Create account' }).click();
   await expect(guest).toHaveURL(/\/$/);
-  expect(await (await guest.request.get('/api/v1/me')).json()).toEqual({ username: name, role: 'user' });
+  expect(await (await guest.request.get('/api/v1/me')).json()).toEqual({
+    username: name,
+    role: 'user',
+  });
   await guest.goto('/settings');
   await expect(guest.getByRole('link', { name: 'Admin' })).toHaveCount(0);
   expect((await guest.request.get('/api/v1/admin/users')).status()).toBe(403);
@@ -113,7 +138,9 @@ test('ACC-02: an admin invites; the invitee joins as a plain user who sees none 
   await ctx.close();
 });
 
-test('ACC-03: deleting the account needs the password, and signs out for good', async ({ page }) => {
+test('ACC-03: deleting the account needs the password, and signs out for good', async ({
+  page,
+}) => {
   const user = await signedIn(page, 'del');
   await page.goto('/settings/account');
   const block = page.getByRole('region', { name: 'Delete account' });

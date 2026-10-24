@@ -188,6 +188,15 @@ paths:
       summary: The signed-in user
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: object, properties: { username: { type: string }, role: { enum: [admin, user] } } } } } }
+    delete:
+      summary: 'Delete the account (§10, ACC-03): password, and the code when TOTP is on; everything of the user goes'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PasswordAndCode' } } }
+      responses:
+        '200': { description: Deleted; the session cookie is cleared }
+        '403': { description: Wrong password or code }
+        '409': { description: The last admin }
 
   /me/connections/navidrome:
     get:
@@ -451,17 +460,6 @@ paths:
       responses:
         '200': { description: New codes, shown once, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryCodes' } } } }
         '403': { description: Wrong password or code }
-  /me:
-    delete:
-      summary: 'Delete the account (§10, ACC-03): password, and the code when TOTP is on; everything of the user goes'
-      requestBody:
-        required: true
-        content: { application/json: { schema: { $ref: '#/components/schemas/PasswordAndCode' } } }
-      responses:
-        '200': { description: Deleted; the session cookie is cleared }
-        '403': { description: Wrong password or code }
-        '409': { description: The last admin }
-
   /me/settings:
     get:
       summary: The user's preferences that follow them (SETTINGS_AND_SECURITY.md §7.1; M7 has one)

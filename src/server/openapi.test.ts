@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { parse } from 'yaml';
 import { testDeps } from './testing.ts';
 
 // docs/api/openapi.yaml and the server's routes stay in step (IMPLEMENTATION_PLAN.md M5 task 13):
@@ -8,15 +9,14 @@ import { testDeps } from './testing.ts';
 const METHODS = ['get', 'put', 'post', 'patch', 'delete'];
 
 function documented() {
+  // Parsed as YAML: a duplicated path key fails here instead of merging silently.
+  const doc = parse(readFileSync('docs/api/openapi.yaml', 'utf8')) as {
+    paths: Record<string, Record<string, unknown>>;
+  };
   const out = new Set<string>();
-  let path: string | null = null;
-  for (const line of readFileSync('docs/api/openapi.yaml', 'utf8').split('\n')) {
-    const p = /^ {2}(\/\S*):\s*$/.exec(line);
-    if (p) path = p[1] as string;
-    else if (/^\S/.test(line)) path = null; // left the paths block
-    const m = /^ {4}(get|put|post|patch|delete):/.exec(line);
-    if (path && m) out.add(`${(m[1] as string).toUpperCase()} ${path}`);
-  }
+  for (const [path, ops] of Object.entries(doc.paths))
+    for (const m of Object.keys(ops))
+      if (METHODS.includes(m)) out.add(`${m.toUpperCase()} ${path}`);
   return out;
 }
 
