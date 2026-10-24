@@ -113,32 +113,45 @@ export function navidromeUrlOf(db: Db, userId: number) {
  * A cover's bytes from the user's own Navidrome, for palette extraction (VISUALIZER_SPEC.md §6.1);
  * null when the user has no connection or the answer is not a raster image.
  */
+/**
+ * A signed client for the user's own Navidrome (the URL re-checked and its address pinned), or
+ * null when the user has no connection. For server-side lookups: covers, lyrics.
+ */
+export async function navidromeClientFor(
+  deps: NavidromeDeps,
+  userId: number,
+): Promise<SubsonicClient | null> {
+  const row = deps.db
+    .prepare(
+      "SELECT config_json, secret_enc FROM connections WHERE user_id = ? AND provider = 'navidrome'",
+    )
+    .get(userId) as { config_json: string; secret_enc: string } | undefined;
+  if (!row) return null;
+  const cfg = JSON.parse(row.config_json) as Stored;
+  const secret = deps.sealer.open(row.secret_enc, {
+    table: 'connections',
+    rowId: `${userId}|navidrome`,
+    column: 'secret_enc',
+  });
+  const creds: Credentials =
+    cfg.auth === 'apiKey' ? { apiKey: secret } : { username: cfg.username, password: secret };
+  const allow = deps.db
+    .prepare("SELECT value_json FROM server_settings WHERE key = 'navidrome.allowList'")
+    .get() as { value_json: string } | undefined;
+  const target = await checkUrl(cfg.url, {
+    defaultUrl: deps.defaultUrl,
+    allowList: allow ? (JSON.parse(allow.value_json) as string[]) : [],
+    resolve: deps.resolve,
+  });
+  return createClient(target, creds);
+}
+
 export function navidromeCovers(deps: NavidromeDeps) {
   return async (userId: number, coverId: string, size = 256): Promise<Buffer | null> => {
-    const row = deps.db
-      .prepare(
-        "SELECT config_json, secret_enc FROM connections WHERE user_id = ? AND provider = 'navidrome'",
-      )
-      .get(userId) as { config_json: string; secret_enc: string } | undefined;
-    if (!row) return null;
-    const cfg = JSON.parse(row.config_json) as Stored;
-    const secret = deps.sealer.open(row.secret_enc, {
-      table: 'connections',
-      rowId: `${userId}|navidrome`,
-      column: 'secret_enc',
-    });
-    const creds: Credentials =
-      cfg.auth === 'apiKey' ? { apiKey: secret } : { username: cfg.username, password: secret };
-    const allow = deps.db
-      .prepare("SELECT value_json FROM server_settings WHERE key = 'navidrome.allowList'")
-      .get() as { value_json: string } | undefined;
     try {
-      const target = await checkUrl(cfg.url, {
-        defaultUrl: deps.defaultUrl,
-        allowList: allow ? (JSON.parse(allow.value_json) as string[]) : [],
-        resolve: deps.resolve,
-      });
-      const res = await createClient(target, creds).request('getCoverArt', {
+      const client = await navidromeClientFor(deps, userId);
+      if (!client) return null;
+      const res = await client.request('getCoverArt', {
         id: coverId,
         size: String(size),
       });

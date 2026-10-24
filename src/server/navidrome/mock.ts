@@ -266,6 +266,64 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
           }),
         );
       }
+      case 'getLyricsBySongId': {
+        // al-1-t1 has word-timed lyrics (songLyrics v2), al-1-t2 line-timed, the rest none.
+        const lines = ['First line here', 'Second line here'];
+        if (id === 'al-1-t1')
+          return json(
+            ok({
+              lyricsList: {
+                structuredLyrics: [
+                  {
+                    kind: 'main',
+                    lang: 'eng',
+                    synced: true,
+                    line: lines.map((value, i) => ({ start: 1000 + i * 4000, value })),
+                    cueLine: lines.map((value, i) => ({
+                      index: i,
+                      start: 1000 + i * 4000,
+                      end: 4000 + i * 4000,
+                      value,
+                      cue: value.split(' ').map((w, k, all) => {
+                        const byteStart = all.slice(0, k).join(' ').length + (k ? 1 : 0);
+                        return {
+                          start: 1000 + i * 4000 + k * 900,
+                          end: 1800 + i * 4000 + k * 900,
+                          value: w,
+                          byteStart,
+                          byteEnd: byteStart + w.length - 1,
+                        };
+                      }),
+                    })),
+                  },
+                ],
+              },
+            }),
+          );
+        if (id === 'al-1-t2')
+          return json(
+            ok({
+              lyricsList: {
+                structuredLyrics: [
+                  {
+                    synced: true,
+                    line: lines.map((value, i) => ({ start: 2000 + i * 3000, value })),
+                  },
+                ],
+              },
+            }),
+          );
+        return json(ok({ lyricsList: { structuredLyrics: [] } }));
+      }
+      case 'getLyrics':
+        return json(
+          ok({
+            lyrics:
+              q.get('title') === 'Copper Rain 1'
+                ? { artist: 'Lowfield', title: 'Copper Rain 1', value: 'Plain words\nfrom tags' }
+                : {},
+          }),
+        );
       case 'star':
         starred.add(id);
         return json(ok());

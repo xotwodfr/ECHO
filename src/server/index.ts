@@ -5,6 +5,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
+import { adminRoutes } from './admin.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
@@ -75,6 +76,7 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', authRoutes(deps.auth));
   app.route('/api/v1', navidromeRoutes(deps.navidrome, requireUser(deps.auth)));
   app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
+  app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.

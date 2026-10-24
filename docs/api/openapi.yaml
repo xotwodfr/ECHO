@@ -269,11 +269,39 @@ paths:
         '400': { description: Not a queue }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
+  /admin/settings:
+    get:
+      summary: Server settings (admins only); secrets are reported as saved or not, never returned
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettings' } } } }
+        '403': { description: Not an admin }
+    put:
+      summary: Change server settings (admins only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lyrics:
+                  type: object
+                  properties:
+                    spicyKey: { type: [string, 'null'], pattern: '^sl_sk_', description: The Spicy Lyrics secret key (null removes it) }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettings' } } } }
+        '400': { description: Not a secret key }
+        '403': { description: Not an admin }
+
 components:
   securitySchemes:
     session: { type: apiKey, in: cookie, name: __Host-echo_session }
     device: { type: http, scheme: bearer, bearerFormat: echo_dt_… }
   schemas:
+    AdminSettings:
+      type: object
+      properties:
+        lyrics: { type: object, properties: { spicyKeySaved: { type: boolean } } }
     ServerInfo:
       type: object
       properties:
