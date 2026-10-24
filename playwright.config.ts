@@ -31,7 +31,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: /photosensitivity|reliability|states|csp/,
+      testIgnore: /photosensitivity|reliability|states|csp|perf/,
       use: {
         ...devices['Desktop Chrome'],
         // WebGL 2 in software, the same everywhere (TECHNICAL_ARCHITECTURE.md §8).
@@ -51,13 +51,13 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testIgnore: /photosensitivity|reliability|states|csp/,
+      testIgnore: /photosensitivity|reliability|states|csp|perf/,
     },
     // Run on their own, after the rest: A11Y-08 reads the stage back every frame for 10 s, and the
     // reliability and states specs break the shared mock Navidrome on purpose.
     {
       name: 'isolated',
-      testMatch: /(photosensitivity|reliability|states|csp)\.spec\.ts/,
+      testMatch: /(photosensitivity|reliability|states|csp|perf)\.spec\.ts/,
       workers: 1, // reliability and states both break the shared mock: one test at a time
       dependencies: ['chromium', 'firefox'],
       use: {

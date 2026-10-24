@@ -178,6 +178,13 @@ export class StageRenderer {
     this.composite.uNoise.value = tex;
   }
 
+  /** The GPU's name where the browser tells it (WEBGL_debug_renderer_info), for the first tier. */
+  gpuName(): string | null {
+    const gl = this.gl.getContext();
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : null;
+  }
+
   setTier(tier: Tier) {
     this.tier = tier;
     this.backing.w = 0; // force a rebuild at the next setSize

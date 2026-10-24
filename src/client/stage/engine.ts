@@ -3,6 +3,7 @@ import type { PlaybackController } from '../playback/controller.ts';
 import { prefsStore } from '../prefs.ts';
 import type { FrameParams } from '../view.ts';
 import { contrastAt, type Inks, peaksOf, type Solve, solveStep } from './contrast.ts';
+import { createGovernor, firstTier, rememberedTier, rememberTier } from './governor.ts';
 import {
   AMBIENT_FLOW_PER_S,
   chromeStep,
@@ -79,7 +80,10 @@ export interface StageOptions {
  */
 export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: StageOptions) {
   const { frame } = opts;
-  const tier = frame?.tier ?? opts.tier ?? TIERS[prefsStore.getState().visuals.quality] ?? 'T1';
+  // A fixed tier (deterministic mode, a caller, Settings → Visuals → Quality), else the governor's,
+  // starting from this device's last stable tier (§8.2).
+  const manualTier = frame?.tier ?? opts.tier ?? TIERS[prefsStore.getState().visuals.quality];
+  let tier: Tier = manualTier ?? rememberedTier() ?? 'T1';
   const env = opts.env ?? browserEnv;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   // Settings → Visuals: motion (system, full, reduced, off) and the mode (SETTINGS_AND_SECURITY.md
@@ -103,9 +107,17 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   let renderer: StageRenderer | null = null;
   try {
     renderer = new StageRenderer(canvas, tier);
+    // First run on this device: T0 on a discrete GPU, T1 otherwise.
+    if (!manualTier && !rememberedTier()) {
+      tier = firstTier(renderer.gpuName());
+      renderer.setTier(tier);
+    }
   } catch {
     set({ renderer: 'css', reason: 'no-webgl2' });
   }
+  const governor = frame ? null : createGovernor({ tier, manual: !!manualTier, now: env.now });
+  let trackStartedAt = env.now();
+  let rememberAt = manualTier ? 0 : env.now() + 20_000; // a tier held 20 s is this device's
 
   let disposed = false;
   let drawing = false; // the room: once the renderer is ready, until the context is lost
@@ -169,6 +181,22 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         });
         // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
         if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;
+        // The governor (§8.2) on frames that draw the room.
+        const next = governor?.sample({
+          dtMs: f.dt,
+          trackMs: env.now() - trackStartedAt,
+          scrubbing: scrub,
+        });
+        if (next) {
+          tier = next;
+          renderer.setTier(next);
+          loop.setMode(loopMode()); // T3 is Still
+          if (!manualTier) rememberAt = env.now() + 20_000;
+        }
+        if (rememberAt && env.now() >= rememberAt) {
+          rememberTier(tier);
+          rememberAt = 0;
+        }
         // Reverb (§4): the moving room with live (or recorded) features; Ambient without them.
         const reverbOn =
           loop.mode === 'ambient' && !frame && f.features.available && visuals().mode !== 'ambient';
@@ -259,6 +287,10 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     loop.setMode(loopMode());
     set({ mode: modeNow() });
   };
+  // The governor holds still for the first 3 s of each track (§8.2).
+  const offTrack = c.player.subscribe((s, prev) => {
+    if (s.track?.key !== prev.track?.key) trackStartedAt = env.now();
+  });
   const offVisuals = prefsStore.subscribe((s, prev) => {
     if (s.visuals === prev.visuals) return;
     if (s.visuals.intensity !== prev.visuals.intensity) reverb = createReverb(s.visuals.intensity);
@@ -322,6 +354,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       offPalette();
       offPrefs();
       offVisuals();
+      offTrack();
       field?.dispose();
       observer.disconnect();
       reduced.removeEventListener('change', onReducedChange);

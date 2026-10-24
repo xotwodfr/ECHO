@@ -6,7 +6,15 @@ import { positionNow } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
 import { Button, buttonClass, ProviderMark } from '../ui/controls.tsx';
 import { formatTime } from '../ui/logic.ts';
-import { AlbumGrid, AlbumTile, Artwork, TrackList, TrackRow } from '../ui/media.tsx';
+import {
+  AlbumGrid,
+  AlbumTile,
+  Artwork,
+  TrackList,
+  TrackRow,
+  WINDOW_FROM,
+  WindowedAlbumGrid,
+} from '../ui/media.tsx';
 import { BlockEmpty, BlockError, FreshnessNote, GridLoading, RowsLoading } from '../ui/states.tsx';
 import type { LibraryTab } from '../view.ts';
 import { Link } from './link.tsx';
@@ -69,20 +77,19 @@ function Albums({ albums }: { albums: Album[] }) {
     const full = a.tracks.length ? a : ((await library?.loadAlbum?.(a.id)) ?? a);
     c.playList(full.tracks, 0, albumContext(full));
   };
-  return (
-    <AlbumGrid>
-      {albums.map((a) => (
-        <AlbumTile
-          key={a.id}
-          id={a.id}
-          title={a.title}
-          artist={a.artist}
-          cover={a.cover}
-          onPlay={() => void play(a)}
-        />
-      ))}
-    </AlbumGrid>
+  const tile = (a: Album) => (
+    <AlbumTile
+      key={a.id}
+      id={a.id}
+      title={a.title}
+      artist={a.artist}
+      cover={a.cover}
+      onPlay={() => void play(a)}
+    />
   );
+  // A large library is windowed (LIB-02); a small one stays a plain grid.
+  if (albums.length > WINDOW_FROM) return <WindowedAlbumGrid items={albums} render={tile} />;
+  return <AlbumGrid>{albums.map(tile)}</AlbumGrid>;
 }
 
 export function LibraryContent({ tab }: { tab: LibraryTab }) {

@@ -1,4 +1,11 @@
-import { type CSSProperties, type HTMLAttributes, type ReactNode, useState } from 'react';
+import {
+  type CSSProperties,
+  type HTMLAttributes,
+  type ReactNode,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
 import type { Force } from './controls.tsx';
@@ -202,4 +209,67 @@ export function AlbumTileSkeleton() {
  */
 export function AlbumGrid({ children }: { children?: ReactNode }) {
   return <ul className="album-grid">{children}</ul>;
+}
+
+/** Lists longer than this are windowed (LIB-02: ≤ 150 tiles in the DOM at 5,000 albums). */
+export const WINDOW_FROM = 150;
+const OVERSCAN_ROWS = 2;
+
+/**
+ * The album grid for long lists: the same CSS grid, but only the rows near the viewport are in the
+ * DOM, with the rows above and below held by padding. Columns and row height are read from the
+ * rendered grid, so the arithmetic above stays CSS's.
+ */
+export function WindowedAlbumGrid<T>({
+  items,
+  render,
+}: {
+  items: readonly T[];
+  render: (item: T) => ReactNode;
+}) {
+  const ref = useRef<HTMLUListElement>(null);
+  const [range, setRange] = useState({ from: 0, to: 60, cols: 6, rowH: 0 });
+  useLayoutEffect(() => {
+    const ul = ref.current;
+    const scroller = ul?.closest<HTMLElement>('.canvas') ?? null;
+    if (!ul || !scroller) return;
+    const measure = () => {
+      const cols = Math.max(1, getComputedStyle(ul).gridTemplateColumns.split(' ').length);
+      const first = ul.querySelector('li');
+      const gap = Number.parseFloat(getComputedStyle(ul).rowGap) || 0;
+      const rowH = first ? first.getBoundingClientRect().height + gap : 0;
+      if (!rowH) return;
+      const top = ul.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+      const view = scroller.clientHeight;
+      const startRow = Math.max(0, Math.floor(-top / rowH) - OVERSCAN_ROWS);
+      const endRow = Math.ceil((view - top) / rowH) + OVERSCAN_ROWS;
+      const from = startRow * cols;
+      const to = Math.min(items.length, endRow * cols);
+      setRange((r) =>
+        r.from === from && r.to === to && r.cols === cols && r.rowH === rowH
+          ? r
+          : { from, to, cols, rowH },
+      );
+    };
+    measure();
+    scroller.addEventListener('scroll', measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(scroller);
+    return () => {
+      scroller.removeEventListener('scroll', measure);
+      ro.disconnect();
+    };
+  }, [items.length]);
+  const rows = Math.ceil(items.length / range.cols);
+  const before = Math.floor(range.from / range.cols) * range.rowH;
+  const after = Math.max(0, rows - Math.ceil(range.to / range.cols)) * range.rowH;
+  return (
+    <ul
+      ref={ref}
+      className="album-grid"
+      style={{ paddingTop: before, paddingBottom: after } as CSSProperties}
+    >
+      {items.slice(range.from, range.to).map(render)}
+    </ul>
+  );
 }

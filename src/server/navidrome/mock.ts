@@ -23,6 +23,7 @@ export interface Faults {
   lrclibStatus: number; // and with this status (200: normal)
   spotifyProduct: string; // the mock Spotify account's plan ('premium' | 'free')
   spotifyMeStatus: number; // 403: the account is not on the app's user list
+  bigLibrary: number; // this many extra synthetic albums in the album list (LIB-02)
 }
 
 const SAMPLE_RATE = 8000;
@@ -124,6 +125,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     lrclibStatus: 200,
     spotifyProduct: 'premium',
     spotifyMeStatus: 200,
+    bigLibrary: 0,
   };
   const starred = new Set<string>(['al-1-t2']);
   const scrobbles: { id: string; submission: boolean }[] = [];
@@ -171,6 +173,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       faults.lrclibStatus = Number(q.get('lrclibStatus') ?? 200);
       faults.spotifyProduct = q.get('spotifyProduct') ?? 'premium';
       faults.spotifyMeStatus = Number(q.get('spotifyMeStatus') ?? 200);
+      faults.bigLibrary = Number(q.get('bigLibrary') ?? 0);
       return res.end('ok');
     }
     // A mock Spotify accounts service and /v1/me (ECHO_SPOTIFY_ACCOUNTS_URL, ECHO_SPOTIFY_API_URL in
@@ -276,9 +279,19 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         const sorted = [...ALBUMS].sort((a, b) =>
           q.get('type') === 'alphabeticalByName' ? a.name.localeCompare(b.name) : b.year - a.year,
         );
-        return json(
-          ok({ albumList2: { album: sorted.slice(offset, offset + size).map(albumJson) } }),
-        );
+        const list = [
+          ...sorted.map(albumJson),
+          ...Array.from({ length: faults.bigLibrary }, (_, i) => ({
+            id: `big-${i}`,
+            name: `Big Album ${i}`,
+            artist: 'Many Hands',
+            artistId: 'ar-1',
+            year: 2000,
+            coverArt: 'al-1',
+            songCount: 1,
+          })),
+        ];
+        return json(ok({ albumList2: { album: list.slice(offset, offset + size) } }));
       }
       case 'getAlbum': {
         const a = ALBUMS.find((x) => x.id === id);
