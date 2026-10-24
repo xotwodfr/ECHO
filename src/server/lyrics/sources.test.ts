@@ -151,6 +151,18 @@ describe('S2 Spicy Lyrics', () => {
     expect(apple.text).not.toMatch(/uploaded|synced by/);
   });
 
+  it('attribution: a non-web maker or uploader URL is credited without a link', () => {
+    const a = spicyAttribution({
+      Type: 'Line',
+      UploadAttribution: {
+        Maker: { username: 'mk', url: 'javascript:alert(1)' },
+        Uploader: { username: 'up', url: 'not a url' },
+      },
+    } as never);
+    expect(a.text).toContain('synced by mk · uploaded by up');
+    expect(a.links).toEqual([{ label: 'Spicy Lyrics', href: 'https://spicylyrics.org' }]);
+  });
+
   it('404 is not found; 429 carries Retry-After; other 4xx are not retried', async () => {
     const s = (st: number, h = {}) =>
       spicySource({

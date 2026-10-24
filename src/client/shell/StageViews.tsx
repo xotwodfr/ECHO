@@ -106,7 +106,7 @@ function AttributionText({ attribution }: { attribution: LyricsDoc['attribution'
   let rest = attribution.text;
   for (const [i, l] of (attribution.links ?? []).entries()) {
     const at = rest.indexOf(l.label);
-    if (at < 0) continue;
+    if (at < 0 || !/^https?:\/\//i.test(l.href)) continue; // a non-web link stays plain text
     parts.push(rest.slice(0, at));
     parts.push(
       <a key={i} href={l.href} target="_blank" rel="noopener noreferrer">

@@ -186,6 +186,16 @@ export function lrclibSource(opts: {
 const SPOTIFY_ID = /^[0-9A-Za-z]{22}$/;
 const CATALOGUE: Record<string, string> = { apple_music: 'Apple Music', spotify: 'Spotify' };
 
+/** A third-party URL as a link only when it is http(s): never `javascript:` or `data:`. */
+const webUrl = (u: unknown) => {
+  try {
+    const x = new URL(String(u));
+    return x.protocol === 'https:' || x.protocol === 'http:' ? x.href : null;
+  } catch {
+    return null;
+  }
+};
+
 /** §8 and the API's attribution rule: the catalogue always; uploader and maker for community syncs. */
 export function spicyAttribution(b: SpicyBody): Attribution {
   const spicy = { label: 'Spicy Lyrics', href: 'https://spicylyrics.org' };
@@ -196,11 +206,13 @@ export function spicyAttribution(b: SpicyBody): Attribution {
   const links = [spicy];
   if (up?.Maker) {
     parts.push(`synced by ${up.Maker.username}`);
-    links.push({ label: up.Maker.username, href: up.Maker.url });
+    const href = webUrl(up.Maker.url);
+    if (href) links.push({ label: up.Maker.username, href });
   }
   if (up?.Uploader) {
     parts.push(`uploaded by ${up.Uploader.username}`);
-    links.push({ label: up.Uploader.username, href: up.Uploader.url });
+    const href = webUrl(up.Uploader.url);
+    if (href) links.push({ label: up.Uploader.username, href });
   }
   if (b.SongWriters?.length) parts.push(`Written by ${b.SongWriters.join(', ')}`);
   return { text: parts.join(' · '), links };
