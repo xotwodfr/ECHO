@@ -106,3 +106,38 @@ test('the queue follows you to another device', async ({ page, browser }) => {
   await expect(otherDock).toHaveAttribute('data-status', 'paused'); // restored, not playing
   await other.context().close();
 });
+
+test('the server library: sorts, playlists, starred and search (LIB-01, SRCH-01)', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await page.getByLabel('Username').fill(USER);
+  await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
+  await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/settings/account');
+  await page.getByLabel('Navidrome username').fill('ada');
+  await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.goto('/library');
+  const titles = () => page.locator('.tile').allInnerTexts();
+  // Recently added first (the mock orders by year), then A–Z.
+  await expect.poll(async () => (await titles())[0]).toContain('Glass Weather');
+  await page.getByRole('button', { name: 'A–Z' }).click();
+  await expect.poll(async () => (await titles())[0]).toContain('Copper Rain');
+  await expect(page.getByRole('button', { name: 'A–Z' })).toHaveAttribute('aria-pressed', 'true');
+
+  await page.goto('/library/playlists');
+  await page.getByRole('button', { name: 'Evening' }).click();
+  await expect(page.getByRole('region', { name: 'Player' })).toContainText('Harbour Lights 1');
+
+  await page.goto('/library/starred');
+  await expect(page.getByRole('main').getByText('Harbour Lights 2')).toBeVisible();
+
+  await page.goto('/search?q=glass');
+  await expect(page.getByRole('heading', { name: 'Albums' })).toBeVisible();
+  await expect(page.locator('.tile', { hasText: 'Glass Weather' })).toBeVisible();
+  await expect(page.getByRole('main').getByText('Glass Weather 3')).toBeVisible(); // tracks from search3
+});

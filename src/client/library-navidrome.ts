@@ -1,5 +1,5 @@
 import { api } from './api.ts';
-import type { Album, Library } from './library.ts';
+import type { Album, AlbumSort, Library, Playlist } from './library.ts';
 import type { NavidromeTrack } from './playback/navidrome.ts';
 
 // The signed-in user's Navidrome library (PLAYBACK_ARCHITECTURE.md §5.4) through ECHO's proxy: the
@@ -61,6 +61,8 @@ const albumOf = (a: SubAlbum): Album => ({
 });
 
 export function createNavidromeLibrary(): Library {
+  let sort: AlbumSort = 'newest';
+  let generation = 0;
   let albums: Album[] = [];
   const byId = new Map<string, Album>();
   const loaded = new Set<string>();
@@ -71,22 +73,33 @@ export function createNavidromeLibrary(): Library {
     for (const l of listeners) l();
   };
 
-  void (async () => {
+  /** The whole album list in the chosen order, page by page; a newer sort supersedes it. */
+  async function loadAll() {
+    const gen = ++generation;
+    const next: Album[] = [];
     for (let offset = 0; ; offset += PAGE) {
       const r = await api<Rest<{ albumList2?: { album?: SubAlbum[] } }>>(
-        `/navidrome/rest/getAlbumList2?type=alphabeticalByName&size=${PAGE}&offset=${offset}`,
+        `/navidrome/rest/getAlbumList2?type=${sort}&size=${PAGE}&offset=${offset}`,
       ).catch(() => null);
+      if (gen !== generation) return;
       const page = r?.['subsonic-response'].albumList2?.album ?? [];
       for (const a of page) {
-        const album = albumOf(a);
-        if (!byId.has(album.id)) albums.push(album);
-        byId.set(album.id, byId.get(album.id) ?? album);
+        const known = byId.get(a.id);
+        const album = known && loaded.has(a.id) ? known : albumOf(a);
+        byId.set(a.id, album);
+        next.push(album);
       }
-      albums = [...albums];
+      albums = [...next];
       changed();
       if (page.length < PAGE) break;
     }
-  })();
+  }
+  void loadAll();
+
+  const songs = (list: SubSong[] | undefined) =>
+    (list ?? []).map((x) =>
+      trackOf(x, { id: x.albumId ?? '', name: x.album ?? '', coverArt: x.coverArt }),
+    );
 
   return {
     get albums() {
@@ -119,6 +132,39 @@ export function createNavidromeLibrary(): Library {
         : [...albums, album];
       changed();
       return album;
+    },
+    sort: () => sort,
+    setSort(next) {
+      if (next === sort) return;
+      sort = next;
+      void loadAll();
+    },
+    async playlists(): Promise<Playlist[]> {
+      const r = await api<
+        Rest<{ playlists?: { playlist?: { id: string; name: string; songCount?: number }[] } }>
+      >('/navidrome/rest/getPlaylists');
+      return (r['subsonic-response'].playlists?.playlist ?? []).map((p) => ({
+        id: p.id,
+        name: p.name,
+        tracks: p.songCount ?? 0,
+      }));
+    },
+    async playlistTracks(id) {
+      const r = await api<Rest<{ playlist?: { entry?: SubSong[] } }>>(
+        `/navidrome/rest/getPlaylist?id=${encodeURIComponent(id)}`,
+      );
+      return songs(r['subsonic-response'].playlist?.entry);
+    },
+    async starred() {
+      const r = await api<Rest<{ starred2?: { song?: SubSong[] } }>>('/navidrome/rest/getStarred2');
+      return songs(r['subsonic-response'].starred2?.song);
+    },
+    async searchRemote(q) {
+      const r = await api<Rest<{ searchResult3?: { album?: SubAlbum[]; song?: SubSong[] } }>>(
+        `/navidrome/rest/search3?query=${encodeURIComponent(q)}&artistCount=6&albumCount=6&songCount=6`,
+      );
+      const found = r['subsonic-response'].searchResult3;
+      return { tracks: songs(found?.song), albums: (found?.album ?? []).map(albumOf) };
     },
     subscribe(onChange) {
       listeners.add(onChange);

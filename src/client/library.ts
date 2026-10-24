@@ -23,6 +23,23 @@ export interface Library {
   subscribe?(onChange: () => void): () => void;
   /** Bumped on every change (with `subscribe`), so React can re-render. */
   version?(): number;
+  /** Server libraries: the album order (PRODUCT_SPEC.md §6.3). */
+  sort?(): AlbumSort;
+  setSort?(sort: AlbumSort): void;
+  playlists?(): Promise<Playlist[]>;
+  playlistTracks?(id: string): Promise<Track[]>;
+  starred?(): Promise<Track[]>;
+  /** Server-side search (Navidrome `search3`). */
+  searchRemote?(q: string): Promise<{ tracks: Track[]; albums: Album[] }>;
+}
+
+export const ALBUM_SORTS = ['newest', 'alphabeticalByName', 'byYear', 'frequent'] as const;
+export type AlbumSort = (typeof ALBUM_SORTS)[number];
+
+export interface Playlist {
+  id: string;
+  name: string;
+  tracks: number;
 }
 
 export function createLibrary(albums: Album[]): Library {

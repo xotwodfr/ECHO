@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { PlayContext, Track } from '../../shared/types.ts';
-import { type Album, albumDurationMs } from '../library.ts';
+import { ALBUM_SORTS, type Album, albumDurationMs, type Playlist } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
@@ -87,7 +87,15 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
   const library = useLibrary();
   const s = strings.library;
   if (!library) return <p className="empty">{s.empty}</p>;
-  if (tab === 'albums') return <Albums albums={library.albums} />;
+  if (tab === 'albums')
+    return (
+      <>
+        {library.setSort && <SortSwitch />}
+        <Albums albums={library.albums} />
+      </>
+    );
+  if (tab === 'playlists' && library.playlists) return <Playlists />;
+  if (tab === 'starred' && library.starred) return <Starred />;
   if (tab === 'artists') {
     const counts = new Map<string, number>();
     for (const a of library.albums) counts.set(a.artist, (counts.get(a.artist) ?? 0) + 1);
@@ -106,6 +114,71 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
     );
   }
   return <p className="empty">{tab === 'playlists' ? s.noPlaylists : s.noStarred}</p>;
+}
+
+/** The album order (PRODUCT_SPEC.md §6.3): recently added, A–Z, year, most played. */
+function SortSwitch() {
+  const library = useLibrary();
+  const current = library?.sort?.();
+  return (
+    <fieldset className="view-switch album-sort">
+      <legend className="visually-hidden">{strings.library.sortLabel}</legend>
+      {ALBUM_SORTS.map((sort) => (
+        <button
+          key={sort}
+          type="button"
+          aria-pressed={current === sort}
+          onClick={() => library?.setSort?.(sort)}
+        >
+          {strings.library.sorts[sort]}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** A server library's playlists: each row plays its playlist. */
+function Playlists() {
+  const library = useLibrary();
+  const c = usePlayback();
+  const [list, setList] = useState<Playlist[] | null>(null);
+  useEffect(() => {
+    void library?.playlists?.().then(setList, () => setList([]));
+  }, [library]);
+  if (!list) return null;
+  if (!list.length) return <p className="empty">{strings.library.noPlaylists}</p>;
+  const play = async (p: Playlist) => {
+    const tracks = (await library?.playlistTracks?.(p.id)) ?? [];
+    c.playList(tracks, 0, { kind: 'playlist', id: p.id, title: p.name });
+  };
+  return (
+    <ul className="artist-list">
+      {list.map((p) => (
+        <li key={p.id}>
+          <Button variant="tertiary" onClick={() => void play(p)}>
+            {p.name}
+          </Button>
+          <span className="artist-count">{strings.album.trackCount(p.tracks)}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** A server library's starred tracks. */
+function Starred() {
+  const library = useLibrary();
+  const [tracks, setTracks] = useState<Track[] | null>(null);
+  useEffect(() => {
+    void library?.starred?.().then(setTracks, () => setTracks([]));
+  }, [library]);
+  if (!tracks) return null;
+  if (!tracks.length) return <p className="empty">{strings.library.noStarred}</p>;
+  return (
+    <TrackList label={strings.library.tabs.starred}>
+      <Rows tracks={tracks} context={{ kind: 'starred', title: strings.library.tabs.starred }} />
+    </TrackList>
+  );
 }
 
 /** S6: object header (cover 240px, title, artist, year, count, length, actions), track table. */
@@ -168,8 +241,23 @@ const RESULTS = 6; // per group (PRODUCT_SPEC.md §6.4)
 export function SearchResults({ q }: { q: string }) {
   const library = useLibrary();
   const s = strings.search;
+  // A server library searches on the server, 200 ms after typing stops (PRODUCT_SPEC.md §6.4).
+  const [remote, setRemote] = useState<{ q: string; tracks: Track[]; albums: Album[] } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!library?.searchRemote || !q) return;
+    const id = setTimeout(() => {
+      void library.searchRemote?.(q).then(
+        (r) => setRemote({ q, ...r }),
+        () => setRemote({ q, tracks: [], albums: [] }),
+      );
+    }, 200);
+    return () => clearTimeout(id);
+  }, [library, q]);
   if (!q) return <p className="empty">{s.prompt}</p>;
-  const found = library?.search(q) ?? { tracks: [], albums: [] };
+  if (library?.searchRemote && remote?.q !== q) return null; // waiting for the server
+  const found = (library?.searchRemote ? remote : library?.search(q)) ?? { tracks: [], albums: [] };
   if (!found.tracks.length && !found.albums.length) return <p className="empty">{s.none(q)}</p>;
   const tracks = found.tracks.slice(0, RESULTS);
   return (

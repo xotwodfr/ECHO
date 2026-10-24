@@ -611,3 +611,8 @@ button {
   line-height: var(--lh-small);
   white-space: nowrap;
 }
+
+/* Album order above the grid (PRODUCT_SPEC.md §6.3). */
+.album-sort {
+  margin-bottom: var(--sp-5);
+}

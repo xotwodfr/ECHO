@@ -16,6 +16,13 @@ export const strings = {
     noPlaylists: 'No playlists on this server yet.',
     noStarred: 'Nothing starred yet.',
     albumCount: (n: number) => `${n} album${n === 1 ? '' : 's'}`,
+    sortLabel: 'Sort albums',
+    sorts: {
+      newest: 'Recently added',
+      alphabeticalByName: 'A–Z',
+      byYear: 'Year',
+      frequent: 'Most played',
+    },
   },
   album: {
     title: 'Album',
