@@ -56,6 +56,9 @@ const STREAM_HEADERS = [
   'etag',
 ];
 const SIGNED_TTL_MS = 6 * 3_600_000;
+/** What a stream and a cover may be served as. SVG is not a raster image: it can carry script. */
+const AUDIO = /^(audio\/[\w.+-]+|application\/ogg)$/i;
+const RASTER = /^image\/(png|jpeg|webp|gif|avif)$/i;
 
 interface Stored {
   url: string;
@@ -292,6 +295,7 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     method: string,
     params: Record<string, string>,
     extra: Record<string, string>,
+    safe: RegExp,
   ): Promise<Response> {
     const s = stored(u.id);
     if (!s) return c.json({ code: 'navidrome.not_connected' }, 409);
@@ -311,6 +315,13 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
         const v = res.headers[h];
         if (typeof v === 'string') headers.set(h, v);
       }
+      // The upstream server decides the bytes, not what our origin serves them as: only media
+      // types pass (no HTML, no SVG), and the response is sandboxed in case it is opened directly.
+      headers.set(
+        'content-type',
+        safe.test(type.split(';')[0]?.trim() ?? '') ? type : 'application/octet-stream',
+      );
+      headers.set('content-security-policy', "sandbox; default-src 'none'");
       return new Response(Readable.toWeb(res) as ReadableStream, { status, headers });
     } catch (err) {
       return c.json(problemOf(err), 502);
@@ -347,7 +358,7 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     const q = c.req.query();
     const params: Record<string, string> = { id: c.req.param('id') };
     for (const k of STREAM_PARAMS) if (q[k]) params[k] = q[k];
-    return pipe(c, user(c), 'stream', params, { 'cache-control': 'private, no-store' });
+    return pipe(c, user(c), 'stream', params, { 'cache-control': 'private, no-store' }, AUDIO);
   });
 
   /** A stream URL for a client that can neither send a cookie nor a header: 6 h, one track. */
@@ -368,9 +379,8 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
       user(c),
       'getCoverArt',
       { id: c.req.param('id'), size: String(size) },
-      {
-        'cache-control': 'private, max-age=604800',
-      },
+      { 'cache-control': 'private, max-age=604800' },
+      RASTER,
     );
   });
 

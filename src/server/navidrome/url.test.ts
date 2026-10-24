@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkUrl, isPrivateAddress, type Resolver } from './url.ts';
+import { checkUrl, ipv6Bytes, isPrivateAddress, type Resolver } from './url.ts';
 
 // SETTINGS_AND_SECURITY.md §6.1: the SSRF rules for a user's Navidrome URL.
 
@@ -49,10 +49,25 @@ describe('private address space', () => {
     '2001:db8::1',
   ])('%s is private', (ip) => expect(isPrivateAddress(ip)).toBe(true));
 
-  it.each(['93.184.216.34', '1.1.1.1', '172.32.0.1', '2606:4700::1111', '::ffff:8.8.8.8'])(
-    '%s is public',
-    (ip) => expect(isPrivateAddress(ip)).toBe(false),
-  );
+  it.each([
+    '93.184.216.34',
+    '1.1.1.1',
+    '172.32.0.1',
+    '2606:4700::1111',
+    '::ffff:8.8.8.8',
+    '::ffff:808:808',
+    '2002:808:808::1',
+  ])('%s is public', (ip) => expect(isPrivateAddress(ip)).toBe(false));
+});
+
+describe('IPv6 parsing', () => {
+  it('expands :: and dotted tails; refuses malformed input', () => {
+    expect(ipv6Bytes('::1')).toEqual([...Array(15).fill(0), 1]);
+    expect(ipv6Bytes('::ffff:1.2.3.4')?.slice(10)).toEqual([255, 255, 1, 2, 3, 4]);
+    expect(ipv6Bytes('2606:4700::1111')?.slice(0, 4)).toEqual([0x26, 0x06, 0x47, 0x00]);
+    for (const bad of ['1::2::3', '12345::', 'g::1', '1:2:3:4:5:6:7:8:9', '::1.2.3.999'])
+      expect(ipv6Bytes(bad), bad).toBeNull();
+  });
 });
 
 describe('the Navidrome URL (SSRF)', () => {

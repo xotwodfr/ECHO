@@ -115,6 +115,8 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
   const scrobbles: { id: string; submission: boolean }[] = [];
   const requests: URLSearchParams[] = [];
   const audio = new Map<string, Buffer>();
+  /** Test switches: what a cover claims to be, and a giant JSON reply. */
+  const state = { coverType: 'image/png', hugeJson: false };
 
   const authed = (q: URLSearchParams) => {
     if (q.has('apiKey'))
@@ -157,6 +159,14 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     if (faults.unauthorized) return json({ error: 'unauthorized' }, 401);
     if (!url.pathname.startsWith('/rest/')) return json({ error: 'not found' }, 404);
     if (!authed(q)) return json(fail(40, 'Wrong username or password'));
+    if (state.hugeJson && method === 'getArtists') {
+      // 20 MB of valid-looking JSON, streamed (the client must stop reading it).
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.write('{"subsonic-response":{"status":"ok","pad":"');
+      const mb = Buffer.alloc(1024 * 1024, 97);
+      for (let i = 0; i < 20 && !res.destroyed; i++) res.write(mb);
+      return res.end('"}}');
+    }
     const id = q.get('id') ?? '';
 
     switch (method) {
@@ -258,7 +268,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         const a = ALBUMS.find((x) => x.id === id);
         const png = a ? await fixtureCover(a.cover) : null;
         if (!png) return json(fail(70, 'not found'));
-        res.writeHead(200, { 'content-type': 'image/png', 'content-length': png.length });
+        res.writeHead(200, { 'content-type': state.coverType, 'content-length': png.length });
         return res.end(png);
       }
       case 'stream': {
@@ -299,6 +309,18 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
   const { port } = server.address() as AddressInfo;
   return {
+    get coverType() {
+      return state.coverType;
+    },
+    set coverType(v: string) {
+      state.coverType = v;
+    },
+    get hugeJson() {
+      return state.hugeJson;
+    },
+    set hugeJson(v: boolean) {
+      state.hugeJson = v;
+    },
     url: `http://127.0.0.1:${port}`,
     username,
     password,

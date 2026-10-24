@@ -231,6 +231,33 @@ describe('streams and covers (§5.5, §5.4)', () => {
     expect((mock.requests.at(-1) as URLSearchParams).get('size')).toBe('300');
   });
 
+  it('upstream content types are not trusted: no HTML or SVG from our origin, and sandboxed', async () => {
+    const s = setup();
+    await s.connect(PASS);
+    mock.coverType = 'text/html';
+    const html = await s.get('/api/v1/navidrome/cover/al-1');
+    expect(html.headers.get('content-type')).toBe('application/octet-stream');
+    mock.coverType = 'image/svg+xml';
+    expect((await s.get('/api/v1/navidrome/cover/al-1')).headers.get('content-type')).toBe(
+      'application/octet-stream',
+    );
+    mock.coverType = 'image/png';
+    const ok = await s.get('/api/v1/navidrome/cover/al-1');
+    expect(ok.headers.get('content-type')).toBe('image/png');
+    expect(ok.headers.get('content-security-policy')).toBe("sandbox; default-src 'none'");
+    const audio = await s.get('/api/v1/navidrome/stream/al-1-t1');
+    expect(audio.headers.get('content-type')).toBe('audio/wav');
+    expect(audio.headers.get('content-security-policy')).toBe("sandbox; default-src 'none'");
+  });
+
+  it('an oversized JSON reply is cut off, not buffered', async () => {
+    const s = setup();
+    await s.connect(PASS);
+    mock.hugeJson = true;
+    const res = await s.get('/api/v1/navidrome/rest/getArtists');
+    expect(res.status).toBe(502);
+  });
+
   it('a signed URL plays one track for its user for 6 h, without a cookie (§6.5)', async () => {
     const s = setup();
     await s.connect(PASS);

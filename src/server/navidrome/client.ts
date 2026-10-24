@@ -12,7 +12,9 @@ import type { Target } from './url.ts';
 export type Credentials = { username: string; password: string } | { apiKey: string };
 
 export const API_VERSION = '1.16.1';
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 15_000; // idle socket
+const DEADLINE_MS = 30_000; // a whole JSON reply
+const MAX_JSON_BYTES = 16 * 1024 * 1024;
 
 export class SubsonicError extends Error {
   readonly status: number; // HTTP status, or 0 for a network failure
@@ -81,7 +83,23 @@ export function createClient(target: Target, creds: Credentials) {
   async function call(method: string, params: Record<string, string> = {}) {
     const res = await request(method, params, { accept: 'application/json' });
     const chunks: Buffer[] = [];
-    for await (const c of res) chunks.push(c as Buffer);
+    let size = 0;
+    const deadline = setTimeout(() => res.destroy(new SubsonicError('timeout', 0)), DEADLINE_MS);
+    try {
+      for await (const c of res) {
+        size += (c as Buffer).length;
+        // A reply this large is not one the allow-listed methods give; stop reading it.
+        if (size > MAX_JSON_BYTES) {
+          res.destroy();
+          throw new SubsonicError('response too large', 200);
+        }
+        chunks.push(c as Buffer);
+      }
+    } catch (err) {
+      throw err instanceof SubsonicError ? err : new SubsonicError((err as Error).message, 0);
+    } finally {
+      clearTimeout(deadline);
+    }
     const text = Buffer.concat(chunks).toString('utf8');
     if (res.statusCode !== 200)
       throw new SubsonicError(`HTTP ${res.statusCode}`, res.statusCode ?? 0);
