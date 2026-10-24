@@ -19,7 +19,13 @@ export type Shortcut =
   | 'viewCover'
   | 'viewLyrics'
   | 'lyricsEarlier'
-  | 'lyricsLater';
+  | 'lyricsLater'
+  | 'goPrefix'
+  | 'goLibrary'
+  | 'goSettings'
+  | 'goListen'
+  | 'fullscreen'
+  | 'help';
 
 /**
  * Where the key was pressed. `text`: shortcuts never fire (§7). `control`: a focused button,
@@ -29,10 +35,20 @@ export type KeyTarget = 'text' | 'control' | 'other';
 
 type Key = { key: string; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; altKey: boolean };
 
-export function shortcutFor(e: Key, target: KeyTarget, stage: boolean): Shortcut | null {
+/** `afterG`: G was pressed just before, so this key completes a G-sequence (§7: G then L/S/P). */
+export function shortcutFor(
+  e: Key,
+  target: KeyTarget,
+  stage: boolean,
+  afterG = false,
+): Shortcut | null {
   if (target === 'text' || e.altKey) return null;
   const mod = e.ctrlKey || e.metaKey;
   const owned = target === 'control';
+  if (afterG && !mod) {
+    const go: Record<string, Shortcut> = { l: 'goLibrary', s: 'goSettings', p: 'goListen' };
+    return go[e.key.toLowerCase()] ?? null;
+  }
   switch (e.key) {
     case ' ':
       return owned || mod ? null : 'toggle';
@@ -49,7 +65,15 @@ export function shortcutFor(e: Key, target: KeyTarget, stage: boolean): Shortcut
       return owned || mod || !stage ? null : 'volumeDown';
   }
   if (mod) return null;
-  const letters: Record<string, Shortcut> = { m: 'mute', s: 'shuffle', r: 'repeat', q: 'queue' };
+  if (e.key === '?') return 'help';
+  const letters: Record<string, Shortcut> = {
+    m: 'mute',
+    s: 'shuffle',
+    r: 'repeat',
+    q: 'queue',
+    g: 'goPrefix',
+    f: 'fullscreen',
+  };
   // The view keys act on the Stage only, so they never change an invisible setting elsewhere.
   const stageLetters: Record<string, Shortcut> = {
     v: 'viewCycle',

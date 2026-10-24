@@ -2,9 +2,9 @@ import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
 import { pinLyricsSource } from '../lyrics/loader.ts';
-import { usePlayer, useTicker } from '../playback/context.tsx';
+import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
 import { prefsStore } from '../prefs.ts';
-import { lyricHost, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
+import { lyricHost, lyricOffset, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
@@ -56,6 +56,7 @@ export function StageContent() {
 function LyricsView() {
   const { doc, state, since, tried } = useStore(lyricsStore);
   const showUnsynced = useStore(prefsStore, (p) => p.lyrics.showUnsynced);
+  const motionOff = useStore(prefsStore, (p) => p.visuals.motion === 'off');
   useTicker(state === 'waiting', 100);
   if (state === 'missing') return <MissingLyrics tried={tried} />;
   if (state === 'waiting') {
@@ -82,6 +83,17 @@ function LyricsView() {
     );
   // Settings → Lyrics → "Show unsynced lyrics" off: an untimed sheet gives way to the cover.
   if (doc.sync === 'none' && !showUnsynced) return <CoverView />;
+  // Motion = Off (§10, WCAG 2.2.2): a static sheet, the active line marked, nothing moving.
+  if (motionOff && doc.sync !== 'none')
+    return (
+      <>
+        <StillLyrics doc={doc} />
+        <div className="stage-attribution">
+          <AttributionText attribution={doc.attribution} />
+          <SourceMenu />
+        </div>
+      </>
+    );
   return (
     <>
       {doc.sync === 'none' ? <LyricSheet doc={doc} /> : <LyricHost />}
@@ -187,17 +199,43 @@ function LyricHost() {
  * Untimed lyrics (§9.3): a static sheet in a centred column, scrollable by wheel, touch and, once
  * focused, the arrow and page keys. A note under the first line says it is not time-synced.
  */
-function LyricSheet({ doc }: { doc: LyricsDoc }) {
+/**
+ * Motion = Off: the sheet with the line at the song's time marked (`aria-current`, `--lit`), which
+ * jumps into view on each hand-over, instantly.
+ */
+function StillLyrics({ doc }: { doc: LyricsDoc }) {
+  const c = usePlayback();
+  const playing = usePlayer((p) => p.status === 'playing');
+  useTicker(playing, 250);
+  const t = c.songTime() - lyricOffset();
+  const lines = doc.lines.filter((l) => l.text.trim());
+  let active = -1;
+  for (const [i, l] of lines.entries()) if (l.start <= t) active = i;
+  // biome-ignore lint/correctness/useExhaustiveDependencies: jump on each hand-over (`active`)
+  useEffect(() => {
+    document
+      .querySelector('.ly-sheet-line[aria-current="true"]')
+      ?.scrollIntoView({ block: 'center', behavior: 'instant' });
+  }, [active]);
+  return <LyricSheet doc={doc} active={active} />;
+}
+
+function LyricSheet({ doc, active }: { doc: LyricsDoc; active?: number }) {
   const lines = doc.lines.filter((l) => l.text.trim());
   return (
     // biome-ignore lint/a11y/noNoninteractiveTabindex: §11, the sheet is focusable for scrolling
     <div className="ly-sheet" role="document" tabIndex={0} aria-label={strings.stage.sheetLabel}>
       <div className="ly-sheet-col">
         {lines.map((l, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: lines are static and may repeat
-          <p key={i} className="ly-sheet-line" dir="auto">
+          <p
+            // biome-ignore lint/suspicious/noArrayIndexKey: lines are static and may repeat
+            key={i}
+            className="ly-sheet-line"
+            dir="auto"
+            aria-current={i === active ? 'true' : undefined}
+          >
             {l.text}
-            {i === 0 && (
+            {i === 0 && doc.sync === 'none' && (
               <span className="ly-sheet-note">
                 {strings.stage.unsynced} · {doc.attribution.text}
               </span>

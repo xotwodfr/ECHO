@@ -30,6 +30,17 @@ describe('shortcutFor (PRODUCT_SPEC.md §7)', () => {
     expect(shortcutFor(key(k, mods), 'other', false)).toBe(action);
   });
 
+  it('G then L / S / P navigates; F full screen; ? the shortcut list (A11Y-01)', () => {
+    expect(shortcutFor(key('g'), 'other', false)).toBe('goPrefix');
+    expect(shortcutFor(key('l'), 'other', false, true)).toBe('goLibrary');
+    expect(shortcutFor(key('s'), 'other', true, true)).toBe('goSettings'); // not shuffle
+    expect(shortcutFor(key('p'), 'other', false, true)).toBe('goListen');
+    expect(shortcutFor(key('x'), 'other', false, true)).toBeNull();
+    expect(shortcutFor(key('f'), 'other', true)).toBe('fullscreen');
+    expect(shortcutFor(key('?', { shift: true }), 'other', false)).toBe('help');
+    expect(shortcutFor(key('g'), 'text', false)).toBeNull();
+  });
+
   it('[ and ] shift the lyrics on the Stage only (LYR-25)', () => {
     expect(shortcutFor(key('['), 'other', true)).toBe('lyricsEarlier');
     expect(shortcutFor(key(']'), 'other', true)).toBe('lyricsLater');

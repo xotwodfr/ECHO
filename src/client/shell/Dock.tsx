@@ -21,7 +21,7 @@ import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
 import { Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
-import { Link } from './link.tsx';
+import { Link, useView } from './link.tsx';
 import { keyTarget, type Shortcut, shortcutFor } from './shortcuts.ts';
 import spotifyLogo from './spotify-logo-white.svg';
 
@@ -47,7 +47,9 @@ export function Dock({ stage }: { stage: boolean }) {
   const endId = useId();
   const active = ACTIVE.includes(status);
   const toggleQueue = useCallback(() => setQueueOpen((open) => !open), []);
-  useShortcuts(stage, toggleQueue);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const openHelp = useCallback(() => setHelpOpen(true), []);
+  useShortcuts(stage, toggleQueue, openHelp);
 
   const idle = !t;
   // Controls with nothing to act on are disabled and point at the reason ("Nothing playing").
@@ -151,6 +153,20 @@ export function Dock({ stage }: { stage: boolean }) {
       </div>
 
       <QueueSheet open={queueOpen} onClose={() => setQueueOpen(false)} />
+      <Sheet open={helpOpen} onClose={() => setHelpOpen(false)} title={strings.prefs.keyboard}>
+        {helpOpen && (
+          <dl className="keymap">
+            {strings.prefs.keys.map(([keys, action]) => (
+              <div key={keys}>
+                <dt>
+                  <kbd>{keys}</kbd>
+                </dt>
+                <dd>{action}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </Sheet>
     </section>
   );
 }
@@ -174,9 +190,11 @@ function DockScrubber() {
 }
 
 /** The transport keys of PRODUCT_SPEC.md §7 (rules in shortcuts.ts). */
-function useShortcuts(stage: boolean, toggleQueue: () => void) {
+function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => void) {
   const c = usePlayback();
+  const navigate = useView((s) => s.navigate);
   useEffect(() => {
+    let gAt = Number.NEGATIVE_INFINITY; // when G was pressed (G-sequences last 1.5 s)
     const run: Record<Shortcut, () => void> = {
       toggle: c.toggle,
       seekBack: () => c.seek(at() - SEEK_MS),
@@ -196,19 +214,34 @@ function useShortcuts(stage: boolean, toggleQueue: () => void) {
       viewCycle: () => setView(nextView(stageView.getState().view)),
       viewCover: () => setView(stageView.getState().view === 'cover' ? 'lyrics' : 'cover'),
       viewLyrics: () => setView(stageView.getState().view === 'lyrics' ? 'visual' : 'lyrics'),
+      goPrefix: () => {
+        gAt = performance.now();
+      },
+      goLibrary: () => navigate({ view: 'library', tab: 'albums' }),
+      goSettings: () => navigate({ view: 'settings', section: 'preferences' }),
+      goListen: () => navigate({ view: 'listen' }),
+      fullscreen: () =>
+        void (
+          document.fullscreenElement
+            ? document.exitFullscreen()
+            : document.documentElement.requestFullscreen()
+        ).catch(() => undefined),
+      help: openHelp,
     };
     const setView = (v: StageView) => stageView.getState().set(v);
     const at = () => positionNow(c.player.getState(), performance.now());
     const onKey = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return;
-      const action = shortcutFor(e, keyTarget(e.target), stage);
+      const afterG = performance.now() - gAt < 1500;
+      const action = shortcutFor(e, keyTarget(e.target), stage, afterG);
+      if (afterG && action !== 'goPrefix') gAt = Number.NEGATIVE_INFINITY;
       if (!action) return;
       e.preventDefault();
       run[action]();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [c, stage, toggleQueue]);
+  }, [c, stage, toggleQueue, openHelp, navigate]);
 }
 
 /** S4 Queue (PRODUCT_SPEC.md §6.2): Now playing, Next up (user-added), Then (the context). */

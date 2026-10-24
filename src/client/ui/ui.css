@@ -45,6 +45,7 @@
 
 .btn--tertiary {
   height: auto;
+  min-height: var(--target-min); /* WCAG 2.5.8 (A11Y-07) */
   padding: 0;
   border: 0;
   border-radius: var(--r-art);
@@ -425,12 +426,15 @@
 .toggle {
   position: relative;
   flex: none;
+  box-sizing: content-box;
   width: var(--toggle-w);
   height: var(--toggle-h);
-  padding: 0;
+  /* The track stays 18 px; transparent padding makes the target 24 px tall (A11Y-07). */
+  padding: calc((var(--target-min) - var(--toggle-h)) / 2) 0;
   border: 0;
   border-radius: var(--r-pill);
   background: var(--control);
+  background-clip: content-box;
   cursor: pointer;
   transition: background-color var(--dur-hover) ease;
 }
@@ -438,7 +442,7 @@
 .toggle::after {
   content: "";
   position: absolute;
-  top: calc((var(--toggle-h) - var(--toggle-knob)) / 2);
+  top: calc((var(--target-min) - var(--toggle-knob)) / 2);
   left: calc((var(--toggle-h) - var(--toggle-knob)) / 2);
   width: var(--toggle-knob);
   height: var(--toggle-knob);

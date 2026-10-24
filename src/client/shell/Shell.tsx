@@ -237,6 +237,7 @@ const TITLES: Record<Route['view'], string> = {
 
 function Frame() {
   const route = useView((s) => s.route);
+  const navigate = useView((s) => s.navigate);
   const playing = usePlayer((p) => p.status === 'playing');
   // Spotify's artwork and metadata must stay visible while it plays (DESIGN_SYSTEM.md §8).
   const attribution = usePlayer((p) => p.capabilities.requiresAttribution === 'spotify');
@@ -258,20 +259,25 @@ function Frame() {
   }, [route]);
 
   useEffect(() => {
-    // `/` focuses the visible search field (the hint shown in it).
+    // `/` or Ctrl/⌘+K focuses the visible search field (the hint shown in it); where none is
+    // visible (the Stage), it opens Search.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || isTextField(e.target as Element))
-        return;
-      const field = [...document.querySelectorAll<HTMLInputElement>('input[type="search"]')].find(
-        (el) => el.offsetParent !== null,
-      );
-      if (!field) return;
+      const slash = e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey;
+      const k = e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey) && !e.altKey;
+      if (!(slash || k) || (slash && isTextField(e.target as Element))) return;
       e.preventDefault();
-      field.focus();
+      const visible = () =>
+        [...document.querySelectorAll<HTMLInputElement>('input[type="search"]')].find(
+          (el) => el.offsetParent !== null,
+        );
+      const field = visible();
+      if (field) return field.focus();
+      navigate({ view: 'search', q: '' });
+      requestAnimationFrame(() => visible()?.focus());
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [navigate]);
 
   // Signing in and setting up stand alone: no sidebar, no player.
   if (route.view === 'login' || route.view === 'setup' || route.view === 'invite')

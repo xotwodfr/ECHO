@@ -327,6 +327,11 @@
   color: color-mix(in oklab, var(--lyric-ink-active) 74%, transparent);
 }
 
+/* Motion = Off: the active line in the lit colour, no movement (LYRICS_EXPERIENCE.md §10). */
+.ly-sheet-line[aria-current="true"] {
+  color: color-mix(in oklab, var(--text) 82%, var(--art-highlight));
+}
+
 .ly-sheet-note {
   display: block;
   margin-top: var(--sp-2);
