@@ -6,8 +6,11 @@ import { createApp } from './index.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { fallbackPalette } from './palette/extract.ts';
 import { createPaletteService } from './palette/service.ts';
+import { testDeps } from './testing.ts';
 
+const base = testDeps().deps;
 const app = createApp({
+  ...base,
   palette: createPaletteService({ dir: '/nonexistent', load: async () => null }),
 });
 
@@ -37,7 +40,7 @@ describe('GET /api/v1/palette/:albumKey (VISUALIZER_SPEC.md §6.3)', () => {
         return key.startsWith('fixture:') ? fixtureCover(key.slice(8)) : null;
       },
     });
-    return { dir, app: createApp({ palette }), loads: () => loads };
+    return { dir, app: createApp({ ...base, palette }), loads: () => loads };
   }
 
   it('computes on a miss, caches to a file, and serves the file afterwards', async () => {
@@ -74,7 +77,7 @@ describe('GET /api/v1/palette/:albumKey (VISUALIZER_SPEC.md §6.3)', () => {
 
   it('development: the fixture library’s SVG covers give their palettes', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'echo-palette-'));
-    const lib = createApp({ palette: createPaletteService({ dir, load: libraryCover }) });
+    const lib = createApp({ ...base, palette: createPaletteService({ dir, load: libraryCover }) });
     // Paper Satellites (black and cream) and Long Exposure (greys) are achromatic: the fallback
     // (§6.2 step 7).
     for (const [id, source] of [

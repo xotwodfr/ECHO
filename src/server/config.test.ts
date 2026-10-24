@@ -8,7 +8,16 @@ describe('loadConfig', () => {
       logLevel: 'info',
       publicOrigin: null,
       dataDir: './data',
+      masterKeyFile: '/run/secrets/echo_master_key',
+      trustedProxy: [],
     });
+  });
+
+  it('reads the trusted proxy list', () => {
+    expect(loadConfig({ ECHO_TRUSTED_PROXY: '172.18.0.0/16, 10.0.0.2' }).trustedProxy).toEqual([
+      '172.18.0.0/16',
+      '10.0.0.2',
+    ]);
   });
 
   it('treats empty values as unset', () => {
@@ -26,6 +35,8 @@ describe('loadConfig', () => {
       logLevel: 'debug',
       publicOrigin: 'https://echo.example.com',
       dataDir: './data',
+      masterKeyFile: '/run/secrets/echo_master_key',
+      trustedProxy: [],
     });
   });
 

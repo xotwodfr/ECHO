@@ -10,6 +10,8 @@ export interface Config {
   logLevel: LogLevel;
   publicOrigin: string | null;
   dataDir: string; // database and caches (/data in the container)
+  masterKeyFile: string; // the Docker secret (SETTINGS_AND_SECURITY.md §3.2)
+  trustedProxy: string[]; // addresses or IPv4 CIDRs whose X-Forwarded-* are honoured (§5.1)
 }
 
 type Env = Record<string, string | undefined>;
@@ -31,6 +33,11 @@ export function loadConfig(env: Env = process.env): Config {
     logLevel: logLevel as LogLevel,
     publicOrigin: parseOrigin(env.ECHO_PUBLIC_ORIGIN),
     dataDir: env.ECHO_DATA_DIR || './data',
+    masterKeyFile: env.ECHO_MASTER_KEY_FILE || '/run/secrets/echo_master_key',
+    trustedProxy: (env.ECHO_TRUSTED_PROXY ?? '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
   };
 }
 

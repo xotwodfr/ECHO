@@ -1,16 +1,39 @@
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
+import { getConnInfo } from '@hono/node-server/conninfo';
 import { serveStatic } from '@hono/node-server/serve-static';
-import { Hono } from 'hono';
+import { type Context, Hono } from 'hono';
+import { bodyLimit } from 'hono/body-limit';
+import { createLoginLimiter } from './auth/ratelimit.ts';
+import { type AuthDeps, authRoutes, hasAdmin, startSetup } from './auth/routes.ts';
 import { LOG_LEVELS, type LogLevel, loadConfig } from './config.ts';
+import { createSealer, loadMasterKey } from './crypto.ts';
+import { openDb } from './db/db.ts';
+import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
 
-export function createApp(deps: { palette: PaletteService }) {
-  const app = new Hono();
+export interface AppDeps {
+  palette: PaletteService;
+  auth: AuthDeps;
+  http: HttpConfig;
+  /** The TCP peer; tests stand in for the Node socket. */
+  socketAddress?: (c: Context) => string;
+}
+
+export function createApp(deps: AppDeps) {
+  const app = new Hono<{ Variables: Vars }>();
+  app.use(
+    '*',
+    hardening(deps.http, deps.socketAddress ?? ((c) => getConnInfo(c).remote.address ?? '')),
+  );
+  app.use(
+    '/api/*',
+    bodyLimit({ maxSize: BODY_LIMIT, onError: (c) => c.json({ error: 'too_large' }, 413) }),
+  );
 
   // Liveness only: unauthenticated and minimal (docs/TECHNICAL_ARCHITECTURE.md §6.2).
   app.get('/api/v1/health', (c) => {
@@ -27,6 +50,7 @@ export function createApp(deps: { palette: PaletteService }) {
     return c.json(await deps.palette.get(key));
   });
 
+  app.route('/api/v1', authRoutes(deps.auth));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -35,6 +59,8 @@ export function createApp(deps: { palette: PaletteService }) {
   // extension-less paths fall back, so a missing file (or `/specimen.html` in the image) stays 404.
   app.get('*', async (c, next) => {
     if (c.req.path.split('/').pop()?.includes('.')) return next();
+    // The setup page exists only while there is no admin (SETTINGS_AND_SECURITY.md §4.1).
+    if (c.req.path === '/setup' && hasAdmin(deps.auth.db)) return next();
     return serveStatic({ path: './dist/client/index.html' })(c, next);
   });
   return app;
@@ -56,13 +82,36 @@ if (import.meta.main) {
     process.exit(1);
   }
   const log = logger(config.logLevel);
+  let master: Buffer;
+  try {
+    master = loadMasterKey(config.masterKeyFile);
+  } catch (err) {
+    log('error', 'refusing to start', { detail: (err as Error).message });
+    process.exit(1);
+  }
+  const auth: AuthDeps = {
+    db: openDb(join(config.dataDir, 'echo.db')),
+    sealer: createSealer(master),
+    limiter: createLoginLimiter(),
+    now: Date.now,
+    setup: { token: null, expiresAt: 0, pending: null },
+  };
+  const setupToken = startSetup(auth);
+  if (setupToken)
+    log('warn', 'no admin yet: open the setup URL within 30 minutes', {
+      url: `${config.publicOrigin ?? `http://localhost:${config.port}`}/setup#${setupToken}`,
+    });
   const palette = createPaletteService({
     dir: join(config.dataDir, 'cache', 'palette'),
     // Navidrome covers arrive with accounts (M5).
     load: async (key) =>
       key.startsWith('fixture:') ? fixtureCover(key.slice(8)) : libraryCover(key),
   });
-  const app = createApp({ palette });
+  const app = createApp({
+    palette,
+    auth,
+    http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
+  });
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>
     log('info', 'listening', { port: info.port, publicOrigin: config.publicOrigin }),
   );

@@ -1,8 +1,19 @@
+import { randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { defineConfig, devices } from '@playwright/test';
 
 // Host port 8080 is the documented container port; E2E uses its own port so it can run next to
 // anything already bound to 8080 on a workstation.
 const port = Number(process.env.E2E_PORT ?? 18787);
+
+// The server refuses to start without a master key (SETTINGS_AND_SECURITY.md §3.2): E2E uses a
+// throwaway one, with its data, outside the repo.
+const e2eDir = join(tmpdir(), 'echo-e2e');
+const keyFile = join(e2eDir, 'master_key');
+mkdirSync(e2eDir, { recursive: true });
+if (!existsSync(keyFile)) writeFileSync(keyFile, randomBytes(32).toString('base64'), { mode: 0o600 });
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -33,7 +44,12 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm build && node src/server/index.ts',
-    env: { ECHO_PORT: String(port), ECHO_LOG: 'warn' },
+    env: {
+      ECHO_PORT: String(port),
+      ECHO_LOG: 'warn',
+      ECHO_MASTER_KEY_FILE: keyFile,
+      ECHO_DATA_DIR: join(e2eDir, 'data'),
+    },
     url: `http://127.0.0.1:${port}/api/v1/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
