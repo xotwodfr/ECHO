@@ -8,6 +8,7 @@ import type {
   Unsubscribe,
 } from '../../shared/types.ts';
 import { api } from '../api.ts';
+import { reportDown } from '../connection.ts';
 import { AnalyserFeatures } from './analyser.ts';
 import { type AudioPath, createAudioPath } from './audio.ts';
 
@@ -52,6 +53,7 @@ export class NavidromeProvider implements PlaybackProvider {
   private wantPlay = false;
   private waiting = false;
   private scrobbled: 'none' | 'now' | 'done' = 'none';
+  private retries = 0;
   private listeners: { [K in keyof Events]: Set<(e: Events[K]) => void> } = {
     state: new Set(),
     ended: new Set(),
@@ -93,6 +95,20 @@ export class NavidromeProvider implements PlaybackProvider {
     });
     el.addEventListener('error', () => {
       if (!el.error || !this.track) return;
+      // REL-02: a broken stream is reloaded at its position up to 3 times (0.5, 1, 2 s apart);
+      // then the controller skips it. The server's reachability is checked meanwhile.
+      reportDown('navidrome');
+      if (this.retries < 3) {
+        const t = this.track;
+        const at = (this.offsetS + el.currentTime) * 1000;
+        const play = this.wantPlay;
+        setTimeout(
+          () => this.track === t && void this.load(t, { startMs: at, autoplay: play, retry: true }),
+          500 * 2 ** this.retries,
+        );
+        this.retries++;
+        return;
+      }
       this.emit('error', {
         code: 'navidrome.stream',
         provider: 'navidrome',
@@ -100,6 +116,9 @@ export class NavidromeProvider implements PlaybackProvider {
         userMessage: 'This track could not be played from Navidrome.',
         detail: el.error.message,
       });
+    });
+    el.addEventListener('playing', () => {
+      this.retries = 0;
     });
   }
 
@@ -124,14 +143,17 @@ export class NavidromeProvider implements PlaybackProvider {
     };
   }
 
-  async load(track: Track, opts: { startMs?: number; autoplay: boolean }) {
+  async load(track: Track, opts: { startMs?: number; autoplay: boolean; retry?: boolean }) {
     const t = track as NavidromeTrack;
     const { el } = this.audio;
     this.track = t;
     this.loading = true;
     this.startMs = opts.startMs ?? 0;
     this.wantPlay = opts.autoplay;
-    this.scrobbled = 'none';
+    if (!opts.retry) {
+      this.scrobbled = 'none';
+      this.retries = 0;
+    }
     this.audio.setReplayGain(t.replayGain?.trackGain, t.replayGain?.trackPeak);
     const load = ++this.loads;
     const { src, transcode } = this.srcFor(t, this.startMs / 1000);

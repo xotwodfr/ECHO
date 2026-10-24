@@ -84,7 +84,15 @@ export function createPlaybackController(opts: {
     player.setState({ track: s.track, positionMs: s.positionMs, positionAt: s.positionAt, status });
   });
   provider?.on('ended', () => void onEnded());
-  provider?.on('error', (e) => player.setState({ status: 'error', error: e }));
+  provider?.on('error', (e) => {
+    // REL-02: a stream that fails after its reloads is skipped, with a toast.
+    if (e.code === 'navidrome.stream') {
+      notify(strings.dock.skipped);
+      const next = Q.advance(queue.getState());
+      if (next) return load(next, true);
+    }
+    player.setState({ status: 'error', error: e });
+  });
 
   const isActive = () => ['playing', 'loading', 'buffering'].includes(player.getState().status);
 

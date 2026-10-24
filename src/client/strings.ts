@@ -88,6 +88,9 @@ export const strings = {
     queue: 'Queue',
     noSeek: "This server can't seek in converted audio.",
     endOfQueue: 'End of the queue',
+    unreachable: (what: string, s: number) =>
+      s > 0 ? `${what} unreachable — retrying in ${s} s` : `${what} unreachable — retrying…`,
+    skipped: 'This track could not be played. Skipped to the next.',
     repeat: { off: 'Repeat off', all: 'Repeat all', one: 'Repeat one' },
   },
   queue: {

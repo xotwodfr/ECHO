@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useId, useState } from 'react';
+import { useStore } from 'zustand';
+import { connectionStore } from '../connection.ts';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
@@ -127,6 +129,7 @@ export function Dock({ stage }: { stage: boolean }) {
           aria-expanded={queueOpen}
           onClick={() => setQueueOpen(true)}
         />
+        <Reachability />
         {c.providerLabel && <ProviderMark>{c.providerLabel}</ProviderMark>}
       </div>
 
@@ -232,5 +235,19 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
         </>
       )}
     </Sheet>
+  );
+}
+
+/** "Navidrome unreachable — retrying in 4 s" (PRODUCT_SPEC.md J6), while something is down. */
+function Reachability() {
+  const { server, navidrome } = useStore(connectionStore);
+  const down = server.down ? server : navidrome.down ? navidrome : null;
+  useTicker(!!down, 500);
+  if (!down?.down) return null;
+  const s = Math.max(0, Math.ceil((down.retryAt - Date.now()) / 1000));
+  return (
+    <p className="dock-reach" role="status">
+      {strings.dock.unreachable(server.down ? 'ECHO server' : 'Navidrome', s)}
+    </p>
   );
 }

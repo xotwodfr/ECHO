@@ -185,6 +185,21 @@ describe('PlaybackController (§3 transport rules)', () => {
     return { clock, provider, c, notes, at, flush, s: () => c.player.getState() };
   };
 
+  it('a stream that still fails after its reloads is skipped, with a toast (REL-02)', () => {
+    const { clock, provider, c, s, notes } = setup();
+    c.playList(album, 0, ctx);
+    clock.advance(100);
+    const fail = (code: string) =>
+      (
+        provider as unknown as { listeners: { error: Set<(e: object) => void> } }
+      ).listeners.error.forEach((cb) => cb({ code, retriable: true, userMessage: 'x' }));
+    fail('navidrome.stream');
+    expect(s().track?.id).toBe('t2');
+    expect(notes).toContain('This track could not be played. Skipped to the next.');
+    fail('navidrome.auth'); // other errors are shown, not skipped
+    expect(s()).toMatchObject({ status: 'error', track: { id: 't2' } });
+  });
+
   it('plays a list: loading, then playing with the position advancing', () => {
     const { clock, c, s, at } = setup();
     c.playList(album, 1, ctx);

@@ -602,3 +602,12 @@ button {
   font: inherit;
   font-variant-numeric: tabular-nums;
 }
+
+/* "Navidrome unreachable — retrying in 4 s" (PRODUCT_SPEC.md J6). */
+.dock-reach {
+  margin: 0;
+  color: var(--warning);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  white-space: nowrap;
+}

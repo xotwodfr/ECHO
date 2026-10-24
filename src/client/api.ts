@@ -1,4 +1,8 @@
+import { reportDown } from './connection.ts';
+
 // The ECHO server's API (TECHNICAL_ARCHITECTURE.md §6.2): same-origin JSON with the session cookie.
+// No answer at all marks the server unreachable, and a proxy reporting Navidrome unreachable marks
+// that (connection.ts); both then retry with backoff.
 
 export class ApiError extends Error {
   readonly status: number;
@@ -16,16 +20,26 @@ export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown } = {},
 ): Promise<T> {
-  const res = await fetch(`/api/v1${path}`, {
-    method: init.method ?? 'GET',
-    credentials: 'same-origin',
-    headers: init.body === undefined ? undefined : { 'content-type': 'application/json' },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`/api/v1${path}`, {
+      method: init.method ?? 'GET',
+      credentials: 'same-origin',
+      headers: init.body === undefined ? undefined : { 'content-type': 'application/json' },
+      body: init.body === undefined ? undefined : JSON.stringify(init.body),
+    });
+  } catch (err) {
+    reportDown('server');
+    throw err;
+  }
   let body: unknown = null;
   try {
     body = await res.json();
   } catch {}
-  if (!res.ok) throw new ApiError(res.status, (body ?? {}) as Record<string, string>);
+  if (!res.ok) {
+    const e = new ApiError(res.status, (body ?? {}) as Record<string, string>);
+    if (e.code === 'navidrome.unreachable') reportDown('navidrome');
+    throw e;
+  }
   return body as T;
 }

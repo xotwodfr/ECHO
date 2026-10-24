@@ -147,6 +147,15 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
   });
 
   const server = http.createServer(async (req, res) => {
+    // Test control, before any fault applies: /__faults?down=1&slowMs=…&breakStreamAt=… (E2E).
+    if (req.url?.startsWith('/__faults')) {
+      const q = new URL(req.url, 'http://mock').searchParams;
+      faults.down = q.get('down') === '1';
+      faults.slowMs = Number(q.get('slowMs') ?? 0);
+      faults.unauthorized = q.get('unauthorized') === '1';
+      faults.breakStreamAt = q.has('breakStreamAt') ? Number(q.get('breakStreamAt')) : null;
+      return res.end('ok');
+    }
     if (faults.down) return req.socket.destroy();
     if (faults.slowMs) await new Promise((r) => setTimeout(r, faults.slowMs));
     const url = new URL(req.url ?? '/', 'http://mock');

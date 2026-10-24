@@ -140,6 +140,7 @@ test('links are real hrefs and focus moves to the new heading', async ({ page })
 
 test('typing in the sidebar search is one history entry; `/` focuses it', async ({ page }) => {
   await page.goto('/library');
+  await expect(h1(page)).toHaveText('Library'); // the shortcut exists once the shell has rendered
   await page.locator('body').press('/');
   const field = mainNav(page).getByRole('searchbox', { name: 'Search' });
   await expect(field).toBeFocused();
