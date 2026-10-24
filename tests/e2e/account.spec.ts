@@ -66,3 +66,43 @@ test('sign in, connect Navidrome, play a track from it', async ({ page }) => {
   await page.getByRole('button', { name: 'Sign out' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
+
+test('the queue follows you to another device', async ({ page, browser }) => {
+  const signIn = async (p: typeof page) => {
+    await p.goto('/login');
+    await p.getByLabel('Username').fill(USER);
+    await p.getByLabel('Password', { exact: true }).fill(PASSWORD);
+    await p.getByRole('button', { name: 'Sign in' }).click();
+    await expect(p).toHaveURL(/\/$/);
+  };
+  await signIn(page);
+  await page.goto('/settings/account');
+  await page.getByLabel('Navidrome username').fill('ada');
+  await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
+  await page.getByRole('button', { name: 'Connect' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/library/album/al-3');
+  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  const dock = page.getByRole('region', { name: 'Player' });
+  await expect(dock).toContainText('Glass Weather 1');
+  // Saved a moment after it changed.
+  await expect
+    .poll(
+      async () =>
+        (
+          (await (await page.request.get('/api/v1/me/queue')).json()) as {
+            queue: { now?: { title: string } } | null;
+          }
+        ).queue?.now?.title,
+      { timeout: 8000 },
+    )
+    .toBe('Glass Weather 1');
+
+  // The other device: a fresh browser, the same account.
+  const other = await (await browser.newContext()).newPage();
+  await signIn(other);
+  const otherDock = other.getByRole('region', { name: 'Player' });
+  await expect(otherDock).toContainText('Glass Weather 1');
+  await expect(otherDock).toHaveAttribute('data-status', 'paused'); // restored, not playing
+  await other.context().close();
+});

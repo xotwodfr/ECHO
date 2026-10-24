@@ -9,6 +9,7 @@ import { createNavidromeLibrary } from './library-navidrome.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
+import { startQueueSync } from './playback/queueSync.ts';
 import { loadSession } from './session.ts';
 import { Shell } from './shell/Shell.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
@@ -60,6 +61,9 @@ const showLyrics = (track: ReturnType<typeof controller.player.getState>['track'
     doc: fixtures?.fixtureLyrics(track) ?? null,
   });
 controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
+
+// The queue follows a signed-in user across sessions and devices (M5).
+if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().show(m));
 
 // The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
 startPalette(controller, { instant: !!frame, ...(frame?.palette && { albumKey: frame.palette }) });

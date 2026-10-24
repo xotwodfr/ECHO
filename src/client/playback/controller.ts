@@ -210,6 +210,13 @@ export function createPlaybackController(opts: {
     },
 
     /** Load `tracks[index]` paused at `startMs` (deterministic mode, VISUALIZER_SPEC.md §10). */
+    /** A saved queue (another session, another device), loaded paused at `positionMs`. */
+    restore(q: QueueState, positionMs: number) {
+      if (!provider) return;
+      if (!q.now) return queue.setState({ ...q, provider: provider.id }, true);
+      load({ ...q, provider: provider.id }, false, positionMs);
+    },
+
     cue(tracks: Track[], index: number, context: PlayContext, startMs: number) {
       if (!provider || !tracks[index]) return;
       source = { tracks, context };
