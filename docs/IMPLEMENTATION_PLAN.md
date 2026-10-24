@@ -160,6 +160,11 @@ deployment on the OptiPlex behind Caddy. **This is the first real listening expe
 
 **Dependencies:** M2, M4 (M3 for the full stage).
 
+**Progress:** tasks 1–11, 13 and 14 built and tested (2026-10-24; record in `docs/reviews/M5.md`).
+Task 12 (deployment on the live OptiPlex) waits for the owner. Open parts: gapless A/B and crossfade,
+Media Session next/previous, the server-backed Artists/Playlists/Starred tabs, sorts and search,
+queue reorder.
+
 **Tasks:**
 1. **Database:** better-sqlite3 (M1 finding: `node:sqlite` is not yet stable), the migrations runner, the
    tables in `TECHNICAL_ARCHITECTURE.md` §5.5.

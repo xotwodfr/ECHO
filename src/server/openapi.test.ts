@@ -39,3 +39,40 @@ describe('the OpenAPI document', () => {
     expect([...doc].filter((r) => !real.has(r)).sort()).toEqual([]); // documented, not served
   });
 });
+
+describe('the unauthenticated surface (SEC-02, SETTINGS_AND_SECURITY.md §5.5)', () => {
+  // The documented list; GET /palette answers without a session only on development servers.
+  const OPEN = new Set([
+    'GET /health',
+    'GET /session',
+    'GET /setup',
+    'POST /setup',
+    'POST /setup/totp',
+    'POST /auth/login',
+    'POST /auth/totp',
+    'GET /navidrome/stream/{id}', // a signed URL; without one it is 401 too (below)
+  ]);
+
+  it('every other route answers 401 without a session or device token', async () => {
+    const { deps } = testDeps();
+    const app = (await import('./index.ts')).createApp({ ...deps, devFixtures: false });
+    const sample = (p: string) => p.replace(/\{\w+\}/g, 'x');
+    let checked = 0;
+    for (const route of served()) {
+      const [method, path] = route.split(' ') as [string, string];
+      if (OPEN.has(route) && route !== 'GET /navidrome/stream/{id}') continue;
+      const res = await app.request(`http://localhost/api/v1${sample(path)}`, {
+        method,
+        headers: {
+          host: 'localhost',
+          origin: 'http://localhost',
+          'content-type': 'application/json',
+        },
+        body: method === 'GET' ? undefined : '{}',
+      });
+      expect(res.status, route).toBe(401);
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(12);
+  });
+});
