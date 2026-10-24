@@ -215,6 +215,9 @@ per-user offsets and late-arrival behaviour, plus the real-song tuning pass.
 
 **Dependencies:** M3, M5.
 
+**Progress:** tasks 1–6 done (2026-10-24; record in `docs/reviews/M6.md`). All M6 criteria pass on
+the mock sources. Task 7 (real-song tuning) waits for the owner's library and machines.
+
 **Tasks:**
 1. Parsers: OpenSubsonic structured (+ `cueLine`), LRC, enhanced LRC, Spicy `Syllable`/`Line`/
    `Static`. Validation and repair. Vitest on captured sample responses.
