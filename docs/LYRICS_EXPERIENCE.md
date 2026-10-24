@@ -1,6 +1,6 @@
 # ECHO — The Floating Lyrics Experience
 
-Status: **Draft 2 — normative for the lyric field (F2)** · Last reviewed 2026-10-22
+Status: **Draft 2 — normative for the lyric field (F2)** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design system](DESIGN_SYSTEM.md) (tokens, type, colour roles) · [Visualizer](VISUALIZER_SPEC.md) (audio features, palette, quality tiers) · [Lyrics integration](LYRICS_INTEGRATION.md) (where lyric data comes from, `LyricsDoc` schema) · [Acceptance criteria](ACCEPTANCE_CRITERIA.md) §LYR
 
 This is ECHO's signature feature and the most detailed spec in the pack. Everything here is meant to
@@ -462,7 +462,7 @@ Timeline after a track starts, from the lyric request (`LYRICS_INTEGRATION.md` �
 | 600 ms → | **Interlude dots** (§9.8) centred at the active anchor, with "Finding lyrics…" in 12px `--faint` beneath after 1.5 s |
 | Resolved | Dots fade out (250 ms). The field builds: if `t` is already past the first line, lines take their computed positions directly (no stagger), fading in over 400 ms |
 | Timeout / not found | §9.4 |
-| Late arrival (after Cover mode was shown) | If it arrives within the track: crossfade Cover → Lyrics at the next line start, or immediately if inside an instrumental gap ≥ 2 s. A **better** source arriving late (word-timed replacing line-timed) swaps only if `t < 10 s` or during an instrumental gap; otherwise it is cached for next time. |
+| Late arrival (after Cover mode was shown) | If it arrives within the track: crossfade Cover → Lyrics at the next line start, or immediately if inside an instrumental gap ≥ 2 s. A **better** source arriving late (word-timed replacing line-timed) swaps only if `t < 10 s` or during an instrumental gap; otherwise it is cached for next time. As built (M6): always cached for next time; the mid-song swap is a follow-up (`reviews/M6.md`). |
 
 ### 9.6 Pause and seek
 

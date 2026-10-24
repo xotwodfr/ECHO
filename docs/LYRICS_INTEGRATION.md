@@ -1,6 +1,6 @@
 # ECHO — Lyrics Integration
 
-Status: **Draft 2** · Last reviewed 2026-10-22
+Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Lyrics experience](LYRICS_EXPERIENCE.md) (how lyrics are shown) · [Settings & security](SETTINGS_AND_SECURITY.md) §6.3 (Spicy Lyrics key) · [Playback](PLAYBACK_ARCHITECTURE.md) §4.6 (gate G2 for Spotify tracks)
 
 Labels: **[C]** confirmed in a primary source (`DESIGN_RESEARCH.md` §5), **[R]** reported, **[A]**
@@ -97,7 +97,10 @@ Only when the user has connected Spotify (ECHO never uses Spotify credentials it
 1. If the track has an ISRC: `GET /v1/search?q=isrc:<ISRC>&type=track&limit=1`.
 2. Else: `q=track:"<title>" artist:"<primary artist>"&type=track&limit=5`. Accept the best result with
    duration within ±2 s and title similarity ≥ 0.9.
-3. Cache the mapping (`navidromeId → spotifyId | none`) for 30 days.
+3. Cache the mapping (`navidromeId → spotifyId | none`) for 30 days. As built (M7, security review):
+   the key also holds what the lookup used (the ISRC, or a hash of the normalised title, artist and
+   duration) and the Navidrome server, so a request with made-up metadata cannot pin a wrong id on
+   someone else's track; "none" lives 7 days (`src/server/lyrics/spotifyId.ts`).
 
 This uses the **requesting user's** own Spotify connection, server-side (the server holds that user's
 refresh token and can mint an access token). Users without a Spotify connection don't trigger lookups,

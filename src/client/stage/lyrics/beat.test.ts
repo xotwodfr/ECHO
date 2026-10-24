@@ -328,7 +328,7 @@ describe('beats on the field (LYR-02, §12.4)', () => {
   });
 
   it('ballad-word: a held word glows brighter and wider than 0.35 / 0.18 em, never above 0.55', {
-    timeout: 20_000,
+    timeout: 60_000, // two minutes of frames; the full parallel run once took over 20 s
   }, () => {
     const m = field('ballad-word');
     let brighter = 0;

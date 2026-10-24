@@ -1,6 +1,6 @@
 # ECHO — Design System
 
-Status: **Draft 2** · Last reviewed 2026-10-22
+Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design research](DESIGN_RESEARCH.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
 This is the visual language of the whole application: tokens, component rules and the reason each
@@ -507,6 +507,8 @@ the fallback (achromatic) palette and are overwritten at runtime.
   --tile-min: 168px; /* phones: --tile-min-compact 132px, two columns at 390 (M9) */ --art-row: 40px; --art-dock: 64px; --art-detail: 240px; --art-cover-max: 640px;
   --scrub-track: 4px; --scrub-thumb: 12px; --scrub-hit: 24px; --volume-w: 96px;
   --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
+  --target-min: 24px;           /* M9: WCAG 2.5.8 floor; switches pad their 18px track to it */
+  --spotify-logo: 80px;         /* M7: Spotify's full logo, never under 70px wide */
   --sheet-w: 400px; --signin-w: 360px;
   --primary-hover: #FFFFFF;
 

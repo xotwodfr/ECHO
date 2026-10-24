@@ -1,6 +1,6 @@
 # ECHO — Technical Architecture
 
-Status: **Draft 2** (revised after product-owner decisions, 2026-10-22) · Last reviewed 2026-10-22
+Status: **Draft 2** (revised after product-owner decisions, 2026-10-22) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Playback](PLAYBACK_ARCHITECTURE.md) · [Lyrics integration](LYRICS_INTEGRATION.md) · [Settings & security](SETTINGS_AND_SECURITY.md) · [Visualizer](VISUALIZER_SPEC.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
 
 Claim labels: **[C]** confirmed in an official/primary source (`DESIGN_RESEARCH.md` §5), **[R]**
@@ -17,7 +17,7 @@ reported, **[A]** an assumption ECHO will verify in the milestone named.
 | Language | TypeScript everywhere (server, web client, shared types) |
 | Web UI | React 19 for the shell **only**. The Stage (environment + lyric field) is an imperative engine that React mounts once. |
 | Rendering | three.js `WebGLRenderer` (WebGL2) used directly. **DOM** for lyrics, composited above the canvas. |
-| State (web) | Zustand vanilla stores, plus TanStack Query for server data |
+| State (web) | Zustand vanilla stores; server data through small purpose-built loaders (`library-*.ts`, `lyrics/loader.ts`). TanStack Query and `postprocessing` were planned and removed unused in M9 |
 | Audio analysis | **On the client**, where the audio plays: Web Audio `AnalyserNode` on Navidrome streams (same-origin via ECHO). None for Spotify (DRM). |
 | Palette extraction | **On the server**, once per album, shared by every client and user (`VISUALIZER_SPEC.md` §6) |
 | Lyrics resolution | On the server, cached and shared (`LYRICS_INTEGRATION.md`) |
@@ -118,9 +118,7 @@ dependencies.
 | vite | 8.3.3 | Dev server, build | — |
 | react, react-dom | 19.3.0 | Web shell | Forms, lists, sheets, focus management |
 | three | 0.186.1 | WebGL2 renderer, render targets | Raw WebGL2 means rewriting context-loss, resize and RT plumbing |
-| postprocessing | 6.39.5 | Bloom at reduced resolution (Zlib) | Hand-written mip-chain bloom |
 | zustand | 5.0.15 | Vanilla stores readable from rAF loops | — |
-| @tanstack/react-query | 5.104.1 | Server-data caching and retries | — |
 | hono | 4.13.13 | HTTP server | — |
 | @hono/node-server | 2.1.3 | Node adapter | — |
 | @material/material-color-utilities | 0.4.0 | `QuantizerCelebi` + `Score` (Apache-2.0, AGPL-compatible) | node-vibrant lacks UI-tuned scoring |
@@ -306,21 +304,24 @@ audio itself.
 
 | Method & path | Purpose |
 |---|---|
-| `POST /auth/login` → `{ totpRequired }` · `POST /auth/totp` · `POST /auth/logout` | Web login (cookie) |
-| `POST /auth/device` | Native-client login: credentials + TOTP → device token (bearer) |
-| `GET /me` · `GET/PUT /me/settings` · `GET/DELETE /me/sessions[/:id]` | Account, preferences, sessions and devices |
-| `POST /me/totp/setup` · `POST /me/totp/enable` · `POST /me/totp/disable` · `POST /me/password` | Account security |
-| `POST /invites/:token/accept` | Create an account from an invite |
-| `GET /health` | Liveness (unauthenticated, minimal) |
-| `PUT/POST/DELETE /me/connections/navidrome[/test]` | The user's own Navidrome account |
-| `GET /navidrome/rest/:method` | Allow-listed Subsonic proxy, signed with the user's credentials |
-| `GET /navidrome/stream/:id` · `GET /navidrome/cover/:id` | Streams (Range) and covers. Cookie, bearer, or a **signed URL** (§6.5) |
-| `GET /spotify/login` · `GET /spotify/callback` · `POST /spotify/token` · `DELETE /me/connections/spotify` | Per-user PKCE |
-| `GET /lyrics?trackKey=&title=&artist=&album=&durationMs=&isrc=&spotifyId=&navidromeId=` | Resolved `LyricsDoc` |
-| `PUT /me/tracks/:trackKey/override` | Lyric offset and pin |
-| `GET /palette/:albumKey?src=` | Palette (computed on miss) |
-| `GET/PUT /me/queue` | Queue persistence |
-| `GET/PUT /admin/settings` · `GET/POST/DELETE /admin/users` · `POST /admin/invites` · `GET /admin/audit` | Admin only |
+| `GET /health` · `GET /session` · `POST /csp-report` | Liveness, who-am-I (never 401), CSP reports (unauthenticated) |
+| `GET/POST /setup` · `POST /setup/totp` | One-time admin creation with mandatory TOTP |
+| `POST /auth/login` → `{ totpRequired, challenge }` · `POST /auth/totp` · `POST /auth/logout` | Web login (cookie) |
+| `POST /auth/device` | Native-client login: credentials + TOTP in one request → device token (bearer) |
+| `GET /invite` · `POST /invite` · `POST /invite/totp` | Redeem an invite (TOTP enrolment when "require TOTP for all" is on) |
+| `GET /me` · `GET /me/account` · `DELETE /me` | Who am I, account facts, account deletion (password + code) |
+| `POST /me/password` · `POST /me/totp/start` · `POST /me/totp/enable` · `POST /me/totp/disable` · `POST /me/recovery-codes` | Account security (re-authentication is rate limited) |
+| `GET /me/sessions` · `DELETE /me/sessions/:id` · `POST /me/sessions/revoke-others` | Sessions and devices |
+| `GET/PUT /me/settings` | Preferences that follow the user (§7.1 of SETTINGS_AND_SECURITY) |
+| `GET/PUT/DELETE /me/connections/navidrome` · `POST /me/connections/navidrome/test` | The user's own Navidrome account |
+| `GET/POST /navidrome/rest/:method` | Allow-listed Subsonic proxy, signed with the user's credentials (writes POST-only) |
+| `GET /navidrome/stream/:id` · `GET /navidrome/stream-url/:id` · `GET /navidrome/cover/:id` | Streams (Range) and covers. Cookie, bearer, or a **signed URL** (§6.5) |
+| `GET /spotify/login` · `GET /spotify/callback` · `POST /spotify/token` · `GET /spotify/status` · `DELETE /spotify/connection` | Per-user PKCE, the access token, status, disconnect |
+| `GET /lyrics?trackKey=&title=&artist=&album=&durationMs=&isrc=` | Resolved `LyricsDoc` (provider ids come from the track key) |
+| `GET/PUT /me/tracks/:trackKey/override` | Lyric offset and pin |
+| `GET /palette/:albumKey[?art=]` | Palette (computed on miss; `art` = a Spotify cover URL, gate G1) |
+| `GET/PUT /me/queue` | Queue persistence (compare-and-set) |
+| `GET/PUT /admin/settings` · `GET /admin/users` · `PATCH/DELETE /admin/users/:id` · `POST /admin/users/:id/unlock` · `GET/POST /admin/invites` · `DELETE /admin/invites/:id` · `GET /admin/audit` | Admin only |
 
 Versioning: breaking changes go to `/api/v2`. `/api/v1` stays until every first-party client has
 moved.

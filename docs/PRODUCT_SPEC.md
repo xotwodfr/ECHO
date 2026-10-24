@@ -1,6 +1,6 @@
 # ECHO — Product Specification
 
-Status: **Draft 2 — source of truth for scope** · Last reviewed 2026-10-22
+Status: **Draft 2 — source of truth for scope** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design system](DESIGN_SYSTEM.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Acceptance criteria](ACCEPTANCE_CRITERIA.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
 
 This document says **what** ECHO is and **what it must do**. How it looks is in `DESIGN_SYSTEM.md`, how
@@ -202,6 +202,11 @@ Sections (each its own view, taste-skill app rules §8.2):
   switches), users & invites, audit log.
 
 Details are in `SETTINGS_AND_SECURITY.md` §7.
+
+**As built (M8):** Preferences is one view with five groups; crossfade, film grain and pointer
+parallax are shown disabled ("Arrives in a later version"); the Spotify-assisted lookup sits with
+the Spotify connection in Account; About has no source-code link yet (no public repository URL). The
+admin also sets "require TOTP for all" in Server.
 
 ---
 

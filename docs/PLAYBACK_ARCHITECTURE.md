@@ -1,6 +1,6 @@
 # ECHO — Playback Architecture
 
-Status: **Draft 2** · Last reviewed 2026-10-22
+Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §5 (types, clock, stores) · [Settings & security](SETTINGS_AND_SECURITY.md) (credentials, OAuth) · [Visualizer](VISUALIZER_SPEC.md) §2 (analysis per provider) · [Lyrics integration](LYRICS_INTEGRATION.md)
 
 Labels: **[C]** confirmed in official docs/terms/source (`DESIGN_RESEARCH.md` §5), **[R]** reported,

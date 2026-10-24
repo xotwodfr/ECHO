@@ -1,6 +1,6 @@
 # ECHO — Design Research
 
-Status: **Draft 2** · Research conducted 2026-10-22
+Status: **Draft 2** · Research conducted 2026-10-22 · open questions (§7) updated 2026-10-24
 Related: [Design system](DESIGN_SYSTEM.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Technical architecture](TECHNICAL_ARCHITECTURE.md)
 
 This document records what was researched, which skills and tools were **actually** used, where every
@@ -315,19 +315,19 @@ conflict:
 
 | ID | Question | Milestone |
 |---|---|---|
-| Q-DS-1 | Does the chosen face's `tnum` produce tabular digits? | M1 |
+| Q-DS-1 | Does the chosen face's `tnum` produce tabular digits? | M1 · **Answered:** yes, both candidate faces (`reviews/M1-type.md`) |
 | Q-DS-2 | Geologica or Mona Sans? (owner chooses from the specimen) | M1 · **Answered:** Mona Sans (owner, 2026-10-23); Geologica kept in the specimen only |
 | Q-SRV-1 | Do `sharp`, `better-sqlite3` and `@node-rs/argon2` prebuilt binaries run on the OptiPlex (Ivy Bridge, no AVX2)? Argon2id timing? | M1 · **Answered:** yes, all load in the production image; Argon2id 183 ms (`TECHNICAL_ARCHITECTURE.md` §2.3) |
 | Q-SRV-2 | Are `node:sqlite` and `node:crypto` Argon2 stable in Node 24 LTS, so they can replace the packages? | M1 · **Answered:** `crypto.argon2` yes (adopted); `node:sqlite` no (1.2 RC), better-sqlite3 stays |
-| Q-SRV-3 | Exact trusted-proxy address of the Caddy container on the compose network | M5 |
-| Q-SP-3 | Do player/queue/device endpoints work unchanged for new Development Mode apps after Feb 2026? Exact `/me/library` paths? | M7 |
-| Q-SP-4 | Is `streaming` sufficient for the SDK, or are `user-read-email`/`user-read-private` required? | M7 |
-| Q-SP-6 | Exact CSP hosts the SDK needs | M7 |
-| Q-SP-7 | Does Spotify offer token revocation for PKCE clients? | M8 |
+| Q-SRV-3 | Exact trusted-proxy address of the Caddy container on the compose network | M5 · **Answered at deployment:** Caddy runs on the host, so it is the gateway of ECHO's own network (`10.77.0.1`); the client address comes from `Cf-Connecting-Ip` behind the Cloudflare tunnel (`reviews/M5.md`, task 12) |
+| Q-SP-3 | Do player/queue/device endpoints work unchanged for new Development Mode apps after Feb 2026? Exact `/me/library` paths? | M7 · **Answered (docs):** player endpoints unchanged; `GET /me/albums` unchanged, saving via `PUT/DELETE /me/library` (`reviews/M7.md`); live check with a Premium account pending |
+| Q-SP-4 | Is `streaming` sufficient for the SDK, or are `user-read-email`/`user-read-private` required? | M7 · **Partly:** `user-read-private` is needed (Search, `product`); `user-read-email` stays until the manual check (`reviews/M7.md`) |
+| Q-SP-6 | Exact CSP hosts the SDK needs | M7 · **Answered:** `sdk.scdn.co` (script and iframe), `api.spotify.com`, `i.scdn.co`; no CSP violations in the full E2E run |
+| Q-SP-7 | Does Spotify offer token revocation for PKCE clients? | M8 · **Answered:** no revocation endpoint; disconnect deletes the refresh token and the user can remove the app in their Spotify account |
 | Q-LI-4 | Does Navidrome fill OpenSubsonic `cueLine` from enhanced LRC/TTML files? Does it expose `isrc`? | **Answered (M6):** yes to both in v0.64.0 — cues from enhanced LRC (with `[bg:]`) and TTML; `isrc` as an array. The owner's server (0.64.0) advertises songLyrics v1+v2, not `apiKeyAuthentication` |
-| Q-LI-5 | Spicy Lyrics' actual rate limits (the owner has a key; limits are unpublished) | M6 |
-| Q-VZ-2 | Does `audio.currentTime` advance coarsely enough in Chrome/Firefox on Linux to need the slew logic? | M5 |
-| Q-AC-1 | Exact model of the owner's laptop (performance floor) | M9 |
+| Q-LI-5 | Spicy Lyrics' actual rate limits (the owner has a key; limits are unpublished) | M6 · **Open:** not measured (no key configured yet); the resolver honours `Retry-After` and backs off with a breaker |
+| Q-VZ-2 | Does `audio.currentTime` advance coarsely enough in Chrome/Firefox on Linux to need the slew logic? | M5 · **Handled:** the SongClock slews small errors and snaps large ones regardless (`reviews/M3.md`); owner listening test pending |
+| Q-AC-1 | Exact model of the owner's laptop (performance floor) | M9 · **Open:** the owner records it (`reviews/M9.md`) |
 
 ### 7.3 Unresolved research questions (accepted risks)
 

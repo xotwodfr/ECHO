@@ -5,12 +5,13 @@ is a floating, word-synchronised lyric field in an audio-reactive environment li
 cover. Design direction: **Reverb Chamber**, a dark acoustic room where sound arrives as light,
 peaks and decays.
 
-**Project status (2026-10-23):** M1 (foundation) **closed** with one explicit exception: scaffold,
-container (Debian 13 base), hardware verification on the OptiPlex, and the typeface decision
-(**Mona Sans**). **SEC-10 is an accepted exception, not a pass** (43 unfixed HIGH base-image
-findings, time-boxed to M9: [reviews/M1-SEC-10-exception.md](reviews/M1-SEC-10-exception.md)).
-Remote CI has not run yet (no repository URL). Status of every M1 criterion:
-[reviews/M1.md](reviews/M1.md). **M2 (main player shell and visual system) is in progress.**
+**Project status (2026-10-24):** milestones **M1–M9 are built and tested**, and ECHO is
+**deployed** at https://echo.folk3s.com (M5 task 12). SEC-10 now passes strictly (distroless runtime;
+the M1 exception is retired). Still open, all needing the owner, people or real devices: the TLS
+grade A (Cloudflare minimum TLS 1.2), cookie flags after the first sign-in and the on-box backup
+drill (SEC-19, DEP-03), the reference-client tuning and PERF-01, the 8 h soak (REL-06), the Orca pass
+and the five-second test (DS-05). Per-milestone records: [reviews/](reviews/) (M1–M9, plus
+[M8-security.md](reviews/M8-security.md) for the pre-share security review).
 
 These documents are the **source of truth**. When implementation and docs disagree, fix one of them
 in the same change. Never leave them diverged.
@@ -30,7 +31,8 @@ in the same change. Never leave them diverged.
 | 7 | [LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) | Lyric sources (Navidrome, Spicy Lyrics, LRCLIB), matching, `LyricsDoc` schema, caching, attribution | lyrics work |
 | 8 | [SETTINGS_AND_SECURITY.md](SETTINGS_AND_SECURITY.md) | Threat model, secrets, OAuth/PKCE, local server hardening, settings, disconnecting | server work |
 | 9 | [TECHNICAL_ARCHITECTURE.md](TECHNICAL_ARCHITECTURE.md) | Delivery shape, exact stack versions, components, data flow, stores, backend, testing, packaging | everyone building |
-| 10 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Milestones M1–M9 with tasks, dependencies and completion criteria | everyone building |
+| 10 | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | Milestones M1–M9 with tasks, dependencies, completion criteria and progress | everyone building |
+| — | [api/openapi.yaml](api/openapi.yaml) | Every `/api/v1` route (contract-tested) | client and server work |
 | 11 | [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) | Testable checklist (IDs referenced by the plan) | review, QA |
 
 A coding agent starting work should read 1, 3, 9 and 10 fully, then the spec(s) for the milestone at
@@ -40,9 +42,9 @@ hand.
 
 | Topic | Decision | Where |
 |---|---|---|
-| Delivery | **Self-hosted web service:** ECHO server in Docker Compose on the owner's OptiPlex next to Navidrome, behind Caddy, reachable from the public internet. MVP client = browser (Chrome, Chromium, Firefox). Desktop and mobile clients later, on the same `/api/v1` | TECHNICAL_ARCHITECTURE §2 |
+| Delivery | **Self-hosted web service:** ECHO server in Docker Compose on the owner's OptiPlex next to Navidrome, behind Caddy and a Cloudflare tunnel (https://echo.folk3s.com). MVP client = browser (Chrome, Chromium, Firefox). Desktop and mobile clients later, on the same `/api/v1` | TECHNICAL_ARCHITECTURE §2 |
 | Accounts | Admin + invited users. Argon2id + TOTP (mandatory for admin). Per-user Navidrome and Spotify connections. Secrets encrypted at rest with a master key | SETTINGS_AND_SECURITY §2–§4 |
-| Stack | TypeScript, React 19 (shell only), three.js (imperative Stage), DOM lyrics, Zustand, TanStack Query. Hono on Node 24, SQLite, sharp | TECHNICAL_ARCHITECTURE §3 |
+| Stack | TypeScript, React 19 (shell only), three.js (imperative Stage), DOM lyrics, Zustand. Hono on Node 24, SQLite, sharp | TECHNICAL_ARCHITECTURE §3 |
 | Audio-reactive visuals | Navidrome only (Web Audio in the client on same-origin streams). Spotify has no PCM access, so its visuals are Ambient. Default intensity **Expressive** | VISUALIZER_SPEC §2, §7.4 |
 | Spotify | One admin-owned Spotify app (Development Mode: ≤ 5 Spotify users). Per-user PKCE. Web Playback SDK. Strict artwork and attribution rules. Gates G1 (cover colours) and G2 (synced lyrics) **on** by owner decision, with admin kill switches | PLAYBACK_ARCHITECTURE §4 |
 | Lyrics | Best sync level wins: user's own files (Navidrome) > Spicy Lyrics (owner's key, server-side, Spotify ID) > LRCLIB. Shared server cache | LYRICS_INTEGRATION §4 |
@@ -53,9 +55,9 @@ hand.
 ## Product-owner decisions
 
 All decisions from the 2026-10-22 clarifying round are logged in
-[DESIGN_RESEARCH.md §7.1](DESIGN_RESEARCH.md#71-product-owner-decisions-2026-10-22). Two items stay
-open until M1: the **typeface** (decided in M1) and the **reference laptop model** (still to be
-recorded by the owner: M9 task 1, see `docs/reviews/M9.md`).
+[DESIGN_RESEARCH.md §7.1](DESIGN_RESEARCH.md#71-product-owner-decisions-2026-10-22). Later
+decisions are recorded in the milestone reviews. The typeface was decided in M1 (Mona Sans); the
+**reference laptop model** is still to be recorded by the owner (M9 task 1, `reviews/M9.md`).
 
 ## Conventions
 

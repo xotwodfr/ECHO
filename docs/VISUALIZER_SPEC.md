@@ -1,6 +1,6 @@
 # ECHO — Visual Environment & Visualizer Specification
 
-Status: **Draft 2** · Last reviewed 2026-10-22
+Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design system](DESIGN_SYSTEM.md) §3.3, §7 (palette roles, permitted light effects) · [Lyrics experience](LYRICS_EXPERIENCE.md) §12 (how the lyric field uses features) · [Playback](PLAYBACK_ARCHITECTURE.md) · [Technical architecture](TECHNICAL_ARCHITECTURE.md) §4.2 (frame order)
 
 The environment is the **room** the lyrics hang in. Its light comes from the album cover. When ECHO
@@ -197,7 +197,7 @@ cap (`DESIGN_SYSTEM.md` §3.4).
 
 ### 5.1 Stack
 
-three.js 0.186.1 `WebGLRenderer` (WebGL2), `postprocessing` 6.39.5 for bloom, and custom
+three.js 0.186.1 `WebGLRenderer` (WebGL2) and custom
 `ShaderMaterial`s on a full-screen triangle. No scene graph beyond an orthographic camera and one or
 two meshes. Owned by `StageRenderer` (`TECHNICAL_ARCHITECTURE.md` §4).
 
@@ -210,6 +210,9 @@ two meshes. Owned by `StageRenderer` (`TECHNICAL_ARCHITECTURE.md` §4).
 | 3 | **Bloom** | ½ → mip chain | `roomRT + energyRT`, threshold L > 0.85 | bloom texture |
 | 4 | **Composite** | full (DPR-capped) | room + energy + bloom, halation, vignette, scrims, tone map, grain (opt), **dither** | canvas |
 | 5 | **Probe** (every 250 ms) | 8×8 | composite downsample of the safe zone | `roomPeakL` for the contrast solver |
+
+**As built (M5):** bloom and halation are a small blur of the energy buffer inside the composite, not a
+separate mip-chain pass (`docs/reviews/M5.md`); revisit if the look needs more.
 
 - **Tone mapping:** a simple filmic curve (Hable-style, exposure-driven) in linear space, then sRGB
   encode. Palette colours are converted OKLab → linear sRGB in JS before upload.

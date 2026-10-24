@@ -1,6 +1,6 @@
 # ECHO — Settings & Security
 
-Status: **Draft 2** (revised for a public, multi-user deployment, 2026-10-22) · Last reviewed 2026-10-22
+Status: **Draft 2** (revised for a public, multi-user deployment, 2026-10-22) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2, §5.5, §6 (deployment, DB, API) · [Playback](PLAYBACK_ARCHITECTURE.md) §4.2, §5.2 · [Lyrics integration](LYRICS_INTEGRATION.md) §2
 
 ECHO runs on a home server (Docker Compose, behind Caddy) and is **reachable from the public
@@ -203,7 +203,8 @@ Content-Security-Policy:
   worker-src 'self' blob:;
   frame-ancestors 'none';
   base-uri 'none';
-  form-action 'self' https://accounts.spotify.com
+  form-action 'self' https://accounts.spotify.com;
+  report-uri /api/v1/csp-report          (M8: violations are logged)
 Referrer-Policy: no-referrer
 X-Content-Type-Options: nosniff
 Cross-Origin-Opener-Policy: same-origin
@@ -333,6 +334,9 @@ Settings → **Playback · Lyrics · Visuals · Keyboard · About** (per-user pr
 **Account** → Profile, Password, Two-factor, Sessions & devices, Connections (Navidrome, Spotify);
 **Admin** (admins only) → Server, Users & invites, Audit log. Each view has one save model:
 self-saving controls with a "Saved" stamp (taste-skill app rules §8.2).
+
+As built (M8): three tabs, Preferences · Account · Admin, with the five preference groups on one
+page; `src/client/shell/SettingsViews.tsx`, `AccountViews.tsx`, `AdminViews.tsx`.
 
 ---
 

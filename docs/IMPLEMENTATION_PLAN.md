@@ -1,6 +1,6 @@
 # ECHO — Implementation Plan
 
-Status: **Draft 2** (revised after product-owner decisions, 2026-10-22) · Last reviewed 2026-10-22
+Status: **Draft 2**, with progress through M9 and the deployment · Last reviewed 2026-10-24
 Related: [Acceptance criteria](ACCEPTANCE_CRITERIA.md) (IDs referenced below) · [Technical architecture](TECHNICAL_ARCHITECTURE.md) · [Product spec](PRODUCT_SPEC.md) §10 (MVP releases)
 
 The plan gets **one visually exceptional listening experience** working first, served from the real
@@ -161,7 +161,7 @@ deployment on the OptiPlex behind Caddy. **This is the first real listening expe
 **Dependencies:** M2, M4 (M3 for the full stage).
 
 **Progress:** tasks 1–11, 13 and 14 built and tested (2026-10-24; record in `docs/reviews/M5.md`).
-Task 12 (deployment on the live OptiPlex) waits for the owner. Open parts: gapless A/B and crossfade,
+Task 12 **done**: deployed at https://echo.folk3s.com (2026-10-24, `docs/reviews/M5.md`). Open parts: gapless A/B and crossfade,
 Media Session next/previous, the server-backed Artists/Playlists/Starred tabs, sorts and search,
 queue reorder.
 
@@ -182,7 +182,7 @@ queue reorder.
 7. `NavidromeProvider`: A/B audio, ReplayGain, raw vs transcode by per-device quality and
    throughput probe, `timeOffset` seeking, gapless preload, optional crossfade, scrobbling, Media
    Session.
-8. Library (Albums with sorts, Artists, Playlists, Starred, Detail) and search via TanStack Query.
+8. Library (Albums with sorts, Artists, Playlists, Starred, Detail) and search (purpose-built loaders; TanStack Query was not needed).
    Virtualised grid.
 9. Queue model and sheet. **Server-side per-user queue persistence** (`/api/v1/me/queue`) with the
    "changed on another device" notice.
@@ -253,7 +253,7 @@ G1/G2 (**on** by owner decision, with admin kill switches), and the Spotify-ID l
 **Progress:** tasks 1–8 built and tested against a fake SDK, a fake Web API and a mock accounts
 service (2026-10-24; record in `docs/reviews/M7.md`). The manual checklist (PLAY-08/09 and the M
 parts of SP-01, SRCH-02, REL-04, BRW-02) needs a Spotify app, a Premium account, and deployment
-behind HTTPS (M5 task 12).
+behind HTTPS (deployed 2026-10-24: https://echo.folk3s.com).
 
 **Tasks:**
 1. **Re-verify** against live Spotify docs: player endpoints for new Development Mode apps,
@@ -292,8 +292,9 @@ the **pre-share security review**.
 
 **Progress:** tasks 1–11 built and tested (2026-10-24; record in `docs/reviews/M8.md`, review in
 `docs/reviews/M8-security.md`). Open: the live half of the pre-share review (SEC-19) and the on-box
-backup drill (DEP-03), both after deployment (M5 task 12). The domain is not to be shared before
-SEC-19 passes. The Settings `blank-gap` deferral from M2 is closed (0 FAIL).
+backup drill (DEP-03). Deployed 2026-10-24: the live checks pass except the TLS grade (B until
+Cloudflare's minimum TLS is 1.2); cookie flags and the drill follow the first sign-in. The domain is
+not to be shared before SEC-19 passes. The Settings `blank-gap` deferral from M2 is closed (0 FAIL).
 
 **Tasks:**
 1. Preferences views (`SETTINGS_AND_SECURITY.md` §7.1), with per-device keys in `localStorage`.
@@ -334,8 +335,8 @@ performance pass, the soak test, the final design critique and polish.
 **Progress:** all code-side work done (2026-10-24; record in `docs/reviews/M9.md`): governor and
 first-run tier, perf probes, windowed library, accessibility suite, critique fixes, docs. SEC-10
 passes strictly on a distroless runtime. Open: the reference-client tuning, Orca, the five-second
-test, the 8 h soak and the on-box DEP-04 run, all needing the owner's machines, people, or the
-deployment (M5 task 12).
+test, the 8 h soak and the on-box DEP-04 run under real transcoding, all needing the owner's
+machines or people (the deployment is done).
 
 **Tasks:**
 1. Record the reference clients (Q-AC-1): **the owner's everyday laptop** (performance floor) and

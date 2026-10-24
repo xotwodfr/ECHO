@@ -1,17 +1,34 @@
 # ECHO — Acceptance Criteria
 
-Status: **Draft 2** · Last reviewed 2026-10-22
+Status: **Draft 2** (criteria unchanged; status below) · Last reviewed 2026-10-24
 Every criterion is testable. **Method:** U = Vitest unit, E = Playwright E2E, V = Playwright visual
 snapshot (deterministic mode), M = manual checklist, I = inspection (code/config review or a script),
 P = performance trace. **MS** = the milestone that must pass it (`IMPLEMENTATION_PLAN.md`). A milestone
 is not done until all of its criteria pass.
+
+## Status at 2026-10-24
+
+Every criterion that a test on this machine can decide has a test, and the suites pass (Vitest 1204,
+Playwright 384 in Chromium, Firefox and the isolated project). Evidence per criterion is in
+`docs/reviews/M1.md` … `M9.md` and `M8-security.md`. ECHO is deployed at https://echo.folk3s.com.
+**Still open**, grouped by what they wait for:
+
+| Waiting for | Criteria |
+|---|---|
+| **The owner's Cloudflare setting and first sign-in** | SEC-19 (TLS grade B → A with minimum TLS 1.2; cookie flags), DEP-03 M (on-box backup drill) |
+| **A Spotify app and Premium account** (manual checklist, `reviews/M7.md`) | PLAY-08, PLAY-09, the M parts of SP-01, SRCH-02, REL-04, BRW-02 |
+| **The owner's laptop and gaming PC** | PERF-01, the reference runs of PERF-03 and LYR-26 (measured here: 0.7 ms frame, 0.2 ms lyrics), REL-06 (8 h soak), DEP-04 under real Navidrome transcoding, VIS-03 client timing on real covers |
+| **People** | DS-05 (five-second test), A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes) |
+| **Owner decisions** | VIS-05 (+3 contrast floor, `reviews/M4.md`) |
+| **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
+| **Remote CI** (no repository URL yet) | DS-06 (baselines on CI), VIS-07 Firefox context-loss (runs under Xvfb in CI) |
 
 ---
 
 ## 0. Test conditions
 
 - **Reference clients (performance):** (1) **the owner's everyday laptop**, the performance floor:
-  its iGPU and native resolution, recorded in `docs/README.md` at M9 (Q-AC-1); (2) **the owner's
+  its iGPU and native resolution, to be recorded by the owner (Q-AC-1, `reviews/M9.md`); (2) **the owner's
   gaming PC**, which must reach tier T0. Browsers: Google Chrome stable (visual baselines), Chromium
   (Arch) and Firefox stable (functional parity).
 - **Reference server:** the owner's **Dell OptiPlex 7010 (i7-3770, 24 GB)** (CPU corrected in M1 from the real box) running ECHO and Navidrome
