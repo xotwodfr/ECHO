@@ -91,24 +91,42 @@ A candidate is accepted only if:
   is downgraded to `none` (static).
 - ID-keyed sources (S1 by Navidrome id, S2 by Spotify id) skip the text check.
 
-### 4.3 Spotify ID resolution for Navidrome tracks (enables S2)
+### 4.3 Spotify ID matching for Navidrome tracks (enables S2)
 
-Only when the user has connected Spotify (ECHO never uses Spotify credentials it doesn't have):
+Spicy Lyrics is keyed by Spotify track ID, so a Navidrome track needs one. **Rebuilt 2026-10-24
+(owner decision):** the old per-play lookup through the user's own Spotify connection (opt-in
+`lyrics.useSpotifyForLookup`, LI-08 as first built) never ran on the deployed server (no Spotify app,
+no connection) and is gone. Now (`src/server/lyrics/spotifyMatch.ts`):
 
-1. If the track has an ISRC: `GET /v1/search?q=isrc:<ISRC>&type=track&limit=1`.
-2. Else: `q=track:"<title>" artist:"<primary artist>"&type=track&limit=5`. Accept the best result with
-   duration within ±2 s and title similarity ≥ 0.9.
-3. Cache the mapping (`navidromeId → spotifyId | none`) for 30 days. As built (M7, security review):
-   the key also holds what the lookup used (the ISRC, or a hash of the normalised title, artist and
-   duration) and the Navidrome server, so a request with made-up metadata cannot pin a wrong id on
-   someone else's track; "none" lives 7 days (`src/server/lyrics/spotifyId.ts`).
+- **Storage.** `spotify_matches`, one row per Navidrome track per Navidrome server, kept until
+  corrected: the Spotify IDs found (best first, up to 5: several releases of one recording), the
+  matcher that found them, the matchers tried, and the track's metadata. "None found" is asked again
+  after 30 days.
+- **Metadata comes from Navidrome**, never from the request (`getSong`, or the sweep's `search3`), so
+  nobody can pin a wrong ID on a track for everyone.
+- **Matchers**, most precise first; a better one replaces a weaker match, nothing replaces a manual one:
 
-This uses the **requesting user's** own Spotify connection, server-side (the server holds that user's
-refresh token and can mint an access token). Users without a Spotify connection don't trigger lookups,
-but they still benefit from mappings already in the shared cache. It is a lookup to fetch lyrics, not
-a metadata service. Its fit with the Developer Terms (no "standalone metadata service") is recorded as
-Q-LI-2. Per-user setting: "Use my Spotify account to find lyrics for my library" (default **off**,
-explained in Settings).
+| Matcher | How | Needs |
+|---|---|---|
+| `manual` | An admin pastes a Spotify link (Admin → Server → Spotify matching, or the Stage's ⓘ → "Fix Spotify match…") | admin |
+| `spotify` | Spotify `GET /v1/search`: `isrc:<ISRC>`, else `track:"…" artist:"<primary>"`, duration ±2 s, title similarity ≥ 0.9 | the app's **client secret** (client-credentials token; no user account involved) |
+| `lb-mbid` | ISRC → MusicBrainz `GET /ws/2/isrc/{isrc}` → recording MBID → ListenBrainz `POST /spotify-id-from-mbid/json` | nothing; MusicBrainz 1 req/s |
+| `lb-meta` | ListenBrainz `POST labs.api.listenbrainz.org/spotify-id-from-metadata/json` (artist, release, title), batches of 100. A miss whose title carries a credit or same-recording tag ("feat. …", "Album Version", "Remastered", "Explicit") is asked again without it; remix, live, demo and edit tags are kept (other timings) | nothing |
+
+- **On play** (`GET /lyrics` for a `navidrome:` track): the stored match, else the fast matchers
+  (`spotify` if configured, else `lb-meta`) within 1.5 s. The matched ID is part of the lyrics cache
+  key, so a new or corrected match is looked up afresh. Spicy tries up to 3 of the IDs, in order, on
+  404.
+- **The sweep**: a minute after start and daily, each Navidrome server once (through its first
+  connected user, admins first), `search3` with an empty query in pages of 500: pass 1 the fast
+  matchers, pass 2 MusicBrainz for what is left and has an ISRC or recording ID. Resumable: nothing is
+  asked twice. Admin → Server shows progress, "Match now" and the misses; "Match the Navidrome library
+  with Spotify in the background" switches it off (default on).
+- **Measured 2026-10-24** on the owner's library (22,689 tracks, 74% with ISRC): `lb-meta` 60% on a
+  300-track sample (0.7 s per 100); `lb-mbid` 6 of 10 sampled ISRCs. Odesli/song.link was tried and
+  is closed (`PUBLIC_API_ACCESS_DEPRECATED`).
+- **Privacy.** The sweep sends the library's titles, artists, albums and ISRCs to ListenBrainz and
+  MusicBrainz (and Spotify, with a client secret). The admin switch says so.
 
 ### 4.4 Spotify tracks
 

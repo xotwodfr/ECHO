@@ -37,7 +37,6 @@ const SCHEMA = {
     globalOffsetMs: { check: intIn(-2000, 2000, 50), default: 0 },
     showUnsynced: { check: bool, default: true },
     announceLines: { check: bool, default: false },
-    useSpotifyForLookup: { check: bool, default: false },
     disabledSources: {
       check: subsetOf('navidrome', 'spicy', 'netease', 'lrclib', 'navidrome-plain'),
       default: [] as string[],

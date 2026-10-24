@@ -201,6 +201,11 @@ describe('SEC-11: isolation between users', () => {
       ['POST', '/api/v1/admin/invites'],
       ['DELETE', '/api/v1/admin/invites/0123456789abcdef'],
       ['GET', '/api/v1/admin/audit'],
+      ['GET', '/api/v1/admin/spotify-matching'],
+      ['POST', '/api/v1/admin/spotify-matching/run'],
+      ['GET', '/api/v1/admin/spotify-matching/misses'],
+      ['GET', `/api/v1/admin/spotify-matching/tracks/${mock.songs[0]?.id}`],
+      ['PUT', `/api/v1/admin/spotify-matching/tracks/${mock.songs[0]?.id}`],
     ] as const)
       expect(
         (await as(B, m, p, m === 'GET' || m === 'DELETE' ? undefined : {})).status,

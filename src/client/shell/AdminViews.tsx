@@ -4,7 +4,7 @@ import { strings } from '../strings.ts';
 import { Button, Field, Pill } from '../ui/controls.tsx';
 import { ConfirmDialog } from '../ui/overlays.tsx';
 import { BlockError, SectionLoading } from '../ui/states.tsx';
-import { AdminServerSection } from './SpotifyViews.tsx';
+import { AdminServerSection, SpotifyMatchingSection } from './SpotifyViews.tsx';
 
 // Settings → Admin (SETTINGS_AND_SECURITY.md §4.2, §7.2, §7.3; IMPLEMENTATION_PLAN.md M8 task 3):
 // Server (the Spotify app, gates, Spicy key, "require TOTP for all"), Users & invites, Audit log.
@@ -44,6 +44,7 @@ export function AdminSection() {
   return (
     <>
       <AdminServerSection />
+      <SpotifyMatchingSection />
       <UsersSection />
       <AuditSection />
     </>

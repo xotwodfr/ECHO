@@ -29,6 +29,8 @@ export interface LookupInput {
   durationMs?: number;
   isrc?: string;
   spotifyId?: string;
+  /** Other Spotify ids the same Navidrome track matched (other releases), tried after spotifyId. */
+  spotifyAlt?: string[];
   navidromeId?: string;
 }
 
@@ -333,11 +335,17 @@ export function spicySource(opts: {
     metadataKeyed: false,
     eligible: (i) => !!i.spotifyId && SPOTIFY_ID.test(i.spotifyId) && !!opts.key(),
     async fetch(i, signal) {
-      const res = await f(`${opts.baseUrl}/v1/lyrics/${i.spotifyId}`, {
-        headers: { Authorization: `Bearer ${opts.key()}` },
-        signal,
-      });
-      if (res.status === 404) return notFound;
+      // A matched Navidrome track may carry ids of several releases: the first one Spicy knows.
+      const ids = [i.spotifyId, ...(i.spotifyAlt ?? [])].filter((x) => SPOTIFY_ID.test(x ?? ''));
+      let res: Response | undefined;
+      for (const id of ids.slice(0, 3)) {
+        res = await f(`${opts.baseUrl}/v1/lyrics/${id}`, {
+          headers: { Authorization: `Bearer ${opts.key()}` },
+          signal,
+        });
+        if (res.status !== 404) break;
+      }
+      if (!res || res.status === 404) return notFound;
       if (!res.ok) return httpError(res.status, res.headers.get('retry-after'));
       const env = (await res.json()) as { Body?: SpicyBody };
       if (!env.Body?.Type)

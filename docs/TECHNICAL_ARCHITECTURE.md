@@ -55,7 +55,8 @@ The deciding constraints are:
 │                              │ master key /run/secrets/echo_master_key                    │
 └──────────────────────────────┼────────────────────────────────────────────────────────────┘
                                │ outbound HTTPS: accounts.spotify.com, api.spotify.com,
-                               │                 api.spicylyrics.org, lrclib.net, music.163.com, i.scdn.co
+                               │                 api.spicylyrics.org, lrclib.net, music.163.com, i.scdn.co,
+                               │                 labs.api.listenbrainz.org, musicbrainz.org
         ┌──────────────────────┴───────────────┐
    Browser client (laptop, gaming PC)     Future: desktop app, mobile app
    Spotify Web Playback SDK runs here      (same /api/v1, device tokens)
@@ -171,7 +172,7 @@ dependencies.
 │  db/         better-sqlite3, migrations                                                  │
 └──────┬────────────────────┬────────────────────────┬─────────────────────────────────────┘
        ▼                    ▼                        ▼
-  navidrome:4533     accounts/api.spotify.com   api.spicylyrics.org · lrclib.net · music.163.com
+  navidrome:4533     accounts/api.spotify.com   api.spicylyrics.org · lrclib.net · music.163.com · ListenBrainz · MusicBrainz
 ```
 
 ### 4.1 Why the stage is not React

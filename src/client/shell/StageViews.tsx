@@ -4,12 +4,14 @@ import type { LyricsDoc } from '../../shared/types.ts';
 import { pinLyricsSource } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
 import { prefsStore } from '../prefs.ts';
+import { sessionStore } from '../session.ts';
 import { lyricHost, lyricOffset, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
-import { Link } from './link.tsx';
+import { Link, useView } from './link.tsx';
+import { fixTrackStore } from './SpotifyViews.tsx';
 
 // What sits on the Stage above the room (PRODUCT_SPEC.md §6.1): the top chrome, and the view mode's
 // content. The lyric field itself is drawn by the Stage engine into the host element below.
@@ -142,8 +144,15 @@ function AttributionText({ attribution }: { attribution: LyricsDoc['attribution'
 
 /** ⓘ: which source this is, and "always use this source for this track" (§4.1 pins). */
 function SourceMenu() {
-  const { doc, pinnedSource } = useStore(lyricsStore);
+  const { doc, pinnedSource, trackKey } = useStore(lyricsStore);
+  const session = useStore(sessionStore);
+  const navigate = useView((s) => s.navigate);
   if (!doc || doc.source === 'fixture') return null;
+  // An admin can correct a Navidrome track's Spotify match, which picks its Spicy Lyrics.
+  const navidromeId =
+    session.status === 'signedIn' && session.role === 'admin' && trackKey?.startsWith('navidrome:')
+      ? trackKey.slice('navidrome:'.length)
+      : null;
   const mark = (on: boolean, label: string) => (on ? `${label} ✓` : label);
   return (
     <Menu
@@ -158,6 +167,17 @@ function SourceMenu() {
           label: mark(pinnedSource === id, strings.stage.sourceUse(name)),
           onSelect: () => void pinLyricsSource(id),
         })),
+        ...(navidromeId
+          ? [
+              {
+                label: strings.stage.fixMatch,
+                onSelect: () => {
+                  fixTrackStore.setState({ id: navidromeId });
+                  navigate({ view: 'settings', section: 'admin' });
+                },
+              },
+            ]
+          : []),
       ]}
     />
   );

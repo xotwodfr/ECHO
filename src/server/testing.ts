@@ -9,6 +9,7 @@ import { openDb } from './db/db.ts';
 import { type AppDeps, createApp } from './index.ts';
 import { createLyricsCache } from './lyrics/cache.ts';
 import { createResolver } from './lyrics/resolve.ts';
+import { createSpotifyMatcher } from './lyrics/spotifyMatch.ts';
 import { fallbackPalette } from './palette/extract.ts';
 import type { PaletteService } from './palette/service.ts';
 
@@ -43,6 +44,19 @@ export function testDeps(over: Partial<AppDeps> = {}) {
       }),
       sourcesFor: () => [],
       scopeFor: () => 'none',
+      // No network in tests: every matcher call fails, so nothing is matched unless a test says so.
+      matcher: createSpotifyMatcher({
+        db: auth.db,
+        now: auth.now,
+        listenbrainzUrl: 'https://lb.test',
+        musicbrainzUrl: 'https://mb.test',
+        spotifyApiUrl: 'https://api.spotify.test',
+        userAgent: 'ECHO/test',
+        spotifyAppToken: async () => null,
+        libraries: async () => [],
+        sweepEnabled: () => true,
+        fetch: async () => new Response('{}', { status: 503 }),
+      }),
     },
     spotify: {
       db: auth.db,

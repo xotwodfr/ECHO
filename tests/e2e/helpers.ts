@@ -19,8 +19,12 @@ const PASSWORD = 'correct horse battery staple';
  * set as the cookie: signing in through the form is the account spec's job, and doing it in every
  * spec would trip the login rate limit (10 a minute per address, SETTINGS_AND_SECURITY.md §4.4).
  */
-export async function signedInWithNavidrome(page: Page, prefix = 'u') {
-  const user = await signedIn(page, prefix);
+export async function signedInWithNavidrome(
+  page: Page,
+  prefix = 'u',
+  role: 'user' | 'admin' = 'user',
+) {
+  const user = await signedIn(page, prefix, role);
   await page.goto('/settings/account');
   await page.getByLabel('Navidrome username').fill('ada');
   await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');

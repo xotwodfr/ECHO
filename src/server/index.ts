@@ -8,7 +8,7 @@ import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
 import { accountRoutes } from './account.ts';
-import { adminRoutes, spicyKey, spotifySettings } from './admin.ts';
+import { adminRoutes, matchLibrary, spicyKey, spotifySettings } from './admin.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
@@ -27,7 +27,7 @@ import {
   neteaseSource,
   spicySource,
 } from './lyrics/sources.ts';
-import { createSpotifyIds } from './lyrics/spotifyId.ts';
+import { createSpotifyMatcher } from './lyrics/spotifyMatch.ts';
 import {
   type NavidromeDeps,
   navidromeClientFor,
@@ -42,6 +42,7 @@ import { fetchSpotifyCover, spotifyArt } from './palette/spotify.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
 import {
+  createSpotifyAppToken,
   createSpotifyTokens,
   type SpotifyDeps,
   type SpotifyTokens,
@@ -255,24 +256,51 @@ if (import.meta.main) {
     publicOrigin: config.publicOrigin,
   };
   const spotifyTokens = createSpotifyTokens(spotifyDeps);
-  const spotifyIds = createSpotifyIds({
+  const matcher = createSpotifyMatcher({
     db: auth.db,
     now: Date.now,
-    apiUrl: config.spotifyApiUrl,
-    // LI-08: only with the user's own connection, and only when they have opted in.
-    tokenFor: async (userId) => {
-      if (!userSettings(auth.db, userId).lyrics.useSpotifyForLookup) return null;
-      const t = await spotifyTokens.accessToken(userId);
-      return 'error' in t ? null : t.accessToken;
+    log,
+    listenbrainzUrl: config.listenbrainzUrl,
+    musicbrainzUrl: config.musicbrainzUrl,
+    spotifyApiUrl: config.spotifyApiUrl,
+    userAgent,
+    spotifyAppToken: createSpotifyAppToken(spotifyDeps),
+    sweepEnabled: () => matchLibrary(auth.db),
+    // Each Navidrome server once, through the first user connected to it (admins first).
+    libraries: async () => {
+      const users = auth.db
+        .prepare(
+          `SELECT c.user_id FROM connections c JOIN users u ON u.id = c.user_id
+           WHERE c.provider = 'navidrome' AND c.status = 'ok' AND u.disabled = 0
+           ORDER BY u.role = 'admin' DESC, u.id`,
+        )
+        .pluck()
+        .all() as number[];
+      const seen = new Set<string>();
+      const out = [];
+      for (const id of users) {
+        const scope = navidromeUrlOf(auth.db, id);
+        if (seen.has(scope)) continue;
+        const client = await navidromeClientFor(navidrome, id).catch(() => null);
+        if (!client) continue;
+        seen.add(scope);
+        out.push({ scope, client });
+      }
+      return out;
     },
   });
+  // The library sweep: a minute after start (let the server settle), then daily.
+  setTimeout(() => void matcher.sweep(), 60_000).unref();
+  setInterval(() => void matcher.sweep(), 86_400_000).unref();
   const lyrics: LyricsDeps = {
     db: auth.db,
     cache: lyricsCache,
     resolver: createResolver(),
     scopeFor: (userId) => navidromeUrlOf(auth.db, userId),
     spotifySyncAllowed: () => spotifySettings(auth.db).gates.syncedLyrics,
-    spotifyIdFor: (userId, scope, input) => spotifyIds.idFor(userId, scope, input),
+    spotifyIdsFor: (userId, scope, navidromeId) =>
+      matcher.idsFor(scope, navidromeId, () => navidromeClientFor(navidrome, userId)),
+    matcher,
     sourcesFor: (userId) => {
       const client = () => navidromeClientFor(navidrome, userId);
       const off: string[] = userSettings(auth.db, userId).lyrics.disabledSources;

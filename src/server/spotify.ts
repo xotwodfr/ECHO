@@ -1,6 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
-import { SPOTIFY_SEATS, spotifySeatsUsed, spotifySettings } from './admin.ts';
+import { SPOTIFY_SEATS, spotifyClientSecret, spotifySeatsUsed, spotifySettings } from './admin.ts';
 import { audit } from './audit.ts';
 import type { AuthEnv } from './auth/routes.ts';
 import type { Sealer } from './crypto.ts';
@@ -58,9 +58,49 @@ export type TokenResult =
   | { error: 'not_connected' | 'expired' | 'unavailable' };
 
 /**
+ * The app's own token (client credentials) for Spotify's search, used only to match Navidrome tracks
+ * (lyrics/spotifyMatch.ts): no user's account is involved. Null without a saved client secret or
+ * when Spotify refuses; cached until a minute before it expires.
+ */
+export function createSpotifyAppToken(deps: SpotifyDeps) {
+  const f: typeof fetch = (url, init) => (deps.fetch ?? fetch)(url, init);
+  let cached: { token: string; expiresAt: number; for: string } | null = null;
+  return async (): Promise<string | null> => {
+    const { clientId } = spotifySettings(deps.db);
+    const secret = spotifyClientSecret(deps.db, deps.sealer);
+    if (!clientId || !secret) return null;
+    if (cached && cached.for === clientId && cached.expiresAt > deps.now()) return cached.token;
+    try {
+      const res = await f(`${deps.accountsUrl}/api/token`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          authorization: `Basic ${Buffer.from(`${clientId}:${secret}`).toString('base64')}`,
+        },
+        body: new URLSearchParams({ grant_type: 'client_credentials' }),
+        signal: AbortSignal.timeout(8000),
+      });
+      const b = (await res.json().catch(() => ({}))) as {
+        access_token?: string;
+        expires_in?: number;
+      };
+      if (!res.ok || !b.access_token) return null;
+      cached = {
+        token: b.access_token,
+        expiresAt: deps.now() + ((b.expires_in ?? 3600) - 60) * 1000,
+        for: clientId,
+      };
+      return cached.token;
+    } catch {
+      return null;
+    }
+  };
+}
+
+/**
  * Each connected user's tokens: the sealed refresh token in `connections`, the access token in
  * memory, refreshed with under 5 minutes left, one refresh per user at a time (Spotify may rotate
- * the refresh token). Shared by the routes and the server's own lookups (lyrics/spotifyId.ts).
+ * the refresh token).
  */
 export function createSpotifyTokens(deps: SpotifyDeps) {
   const f: typeof fetch = (url, init) => (deps.fetch ?? fetch)(url, init);

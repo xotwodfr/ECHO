@@ -50,7 +50,7 @@ fixtures; any fixture at any moment: `/?fixture=ballad-word&frame=60000`).
 | `ECHO_DATA_DIR` | `./data` | Database and caches (`/data` in the container) |
 | `ECHO_MASTER_KEY_FILE` | `/run/secrets/echo_master_key` | The Docker secret; the server refuses to start without it |
 | `ECHO_NAVIDROME_URL` | unset | The default Navidrome URL, always allowed (e.g. `http://navidrome:4533` on a shared Docker network) |
-| `ECHO_LRCLIB_URL`, `ECHO_SPICY_URL`, `ECHO_NETEASE_URL`, `ECHO_SPOTIFY_ACCOUNTS_URL`, `ECHO_SPOTIFY_API_URL`, `ECHO_SPOTIFY_IMAGE_URL` | the public services | Overridable for tests (the E2E mocks) |
+| `ECHO_LRCLIB_URL`, `ECHO_SPICY_URL`, `ECHO_NETEASE_URL`, `ECHO_LISTENBRAINZ_URL`, `ECHO_MUSICBRAINZ_URL`, `ECHO_SPOTIFY_ACCOUNTS_URL`, `ECHO_SPOTIFY_API_URL`, `ECHO_SPOTIFY_IMAGE_URL` | the public services | Overridable for tests (the E2E mocks) |
 | `ECHO_DEV_FIXTURES`, `ECHO_CSP_REPORT_FILE` | unset | E2E only |
 
 See `.env.example`. Invalid values stop the server at start with a clear message. Secrets never go in

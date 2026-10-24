@@ -1,11 +1,14 @@
 import { createHash } from 'node:crypto';
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { LyricsDoc } from '../../shared/types.ts';
+import { requireAdmin } from '../admin.ts';
+import { audit } from '../audit.ts';
 import type { AuthEnv } from '../auth/routes.ts';
 import type { Db } from '../db/db.ts';
 import type { LyricsCache } from './cache.ts';
 import { normalise, PRECEDENCE, type Resolver, type Tried } from './resolve.ts';
 import type { LookupInput, Source, SourceId } from './sources.ts';
+import { parseSpotifyId, type SpotifyMatcher } from './spotifyMatch.ts';
 
 // GET /api/v1/lyrics (LYRICS_INTEGRATION.md §3): cache first, then the resolver; a late improvement
 // replaces the cache entry for next time. The user's per-track override (timing offset and source
@@ -19,8 +22,10 @@ export interface LyricsDeps {
   sourcesFor: (userId: number) => Source[];
   /** The user's Navidrome URL: a Navidrome track key means something only on its own server. */
   scopeFor: (userId: number) => string;
-  /** A Navidrome track's Spotify id, so Spicy can serve it (§4.3, spotifyId.ts). */
-  spotifyIdFor?: (userId: number, scope: string, input: LookupInput) => Promise<string | undefined>;
+  /** A Navidrome track's Spotify ids, best first, so Spicy can serve it (§4.3, spotifyMatch.ts). */
+  spotifyIdsFor?: (userId: number, scope: string, navidromeId: string) => Promise<string[]>;
+  /** Admin → Server → Spotify matching; absent in tests that do not need it. */
+  matcher?: SpotifyMatcher;
   /** Gate G2 (PLAYBACK_ARCHITECTURE.md §4.6): timed lyrics for Spotify tracks. Default on. */
   spotifySyncAllowed?: () => boolean;
 }
@@ -99,15 +104,24 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
           normalise(input.artist),
           normalise(input.album ?? ''),
           Math.round((input.durationMs ?? 0) / 1000),
-          input.isrc ?? '', // it picks the Spotify id, so the Spicy answer (spotifyId.ts)
+          input.isrc ?? '',
         ].join('\u0000'),
       )
       .digest('hex')
       .slice(0, 16);
+    // The Navidrome track's Spotify match picks the Spicy answer, so it is part of the key: a new
+    // or corrected match is looked up afresh.
+    if (provider === 'navidrome' && providerId && deps.spotifyIdsFor) {
+      const ids = await deps.spotifyIdsFor(user.id, deps.scopeFor(user.id), providerId);
+      if (ids[0]) {
+        input.spotifyId = ids[0];
+        input.spotifyAlt = ids.slice(1);
+      }
+    }
     // Sources the user turned off: their answers must not come back from the shared cache.
     const sources = deps.sourcesFor(user.id);
     const off = PRECEDENCE.filter((id) => !sources.some((s) => s.id === id));
-    const key = `${scope}${trackKey}|${meta}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}${off.length ? `|-${off.join(',')}` : ''}`;
+    const key = `${scope}${trackKey}|${meta}${provider === 'navidrome' && input.spotifyId ? `|sp:${input.spotifyId}` : ''}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}${off.length ? `|-${off.join(',')}` : ''}`;
 
     // The cache keeps the full document; G2 applies on the way out, so switching it takes effect
     // on the next request (SP-04).
@@ -119,13 +133,6 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
 
     // Listeners of the same track at the same moment share one lookup.
     let p = inflight.get(key);
-    if (!p) {
-      if (provider === 'navidrome' && deps.spotifyIdFor) {
-        const spotifyId = await deps.spotifyIdFor(user.id, deps.scopeFor(user.id), input);
-        if (spotifyId) input.spotifyId = spotifyId;
-      }
-      p = inflight.get(key); // another request may have started meanwhile
-    }
     if (!p) {
       p = deps.resolver
         .resolve(input, sources, {
@@ -184,6 +191,49 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       .run(c.var.user.id, trackKey, now.offsetMs, now.pinnedSource);
     return c.json(now);
   });
+
+  // ---- Admin → Server → Spotify matching (§4.3) ----
+  const m = deps.matcher;
+  if (m) {
+    const admin = [requireUser, requireAdmin] as const;
+    const view = (userId: number) => ({
+      status: m.status(),
+      counts: m.counts(deps.scopeFor(userId)),
+    });
+    app.get('/admin/spotify-matching', ...admin, (c) => c.json(view(c.var.user.id)));
+    app.post('/admin/spotify-matching/run', ...admin, (c) => {
+      void m.sweep();
+      return c.json(view(c.var.user.id), 202);
+    });
+    app.get('/admin/spotify-matching/misses', ...admin, (c) => {
+      const offset = Math.max(0, Number(c.req.query('offset') ?? 0) || 0);
+      const limit = Math.min(200, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
+      return c.json(m.misses(deps.scopeFor(c.var.user.id), offset, limit));
+    });
+    app.get('/admin/spotify-matching/tracks/:id', ...admin, (c) => {
+      const id = c.req.param('id');
+      if (!KEY.test(id)) return c.json({ error: 'bad_track_key' }, 400);
+      return c.json({ match: m.match(deps.scopeFor(c.var.user.id), id) });
+    });
+    // A correction holds for everyone on this Navidrome server, so only an admin makes it.
+    app.put('/admin/spotify-matching/tracks/:id', ...admin, async (c) => {
+      const id = c.req.param('id');
+      if (!KEY.test(id)) return c.json({ error: 'bad_track_key' }, 400);
+      let b: { spotify?: unknown };
+      try {
+        b = await c.req.json();
+      } catch {
+        return c.json({ error: 'bad_spotify_id' }, 400);
+      }
+      const sid = typeof b.spotify === 'string' ? parseSpotifyId(b.spotify) : null;
+      if (b.spotify !== null && !sid)
+        return c.json({ error: 'bad_spotify_id', detail: 'A Spotify track link, URI or id' }, 400);
+      const scope = deps.scopeFor(c.var.user.id);
+      m.setManual(scope, id, sid);
+      audit(deps.db, Date.now(), c.var.user.id, 'admin.spotify_match', { track: id, set: !!sid });
+      return c.json({ match: m.match(scope, id) });
+    });
+  }
 
   return app;
 }

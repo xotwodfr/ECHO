@@ -19,7 +19,6 @@ export interface Prefs {
     globalOffsetMs: number;
     showUnsynced: boolean;
     announceLines: boolean;
-    useSpotifyForLookup: boolean;
     disabledSources: string[];
   };
   visuals: {
@@ -45,7 +44,6 @@ export const DEFAULT_PREFS: Prefs = {
     globalOffsetMs: 0,
     showUnsynced: true,
     announceLines: false,
-    useSpotifyForLookup: false,
     disabledSources: [],
   },
   visuals: {

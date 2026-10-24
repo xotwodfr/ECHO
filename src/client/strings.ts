@@ -301,9 +301,6 @@ export const strings = {
       seats_full: 'All 5 Spotify seats on this server are taken.',
       not_configured: 'The admin has not set up a Spotify app on this server yet.',
     } as Record<string, string>,
-    lookup: 'Use my Spotify account to find lyrics for my library',
-    lookupHint:
-      'Looks up each Navidrome track on Spotify (by ISRC, or title and artist) so Spicy Lyrics can find it. Found matches are shared on this server.',
     reconnecting: 'Reconnecting to Spotify…',
     retry: 'Retry',
     expired: 'Spotify sign-in expired.',
@@ -399,6 +396,7 @@ export const strings = {
     },
     sourceMenu: 'Lyrics source',
     sourceAuto: 'Choose automatically',
+    fixMatch: 'Fix Spotify match…',
     sourceUse: (name: string) => `Use ${name} for this track`,
     viewLabel: 'Stage view',
     views: { lyrics: 'Lyrics', cover: 'Cover', visual: 'Visual' },

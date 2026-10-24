@@ -23,13 +23,15 @@ function setup() {
 const ID = 'a'.repeat(32);
 
 describe('Spotify server settings', () => {
-  it('defaults: no Client ID, both gates on, no seats used', async () => {
+  it('defaults: no Client ID or secret, both gates on, no seats used, matching on', async () => {
     const { t, admin } = setup();
     const res = await call(t.app, 'GET', '/api/v1/admin/settings', undefined, admin.cookie);
     expect((await res.json()).spotify).toEqual({
       clientId: null,
       gates: { artPalette: true, syncedLyrics: true },
       seats: { used: 0, max: 5 },
+      clientSecretSaved: false,
+      matchLibrary: true,
     });
   });
 

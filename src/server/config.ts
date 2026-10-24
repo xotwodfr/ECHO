@@ -17,6 +17,8 @@ export interface Config {
   lrclibUrl: string; // LYRICS_INTEGRATION.md S3 (overridable for E2E mocks)
   spicyUrl: string; // S2
   neteaseUrl: string; // S5
+  listenbrainzUrl: string; // Spotify matching (§4.3)
+  musicbrainzUrl: string;
   spotifyAccountsUrl: string; // PKCE and tokens (overridable for E2E mocks)
   spotifyApiUrl: string;
   spotifyImageUrl: string; // where i.scdn.co covers are fetched from (overridable for E2E mocks)
@@ -50,6 +52,11 @@ export function loadConfig(env: Env = process.env): Config {
     devFixtures: env.ECHO_DEV_FIXTURES === '1',
     lrclibUrl: (env.ECHO_LRCLIB_URL || 'https://lrclib.net').replace(/\/+$/, ''),
     neteaseUrl: (env.ECHO_NETEASE_URL || 'https://music.163.com').replace(/\/+$/, ''),
+    listenbrainzUrl: (env.ECHO_LISTENBRAINZ_URL || 'https://labs.api.listenbrainz.org').replace(
+      /\/+$/,
+      '',
+    ),
+    musicbrainzUrl: (env.ECHO_MUSICBRAINZ_URL || 'https://musicbrainz.org').replace(/\/+$/, ''),
     spicyUrl: (env.ECHO_SPICY_URL || 'https://api.spicylyrics.org').replace(/\/+$/, ''),
     spotifyAccountsUrl: (env.ECHO_SPOTIFY_ACCOUNTS_URL || 'https://accounts.spotify.com').replace(
       /\/+$/,

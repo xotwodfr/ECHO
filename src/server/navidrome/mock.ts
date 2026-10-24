@@ -208,6 +208,18 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         JSON.stringify({ id: 'mock-user', display_name: 'Ada', product: faults.spotifyProduct }),
       );
     }
+    // ListenBrainz and MusicBrainz (Spotify matching in E2E) know no track.
+    if (req.url?.startsWith('/spotify-id-from-')) {
+      const chunks: Buffer[] = [];
+      for await (const c of req) chunks.push(c as Buffer);
+      const asked = JSON.parse(Buffer.concat(chunks).toString() || '[]') as unknown[];
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(JSON.stringify(asked.map(() => ({ spotify_track_ids: [] }))));
+    }
+    if (req.url?.startsWith('/ws/2/')) {
+      res.writeHead(404, { 'content-type': 'application/json' });
+      return res.end('{"error":"Not Found"}');
+    }
     // LRCLIB's search and NetEase (ECHO_NETEASE_URL in E2E) know nothing: the exact lookup decides.
     if (req.url?.startsWith('/api/search')) {
       res.writeHead(200, { 'content-type': 'application/json' });

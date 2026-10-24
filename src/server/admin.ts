@@ -10,7 +10,8 @@ import type { Db } from './db/db.ts';
 // Admin → Server settings (SETTINGS_AND_SECURITY.md §6.2, §6.3, §7.2): the Spicy Lyrics secret key,
 // sealed in `server_settings`, write-only (the API says whether one is saved, never what it is),
 // and read only by the server's lyric source; the Spotify app's Client ID (public in PKCE), its
-// seats, and the policy gates G1/G2 (PLAYBACK_ARCHITECTURE.md §4.6, both on by default).
+// seats, its optional client secret (sealed, write-only; only for Spotify matching), the library
+// matching switch, and the policy gates G1/G2 (PLAYBACK_ARCHITECTURE.md §4.6, both on by default).
 
 const SPICY = { table: 'server_settings', rowId: 'lyrics.spicyKey', column: 'secret_enc' } as const;
 
@@ -21,6 +22,23 @@ export function spicyKey(db: Db, sealer: Sealer): string | null {
     .get() as { secret_enc: string | null } | undefined;
   return row?.secret_enc ? sealer.tryOpen(row.secret_enc, SPICY) : null;
 }
+
+const SPOTIFY_SECRET = {
+  table: 'server_settings',
+  rowId: 'spotify.clientSecret',
+  column: 'secret_enc',
+} as const;
+
+/** The Spotify app's client secret (only for matching with Spotify's search), or null. */
+export function spotifyClientSecret(db: Db, sealer: Sealer): string | null {
+  const row = db
+    .prepare("SELECT secret_enc FROM server_settings WHERE key = 'spotify.clientSecret'")
+    .get() as { secret_enc: string | null } | undefined;
+  return row?.secret_enc ? sealer.tryOpen(row.secret_enc, SPOTIFY_SECRET) : null;
+}
+
+/** Admin → Server → "Match the library with Spotify in the background" (on by default). */
+export const matchLibrary = (db: Db) => setting(db, 'spotify.matchLibrary', true);
 
 /** Development Mode allows 5 Spotify users per app (PLAYBACK_ARCHITECTURE.md §4.1). */
 export const SPOTIFY_SEATS = 5;
@@ -78,6 +96,8 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
     spotify: {
       ...spotifySettings(deps.db),
       seats: { used: spotifySeatsUsed(deps.db), max: SPOTIFY_SEATS },
+      clientSecretSaved: spotifyClientSecret(deps.db, deps.sealer) !== null,
+      matchLibrary: matchLibrary(deps.db),
     },
   });
 
@@ -86,7 +106,12 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
   app.put('/admin/settings', requireUser, requireAdmin, async (c: Context<AuthEnv>) => {
     let b: {
       lyrics?: { spicyKey?: unknown };
-      spotify?: { clientId?: unknown; gates?: { artPalette?: unknown; syncedLyrics?: unknown } };
+      spotify?: {
+        clientId?: unknown;
+        clientSecret?: unknown;
+        matchLibrary?: unknown;
+        gates?: { artPalette?: unknown; syncedLyrics?: unknown };
+      };
       auth?: { requireTotpForAll?: unknown };
     };
     try {
@@ -104,6 +129,16 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
       gates.some(([k, v]) => !['artPalette', 'syncedLyrics'].includes(k) || typeof v !== 'boolean')
     )
       return c.json({ error: 'bad_gate' }, 400);
+    const secret = sp?.clientSecret;
+    if (
+      secret !== undefined &&
+      secret !== null &&
+      (typeof secret !== 'string' || !CLIENT_ID.test(secret.trim()))
+    )
+      return c.json({ error: 'bad_client_secret', detail: '32 hexadecimal characters' }, 400);
+    const match = sp?.matchLibrary;
+    if (match !== undefined && typeof match !== 'boolean')
+      return c.json({ error: 'bad_setting' }, 400);
     const totpAll = b.auth?.requireTotpForAll;
     if (totpAll !== undefined && typeof totpAll !== 'boolean')
       return c.json({ error: 'bad_setting' }, 400);
@@ -129,6 +164,21 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
       audit(deps.db, deps.now(), c.var.user.id, 'admin.spotify_client_id', {
         set: Boolean(id),
       });
+    }
+    if (secret !== undefined) {
+      deps.db
+        .prepare(
+          `INSERT INTO server_settings (key, value_json, secret_enc) VALUES ('spotify.clientSecret', NULL, ?)
+           ON CONFLICT (key) DO UPDATE SET secret_enc = excluded.secret_enc`,
+        )
+        .run(secret === null ? null : deps.sealer.seal(secret.trim(), SPOTIFY_SECRET));
+      audit(deps.db, deps.now(), c.var.user.id, 'admin.spotify_client_secret', {
+        set: secret !== null,
+      });
+    }
+    if (typeof match === 'boolean') {
+      putSetting(deps.db, 'spotify.matchLibrary', match);
+      audit(deps.db, deps.now(), c.var.user.id, 'admin.spotify_match_library', { on: match });
     }
     for (const [k, v] of gates) {
       putSetting(deps.db, `spotify.gates.${k}`, v);

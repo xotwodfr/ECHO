@@ -485,7 +485,7 @@ paths:
               type: object
               additionalProperties: false
               properties:
-                lyrics: { type: object, additionalProperties: false, properties: { useSpotifyForLookup: { type: boolean }, disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off } } }
+                lyrics: { type: object, additionalProperties: false, properties: { disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off } } }
       responses:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/UserSettings' } } } }
         '400': { description: An unknown key or a wrong type }
@@ -590,6 +590,46 @@ paths:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { type: object, required: [id, at, event], properties: { id: { type: integer }, at: { type: integer }, event: { type: string }, username: { type: [string, 'null'] }, detail: { type: [object, 'null'] } } } } } } }
         '403': { description: Not an admin }
 
+  /admin/spotify-matching:
+    get:
+      summary: Spotify matching for this admin's Navidrome server (LYRICS_INTEGRATION.md §4.3)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SpotifyMatching' } } } }
+        '403': { description: Not an admin }
+  /admin/spotify-matching/run:
+    post:
+      summary: Start a library sweep now (no-op while one runs or when switched off)
+      responses:
+        '202': { description: Started, content: { application/json: { schema: { $ref: '#/components/schemas/SpotifyMatching' } } } }
+        '403': { description: Not an admin }
+  /admin/spotify-matching/misses:
+    get:
+      summary: Tracks tried without a match, by artist, album, title
+      parameters:
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200 } }
+      responses:
+        '200':
+          description: OK
+          content: { application/json: { schema: { type: array, items: { type: object, properties: { id: { type: string }, title: { type: string }, artist: { type: string }, album: { type: [string, 'null'] }, isrc: { type: [string, 'null'] } } } } } }
+        '403': { description: Not an admin }
+  /admin/spotify-matching/tracks/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: The Navidrome track id }
+    get:
+      summary: One track's match
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SpotifyMatch' } } } }
+        '403': { description: Not an admin }
+    put:
+      summary: Correct a track's match for everyone on this Navidrome server
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [spotify], properties: { spotify: { type: [string, 'null'], description: 'A Spotify track link, URI or id; null forgets the match and matches again' } } } } }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/SpotifyMatch' } } } }
+        '400': { description: Not a Spotify track }
+        '403': { description: Not an admin }
   /admin/settings:
     get:
       summary: Server settings (admins only); secrets are reported as saved or not, never returned
@@ -614,6 +654,8 @@ paths:
                   type: object
                   properties:
                     clientId: { type: [string, 'null'], pattern: '^[0-9a-f]{32}$', description: The Spotify app's Client ID (null removes it) }
+                    clientSecret: { type: [string, 'null'], pattern: '^[0-9a-f]{32}$', description: 'Optional, write-only: only for Spotify matching with an app token (null removes it)' }
+                    matchLibrary: { type: boolean, description: Match the Navidrome library with Spotify in the background }
                     gates:
                       type: object
                       additionalProperties: false
@@ -710,7 +752,7 @@ components:
       type: object
       properties:
         version: { const: 2 }
-        lyrics: { type: object, properties: { useSpotifyForLookup: { type: boolean, default: false }, disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off, default: [] } } }
+        lyrics: { type: object, properties: { disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off, default: [] } } }
     AdminSettings:
       type: object
       properties:
@@ -722,6 +764,32 @@ components:
             clientId: { type: [string, 'null'] }
             gates: { type: object, properties: { artPalette: { type: boolean }, syncedLyrics: { type: boolean } } }
             seats: { type: object, properties: { used: { type: integer }, max: { type: integer, const: 5 } } }
+            clientSecretSaved: { type: boolean }
+            matchLibrary: { type: boolean }
+    SpotifyMatching:
+      type: object
+      properties:
+        status:
+          type: object
+          properties:
+            running: { type: boolean }
+            phase: { enum: [scan, musicbrainz, null] }
+            scanned: { type: integer }
+            startedAt: { type: [integer, 'null'] }
+            finishedAt: { type: [integer, 'null'] }
+            error: { type: [string, 'null'] }
+        counts:
+          type: object
+          properties: { tracks: { type: integer }, matched: { type: integer }, manual: { type: integer }, none: { type: integer }, pending: { type: integer } }
+    SpotifyMatch:
+      type: object
+      properties:
+        match:
+          type: [object, 'null']
+          properties:
+            ids: { type: array, items: { type: string, pattern: '^[0-9A-Za-z]{22}$' } }
+            method: { enum: [manual, spotify, lb-mbid, lb-meta, null] }
+            tried: { type: array, items: { enum: [spotify, lb-mbid, lb-meta] } }
     ServerInfo:
       type: object
       properties:

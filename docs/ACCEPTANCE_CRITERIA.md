@@ -118,7 +118,7 @@ Playwright 384 in Chromium, Firefox and the isolated project). Evidence per crit
 | LI-05 | Attribution is rendered for every source per `LYRICS_INTEGRATION.md` §8 and cannot be disabled | E + I | M6 |
 | LI-06 | Spicy entries are deleted after 30 days and never served stale. Negative caching follows the TTL table | U | M6 |
 | LI-07 | The Spicy key is used server-side only: no request from the browser to `api.spicylyrics.org`, and the key never appears in any client-visible response | E (network log) + I | M6 |
-| LI-08 | Spotify-ID resolution runs only when Spotify is connected **and** `useSpotifyForLookup` is on. Mappings are cached 30 days | U | M7 |
+| LI-08 | Navidrome tracks get Spotify IDs from Navidrome's own metadata (never the request): stored per track, manual corrections win, the sweep is resumable and can be switched off (rebuilt 2026-10-24, `LYRICS_INTEGRATION.md` §4.3) | U, E2E | M7 |
 
 ## 6. Visual environment & palette (F3, F4)
 

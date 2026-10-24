@@ -95,6 +95,27 @@ const MIGRATIONS: string[] = [
     expires_at INTEGER NOT NULL
   );
   `,
+  // Spotify matching (LYRICS_INTEGRATION.md §4.3, lyrics/spotifyMatch.ts): one row per track per
+  // Navidrome server, kept until corrected. spotify_ids is a JSON array, best first; NULL with a
+  // non-empty `tried` means none found. The 30-day spotify_ids cache it replaces was never filled.
+  `
+  DROP TABLE spotify_ids;
+  CREATE TABLE spotify_matches (
+    scope TEXT NOT NULL,
+    navidrome_id TEXT NOT NULL,
+    spotify_ids TEXT,
+    method TEXT CHECK (method IN ('manual', 'spotify', 'lb-mbid', 'lb-meta')),
+    tried TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    album TEXT,
+    duration_ms INTEGER,
+    isrc TEXT,
+    mbid TEXT,
+    checked_at INTEGER NOT NULL,
+    PRIMARY KEY (scope, navidrome_id)
+  );
+  `,
 ];
 
 export function openDb(path: string): Db {

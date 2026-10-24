@@ -201,13 +201,7 @@ describe('deleting accounts (ACC-03, SEC-06)', () => {
     const w = await withAdmin();
     const bo = await invited(w);
     // Give Bo some of everything.
-    await call(
-      w.app,
-      'PUT',
-      '/api/v1/me/settings',
-      { lyrics: { useSpotifyForLookup: true } },
-      bo.cookie,
-    );
+    await call(w.app, 'PUT', '/api/v1/me/settings', { lyrics: { announceLines: true } }, bo.cookie);
     await call(
       w.app,
       'PUT',

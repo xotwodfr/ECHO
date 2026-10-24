@@ -74,6 +74,7 @@ signed URLs). Every call must fail (`ACCEPTANCE_CRITERIA.md` SEC-11).
 | PKCE verifier + state | user, transient | memory, 10 min TTL | never |
 | Spotify Client ID | server | plain (public in PKCE) | yes |
 | Spicy Lyrics secret key (`sl_sk_…`) | server | encrypted | never |
+| Spotify app client secret (optional; Spotify matching only) | server | encrypted | never |
 | Stream-URL signing key, cookie-signing key | server | derived from the master key (HKDF-SHA256, distinct `info` labels) | never |
 | **Master key** | server | Docker secret file, **not** in the DB or the image | never |
 
@@ -306,7 +307,7 @@ redistribution) is shown next to the field.
 | | `lyrics.globalOffsetMs` | −2000…2000 step 50 | 0 |
 | | `lyrics.showUnsynced` | bool | true |
 | | `lyrics.announceLines` | bool | false |
-| | `lyrics.useSpotifyForLookup` | bool | false (`LYRICS_INTEGRATION.md` §4.3) |
+| | `lyrics.disabledSources` | subset of the lyric sources | none (Settings → Lyrics → Lyric sources) |
 | Visuals | `visuals.mode` | `auto` \| `reverb` \| `ambient` \| `still` | `auto` |
 | | `visuals.intensity` | `subtle` \| `balanced` \| `expressive` | **`expressive`** (`VISUALIZER_SPEC.md` §7.4) |
 | | `visuals.quality` | `auto` \| `high` \| `balanced` \| `low` \| `minimal` | `auto` (**per device**, stored client-side because devices differ) |

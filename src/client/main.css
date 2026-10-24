@@ -714,7 +714,8 @@ button {
 /* Account and Admin lists: a name with its facts, actions on the right. */
 .sessions,
 .admin-users,
-.admin-invites {
+.admin-invites,
+.match-misses {
   display: grid;
   gap: var(--sp-3);
   margin: 0;
@@ -735,6 +736,24 @@ button {
 .sessions .field-hint,
 .admin-users .field-hint {
   margin: var(--sp-1) 0 0;
+}
+
+/* Admin → Spotify matching: each unmatched track with a field for its link. */
+.match-misses li {
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--rule) solid var(--line);
+}
+
+.match-misses form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--sp-2);
+  align-items: end;
+}
+
+.match-misses p {
+  grid-column: 1 / -1;
+  margin: 0;
 }
 
 .admin-user-name {
