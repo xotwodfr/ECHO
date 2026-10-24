@@ -1,6 +1,7 @@
 import { paletteStore } from '../palette/live.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import type { FrameParams } from '../view.ts';
+import { contrastAt, type Inks, peaksOf, type Solve, solveStep } from './contrast.ts';
 import {
   AMBIENT_FLOW_PER_S,
   chromeStep,
@@ -10,11 +11,26 @@ import {
 } from './loop.ts';
 import { createLyricField, type LyricField } from './lyrics/field.ts';
 import { paletteUniforms, readPalette } from './palette.ts';
-import { StageRenderer, type Tier } from './renderer.ts';
+import { type FrameInput, StageRenderer, type Tier } from './renderer.ts';
 import { lyricHost, lyricPrefs, lyricsStore, scrubStore, stageStatus } from './status.ts';
 
 // The Stage engine (TECHNICAL_ARCHITECTURE.md §4): mounted once by React, then imperative. Loaded
 // lazily with three.js when the Stage first opens (PERF-05: three.js loads with the Stage).
+
+/** VISUALIZER_SPEC.md §5.4: the contrast probe reads back every 250 ms. */
+const PROBE_MS = 250;
+
+/** The colours the lyric inks derive from, as currently set on :root. */
+function readInks(): Inks {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (name: string) => cs.getPropertyValue(name).trim();
+  return {
+    inkActive: v('--lyric-ink-active'),
+    room: v('--art-room'),
+    text: v('--text'),
+    highlight: v('--art-highlight'),
+  };
+}
 
 /** Where the key light sits when no line is being sung: 40% H. */
 const DEFAULT_KEY: [number, number] = [0.5, 0.4];
@@ -77,6 +93,26 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   let field: LyricField | null = null;
   const playing = () => c.player.getState().status === 'playing';
 
+  // The contrast solver's state (DESIGN_SYSTEM.md §3.4): inks are re-read when the palette moves.
+  let solve: Solve = { exposure: 0, scrim: 0 };
+  let inks: Inks | null = null;
+  let lastProbe = Number.NEGATIVE_INFINITY;
+  /** One probe and solver step; true when the zone's darkening changed. */
+  const contrastStep = (dtMs: number) => {
+    const px = renderer?.probe();
+    if (!px || !renderer) return false;
+    inks ??= readInks();
+    const peaks = peaksOf(px);
+    const report = contrastAt(inks, peaks);
+    const next = solveStep(solve, report, dtMs);
+    if (__ECHO_FIXTURES__)
+      Object.assign(window, { __echoContrast: { peaks, report, solve: next } });
+    if (next.exposure === solve.exposure && next.scrim === solve.scrim) return false;
+    solve = next;
+    renderer.setZone(solve.exposure, solve.scrim);
+    return true;
+  };
+
   const loop = createStageLoop(
     {
       songTime: () => frame?.ms ?? scrubStore.getState().ms ?? c.songTime(),
@@ -102,13 +138,23 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
         if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;
         chrome = loop.mode === 'still' ? chromeTarget : chromeStep(chrome, chromeTarget, f.dt);
-        renderer.render({
+        const input = {
           flow,
           drift,
           key: key ? [key.x, key.y] : DEFAULT_KEY,
           chrome,
           seed: frame?.seed ?? 0,
-        });
+        } satisfies FrameInput;
+        renderer.render(input);
+        // Contrast (DESIGN_SYSTEM.md §3.4): probe every 250 ms while running. A single frame (Still
+        // mode, deterministic frames) probes until the solver settles, so it is drawn compliant.
+        const now = env.now();
+        if (loop.mode === 'still') {
+          for (let i = 0; i < 12 && contrastStep(PROBE_MS); i++) renderer.render(input);
+        } else if (now - lastProbe >= PROBE_MS) {
+          contrastStep(Math.min(now - lastProbe, 1000));
+          lastProbe = now;
+        }
       },
       isPlaying: playing,
       // Deterministic mode draws single frames only.
@@ -150,6 +196,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   const offPalette = paletteStore.subscribe((s, prev) => {
     if (s.version === prev.version || !drawing || !renderer) return;
     renderer.setPalette(paletteUniforms(readPalette()));
+    inks = null;
     if (loop.mode === 'still') loop.renderOnce();
   });
   const offDoc = lyricsStore.subscribe((s) => void field?.setDoc(s.doc));

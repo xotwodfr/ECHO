@@ -3,6 +3,7 @@
 
 export const LYRICS = {
   anchorY: 0.4, // §3.2
+  unlitMix: 0.22, // §5.1: unsung ink at the anchor, 22% toward the room (M3 design review)
   maxWidth: 0.64, // §3.3
   maxRows: 2,
   shrinkMax: 0.12,

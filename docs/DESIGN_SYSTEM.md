@@ -122,7 +122,8 @@ enough. Rules:
    against `roomPeakL`. Lit text is always at least as light as unlit text, so lighting never lowers
    contrast.
 4. **Upcoming +1/+2/+3** use opacity steps (`LYRICS_EXPERIENCE.md` §4.1). Each must still reach
-   **≥ 3:1**, the large-text threshold. Rendered size is ≥ 25px even at the minimum `--ly-active`
+   **≥ 3:1**, the large-text threshold. *(M4: +3 cannot reach it with the §4.1 depth table; enforced
+   for +1 and +2, +3 reported, pending the owner's decision in `docs/reviews/M4.md`.)* Rendered size is ≥ 25px even at the minimum `--ly-active`
    (32px × the +3 scale of 0.80). For lines rendered under 24px (only at the compact breakpoint),
    the floor rises to 4.5:1. +3 must stay readable because the user may read ahead.
 5. **Background and past lines** are decorative. No minimum applies, and they are `aria-hidden`

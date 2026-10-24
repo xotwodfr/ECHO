@@ -25,6 +25,8 @@ export interface FrameParams {
    */
   fixture?: string;
   tier?: Tier;
+  /** An album key whose palette the frame shows instead of the cued track's (M4: VIS-05). */
+  palette?: string;
   /** Query params this mode does not use, kept in the URL as they came (`a=1&b=2`). */
   other?: string;
 }
@@ -42,7 +44,7 @@ const isOneOf = <T extends string>(list: readonly T[], v: string | undefined): v
   list.includes(v as T);
 
 const TIER_NAMES: readonly Tier[] = ['T0', 'T1', 'T2', 'T3'];
-const FRAME_KEYS = ['frame', 'seed', 'track', 'fixture', 'tier'];
+const FRAME_KEYS = ['frame', 'seed', 'track', 'fixture', 'tier', 'palette'];
 const isWhole = (v: string | null): v is string => v !== null && /^\d+$/.test(v);
 
 /**
@@ -56,6 +58,7 @@ export function parseFrame(search: string): FrameParams | undefined {
   const track = p.get('track');
   const fixture = p.get('fixture');
   const tier = p.get('tier') ?? undefined;
+  const palette = p.get('palette');
   if (!isWhole(frame)) return undefined;
   const other = String(new URLSearchParams([...p].filter(([k]) => !FRAME_KEYS.includes(k))));
   return {
@@ -64,6 +67,7 @@ export function parseFrame(search: string): FrameParams | undefined {
     ...(track && { track }),
     ...(fixture && { fixture }),
     ...(isOneOf(TIER_NAMES, tier) && { tier }),
+    ...(palette && { palette }),
     ...(other && { other }),
   };
 }
@@ -108,6 +112,7 @@ export function routePath(route: Route): string {
       if (f.seed) q.set('seed', String(f.seed));
       if (f.track) q.set('track', f.track);
       if (f.fixture) q.set('fixture', f.fixture);
+      if (f.palette) q.set('palette', f.palette);
       if (f.tier) q.set('tier', f.tier);
       return f.other ? `/?${q}&${f.other}` : `/?${q}`;
     }

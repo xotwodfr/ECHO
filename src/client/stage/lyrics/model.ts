@@ -46,6 +46,13 @@ export const opacityAt = (z: number) => table(LYRICS.depth.opacity, z);
 export const blurAt = (z: number) => table(LYRICS.depth.blur, z);
 /** Ink mixes 18% toward the room per 0.33 z (§4.1). */
 export const inkMixAt = (z: number) => clamp((0.18 * z) / 0.33, 0, 1);
+/**
+ * The zone's unsung ink: the depth mix, plus 22% toward the room at the anchor so the sweep reads
+ * against it (M3 design review). The extra part fades in as a line arrives (z 0.22 → 0), so it
+ * never steps, and leaves the upcoming lines' contrast alone (DESIGN_SYSTEM.md §3.4 rule 4).
+ */
+export const unlitMixAt = (z: number) =>
+  clamp(inkMixAt(z) + LYRICS.unlitMix * Math.max(0, 1 - z / Z.dz), 0, 1);
 
 /** Word sweep (§5.1): linear in time, at least 60 ms long. */
 export const sweepAt = (w: LyricWord, t: number) =>
@@ -518,7 +525,7 @@ export class FieldModel {
     // bass and +1…+3 lean toward the viewer; opacity and blur keep the unleaned depth.
     inst.scale = inst.rank === 0 ? inst.scale * (1 + beat.pulse) : scaleAt(z - beat.lean);
     inst.blur = inst.rank <= 3 ? Math.min(blurAt(z), LYRICS.depth.zoneBlurCap) : blurAt(z);
-    inst.mix = inkMixAt(z);
+    inst.mix = unlitMixAt(z);
     inst.fade = 0;
   }
 

@@ -48,7 +48,7 @@ const showLyrics = (track: ReturnType<typeof controller.player.getState>['track'
 controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
 
 // The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
-startPalette(controller, { instant: !!frame });
+startPalette(controller, { instant: !!frame, ...(frame?.palette && { albumKey: frame.palette }) });
 
 // `fixture=<lyric fixture>` also cues its guide track (LYRICS_EXPERIENCE.md §16).
 const cueId = frame?.track ?? (frame?.fixture ? fixtures?.guideTrackId(frame.fixture) : undefined);

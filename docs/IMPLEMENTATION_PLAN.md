@@ -128,6 +128,10 @@ the probe pass. Colour is wired into the shell, dock, lyric field and environmen
 
 **Dependencies:** M2. It can run alongside M3. Lyric-field integration needs M3.
 
+**Progress:** tasks 1–6 done (2026-10-24; record in `docs/reviews/M4.md`). VIS-02 and VIS-04 pass.
+Open: the +3 contrast floor (an owner decision), VIS-03's client timing and VIS-05's stress-fixture
+moment (both need M5).
+
 **Tasks:**
 1. `src/shared/oklab.ts` plus tests against reference values.
 2. `src/server/palette/`: fetch → sharp 128² raw → border drop → `QuantizerCelebi` + `Score` → roles

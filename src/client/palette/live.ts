@@ -28,7 +28,7 @@ const fetchPalette: Fetch = async (albumKey) => {
 
 export function startPalette(
   c: PlaybackController,
-  opts: { root?: HTMLElement; load?: Fetch; instant?: boolean } = {},
+  opts: { root?: HTMLElement; load?: Fetch; instant?: boolean; albumKey?: string } = {},
 ) {
   const root = opts.root ?? document.documentElement;
   const load = opts.load ?? fetchPalette;
@@ -87,7 +87,7 @@ export function startPalette(
 
   const onTrack = () => {
     const track = c.player.getState().track;
-    void show(track?.album.key ?? null);
+    void show(opts.albumKey ?? track?.album.key ?? null);
     // Prefetch the next track's palette, so it is ready when the track changes.
     const next = upcoming(c.queue.getState())[0];
     if (next && next.album.key !== track?.album.key) void get(next.album.key);

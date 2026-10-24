@@ -23,7 +23,7 @@ import {
 } from 'three';
 import blueNoiseUrl from './blue-noise-64.png';
 import { BASE_EXPOSURE, type PaletteUniforms } from './palette.ts';
-import { COMPOSITE_FRAG, FULLSCREEN_VERT, ROOM_FRAG } from './shaders.ts';
+import { COMPOSITE_FRAG, FULLSCREEN_VERT, PROBE_FRAG, ROOM_FRAG } from './shaders.ts';
 
 // StageRenderer (VISUALIZER_SPEC.md §5): room pass into a reduced-resolution float target, then
 // the composite to the canvas. three.js is used only for its context, render-target and
@@ -75,9 +75,19 @@ export class StageRenderer {
     uShadow: { value: new Vector3() },
     uChrome: { value: 1 },
     uExposure: { value: BASE_EXPOSURE },
+    uZoneExposure: { value: 0 },
+    uZoneScrim: { value: 0 },
   };
   private readonly roomMat: RawShaderMaterial;
   private readonly compositeMat: RawShaderMaterial;
+  private readonly probeMat: RawShaderMaterial;
+  private readonly probeScene = new Scene();
+  private readonly probeRT = new WebGLRenderTarget(8, 8, {
+    type: UnsignedByteType,
+    depthBuffer: false,
+    generateMipmaps: false,
+  });
+  private readonly probePixels = new Uint8Array(8 * 8 * 4);
   private readonly geometry = new BufferGeometry();
   private roomRT: WebGLRenderTarget | null = null;
   private noise: Texture | null = null;
@@ -117,8 +127,15 @@ export class StageRenderer {
       fragmentShader: COMPOSITE_FRAG,
       uniforms: this.composite,
     });
+    // The probe shares the composite's uniforms, so it sees exactly what is drawn.
+    this.probeMat = new RawShaderMaterial({
+      ...common,
+      fragmentShader: PROBE_FRAG,
+      uniforms: this.composite,
+    });
     this.roomScene.add(new Mesh(this.geometry, this.roomMat));
     this.compositeScene.add(new Mesh(this.geometry, this.compositeMat));
+    this.probeScene.add(new Mesh(this.geometry, this.probeMat));
   }
 
   /** Loads the blue-noise texture; the first frame waits for it (dither is always on). */
@@ -144,6 +161,25 @@ export class StageRenderer {
     u.uHighlight.value.set(...p.highlight);
     u.uGlow.value.set(...p.glow);
     this.composite.uShadow.value.set(...p.shadow);
+  }
+
+  /** The contrast solver's darkening of the lyric zone (DESIGN_SYSTEM.md §3.4 rule 6). */
+  setZone(exposure: number, scrim: number) {
+    this.composite.uZoneExposure.value = exposure;
+    this.composite.uZoneScrim.value = scrim;
+  }
+
+  /**
+   * The safe zone as the last frame drew it, 8×8 sRGB pixels (VISUALIZER_SPEC.md §5.4). A small
+   * synchronous read (64 pixels), every 250 ms at most.
+   */
+  probe(): Uint8Array | null {
+    if (!this.roomRT || !this.noise) return null;
+    this.gl.setRenderTarget(this.probeRT);
+    this.gl.render(this.probeScene, this.camera);
+    this.gl.readRenderTargetPixels(this.probeRT, 0, 0, 8, 8, this.probePixels);
+    this.gl.setRenderTarget(null);
+    return this.probePixels;
   }
 
   /** CSS size and devicePixelRatio; the backing store is capped per tier (§5.5). */
@@ -188,6 +224,7 @@ export class StageRenderer {
     this.buildTargets();
     this.roomMat.needsUpdate = true;
     this.compositeMat.needsUpdate = true;
+    this.probeMat.needsUpdate = true;
     if (this.noise) this.noise.needsUpdate = true;
   }
 
@@ -196,6 +233,8 @@ export class StageRenderer {
     this.noise?.dispose();
     this.roomMat.dispose();
     this.compositeMat.dispose();
+    this.probeMat.dispose();
+    this.probeRT.dispose();
     this.geometry.dispose();
     this.gl.dispose();
     // Release the context now: browsers cap live contexts, and the Stage mounts per visit.

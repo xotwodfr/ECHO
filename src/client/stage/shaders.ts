@@ -83,6 +83,54 @@ void main() {
 }`;
 
 /**
+ * The lyric zone in canvas uv (y up; the canvas spans the dock too): the reading corridor
+ * (LYRICS_EXPERIENCE.md §3.2: x 0.12–0.88 W, active line at 0.40 H, zone to 0.86 H) as a soft
+ * ellipse, and the active line's own smaller ellipse for the scrim (DESIGN_SYSTEM.md §3.4 rule 6,
+ * the one gradient permitted for contrast).
+ */
+const ZONE_GLSL = /* glsl */ `
+float zoneMask(vec2 uv) {
+  float d = length((uv - vec2(0.5, 0.43)) / vec2(0.46, 0.32));
+  return 1.0 - smoothstep(0.75, 1.15, d);
+}
+float scrimMask(vec2 uv) {
+  float d = length((uv - vec2(0.5, 0.63)) / vec2(0.36, 0.13));
+  return 1.0 - smoothstep(0.0, 1.0, d);
+}`;
+
+/**
+ * The contrast probe (VISUALIZER_SPEC.md §5.4): the composite's safe zone (the corridor rect) into
+ * an 8×8 RGBA8 target, read back every 250 ms. The same light path as the composite, without the
+ * scrims and dither, which only darken.
+ */
+export const PROBE_FRAG = /* glsl */ `
+precision highp float;
+uniform sampler2D uRoomTex;
+uniform vec3 uShadow;
+uniform float uExposure;
+uniform float uZoneExposure;
+uniform float uZoneScrim;
+in vec2 vUv;
+out vec4 outColor;
+${ZONE_GLSL}
+vec3 hable(vec3 x) {
+  const float A = ${HABLE.A}, B = ${HABLE.B}, C = ${HABLE.C}, D = ${HABLE.D}, E = ${HABLE.E}, F = ${HABLE.F};
+  return (x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F) - E / F;
+}
+vec3 toSrgb(vec3 c) {
+  return mix(12.92 * c, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+}
+void main() {
+  vec2 uv = vec2(mix(0.12, 0.88, vUv.x), mix(0.14, 0.66, vUv.y));
+  vec3 col = texture(uRoomTex, uv).rgb;
+  col = mix(col, uShadow, 0.16 * smoothstep(0.30, 0.71, length(uv - 0.5)));
+  col *= 1.0 + uZoneExposure * zoneMask(uv);
+  col = mix(col, uShadow, uZoneScrim * scrimMask(uv));
+  col = hable(col * uExposure) / hable(vec3(${HABLE.W.toFixed(1)}));
+  outColor = vec4(toSrgb(clamp(col, 0.0, 1.0)), 1.0);
+}`;
+
+/**
  * Pass 4, the composite (§5.2): room → vignette → scrims → filmic tone map → sRGB encode →
  * blue-noise dither (±1 LSB, always the last step). Energy, bloom, halation and grain join here
  * in later milestones.
@@ -96,8 +144,11 @@ uniform float uDpr;            // backing px per CSS px
 uniform vec3 uShadow;          // --art-shadow, linear
 uniform float uChrome;         // 0..1: scrims follow chrome visibility (DESIGN_SYSTEM.md §7.7)
 uniform float uExposure;
+uniform float uZoneExposure;   // −0.4…0: the contrast solver darkens the lyric zone (DESIGN_SYSTEM.md §3.4)
+uniform float uZoneScrim;      // 0…0.45: then a shadow scrim behind the active line
 in vec2 vUv;
 out vec4 outColor;
+${ZONE_GLSL}
 
 vec3 hable(vec3 x) {
   const float A = ${HABLE.A}, B = ${HABLE.B}, C = ${HABLE.C}, D = ${HABLE.D}, E = ${HABLE.E}, F = ${HABLE.F};
@@ -119,6 +170,10 @@ void main() {
   float fromTop = (uRes.y - gl_FragCoord.y) / uDpr;
   col = mix(col, uShadow, uChrome * 0.72 * clamp(1.0 - fromBottom / 220.0, 0.0, 1.0));
   col = mix(col, uShadow, uChrome * 0.50 * clamp(1.0 - fromTop / 120.0, 0.0, 1.0));
+
+  // Contrast (§5.4): the lyric zone is darkened, never the ink changed.
+  col *= 1.0 + uZoneExposure * zoneMask(vUv);
+  col = mix(col, uShadow, uZoneScrim * scrimMask(vUv));
 
   col = hable(col * uExposure) / hable(vec3(${HABLE.W.toFixed(1)}));
   col = toSrgb(clamp(col, 0.0, 1.0));
