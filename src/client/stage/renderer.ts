@@ -18,12 +18,14 @@ import {
   UnsignedByteType,
   Vector2,
   Vector3,
+  Vector4,
   WebGLRenderer,
   WebGLRenderTarget,
 } from 'three';
 import blueNoiseUrl from './blue-noise-64.png';
 import { BASE_EXPOSURE, type PaletteUniforms } from './palette.ts';
-import { COMPOSITE_FRAG, FULLSCREEN_VERT, PROBE_FRAG, ROOM_FRAG } from './shaders.ts';
+import { type ReverbFrame, ringLight, safeTint } from './reverb.ts';
+import { COMPOSITE_FRAG, ENERGY_FRAG, FULLSCREEN_VERT, PROBE_FRAG, ROOM_FRAG } from './shaders.ts';
 
 // StageRenderer (VISUALIZER_SPEC.md §5): room pass into a reduced-resolution float target, then
 // the composite to the canvas. three.js is used only for its context, render-target and
@@ -66,6 +68,19 @@ export class StageRenderer {
     uHighlight: { value: new Vector3() },
     uGlow: { value: new Vector3() },
     uKey: { value: new Vector2(0.5, 0.4) },
+    uPoolScale: { value: 1 },
+    uKeyScale: { value: 1 },
+  };
+  private readonly energy = {
+    uPrev: { value: null as Texture | null },
+    uAspect: { value: 1 },
+    uDecay: { value: 0.93 },
+    uWarp: { value: 0.002 },
+    uFlow: { value: 0 },
+    uKey: { value: new Vector2(0.5, 0.4) },
+    uRings: { value: [new Vector4(), new Vector4(), new Vector4()] },
+    uTint: { value: new Vector3() },
+    uFlare: { value: 0 },
   };
   private readonly composite = {
     uRoomTex: { value: null as Texture | null },
@@ -77,7 +92,15 @@ export class StageRenderer {
     uExposure: { value: BASE_EXPOSURE },
     uZoneExposure: { value: 0 },
     uZoneScrim: { value: 0 },
+    uEnergyTex: { value: null as Texture | null },
+    uEnergyOn: { value: 0 },
+    uKeyUv: { value: new Vector2(0.5, 0.6) },
   };
+  private readonly energyMat: RawShaderMaterial;
+  private readonly energyScene = new Scene();
+  private energyRT: [WebGLRenderTarget, WebGLRenderTarget] | null = null;
+  private reverb: ReverbFrame | null = null;
+  private lumaRT: WebGLRenderTarget | null = null;
   private readonly roomMat: RawShaderMaterial;
   private readonly compositeMat: RawShaderMaterial;
   private readonly probeMat: RawShaderMaterial;
@@ -133,6 +156,12 @@ export class StageRenderer {
       fragmentShader: PROBE_FRAG,
       uniforms: this.composite,
     });
+    this.energyMat = new RawShaderMaterial({
+      ...common,
+      fragmentShader: ENERGY_FRAG,
+      uniforms: this.energy,
+    });
+    this.energyScene.add(new Mesh(this.geometry, this.energyMat));
     this.roomScene.add(new Mesh(this.geometry, this.roomMat));
     this.compositeScene.add(new Mesh(this.geometry, this.compositeMat));
     this.probeScene.add(new Mesh(this.geometry, this.probeMat));
@@ -155,12 +184,22 @@ export class StageRenderer {
   }
 
   setPalette(p: PaletteUniforms) {
+    this.energy.uTint.value.set(...safeTint(p.highlight));
     const u = this.room;
     u.uRoom.value.set(...p.room);
     u.uAccent.value.set(...p.accent);
     u.uHighlight.value.set(...p.highlight);
     u.uGlow.value.set(...p.glow);
     this.composite.uShadow.value.set(...p.shadow);
+  }
+
+  /**
+   * Reverb mode's state for the next frames (VISUALIZER_SPEC.md §4.3–§4.5), or null for Ambient
+   * and Still: the energy buffer is cleared and unused.
+   */
+  setReverb(r: ReverbFrame | null) {
+    if (!r && this.reverb) this.clearEnergy();
+    this.reverb = r;
   }
 
   /** The contrast solver's darkening of the lyric zone (DESIGN_SYSTEM.md §3.4 rule 6). */
@@ -180,6 +219,52 @@ export class StageRenderer {
     this.gl.readRenderTargetPixels(this.probeRT, 0, 0, 8, 8, this.probePixels);
     this.gl.setRenderTarget(null);
     return this.probePixels;
+  }
+
+  /**
+   * Development: the mean relative luminance of a 4×4 grid over the stage as last drawn
+   * (A11Y-08). The composite is re-rendered into a 64-px-wide target with its resolution uniforms
+   * scaled, so vignette and scrims fall where they do on screen.
+   */
+  lumaGrid(): Float32Array | null {
+    if (!this.roomRT || !this.noise) return null;
+    const w = 64;
+    const h = Math.max(4, Math.round((64 * this.backing.h) / Math.max(1, this.backing.w)));
+    if (!this.lumaRT || this.lumaRT.height !== h) {
+      this.lumaRT?.dispose();
+      this.lumaRT = new WebGLRenderTarget(w, h, { type: UnsignedByteType, depthBuffer: false });
+    }
+    const c = this.composite;
+    const [res, dpr] = [c.uRes.value.clone(), c.uDpr.value];
+    c.uRes.value.set(w, h);
+    c.uDpr.value = (dpr * w) / this.backing.w;
+    this.gl.setRenderTarget(this.lumaRT);
+    this.gl.render(this.compositeScene, this.camera);
+    const px = new Uint8Array(w * h * 4);
+    this.gl.readRenderTargetPixels(this.lumaRT, 0, 0, w, h, px);
+    this.gl.setRenderTarget(null);
+    c.uRes.value.copy(res);
+    c.uDpr.value = dpr;
+    const lin = (v: number) => {
+      const x = v / 255;
+      return x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+    };
+    const grid = new Float32Array(16);
+    const count = new Float32Array(16);
+    for (let y = 0; y < h; y++)
+      for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        const cell =
+          Math.min(3, Math.floor((y / h) * 4)) * 4 + Math.min(3, Math.floor((x / w) * 4));
+        grid[cell] =
+          (grid[cell] as number) +
+          0.2126 * lin(px[i] as number) +
+          0.7152 * lin(px[i + 1] as number) +
+          0.0722 * lin(px[i + 2] as number);
+        count[cell] = (count[cell] as number) + 1;
+      }
+    for (let k = 0; k < 16; k++) grid[k] = (grid[k] as number) / (count[k] as number);
+    return grid;
   }
 
   /** CSS size and devicePixelRatio; the backing store is capped per tier (§5.5). */
@@ -213,8 +298,38 @@ export class StageRenderer {
     r.uSeed.value = f.seed;
     r.uKey.value.set(f.key[0], f.key[1]);
     this.composite.uChrome.value = f.chrome;
+    const rv = this.reverb;
+    r.uPoolScale.value = rv?.poolScale ?? 1;
+    r.uKeyScale.value = rv?.keyScale ?? 1;
+    this.composite.uExposure.value = BASE_EXPOSURE * (rv?.exposure ?? 1);
     this.gl.setRenderTarget(this.roomRT);
     this.gl.render(this.roomScene, this.camera);
+    if (rv && this.energyRT) {
+      const [prev, next] = this.energyRT;
+      const e = this.energy;
+      e.uPrev.value = prev.texture;
+      e.uAspect.value = r.uAspect.value;
+      e.uDecay.value = rv.decay;
+      e.uWarp.value = rv.warp;
+      e.uFlow.value = rv.flow;
+      e.uKey.value.set(f.key[0], f.key[1]);
+      e.uFlare.value = rv.flare;
+      for (let i = 0; i < 3; i++) {
+        const ring = rv.rings[i];
+        (e.uRings.value[i] as Vector4).set(
+          ring?.x ?? 0,
+          ring?.y ?? 0,
+          ring ? rv.ringRadius(ring) : 0,
+          ring ? ringLight(ring) : 0,
+        );
+      }
+      this.gl.setRenderTarget(next);
+      this.gl.render(this.energyScene, this.camera);
+      this.energyRT = [next, prev];
+      this.composite.uEnergyTex.value = next.texture;
+      this.composite.uEnergyOn.value = 1;
+      this.composite.uKeyUv.value.set(f.key[0], 1 - f.key[1]);
+    } else this.composite.uEnergyOn.value = 0;
     this.gl.setRenderTarget(null);
     this.gl.render(this.compositeScene, this.camera);
   }
@@ -225,6 +340,7 @@ export class StageRenderer {
     this.roomMat.needsUpdate = true;
     this.compositeMat.needsUpdate = true;
     this.probeMat.needsUpdate = true;
+    this.energyMat.needsUpdate = true;
     if (this.noise) this.noise.needsUpdate = true;
   }
 
@@ -234,6 +350,9 @@ export class StageRenderer {
     this.roomMat.dispose();
     this.compositeMat.dispose();
     this.probeMat.dispose();
+    this.energyMat.dispose();
+    this.lumaRT?.dispose();
+    for (const t of this.energyRT ?? []) t.dispose();
     this.probeRT.dispose();
     this.geometry.dispose();
     this.gl.dispose();
@@ -257,5 +376,24 @@ export class StageRenderer {
       },
     );
     this.composite.uRoomTex.value = this.roomRT.texture;
+    for (const t of this.energyRT ?? []) t.dispose();
+    const make = () =>
+      new WebGLRenderTarget(this.roomRT?.width ?? 1, this.roomRT?.height ?? 1, {
+        type: float ? HalfFloatType : UnsignedByteType,
+        magFilter: LinearFilter,
+        minFilter: LinearFilter,
+        depthBuffer: false,
+        generateMipmaps: false,
+      });
+    this.energyRT = [make(), make()];
+    this.clearEnergy();
+  }
+
+  private clearEnergy() {
+    for (const t of this.energyRT ?? []) {
+      this.gl.setRenderTarget(t);
+      this.gl.clear(true, false, false);
+    }
+    this.gl.setRenderTarget(null);
   }
 }

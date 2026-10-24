@@ -12,6 +12,7 @@ import {
 import { createLyricField, type LyricField } from './lyrics/field.ts';
 import { paletteUniforms, readPalette } from './palette.ts';
 import { type FrameInput, StageRenderer, type Tier } from './renderer.ts';
+import { createReverb } from './reverb.ts';
 import { lyricHost, lyricPrefs, lyricsStore, scrubStore, stageStatus } from './status.ts';
 
 // The Stage engine (TECHNICAL_ARCHITECTURE.md §4): mounted once by React, then imperative. Loaded
@@ -93,6 +94,9 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   let field: LyricField | null = null;
   const playing = () => c.player.getState().status === 'playing';
 
+  // Reverb's state (§4.3–§4.5) at the default intensity; Settings → Visuals sets it in M8.
+  const reverb = createReverb('expressive');
+
   // The contrast solver's state (DESIGN_SYSTEM.md §3.4): inks are re-read when the palette moves.
   let solve: Solve = { exposure: 0, scrim: 0 };
   let inks: Inks | null = null;
@@ -137,15 +141,35 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         });
         // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
         if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;
+        // Reverb (§4): the moving room with live (or recorded) features; Ambient without them.
+        const reverbOn = loop.mode === 'ambient' && !frame && f.features.available;
+        if (reverbOn !== (stageStatus.getState().mode === 'reverb'))
+          set({ mode: reverbOn ? 'reverb' : modeNow() });
+        const rv = reverbOn
+          ? reverb.step(f.features, f.dt, key ? [key.x, key.y] : DEFAULT_KEY)
+          : null;
+        renderer.setReverb(rv);
         chrome = loop.mode === 'still' ? chromeTarget : chromeStep(chrome, chromeTarget, f.dt);
         const input = {
-          flow,
+          flow: rv ? rv.flow : flow,
           drift,
           key: key ? [key.x, key.y] : DEFAULT_KEY,
           chrome,
           seed: frame?.seed ?? 0,
         } satisfies FrameInput;
         renderer.render(input);
+        // Development: A11Y-08 records the stage's luminance grid while asked to.
+        if (
+          __ECHO_FIXTURES__ &&
+          (window as { __echoLuma?: { t: number; grid: number[] }[] }).__echoLuma
+        ) {
+          const grid = renderer.lumaGrid();
+          if (grid)
+            (window as unknown as { __echoLuma: { t: number; grid: number[] }[] }).__echoLuma.push({
+              t: env.now(),
+              grid: [...grid],
+            });
+        }
         // Contrast (DESIGN_SYSTEM.md §3.4): probe every 250 ms while running. A single frame (Still
         // mode, deterministic frames) probes until the solver settles, so it is drawn compliant.
         const now = env.now();

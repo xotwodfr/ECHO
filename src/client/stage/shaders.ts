@@ -26,6 +26,8 @@ uniform vec3 uAccent;
 uniform vec3 uHighlight;
 uniform vec3 uGlow;      // pre-multiplied by its alpha
 uniform vec2 uKey;       // key light centre, stage uv with y down
+uniform float uPoolScale; // Reverb: pools swell with the bass (§7.1), else 1
+uniform float uKeyScale;  // Reverb: the key light swells with the sub, else 1
 in vec2 vUv;
 out vec4 outColor;
 
@@ -73,13 +75,50 @@ void main() {
   // Intensities (§4.1: pools 0.10–0.22, key light 0.12–0.20) are perceptual amplitudes, so they
   // are squared into linear light: a low glow on a dark room, not a lit wall.
   vec3 col = uRoom;
-  col += uAccent * (0.16 * 0.16) * pool(w, c1, 0.80);
-  col += uHighlight * (0.12 * 0.12) * pool(w, c2, 0.60);
-  col += uAccent * (0.10 * 0.10) * pool(w, c3, 0.90);
+  col += uAccent * (0.16 * 0.16) * pool(w, c1, 0.80 * uPoolScale);
+  col += uHighlight * (0.12 * 0.12) * pool(w, c2, 0.60 * uPoolScale);
+  col += uAccent * (0.10 * 0.10) * pool(w, c3, 0.90 * uPoolScale);
   // Key light: the lamp the words hang under, 0.35 H, in --art-glow (alpha already applied).
   vec2 key = vec2(uKey.x * uAspect, 1.0 - uKey.y);
-  col += uGlow / 0.35 * (0.16 * 0.16) * pool(p, key, 0.35);
+  col += uGlow / 0.35 * (0.16 * 0.16) * pool(p, key, 0.35 * uKeyScale);
   outColor = vec4(col, 1.0);
+}`;
+
+/**
+ * Pass 2, energy (Reverb only, §4.4): the light that lingers. The previous energy, sampled with a
+ * 0.3% zoom toward the key light and a slight warp, decays, and the rings (§4.3) and the key flare
+ * are added. Only this buffer feeds back; the room never does.
+ */
+export const ENERGY_FRAG = /* glsl */ `
+precision highp float;
+uniform sampler2D uPrev;
+uniform float uAspect;
+uniform float uDecay;
+uniform float uWarp;      // ≤ 0.003 uv
+uniform float uFlow;
+uniform vec2 uKey;        // stage uv, y down
+uniform vec4 uRings[3];   // x, y (stage uv, y down), radius (H), light
+uniform vec3 uTint;       // ring tint, --art-highlight (never saturated red)
+uniform float uFlare;     // key flare, 0..0.15
+in vec2 vUv;
+out vec4 outColor;
+
+void main() {
+  vec2 key = vec2(uKey.x, 1.0 - uKey.y);
+  vec2 back = key + (vUv - key) * (1.0 - 0.003); // drift outward like a reflection
+  back += uWarp * vec2(sin(vUv.y * 9.0 + uFlow * 6.0), cos(vUv.x * 9.0 - uFlow * 6.0));
+  vec3 e = texture(uPrev, back).rgb * uDecay;
+  vec2 p = vec2(vUv.x * uAspect, vUv.y);
+  for (int i = 0; i < 3; i++) {
+    vec4 r = uRings[i];
+    if (r.w <= 0.0) continue;
+    vec2 c = vec2(r.x * uAspect, 1.0 - r.y);
+    float d = abs(length(p - c) - r.z);
+    e += uTint * r.w * exp(-(d * d) / (0.01 * 0.01)); // a soft band 0.02 H wide
+  }
+  vec2 k = vec2(key.x * uAspect, key.y);
+  e += uTint * uFlare * exp(-dot(p - k, p - k) / (0.12 * 0.12));
+  outColor = vec4(e, 1.0);
 }`;
 
 /**
@@ -146,6 +185,9 @@ uniform float uChrome;         // 0..1: scrims follow chrome visibility (DESIGN_
 uniform float uExposure;
 uniform float uZoneExposure;   // −0.4…0: the contrast solver darkens the lyric zone (DESIGN_SYSTEM.md §3.4)
 uniform float uZoneScrim;      // 0…0.45: then a shadow scrim behind the active line
+uniform sampler2D uEnergyTex;  // Reverb: rings and flares (§4.4); black otherwise
+uniform float uEnergyOn;
+uniform vec2 uKeyUv;           // the key light, canvas uv (y up), for halation
 in vec2 vUv;
 out vec4 outColor;
 ${ZONE_GLSL}
@@ -160,6 +202,19 @@ vec3 toSrgb(vec3 c) {
 
 void main() {
   vec3 col = texture(uRoomTex, vUv).rgb;
+
+  // Reverb (§4.3–§4.4, §5.2): the energy, masked to 40% in the reading corridor so rings pass
+  // behind the words. A soft glow of it (a small blur standing in for the bloom chain), and
+  // halation shifted toward red around the key light only.
+  if (uEnergyOn > 0.5) {
+    vec3 e = texture(uEnergyTex, vUv).rgb;
+    vec2 o = 6.0 / uRes;
+    vec3 glow = (texture(uEnergyTex, vUv + vec2(o.x, o.y)).rgb + texture(uEnergyTex, vUv - vec2(o.x, o.y)).rgb
+      + texture(uEnergyTex, vUv + vec2(o.x, -o.y)).rgb + texture(uEnergyTex, vUv + vec2(-o.x, o.y)).rgb) * 0.25;
+    col += mix(1.0, 0.4, zoneMask(vUv)) * (e + 0.5 * glow);
+    float near = exp(-dot(vUv - uKeyUv, vUv - uKeyUv) / (0.18 * 0.18));
+    col += glow * vec3(1.0, 0.55, 0.35) * 0.12 * near;
+  }
 
   // Vignette (§7.6): elliptical, --art-shadow, 16% at the corners.
   float v = smoothstep(0.30, 0.71, length(vUv - 0.5));

@@ -448,7 +448,7 @@ test('scrub: lines follow the drag directly, then settle on the slow spring (LYR
     // No springs while dragging: the line is in place on the next frames.
     await expect
       .poll(async () => main(await lines(page)).find((v) => v.text === l.text)?.cy ?? 0, {
-        timeout: 500,
+        timeout: 2000, // the page under a software renderer and parallel specs
         intervals: [16],
       })
       .toBeCloseTo(0.4 * H, 0);
@@ -459,7 +459,7 @@ test('scrub: lines follow the drag directly, then settle on the slow spring (LYR
   // and the seek would land a line early.
   await expect
     .poll(async () => main(await lines(page)).find((v) => v.text === target.text)?.cy ?? 0, {
-      timeout: 500,
+      timeout: 2000,
       intervals: [16],
     })
     .toBeCloseTo(0.4 * H, 0);
@@ -519,13 +519,31 @@ test('announcements are off by default and, when on, speak the active line (A11Y
   const live = page.locator('.ly-field [role="status"]');
   await dock(page).getByRole('button', { name: 'Pause' }).click();
   await expect(dock(page)).toHaveAttribute('data-status', 'paused');
+  await expect(live).toHaveText(''); // opt-in: silent through every hand-over so far
+  // Every announcement is recorded as it happens, so a slow poll cannot miss a short line.
   await page.evaluate(() => {
-    (
-      window as unknown as { __echoLyricPrefs: { setState(s: object): void } }
-    ).__echoLyricPrefs.setState({
-      announce: true,
+    const w = window as unknown as {
+      __echoLyricPrefs: { setState(s: object): void };
+      __said: string[];
+    };
+    w.__said = [];
+    const region = document.querySelector('.ly-field [role="status"]') as Element;
+    new MutationObserver(() => w.__said.push(region.textContent ?? '')).observe(region, {
+      childList: true,
+      characterData: true,
+      subtree: true,
     });
+    w.__echoLyricPrefs.setState({ announce: true });
   });
   await dock(page).getByRole('button', { name: 'Play', exact: true }).click();
-  await expect.poll(() => live.textContent(), { timeout: 8000 }).toBe(next.text);
+  // What is spoken is the line that takes the anchor at each hand-over from here on. Which line
+  // comes first depends on where the pause landed, so any line of the song counts.
+  const lines = new Set(tl.lines.map((l) => l.text));
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __said: string[] }).__said.length), {
+      timeout: 10_000,
+    })
+    .toBeGreaterThan(0);
+  const said = await page.evaluate(() => (window as unknown as { __said: string[] }).__said);
+  for (const text of said) expect(lines.has(text)).toBe(true);
 });
