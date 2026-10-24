@@ -187,8 +187,8 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         duration: song.duration,
         instrumental: false,
         plainLyrics: 'Glass in the morning\nRain on the window',
-        syncedLyrics:
-          '[00:01.00]Glass in the morning\n[00:05.00]Rain on the window\n[00:09.00]Light coming through',
+        // The first line names its track, so E2E can tell the tracks' lyrics apart.
+        syncedLyrics: `[00:01.00]Glass in the morning, ${song.title}\n[00:05.00]Rain on the window\n[00:09.00]Light coming through`,
       });
     }
     if (faults.down) return req.socket.destroy();

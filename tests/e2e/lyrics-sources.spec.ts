@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { playAlbum, signedInWithNavidrome } from './helpers.ts';
+import { clearLyricsCache, playAlbum, signedInWithNavidrome } from './helpers.ts';
 
 // M6 on the mock sources: lyrics from the user's own Navidrome (word-timed) and from LRCLIB, the
 // attribution for each (LI-05), Cover mode when there are none (LYR-15), the timing offset
@@ -74,4 +74,24 @@ test('the scrubber shows the lyric line at the hovered time (PLAY-10)', async ({
     await page.mouse.move(x, y);
     await expect(page.locator('.slider-preview')).toHaveText('Second line here', { timeout: 500 });
   }).toPass({ timeout: 8000 });
+});
+
+test('rapid skipping never shows another track’s lyrics (LYR-19)', async ({ page }) => {
+  clearLyricsCache(); // each track's own lyrics, from the source
+  await signedInWithNavidrome(page);
+  await playAlbum(page, 'al-3');
+  const dock = page.getByRole('region', { name: 'Player' });
+  // Ctrl+→ is Next (PRODUCT_SPEC.md §7): it works while the Stage has hidden its idle chrome.
+  for (let i = 0; i < 4; i++) {
+    await page.keyboard.press('Control+ArrowRight'); // 4 more changes, well inside 3 s
+    await page.waitForTimeout(150);
+  }
+  await expect(dock).toContainText('Glass Weather 5');
+  const line = page.locator('.ly-field .ly-line', { hasText: 'Glass in the morning' });
+  await expect(line).toHaveText(/Glass Weather 5$/, { timeout: 5000 });
+  // Nothing from the tracks skipped over is on the stage, now or a moment later.
+  await page.waitForTimeout(1000);
+  const texts = await page.locator('.ly-field .ly-line').allInnerTexts();
+  for (const n of [1, 2, 3, 4])
+    expect(texts.join('\n')).not.toContain(`morning, Glass Weather ${n}`);
 });
