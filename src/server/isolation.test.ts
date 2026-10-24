@@ -120,9 +120,15 @@ describe('SEC-11: isolation between users', () => {
     ];
     for (const p of reads) {
       const body = await json(await as(B, 'GET', p));
-      for (const mark of ['ALICE', '1234', '450', 'subtle', 'navidrome-pass', ...aSessions])
+      // Text marks only: numbers like A's position could also appear by chance (the mock's
+      // random port is in B's connection answer); those are checked as fields below.
+      for (const mark of ['ALICE', 'subtle', 'navidrome-pass', ...aSessions])
         expect(body, `${p} leaks ${mark}`).not.toContain(mark);
     }
+    const field = async (p: string) =>
+      JSON.parse(await json(await call(app, 'GET', p, undefined, B.cookie)));
+    expect((await field('/api/v1/me/queue')).queue).toBeNull();
+    expect((await field(`/api/v1/me/tracks/navidrome:${track}/override`)).offsetMs).toBe(0);
     expect(
       JSON.parse(
         await json(await call(app, 'GET', '/api/v1/me/connections/navidrome', undefined, B.cookie)),
