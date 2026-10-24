@@ -323,9 +323,19 @@ paths:
                   type: object
                   properties:
                     spicyKey: { type: [string, 'null'], pattern: '^sl_sk_', description: The Spicy Lyrics secret key (null removes it) }
+                spotify:
+                  type: object
+                  properties:
+                    clientId: { type: [string, 'null'], pattern: '^[0-9a-f]{32}$', description: The Spotify app's Client ID (null removes it) }
+                    gates:
+                      type: object
+                      additionalProperties: false
+                      properties:
+                        artPalette: { type: boolean, description: 'G1: palettes from Spotify cover art' }
+                        syncedLyrics: { type: boolean, description: 'G2: timed lyrics during Spotify playback' }
       responses:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettings' } } } }
-        '400': { description: Not a secret key }
+        '400': { description: Not a secret key, not a Client ID, or an unknown gate; nothing was saved }
         '403': { description: Not an admin }
 
 components:
@@ -355,6 +365,12 @@ components:
       type: object
       properties:
         lyrics: { type: object, properties: { spicyKeySaved: { type: boolean } } }
+        spotify:
+          type: object
+          properties:
+            clientId: { type: [string, 'null'] }
+            gates: { type: object, properties: { artPalette: { type: boolean }, syncedLyrics: { type: boolean } } }
+            seats: { type: object, properties: { used: { type: integer }, max: { type: integer, const: 5 } } }
     ServerInfo:
       type: object
       properties:

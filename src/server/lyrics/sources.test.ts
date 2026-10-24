@@ -273,7 +273,7 @@ describe('the Spicy key (Admin → Server, write-only)', () => {
       admin,
     );
     const text = await put.text();
-    expect(JSON.parse(text)).toEqual({ lyrics: { spicyKeySaved: true } });
+    expect(JSON.parse(text).lyrics).toEqual({ spicyKeySaved: true });
     expect(text).not.toContain(FAKE_SK_2);
     const stored = db
       .prepare("SELECT secret_enc FROM server_settings WHERE key = 'lyrics.spicyKey'")
