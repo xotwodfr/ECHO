@@ -48,7 +48,7 @@ allow.
 
 ## 3. Inputs to a lookup
 
-`GET /api/v1/lyrics?trackKey=&title=&artist=&album=&durationMs=&isrc=&spotifyId=&navidromeId=`. The server
+`GET /api/v1/lyrics?trackKey=&title=&artist=&album=&durationMs=`. Provider ids are derived from the track key on the server (`navidrome:<id>`, `spotify:<id>`), never taken from free-form parameters, and the normalised metadata is part of the shared cache key, so one user's request cannot fill another track's entry (M6 security review). The server
 resolves and returns a `LyricsDoc` (§5) or `404 { tried: [{ source, outcome }] }`.
 
 Normalisation for matching (server-side):

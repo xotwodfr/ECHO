@@ -272,15 +272,13 @@ paths:
   /lyrics:
     get:
       summary: The track's lyrics (cache first, then the sources), with the user's override for it
+      description: Provider ids are taken from trackKey (navidrome:<id>, spotify:<id>); the metadata is part of the shared cache key.
       parameters:
         - { name: trackKey, in: query, required: true, schema: { type: string, pattern: '^[\w:.-]{1,200}$' } }
         - { name: title, in: query, schema: { type: string } }
         - { name: artist, in: query, schema: { type: string } }
         - { name: album, in: query, schema: { type: string } }
         - { name: durationMs, in: query, schema: { type: integer } }
-        - { name: isrc, in: query, schema: { type: string } }
-        - { name: spotifyId, in: query, schema: { type: string } }
-        - { name: navidromeId, in: query, schema: { type: string } }
       responses:
         '200':
           description: Found

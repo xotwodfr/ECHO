@@ -48,7 +48,7 @@ function setup(sources: Source[], scope = 'http://nd') {
   return { ...t, app, cookie, get };
 }
 
-const Q = 'trackKey=navidrome:t1&title=Song&artist=Band&durationMs=200000&navidromeId=t1';
+const Q = 'trackKey=navidrome:t1&title=Song&artist=Band&durationMs=200000';
 
 describe('GET /api/v1/lyrics', () => {
   it('resolves once, then serves the cache; the override comes along', async () => {
@@ -135,5 +135,39 @@ describe('GET /api/v1/lyrics', () => {
     s.deps.lyrics.scopeFor = () => 'http://server-b';
     await s.get(Q);
     expect(one.calls.n).toBe(2); // not served server A's entry
+  });
+});
+
+describe('the shared cache cannot be poisoned (security review)', () => {
+  it('ids come from the track key; other metadata gets its own entry', async () => {
+    const seen: { navidromeId?: string; spotifyId?: string; title: string }[] = [];
+    const s1: Source = {
+      id: 'navidrome',
+      timeoutMs: 1000,
+      retryAfterMs: null,
+      metadataKeyed: false,
+      eligible: () => true,
+      fetch: async (i) => {
+        seen.push({ navidromeId: i.navidromeId, spotifyId: i.spotifyId, title: i.title });
+        return {
+          kind: 'found',
+          candidate: { ...candidate('navidrome'), lines: [{ text: i.title, start: 1000 }] },
+        };
+      },
+    };
+    const s = setup([s1]);
+    // An attacker asks for t1 with another track's id and another song's title.
+    await s.get(
+      'trackKey=navidrome:t1&title=Other%20Song&artist=Band&navidromeId=t9&spotifyId=4cOdK2wGLETKBW3PvgPWqT',
+    );
+    expect(seen[0]).toEqual({ navidromeId: 't1', spotifyId: undefined, title: 'Other Song' });
+    // The honest request for t1 is not served the planted entry.
+    const honest = (await (await s.get('trackKey=navidrome:t1&title=Song&artist=Band')).json()) as {
+      doc: { lines: { text: string }[] };
+    };
+    expect(honest.doc.lines[0]?.text).toBe('Song');
+    // The same metadata (in another spelling) is shared.
+    await s.get('trackKey=navidrome:t1&title=SONG&artist=band');
+    expect(seen).toHaveLength(2);
   });
 });

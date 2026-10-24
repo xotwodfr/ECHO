@@ -1,8 +1,9 @@
+import { createHash } from 'node:crypto';
 import { Hono, type MiddlewareHandler } from 'hono';
 import type { AuthEnv } from '../auth/routes.ts';
 import type { Db } from '../db/db.ts';
 import type { LyricsCache } from './cache.ts';
-import { PRECEDENCE, type Resolver, type Tried } from './resolve.ts';
+import { normalise, PRECEDENCE, type Resolver, type Tried } from './resolve.ts';
 import type { LookupInput, Source, SourceId } from './sources.ts';
 
 // GET /api/v1/lyrics (LYRICS_INTEGRATION.md §3): cache first, then the resolver; a late improvement
@@ -52,21 +53,38 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
     const trackKey = q.trackKey ?? '';
     if (!KEY.test(trackKey)) return c.json({ error: 'bad_track_key' }, 400);
     const duration = Number(q.durationMs);
+    // Provider ids come from the track key itself, never from free-form parameters, and the
+    // metadata used for the lookup is part of the cache key: a request cannot fill another
+    // track's shared entry with a different song.
+    const [provider, providerId] = [
+      trackKey.slice(0, trackKey.indexOf(':')),
+      trackKey.slice(trackKey.indexOf(':') + 1),
+    ];
     const input: LookupInput = {
       trackKey,
       title: str(q.title) ?? '',
       artist: str(q.artist) ?? '',
       ...(str(q.album) && { album: str(q.album) }),
       ...(Number.isFinite(duration) && duration > 0 && { durationMs: Math.round(duration) }),
-      ...(str(q.isrc, 20) && { isrc: str(q.isrc, 20) }),
-      ...(str(q.spotifyId, 30) && { spotifyId: str(q.spotifyId, 30) }),
-      ...(str(q.navidromeId, 200) && { navidromeId: str(q.navidromeId, 200) }),
+      ...(provider === 'navidrome' && providerId && { navidromeId: providerId }),
+      ...(provider === 'spotify' && providerId && { spotifyId: providerId }),
     };
     const user = c.var.user;
     const ov = override(user.id, trackKey);
     c.header('Cache-Control', 'private, no-store');
-    const scope = trackKey.startsWith('navidrome:') ? `${deps.scopeFor(user.id)}|` : '';
-    const key = `${scope}${trackKey}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}`;
+    const scope = provider === 'navidrome' ? `${deps.scopeFor(user.id)}|` : '';
+    const meta = createHash('sha1')
+      .update(
+        [
+          normalise(input.title),
+          normalise(input.artist),
+          normalise(input.album ?? ''),
+          Math.round((input.durationMs ?? 0) / 1000),
+        ].join('\u0000'),
+      )
+      .digest('hex')
+      .slice(0, 16);
+    const key = `${scope}${trackKey}|${meta}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}`;
 
     const hit = await deps.cache.get(key);
     if (hit && 'doc' in hit) return c.json({ doc: hit.doc, override: ov });
