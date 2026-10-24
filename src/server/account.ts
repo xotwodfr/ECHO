@@ -1,4 +1,4 @@
-import { Hono, type MiddlewareHandler } from 'hono';
+import { type Context, Hono, type MiddlewareHandler } from 'hono';
 import { deleteCookie } from 'hono/cookie';
 import { audit } from './audit.ts';
 import { CODE_PARAMS, hashSecret, passwordProblem, verifySecret } from './auth/password.ts';
@@ -112,6 +112,37 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
     return !!u && (await verifySecret(str(pw, 1024) ?? '', u.password_hash));
   };
 
+  /**
+   * Re-authentication for a sensitive change: the password and, when `needCode`, a second factor.
+   * Wrong guesses count like failed logins (per IP, and per account towards the lockout), so a
+   * stolen session cannot be used to guess them; a lockout signs the account out everywhere
+   * (security review). Returns the refusal, or null when both are good.
+   */
+  async function reauth(c: Context<AuthEnv>, b: Record<string, unknown>, needCode: boolean) {
+    const user = c.var.user;
+    const t = now();
+    if (!deps.limiter.ipAllows(c.var.ip, t)) return c.json({ error: 'rate_limited' }, 429);
+    if (deps.limiter.lockedFor(user.username, t)) return c.json({ error: 'locked' }, 423);
+    const lockout = (factor: string) => {
+      revokeOthers(db, user.id, null);
+      audit(db, t, user.id, 'login.locked', { factor, reauth: true });
+    };
+    if (!(await passwordOk(user.id, b.password ?? b.current))) {
+      if (deps.limiter.fail(user.username, t)) lockout('password');
+      audit(db, t, user.id, 'reauth.failed', { factor: 'password' });
+      return c.json({ error: 'wrong_password' }, 403);
+    }
+    deps.limiter.succeed(user.username);
+    if (!needCode) return null;
+    if (!(await secondFactor(deps, user.id, b.code))) {
+      if (deps.limiter.failSecond(user.username, t)) lockout('totp');
+      audit(db, t, user.id, 'reauth.failed', { factor: 'totp' });
+      return c.json({ error: 'bad_code' }, 403);
+    }
+    deps.limiter.succeedSecond(user.username);
+    return null;
+  }
+
   app.get('/me/account', requireUser, (c) => {
     const u = userRow(c.var.user.id);
     if (!u) return c.json({ error: 'unauthenticated' }, 401);
@@ -132,7 +163,8 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
   app.post('/me/password', requireUser, async (c) => {
     const b = await body(c);
     const user = c.var.user;
-    if (!(await passwordOk(user.id, b.current))) return c.json({ error: 'wrong_password' }, 403);
+    const refused = await reauth(c, b, false);
+    if (refused) return refused;
     const next = str(b.next, 1024);
     const problem = next === null ? 'required' : passwordProblem(next);
     if (problem || next === null) return c.json({ error: 'bad_password', detail: problem }, 400);
@@ -196,8 +228,9 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
   app.post('/me/totp/start', requireUser, async (c) => {
     const b = await body(c);
     const user = c.var.user;
-    if (!(await passwordOk(user.id, b.password))) return c.json({ error: 'wrong_password' }, 403);
     if (userRow(user.id)?.totp_enabled) return c.json({ error: 'totp_already_on' }, 409);
+    const refused = await reauth(c, b, false);
+    if (refused) return refused;
     const secret = newTotpSecret();
     enrolling.set(user.id, { secret, expiresAt: now() + ENROL_TTL });
     return c.json({ otpauth: otpauthUri(user.username, secret), secret });
@@ -227,8 +260,8 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
     const b = await body(c);
     const user = c.var.user;
     if (user.role === 'admin') return c.json({ error: 'admin_needs_totp' }, 403);
-    if (!(await passwordOk(user.id, b.password))) return c.json({ error: 'wrong_password' }, 403);
-    if (!(await secondFactor(deps, user.id, b.code))) return c.json({ error: 'bad_code' }, 403);
+    const refused = await reauth(c, b, true);
+    if (refused) return refused;
     db.transaction(() => {
       db.prepare(
         'UPDATE users SET totp_secret_enc = NULL, totp_enabled = 0, totp_last_step = NULL WHERE id = ?',
@@ -242,8 +275,8 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
   app.post('/me/recovery-codes', requireUser, async (c) => {
     const b = await body(c);
     const user = c.var.user;
-    if (!(await passwordOk(user.id, b.password))) return c.json({ error: 'wrong_password' }, 403);
-    if (!(await secondFactor(deps, user.id, b.code))) return c.json({ error: 'bad_code' }, 403);
+    const refused = await reauth(c, b, true);
+    if (refused) return refused;
     const codes = await storeRecoveryCodes(db, user.id);
     audit(db, now(), user.id, 'totp.recovery_codes_regenerated');
     return c.json({ recoveryCodes: codes });
@@ -254,9 +287,8 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
     const b = await body(c);
     const user = c.var.user;
     if (isLastAdmin(db, user.id)) return c.json({ error: 'last_admin' }, 409);
-    if (!(await passwordOk(user.id, b.password))) return c.json({ error: 'wrong_password' }, 403);
-    if (userRow(user.id)?.totp_enabled && !(await secondFactor(deps, user.id, b.code)))
-      return c.json({ error: 'bad_code' }, 403);
+    const refused = await reauth(c, b, !!userRow(user.id)?.totp_enabled);
+    if (refused) return refused;
     revokeSession(db, user.sessionHash);
     deleteUser(db, user.id, now(), user.id);
     deleteCookie(c, SESSION_COOKIE, { secure: true, path: '/' });

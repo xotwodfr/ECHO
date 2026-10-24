@@ -451,3 +451,36 @@ describe('device tokens (API-02)', () => {
     expect((await bearer('/me')).status).toBe(401);
   });
 });
+
+describe('re-authentication is rate limited (security review)', () => {
+  it('five wrong passwords through a session lock the account and sign it out everywhere', async () => {
+    const w = await withAdmin();
+    const bo = await invited(w);
+    for (let i = 0; i < 5; i++) {
+      const r = await call(
+        w.app,
+        'POST',
+        '/api/v1/me/password',
+        { current: `wrong guess ${i}xx`, next: NEW_PASSWORD },
+        bo.cookie,
+      );
+      expect(r.status).toBe(403);
+    }
+    expect((await call(w.app, 'GET', '/api/v1/me', undefined, bo.cookie)).status).toBe(401);
+    expect(w.deps.auth.limiter.lockedFor('bo', w.clock.t)).toBeGreaterThan(0);
+  });
+
+  it('wrong second factors count too', async () => {
+    const w = await withAdmin();
+    for (let i = 0; i < 5; i++)
+      await call(
+        w.app,
+        'POST',
+        '/api/v1/me/recovery-codes',
+        { password: PASSWORD, code: '000000' },
+        w.admin,
+      );
+    expect(w.deps.auth.limiter.lockedFor('ada', w.clock.t)).toBeGreaterThan(0);
+    expect((await call(w.app, 'GET', '/api/v1/me', undefined, w.admin)).status).toBe(401);
+  });
+});

@@ -129,9 +129,30 @@ describe('the route: opt-in setting and Spicy for Navidrome tracks', () => {
     );
     const cookie = `__Host-echo_session=${createSession(db, id, 'web', t.clock.t)}`;
     const app = createApp(t.deps);
-    expect(await (await call(app, 'GET', '/api/v1/me/settings', undefined, cookie)).json()).toEqual(
-      { version: 2, lyrics: { useSpotifyForLookup: false } },
+    expect(
+      await (await call(app, 'GET', '/api/v1/me/settings', undefined, cookie)).json(),
+    ).toMatchObject({ version: 2, lyrics: { useSpotifyForLookup: false } });
+    // Every §7.1 key is checked; the per-device ones never reach the server.
+    for (const bad of [
+      { lyrics: { globalOffsetMs: 25 } },
+      { lyrics: { sizeScale: 2 } },
+      { visuals: { intensity: 'loud' } },
+      { visuals: { quality: 'high' } },
+      { playback: { quality: 'raw' } },
+      { playback: { crossfadeSec: 9 } },
+    ])
+      expect((await call(app, 'PUT', '/api/v1/me/settings', bad, cookie)).status).toBe(400);
+    const vis = await call(
+      app,
+      'PUT',
+      '/api/v1/me/settings',
+      { visuals: { intensity: 'subtle' }, lyrics: { globalOffsetMs: -150 } },
+      cookie,
     );
+    expect(await vis.json()).toMatchObject({
+      visuals: { intensity: 'subtle', mode: 'auto' },
+      lyrics: { globalOffsetMs: -150 },
+    });
     for (const bad of [
       { other: 1 },
       { lyrics: { useSpotifyForLookup: 'yes' } },
