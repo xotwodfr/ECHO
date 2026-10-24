@@ -109,7 +109,7 @@ export function trackFromSdk(t: SdkTrack): Track {
     title: t.name,
     artists: t.artists.map((a) => ({ id: idOf(a.uri), name: a.name })),
     album: {
-      id: idOf(t.album.uri),
+      id: `spotify:${idOf(t.album.uri)}`, // ECHO's album id (library-spotify.ts)
       title: t.album.name,
       key: `spotify:album:${idOf(t.album.uri)}`,
     },
@@ -353,8 +353,8 @@ export class SpotifyProvider implements PlaybackProvider {
   }
 
   async playContext(ctx: PlayContext, offset: number, tracks: Track[]) {
-    const byUri =
-      (ctx.kind === 'album' || ctx.kind === 'playlist') && SPOTIFY_ID.test(ctx.id ?? '');
+    const id = (ctx.id ?? '').replace(/^spotify:/, ''); // ECHO prefixes Spotify ids
+    const byUri = (ctx.kind === 'album' || ctx.kind === 'playlist') && SPOTIFY_ID.test(id);
     const first = tracks[offset];
     if (first)
       this.emit({
@@ -366,7 +366,7 @@ export class SpotifyProvider implements PlaybackProvider {
       });
     await this.playOnDevice(
       byUri
-        ? { context_uri: `spotify:${ctx.kind}:${ctx.id}`, offset: { position: offset } }
+        ? { context_uri: `spotify:${ctx.kind}:${id}`, offset: { position: offset } }
         : { uris: tracks.map((t) => `spotify:track:${t.id}`), offset: { position: offset } },
     );
   }

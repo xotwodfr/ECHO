@@ -4,6 +4,7 @@ import { ApiError, api } from '../api.ts';
 import { login, logout, sessionStore, setupFinish, setupStart, totp } from '../session.ts';
 import { strings } from '../strings.ts';
 import { Button, Field } from '../ui/controls.tsx';
+import { AdminServerSection, SpotifyConnection } from './SpotifyViews.tsx';
 
 // Sign-in, first-start setup and the Account section (SETTINGS_AND_SECURITY.md §4, §6.1, §7.3). A
 // successful sign-in or connection reloads the page: the playback provider is chosen at start.
@@ -219,6 +220,8 @@ export function AccountSection() {
         {s.signOut}
       </Button>
       <NavidromeConnection />
+      <SpotifyConnection />
+      <AdminServerSection />
     </>
   );
 }

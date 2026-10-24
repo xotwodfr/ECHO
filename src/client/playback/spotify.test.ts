@@ -156,7 +156,7 @@ describe('SpotifyProvider', () => {
   it('transfers to ECHO once, then plays an album by its context URI from the offset', async () => {
     const { p } = setup();
     const ctx = { kind: 'album' as const, id: 'a'.repeat(22), title: 'Record' };
-    await p.playContext(ctx, 2, [tr(1), tr(2), tr(3)]);
+    await p.playContext({ ...ctx, id: `spotify:${ctx.id}` }, 2, [tr(1), tr(2), tr(3)]);
     await p.playContext(ctx, 0, [tr(1), tr(2), tr(3)]);
     const calls = web.map((w) => `${w.method} ${w.url.pathname}`);
     expect(calls).toEqual([
@@ -192,7 +192,7 @@ describe('SpotifyProvider', () => {
     expect(s.track).toMatchObject({
       key: `spotify:${'t'.repeat(21)}1`,
       spotifyId: `${'t'.repeat(21)}1`,
-      album: { key: `spotify:album:${'a'.repeat(22)}` },
+      album: { id: `spotify:${'a'.repeat(22)}`, key: `spotify:album:${'a'.repeat(22)}` },
       artwork: [{ url: 'https://i.scdn.co/image/x', width: 640, height: 640 }],
     });
     expect(s.upcoming?.map((t) => t.title)).toEqual(['Song 2', 'Song 3']);

@@ -39,7 +39,7 @@ test('sign in, connect Navidrome, play a track from it', async ({ page }) => {
   await expect(page.getByLabel('Server address')).toHaveValue(/^http:\/\/127\.0\.0\.1:\d+$/);
   await page.getByLabel('Navidrome username').fill('ada');
   await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page).toHaveURL(/\/$/); // reloads with the Navidrome provider
 
   await page.goto('/library');
@@ -80,7 +80,7 @@ test('the queue follows you to another device', async ({ page, browser }) => {
   await page.goto('/settings/account');
   await page.getByLabel('Navidrome username').fill('ada');
   await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto('/library/album/al-3');
   await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();

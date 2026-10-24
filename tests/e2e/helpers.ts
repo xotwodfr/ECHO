@@ -44,7 +44,7 @@ export async function signedInWithNavidrome(page: Page, prefix = 'u') {
   await page.goto('/settings/account');
   await page.getByLabel('Navidrome username').fill('ada');
   await page.getByLabel('Navidrome password', { exact: true }).fill('navidrome-pass');
-  await page.getByRole('button', { name: 'Connect' }).click();
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   return user;
 }
@@ -71,4 +71,49 @@ export async function playAlbum(page: Page, albumId: string, track = 0) {
 /** Empties the server's lyric cache, so a test meets the sources themselves (the files are shared). */
 export function clearLyricsCache() {
   rmSync(join(tmpdir(), 'echo-e2e', 'data', 'cache', 'lyrics'), { recursive: true, force: true });
+}
+
+const e2eDb = () => new Database(join(tmpdir(), 'echo-e2e', 'data', 'echo.db'));
+
+/**
+ * The admin's Spotify app (Client ID) on the E2E server, and room on it: Development Mode allows 5
+ * users, and the E2E database outlives runs, so connections older than 45 s (longer than any test) are let go.
+ */
+export function spotifyAppReady() {
+  const db = e2eDb();
+  db.prepare(
+    `INSERT INTO server_settings (key, value_json) VALUES ('spotify.clientId', ?)
+     ON CONFLICT (key) DO UPDATE SET value_json = excluded.value_json`,
+  ).run(JSON.stringify('e'.repeat(32)));
+  db.prepare("DELETE FROM connections WHERE provider = 'spotify' AND updated_at < ?").run(
+    Date.now() - 45_000,
+  );
+  db.close();
+}
+
+/** Sets an admin setting directly (the gates), as Admin → Server would. */
+export function serverSetting(key: string, value: unknown) {
+  const db = e2eDb();
+  db.prepare(
+    `INSERT INTO server_settings (key, value_json) VALUES (?, ?)
+     ON CONFLICT (key) DO UPDATE SET value_json = excluded.value_json`,
+  ).run(key, JSON.stringify(value));
+  db.close();
+}
+
+/** Connects Spotify through Settings → Account: ECHO's PKCE against the mock accounts service. */
+export async function connectSpotify(page: Page) {
+  spotifyAppReady();
+  await page.goto('/settings/account');
+  await page.getByRole('button', { name: 'Connect Spotify' }).click();
+  await expect(page.getByText(/^Connected as /)).toBeVisible();
+}
+
+/** Lets the user's Spotify seat go (after each Spotify test: the app has only 5). */
+export function releaseSpotify(username: string) {
+  const db = e2eDb();
+  db.prepare(
+    "DELETE FROM connections WHERE provider = 'spotify' AND user_id = (SELECT id FROM users WHERE username = ?)",
+  ).run(username);
+  db.close();
 }

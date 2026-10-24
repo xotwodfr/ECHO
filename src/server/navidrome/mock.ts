@@ -21,6 +21,8 @@ export interface Faults {
   breakStreamAt: number | null; // a stream body stops after this many bytes
   lyricsDelayMs: number; // the mock LRCLIB answers this late
   lrclibStatus: number; // and with this status (200: normal)
+  spotifyProduct: string; // the mock Spotify account's plan ('premium' | 'free')
+  spotifyMeStatus: number; // 403: the account is not on the app's user list
 }
 
 const SAMPLE_RATE = 8000;
@@ -120,6 +122,8 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     breakStreamAt: null,
     lyricsDelayMs: 0,
     lrclibStatus: 200,
+    spotifyProduct: 'premium',
+    spotifyMeStatus: 200,
   };
   const starred = new Set<string>(['al-1-t2']);
   const scrobbles: { id: string; submission: boolean }[] = [];
@@ -165,7 +169,35 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       faults.breakStreamAt = q.has('breakStreamAt') ? Number(q.get('breakStreamAt')) : null;
       faults.lyricsDelayMs = Number(q.get('lyricsDelayMs') ?? 0);
       faults.lrclibStatus = Number(q.get('lrclibStatus') ?? 200);
+      faults.spotifyProduct = q.get('spotifyProduct') ?? 'premium';
+      faults.spotifyMeStatus = Number(q.get('spotifyMeStatus') ?? 200);
       return res.end('ok');
+    }
+    // A mock Spotify accounts service and /v1/me (ECHO_SPOTIFY_ACCOUNTS_URL, ECHO_SPOTIFY_API_URL in
+    // E2E): consent is granted at once; the browser's own Web API calls are faked by Playwright.
+    if (req.url?.startsWith('/authorize')) {
+      const q = new URL(req.url, 'http://mock').searchParams;
+      const back = new URL(q.get('redirect_uri') ?? '');
+      back.searchParams.set('code', 'mock-code');
+      back.searchParams.set('state', q.get('state') ?? '');
+      res.writeHead(302, { location: back.href });
+      return res.end();
+    }
+    if (req.url === '/api/token' && req.method === 'POST') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      return res.end(
+        JSON.stringify({
+          access_token: 'mock-access',
+          refresh_token: 'mock-refresh',
+          expires_in: 3600,
+        }),
+      );
+    }
+    if (req.url === '/v1/me') {
+      res.writeHead(faults.spotifyMeStatus, { 'content-type': 'application/json' });
+      return res.end(
+        JSON.stringify({ id: 'mock-user', display_name: 'Ada', product: faults.spotifyProduct }),
+      );
     }
     // A mock LRCLIB (ECHO_LRCLIB_URL in E2E): "Glass Weather" tracks have synced lyrics.
     if (req.url?.startsWith('/api/get')) {

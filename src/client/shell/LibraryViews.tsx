@@ -4,7 +4,7 @@ import { ALBUM_SORTS, type Album, albumDurationMs, type Playlist } from '../libr
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
-import { Button } from '../ui/controls.tsx';
+import { Button, ProviderMark } from '../ui/controls.tsx';
 import { formatTime } from '../ui/logic.ts';
 import { AlbumGrid, AlbumTile, Artwork, TrackList, TrackRow } from '../ui/media.tsx';
 import type { LibraryTab } from '../view.ts';
@@ -237,6 +237,7 @@ export function AlbumView({ id }: { id: string }) {
 }
 
 const RESULTS = 6; // per group (PRODUCT_SPEC.md §6.4)
+const PROVIDER_NAMES = { navidrome: 'Navidrome', spotify: 'Spotify' } as const;
 
 export function SearchResults({ q }: { q: string }) {
   const library = useLibrary();
@@ -259,23 +260,40 @@ export function SearchResults({ q }: { q: string }) {
   if (library?.searchRemote && remote?.q !== q) return null; // waiting for the server
   const found = (library?.searchRemote ? remote : library?.search(q)) ?? { tracks: [], albums: [] };
   if (!found.tracks.length && !found.albums.length) return <p className="empty">{s.none(q)}</p>;
-  const tracks = found.tracks.slice(0, RESULTS);
-  return (
-    <>
-      {tracks.length > 0 && (
-        <section className="results" aria-labelledby="results-tracks">
-          <h2 id="results-tracks">{s.tracks}</h2>
-          <TrackList label={s.tracks}>
-            <Rows tracks={tracks} context={{ kind: 'search', title: q }} />
-          </TrackList>
-        </section>
-      )}
-      {found.albums.length > 0 && (
-        <section className="results" aria-labelledby="results-albums">
-          <h2 id="results-albums">{s.albums}</h2>
-          <Albums albums={found.albums.slice(0, RESULTS)} />
-        </section>
-      )}
-    </>
-  );
+  // Grouped by provider, Navidrome first, each group marked when both appear (SRCH-02).
+  const groups = (['navidrome', 'spotify'] as const)
+    .map((provider) => ({
+      provider,
+      tracks: found.tracks.filter((t) => t.provider === provider).slice(0, RESULTS),
+      albums: found.albums
+        .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
+        .slice(0, RESULTS),
+    }))
+    .filter((g) => g.tracks.length || g.albums.length);
+  const marked = groups.length > 1;
+  return groups.map((g) => {
+    const mark = marked ? <ProviderMark>{PROVIDER_NAMES[g.provider]}</ProviderMark> : null;
+    return (
+      <div key={g.provider} className="results-group" data-provider={g.provider}>
+        {g.tracks.length > 0 && (
+          <section className="results" aria-labelledby={`results-tracks-${g.provider}`}>
+            <h2 id={`results-tracks-${g.provider}`}>
+              {s.tracks} {mark}
+            </h2>
+            <TrackList label={s.tracks}>
+              <Rows tracks={g.tracks} context={{ kind: 'search', title: q }} />
+            </TrackList>
+          </section>
+        )}
+        {g.albums.length > 0 && (
+          <section className="results" aria-labelledby={`results-albums-${g.provider}`}>
+            <h2 id={`results-albums-${g.provider}`}>
+              {s.albums} {mark}
+            </h2>
+            <Albums albums={g.albums} />
+          </section>
+        )}
+      </div>
+    );
+  });
 }

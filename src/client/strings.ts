@@ -123,6 +123,8 @@ export const strings = {
     playNextBecomesAdd: 'Spotify can only add to the end of its queue.',
     replaceQueue: (provider: string) => `Replace the queue with this ${provider} music?`,
     replace: 'Replace',
+    replaceConsequence:
+      'One queue holds music from one service. What is queued now will be cleared.',
     cancel: 'Cancel',
     openIn: 'Open in Spotify',
     drm: {

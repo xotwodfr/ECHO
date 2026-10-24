@@ -1,11 +1,13 @@
 import type React from 'react';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { useStore } from 'zustand';
+import type { Track } from '../../shared/types.ts';
 import { connectionStore } from '../connection.ts';
 import { lineAt, nudgeLyrics } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
+import { type SpotifyProvider, spotifyStore } from '../playback/spotify.ts';
 import { lyricsStore, nextView, type StageView, scrubStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
@@ -14,6 +16,7 @@ import { Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
 import { Link } from './link.tsx';
 import { keyTarget, type Shortcut, shortcutFor } from './shortcuts.ts';
+import spotifyLogo from './spotify-logo-white.svg';
 
 // The transport dock (DESIGN_SYSTEM.md §5, §9.2; PRODUCT_SPEC.md §6.1): 88px, full width. Shell
 // in form, Stage in colour (the progress fill and the Stage play glyph take the art palette).
@@ -54,21 +57,25 @@ export function Dock({ stage }: { stage: boolean }) {
         ) : (
           <span className="art art--dock" aria-hidden="true" />
         )}
-        <div className="dock-text">
-          <p className="dock-title" id={idleId}>
-            {t ? t.title : strings.dock.idle}
-          </p>
-          {t && (
-            <p className="dock-sub">
-              {t.artists.map((a) => a.name).join(', ')} —{' '}
-              {t.album.id ? (
-                <Link to={{ view: 'album', id: t.album.id }}>{t.album.title}</Link>
-              ) : (
-                t.album.title
-              )}
+        {t?.provider === 'spotify' ? (
+          <SpotifyMeta track={t} titleId={idleId} />
+        ) : (
+          <div className="dock-text">
+            <p className="dock-title" id={idleId}>
+              {t ? t.title : strings.dock.idle}
             </p>
-          )}
-        </div>
+            {t && (
+              <p className="dock-sub">
+                {t.artists.map((a) => a.name).join(', ')} —{' '}
+                {t.album.id ? (
+                  <Link to={{ view: 'album', id: t.album.id }}>{t.album.title}</Link>
+                ) : (
+                  t.album.title
+                )}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="dock-transport">
@@ -132,6 +139,7 @@ export function Dock({ stage }: { stage: boolean }) {
           onClick={() => setQueueOpen(true)}
         />
         <Reachability />
+        <SpotifyLine />
         {c.providerLabel && <ProviderMark>{c.providerLabel}</ProviderMark>}
       </div>
 
@@ -281,6 +289,9 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
           </>
         )}
       </div>
+      {open && q.provider === 'spotify' && (
+        <p className="queue-note">{strings.spotify.queueNote}</p>
+      )}
       {open && canEdit && total > 0 && (
         <Button variant="tertiary" onClick={c.clear}>
           {s.clear}
@@ -302,4 +313,86 @@ function Reachability() {
       {strings.dock.unreachable(server.down ? 'ECHO server' : 'Navidrome', s)}
     </p>
   );
+}
+
+const OPEN = 'https://open.spotify.com';
+
+/**
+ * Spotify's metadata (Policy II.4, II.5; SP-01, SP-02): title, artists and album link back to
+ * open.spotify.com, with the official logo; the dock keeps it visible when the chrome hides.
+ */
+function SpotifyMeta({ track: t, titleId }: { track: Track; titleId: string }) {
+  const ext = { target: '_blank', rel: 'noopener noreferrer' };
+  return (
+    <div className="dock-text">
+      <p className="dock-title" id={titleId}>
+        <a href={`${OPEN}/track/${t.id}`} {...ext}>
+          {t.title}
+        </a>
+      </p>
+      <p className="dock-sub">
+        {t.artists.map((a, i) => (
+          <span key={a.id ?? a.name}>
+            {i > 0 && ', '}
+            {a.id ? (
+              <a href={`${OPEN}/artist/${a.id}`} {...ext}>
+                {a.name}
+              </a>
+            ) : (
+              a.name
+            )}
+          </span>
+        ))}{' '}
+        —{' '}
+        {t.album.id ? (
+          <a href={`${OPEN}/album/${t.album.id.replace(/^spotify:/, '')}`} {...ext}>
+            {t.album.title}
+          </a>
+        ) : (
+          t.album.title
+        )}
+      </p>
+      <a className="spotify-logo" href={OPEN} {...ext}>
+        <img src={spotifyLogo} alt="Spotify" width={80} height={22} />
+      </a>
+    </div>
+  );
+}
+
+/** The Spotify device's state (PLAYBACK_ARCHITECTURE.md §4.7, §8; PLAY-09, REL-04). */
+function SpotifyLine() {
+  const c = usePlayback();
+  const sp = useStore(spotifyStore);
+  const spotify = c.provider?.id === 'spotify' ? (c.provider as unknown as SpotifyProvider) : null;
+  if (!spotify) return null;
+  if (sp.remoteDevice)
+    return (
+      <p className="dock-reach" role="status">
+        {strings.spotify.playingOn(sp.remoteDevice)}{' '}
+        <Button variant="tertiary" onClick={() => void spotify.playHere()}>
+          {strings.spotify.playHere}
+        </Button>
+      </p>
+    );
+  if (sp.status === 'reconnecting')
+    return (
+      <p className="dock-reach" role="status">
+        {strings.spotify.reconnecting}{' '}
+        {sp.offerRetry && (
+          <Button variant="tertiary" onClick={() => spotify.retry()}>
+            {strings.spotify.retry}
+          </Button>
+        )}
+      </p>
+    );
+  if (sp.status === 'error' && sp.error)
+    return (
+      <p className="dock-reach" role="alert">
+        {sp.error.userMessage}{' '}
+        {sp.error.code === 'spotify.expired' && (
+          <Link to={{ view: 'settings', section: 'account' }}>{strings.spotify.reconnect}</Link>
+        )}
+      </p>
+    );
+  return null;
 }

@@ -13,6 +13,7 @@ import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
 import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
+import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
 import { Stage } from './Stage.tsx';
 import { StageChrome, StageContent } from './StageViews.tsx';
 
@@ -271,6 +272,7 @@ function Frame() {
       </main>
       <Dock stage={route.view === 'listen'} />
       <ToastRegion />
+      <ReplaceQueueDialog />
     </div>
   );
 }

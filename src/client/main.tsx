@@ -6,13 +6,17 @@ import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
 import { createNavidromeLibrary } from './library-navidrome.ts';
+import { combineLibraries, createSpotifyLibrary } from './library-spotify.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
+import { SpotifyProvider } from './playback/spotify.ts';
 import { loadSession } from './session.ts';
+import { confirmReplace } from './shell/ReplaceQueue.tsx';
 import { Shell } from './shell/Shell.tsx';
+import { spotifyStatus } from './shell/SpotifyViews.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { createViewStore } from './view.ts';
@@ -46,10 +50,21 @@ if (!fixtures && session && route.view !== 'login' && route.view !== 'setup') {
     store.getState().navigate({ view: 'login' }, { replace: true });
 }
 const ownLibrary = session?.status === 'signedIn' && session.navidrome;
-const library = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null);
+
+// Spotify joins once the user has connected it (M7); its SDK loads on the first Spotify play.
+const spotifyState =
+  session?.status === 'signedIn' ? await spotifyStatus().catch(() => null) : null;
+const spotify =
+  spotifyState?.connection?.status === 'connected'
+    ? new SpotifyProvider({ gates: spotifyState.gates })
+    : null;
+const baseLibrary = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null);
+const library = spotify ? combineLibraries(baseLibrary, createSpotifyLibrary()) : baseLibrary;
 
 const controller = createPlaybackController({
   provider: ownLibrary ? new NavidromeProvider() : (fixtures?.createFixtureProvider() ?? null),
+  spotify,
+  confirmReplace,
   notify: (message) => toastStore.getState().show(message),
   features,
 });
@@ -57,7 +72,7 @@ const controller = createPlaybackController({
 // Lyrics: the guide tracks sing their fixture documents (LYRICS_EXPERIENCE.md §16) until the
 // lyrics loader arrives (M6).
 // A signed-in user with Navidrome gets them from the server (M6).
-if (ownLibrary) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
+if (ownLibrary || spotify) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
 else {
   const showLyrics = (track: ReturnType<typeof controller.player.getState>['track']) => {
     const doc = fixtures?.fixtureLyrics(track) ?? null;
