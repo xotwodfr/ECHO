@@ -102,6 +102,20 @@ describe('Spotify IDs for Navidrome tracks', () => {
   });
 });
 
+describe('the shared mappings cannot be poisoned (security review)', () => {
+  it('made-up metadata for another user’s track id lands in its own entry', async () => {
+    const s = setup();
+    // An attacker asks with the real track id but metadata of some other song.
+    s.items([{ id: ID_B, name: 'Decoy Song', duration_ms: 100_000 }]);
+    await s.ids.idFor(1, 'nd', { ...input, title: 'Decoy Song', durationMs: 100_000 });
+    await s.ids.idFor(1, 'nd', { ...input, isrc: 'XXAAA0000001' });
+    // The honest request is not served the decoy: it looks up its own basis.
+    s.items([{ id: ID_A, name: 'Harbour Lights', duration_ms: 200_000 }]);
+    expect(await s.ids.idFor(2, 'nd', input)).toBe(ID_A);
+    expect(s.searches).toHaveLength(3);
+  });
+});
+
 describe('the route: opt-in setting and Spicy for Navidrome tracks', () => {
   it('GET/PUT /me/settings: default off, only known keys', async () => {
     const t = testDeps();
@@ -173,5 +187,55 @@ describe('the route: opt-in setting and Spicy for Navidrome tracks', () => {
       cookie,
     );
     expect(seen).toEqual([ID_A]);
+  });
+});
+
+describe('the lyrics cache key includes the ISRC (security review)', () => {
+  it('a request with another ISRC does not share (or fill) the entry', async () => {
+    const t = testDeps();
+    const db = t.deps.auth.db;
+    const uid = Number(
+      db
+        .prepare(
+          "INSERT INTO users (username, password_hash, role, created_at) VALUES ('ada', 'x', 'user', 0)",
+        )
+        .run().lastInsertRowid,
+    );
+    const seen: (string | undefined)[] = [];
+    const spicy: Source = {
+      id: 'spicy',
+      timeoutMs: 1000,
+      retryAfterMs: null,
+      metadataKeyed: false,
+      eligible: (i) => !!i.spotifyId,
+      fetch: async (i) => {
+        seen.push(i.spotifyId);
+        return {
+          kind: 'found',
+          candidate: {
+            source: 'spicy',
+            sync: 'line',
+            offsetMs: 0,
+            attribution: { text: i.spotifyId as string },
+            lines: [{ text: i.spotifyId as string, start: 1000 }],
+          },
+        };
+      },
+    };
+    t.deps.lyrics.sourcesFor = () => [spicy];
+    t.deps.lyrics.spotifyIdFor = async (_u, _s, i) => (i.isrc === 'GBAYE0601498' ? ID_A : ID_B);
+    const app = createApp(t.deps);
+    const cookie = `__Host-echo_session=${createSession(db, uid, 'web', t.clock.t)}`;
+    const get = (isrc: string) =>
+      call(
+        app,
+        'GET',
+        `/api/v1/lyrics?trackKey=navidrome:t1&title=T&artist=A&durationMs=200000&isrc=${isrc}`,
+        undefined,
+        cookie,
+      ).then((r: Response) => r.json());
+    expect((await get('XXAAA0000001')).doc.lines[0].text).toBe(ID_B); // the forged one
+    expect((await get('GBAYE0601498')).doc.lines[0].text).toBe(ID_A); // not served ID_B's
+    expect(seen).toEqual([ID_B, ID_A]);
   });
 });

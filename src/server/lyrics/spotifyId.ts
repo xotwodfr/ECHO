@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Db } from '../db/db.ts';
 import { jaroWinkler, normalise } from './resolve.ts';
 import type { LookupInput } from './sources.ts';
@@ -72,7 +73,22 @@ export function createSpotifyIds(opts: {
      */
     async idFor(userId: number, scope: string, input: LookupInput): Promise<string | undefined> {
       if (!input.navidromeId) return undefined;
-      const key = `${scope}|${input.navidromeId}`;
+      // The metadata comes from the request: the mapping is keyed by what it was looked up from,
+      // so a request with someone else's track id and made-up metadata cannot pin a wrong id on
+      // that track for everyone (security review).
+      const basis = input.isrc
+        ? `isrc:${input.isrc}`
+        : createHash('sha1')
+            .update(
+              [
+                normalise(input.title),
+                normalise(input.artist),
+                Math.round((input.durationMs ?? 0) / 1000),
+              ].join('\u0000'),
+            )
+            .digest('hex')
+            .slice(0, 16);
+      const key = `${scope}|${input.navidromeId}|${basis}`;
       const known = cached(key);
       if (known !== undefined) return known ?? undefined;
       let p = inflight.get(key);

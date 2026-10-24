@@ -99,6 +99,7 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
           normalise(input.artist),
           normalise(input.album ?? ''),
           Math.round((input.durationMs ?? 0) / 1000),
+          input.isrc ?? '', // it picks the Spotify id, so the Spicy answer (spotifyId.ts)
         ].join('\u0000'),
       )
       .digest('hex')
