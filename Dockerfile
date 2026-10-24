@@ -30,6 +30,9 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/src/server ./src/server
 COPY --from=build /app/src/shared ./src/shared
 COPY scripts/verify-hardware.ts ./scripts/
+# `docker compose exec echo echo-admin backup | verify | rotate-master-key` (src/server/admin-cli.ts).
+RUN printf '#!/bin/sh\nexec node /app/src/server/admin-cli.ts "$@"\n' > /usr/local/bin/echo-admin \
+  && chmod 755 /usr/local/bin/echo-admin
 USER 1000:1000
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \

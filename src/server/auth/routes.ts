@@ -259,12 +259,13 @@ export function authRoutes(deps: AuthDeps) {
     if (!u) return c.json({ error: 'challenge_expired' }, 401);
     let ok = false;
     if (/^\d{6}$/.test(code)) {
-      const secret = sealer.open(u.totp_secret_enc, {
+      // Unreadable after a restore without the master key: recovery codes (hashed) still work.
+      const secret = sealer.tryOpen(u.totp_secret_enc, {
         table: 'users',
         rowId: ch.userId,
         column: 'totp_secret_enc',
       });
-      const step = verifyTotp(secret, code, t, u.totp_last_step);
+      const step = secret === null ? null : verifyTotp(secret, code, t, u.totp_last_step);
       // Recorded atomically: of two concurrent requests with the same code, one wins.
       ok =
         step !== null &&

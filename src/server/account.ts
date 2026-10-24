@@ -47,12 +47,12 @@ export async function secondFactor(deps: AuthDeps, userId: number, raw: unknown)
     .get(userId) as { totp_secret_enc: string; totp_last_step: number | null } | undefined;
   if (!u) return false;
   if (/^\d{6}$/.test(code)) {
-    const secret = sealer.open(u.totp_secret_enc, {
+    const secret = sealer.tryOpen(u.totp_secret_enc, {
       table: 'users',
       rowId: userId,
       column: 'totp_secret_enc',
     });
-    const step = verifyTotp(secret, code, now(), u.totp_last_step);
+    const step = secret === null ? null : verifyTotp(secret, code, now(), u.totp_last_step);
     return (
       step !== null &&
       db
@@ -90,6 +90,15 @@ async function storeRecoveryCodes(db: Db, userId: number) {
 export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthEnv>) {
   const { db, sealer, now } = deps;
   const app = new Hono<AuthEnv>();
+  const totpReadable = (id: number) => {
+    const enc = db.prepare('SELECT totp_secret_enc FROM users WHERE id = ?').pluck().get(id) as
+      | string
+      | null;
+    return (
+      !!enc &&
+      sealer.tryOpen(enc, { table: 'users', rowId: id, column: 'totp_secret_enc' }) !== null
+    );
+  };
   /** TOTP enrolments in progress: the secret waits here until one valid code confirms it. */
   const enrolling = new Map<number, { secret: string; expiresAt: number }>();
 
@@ -228,7 +237,10 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
   app.post('/me/totp/start', requireUser, async (c) => {
     const b = await body(c);
     const user = c.var.user;
-    if (userRow(user.id)?.totp_enabled) return c.json({ error: 'totp_already_on' }, 409);
+    // On, and readable: nothing to enrol. Unreadable (a restore without the master key, signed
+    // in with a recovery code): enrolling again replaces it.
+    if (userRow(user.id)?.totp_enabled && totpReadable(user.id))
+      return c.json({ error: 'totp_already_on' }, 409);
     const refused = await reauth(c, b, false);
     if (refused) return refused;
     const secret = newTotpSecret();

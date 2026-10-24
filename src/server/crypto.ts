@@ -41,7 +41,7 @@ const aad = (w: Where) => Buffer.from(`${w.table}|${w.rowId}|${w.column}`, 'utf8
 /** `remember` sees every plaintext opened, so the log redactor can mask it word for word (§9). */
 export function createSealer(master: Buffer, opts: { remember?: (plain: string) => void } = {}) {
   const key = subkey(master, 'secrets');
-  return {
+  const sealer = {
     /** `v1:<nonce>:<ciphertext+tag>`, base64url. */
     seal(plain: string, where: Where): string {
       const nonce = randomBytes(12);
@@ -66,7 +66,19 @@ export function createSealer(master: Buffer, opts: { remember?: (plain: string) 
       opts.remember?.(plain);
       return plain;
     },
+    /**
+     * The plaintext, or null when it cannot be opened: after a restore without the master key,
+     * a connection needs re-entry and nothing else breaks (DEP-03).
+     */
+    tryOpen(sealed: string, where: Where): string | null {
+      try {
+        return sealer.open(sealed, where);
+      } catch {
+        return null;
+      }
+    },
   };
+  return sealer;
 }
 
 export type Sealer = ReturnType<typeof createSealer>;

@@ -115,7 +115,12 @@ export function createSpotifyTokens(deps: SpotifyDeps) {
     const r = row(userId);
     const { clientId } = spotifySettings(deps.db);
     if (!r?.secret_enc || !clientId) return { error: 'not_connected' };
-    const refreshToken = deps.sealer.open(r.secret_enc, SEALED(userId));
+    const refreshToken = deps.sealer.tryOpen(r.secret_enc, SEALED(userId));
+    if (refreshToken === null) {
+      // Sealed with another master key (a restore without it): reconnect.
+      setStatus(userId, 'expired');
+      return { error: 'expired' };
+    }
     let out: Awaited<ReturnType<typeof tokenRequest>>;
     try {
       out = await tokenRequest(clientId, {

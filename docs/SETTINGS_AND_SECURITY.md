@@ -398,12 +398,19 @@ connection remains (SEC-06).
 
 ## 11. Backups and key management
 
-- Back up the `echo-data` volume (`echo.db` + cache) with the owner's normal backups. Use
-  `sqlite3 .backup` or stop the container briefly. The cache can be skipped.
+- Back up the database with `docker compose exec echo echo-admin backup` (a consistent online
+  copy, `VACUUM INTO`, written to `/data/backups/echo-<time>.db`), and copy that file out with the
+  owner's normal backups. The cache can be skipped.
 - Back up `secrets/echo_master_key` **separately** (password manager or offline). A DB backup
-  without the key exposes no secrets. Without the key, users must re-enter their connections, and
-  nothing else is lost.
-- Restoring requires the same master key, or a rotation from the old key.
+  without the key exposes no secrets.
+- **Restore:** put the backup in place as `/data/echo.db` on a fresh container with the same
+  master key; `echo-admin verify` reports how many sealed values open. Without the key (verified
+  in the M8 drill, `src/server/admin-cli.test.ts`): passwords, sessions, settings and queues work;
+  Navidrome and Spotify connections show "needs re-entry"; TOTP secrets are unreadable, so users
+  sign in with a recovery code and enrol again; the admin re-enters the Spicy key.
+- **Rotation:** `echo-admin rotate-master-key --new-key-file <file>` re-seals every secret with
+  the new key in one transaction; then replace the `echo_master_key` secret with that file and
+  restart at once.
 
 ---
 

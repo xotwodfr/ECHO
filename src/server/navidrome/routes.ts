@@ -128,11 +128,12 @@ export async function navidromeClientFor(
     .get(userId) as { config_json: string; secret_enc: string } | undefined;
   if (!row) return null;
   const cfg = JSON.parse(row.config_json) as Stored;
-  const secret = deps.sealer.open(row.secret_enc, {
+  const secret = deps.sealer.tryOpen(row.secret_enc, {
     table: 'connections',
     rowId: `${userId}|navidrome`,
     column: 'secret_enc',
   });
+  if (secret === null) return null; // sealed with another master key: needs re-entry
   const creds: Credentials =
     cfg.auth === 'apiKey' ? { apiKey: secret } : { username: cfg.username, password: secret };
   const allow = deps.db
@@ -215,7 +216,8 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
       .get(userId) as { config_json: string; secret_enc: string } | undefined;
     if (!row) return null;
     const cfg = JSON.parse(row.config_json) as Stored;
-    const secret = sealer.open(row.secret_enc, where(userId));
+    const secret = sealer.tryOpen(row.secret_enc, where(userId));
+    if (secret === null) return null; // sealed with another master key: needs re-entry
     return {
       cfg,
       creds:
@@ -270,6 +272,15 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     const { url, username, auth, serverVersion, extensions } = JSON.parse(
       row.config_json,
     ) as Stored;
+    // Restored without the master key: the saved secret is unreadable, so ask for it again.
+    if (!stored(user(c).id))
+      return c.json({
+        connected: false,
+        needsReentry: true,
+        url,
+        username,
+        defaultUrl: deps.defaultUrl,
+      });
     // The secret is write-only: only that one is saved, never what it is.
     return c.json({
       connected: true,

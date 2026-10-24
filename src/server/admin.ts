@@ -19,7 +19,7 @@ export function spicyKey(db: Db, sealer: Sealer): string | null {
   const row = db
     .prepare("SELECT secret_enc FROM server_settings WHERE key = 'lyrics.spicyKey'")
     .get() as { secret_enc: string | null } | undefined;
-  return row?.secret_enc ? sealer.open(row.secret_enc, SPICY) : null;
+  return row?.secret_enc ? sealer.tryOpen(row.secret_enc, SPICY) : null;
 }
 
 /** Development Mode allows 5 Spotify users per app (PLAYBACK_ARCHITECTURE.md §4.1). */
