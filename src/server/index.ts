@@ -23,6 +23,7 @@ import {
   navidromeSource,
   spicySource,
 } from './lyrics/sources.ts';
+import { createSpotifyIds } from './lyrics/spotifyId.ts';
 import {
   type NavidromeDeps,
   navidromeClientFor,
@@ -35,7 +36,13 @@ import { fallbackPalette } from './palette/extract.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 import { fetchSpotifyCover, spotifyArt } from './palette/spotify.ts';
 import { queueRoutes } from './queue.ts';
-import { type SpotifyDeps, spotifyRoutes } from './spotify.ts';
+import { settingsRoutes, userSettings } from './settings.ts';
+import {
+  createSpotifyTokens,
+  type SpotifyDeps,
+  type SpotifyTokens,
+  spotifyRoutes,
+} from './spotify.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -46,6 +53,8 @@ export interface AppDeps {
   navidrome: NavidromeDeps;
   lyrics: LyricsDeps;
   spotify: SpotifyDeps;
+  /** Shared with the server's own Spotify lookups; created from `spotify` when absent. */
+  spotifyTokens?: SpotifyTokens;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -109,7 +118,8 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', lyricsRoutes(deps.lyrics, requireUser(deps.auth)));
-  app.route('/api/v1', spotifyRoutes(deps.spotify, requireUser(deps.auth)));
+  app.route('/api/v1', spotifyRoutes(deps.spotify, requireUser(deps.auth), deps.spotifyTokens));
+  app.route('/api/v1', settingsRoutes(deps.auth.db, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -195,12 +205,33 @@ if (import.meta.main) {
   sweep();
   setInterval(sweep, 86_400_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
+  const spotifyDeps: SpotifyDeps = {
+    db: auth.db,
+    sealer: auth.sealer,
+    now: Date.now,
+    accountsUrl: config.spotifyAccountsUrl,
+    apiUrl: config.spotifyApiUrl,
+    publicOrigin: config.publicOrigin,
+  };
+  const spotifyTokens = createSpotifyTokens(spotifyDeps);
+  const spotifyIds = createSpotifyIds({
+    db: auth.db,
+    now: Date.now,
+    apiUrl: config.spotifyApiUrl,
+    // LI-08: only with the user's own connection, and only when they have opted in.
+    tokenFor: async (userId) => {
+      if (!userSettings(auth.db, userId).lyrics.useSpotifyForLookup) return null;
+      const t = await spotifyTokens.accessToken(userId);
+      return 'error' in t ? null : t.accessToken;
+    },
+  });
   const lyrics: LyricsDeps = {
     db: auth.db,
     cache: lyricsCache,
     resolver: createResolver(),
     scopeFor: (userId) => navidromeUrlOf(auth.db, userId),
     spotifySyncAllowed: () => spotifySettings(auth.db).gates.syncedLyrics,
+    spotifyIdFor: (userId, scope, input) => spotifyIds.idFor(userId, scope, input),
     sourcesFor: (userId) => {
       const client = () => navidromeClientFor(navidrome, userId);
       return [
@@ -216,14 +247,8 @@ if (import.meta.main) {
     auth,
     navidrome,
     lyrics,
-    spotify: {
-      db: auth.db,
-      sealer: auth.sealer,
-      now: Date.now,
-      accountsUrl: config.spotifyAccountsUrl,
-      apiUrl: config.spotifyApiUrl,
-      publicOrigin: config.publicOrigin,
-    },
+    spotify: spotifyDeps,
+    spotifyTokens,
     devFixtures: config.devFixtures,
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });

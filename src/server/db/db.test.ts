@@ -16,6 +16,7 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'recovery_codes',
       'server_settings',
       'sessions',
+      'spotify_ids',
       'track_overrides',
       'user_settings',
       'users',

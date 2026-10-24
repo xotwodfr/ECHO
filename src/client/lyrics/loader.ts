@@ -31,6 +31,8 @@ export function lyricsQuery(t: Track) {
     album: t.album.title,
     durationMs: String(t.durationMs),
   });
+  // Lets the server find a Spotify id for Spicy Lyrics (LYRICS_INTEGRATION.md §4.3).
+  if (t.isrc) q.set('isrc', t.isrc);
   return `/lyrics?${q}`;
 }
 

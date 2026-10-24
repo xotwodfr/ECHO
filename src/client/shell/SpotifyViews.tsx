@@ -65,6 +65,7 @@ export function SpotifyConnection() {
           <p role="status">
             {c.status === 'connected' ? t.connected(c.displayName) : t.status[c.status]}
           </p>
+          <LookupToggle />
           <div className="actions">
             {c.status !== 'connected' && (
               <Button variant="primary" onClick={connect}>
@@ -185,5 +186,30 @@ export function AdminServerSection() {
       />
       {note && <p role="status">{note}</p>}
     </section>
+  );
+}
+
+/** "Use my Spotify account to find lyrics for my library" (LYRICS_INTEGRATION.md §4.3), default off. */
+function LookupToggle() {
+  const [on, setOn] = useState<boolean | null>(null);
+  useEffect(() => {
+    void api<{ lyrics: { useSpotifyForLookup: boolean } }>('/me/settings').then(
+      (r) => setOn(r.lyrics.useSpotifyForLookup),
+      () => setOn(false),
+    );
+  }, []);
+  if (on === null) return null;
+  const set = async (v: boolean) => {
+    const r = await api<{ lyrics: { useSpotifyForLookup: boolean } }>('/me/settings', {
+      method: 'PUT',
+      body: { lyrics: { useSpotifyForLookup: v } },
+    });
+    setOn(r.lyrics.useSpotifyForLookup);
+  };
+  return (
+    <>
+      <Toggle label={t.lookup} checked={on} onChange={(v) => void set(v)} />
+      <p className="field-hint">{t.lookupHint}</p>
+    </>
   );
 }

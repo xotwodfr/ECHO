@@ -19,6 +19,8 @@ export interface LyricsDeps {
   sourcesFor: (userId: number) => Source[];
   /** The user's Navidrome URL: a Navidrome track key means something only on its own server. */
   scopeFor: (userId: number) => string;
+  /** A Navidrome track's Spotify id, so Spicy can serve it (§4.3, spotifyId.ts). */
+  spotifyIdFor?: (userId: number, scope: string, input: LookupInput) => Promise<string | undefined>;
   /** Gate G2 (PLAYBACK_ARCHITECTURE.md §4.6): timed lyrics for Spotify tracks. Default on. */
   spotifySyncAllowed?: () => boolean;
 }
@@ -39,6 +41,7 @@ export function untimed(doc: LyricsDoc): LyricsDoc {
 }
 
 const KEY = /^[\w:.-]{1,200}$/;
+const ISRC = /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/i;
 const OFFSET_MAX = 10_000;
 const str = (v: string | undefined, max = 500) => (v && v.length <= max ? v : undefined);
 
@@ -83,6 +86,7 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       ...(Number.isFinite(duration) && duration > 0 && { durationMs: Math.round(duration) }),
       ...(provider === 'navidrome' && providerId && { navidromeId: providerId }),
       ...(provider === 'spotify' && providerId && { spotifyId: providerId }),
+      ...(q.isrc && ISRC.test(q.isrc) && { isrc: q.isrc.toUpperCase() }),
     };
     const user = c.var.user;
     const ov = override(user.id, trackKey);
@@ -111,6 +115,13 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
 
     // Listeners of the same track at the same moment share one lookup.
     let p = inflight.get(key);
+    if (!p) {
+      if (provider === 'navidrome' && deps.spotifyIdFor) {
+        const spotifyId = await deps.spotifyIdFor(user.id, deps.scopeFor(user.id), input);
+        if (spotifyId) input.spotifyId = spotifyId;
+      }
+      p = inflight.get(key); // another request may have started meanwhile
+    }
     if (!p) {
       p = deps.resolver
         .resolve(input, deps.sourcesFor(user.id), {

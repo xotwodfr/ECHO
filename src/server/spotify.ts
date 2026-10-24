@@ -53,10 +53,17 @@ const b64url = (b: Buffer) => b.toString('base64url');
 const sameText = (a: string, b: string) =>
   a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
-export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<AuthEnv>) {
-  const app = new Hono<AuthEnv>();
+export type TokenResult =
+  | { accessToken: string; expiresAt: number }
+  | { error: 'not_connected' | 'expired' | 'unavailable' };
+
+/**
+ * Each connected user's tokens: the sealed refresh token in `connections`, the access token in
+ * memory, refreshed with under 5 minutes left, one refresh per user at a time (Spotify may rotate
+ * the refresh token). Shared by the routes and the server's own lookups (lyrics/spotifyId.ts).
+ */
+export function createSpotifyTokens(deps: SpotifyDeps) {
   const f: typeof fetch = (url, init) => (deps.fetch ?? fetch)(url, init);
-  const flows = new Map<string, Flow>();
   const tokens = new Map<number, { accessToken: string; expiresAt: number }>();
   const refreshing = new Map<number, Promise<TokenResult>>();
 
@@ -75,10 +82,6 @@ export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<
         "UPDATE connections SET status = ?, updated_at = ? WHERE user_id = ? AND provider = 'spotify'",
       )
       .run(status, deps.now(), userId);
-
-  const sweep = () => {
-    for (const [k, v] of flows) if (v.expiresAt <= deps.now()) flows.delete(k);
-  };
 
   async function tokenRequest(clientId: string, params: Record<string, string>) {
     const res = await f(`${deps.accountsUrl}/api/token`, {
@@ -107,10 +110,6 @@ export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<
     const me = (await res.json()) as { id?: string; display_name?: string; product?: string };
     return { id: String(me.id ?? ''), name: me.display_name ?? null, product: me.product ?? null };
   }
-
-  type TokenResult =
-    | { accessToken: string; expiresAt: number }
-    | { error: 'not_connected' | 'expired' | 'unavailable' };
 
   async function refresh(userId: number): Promise<TokenResult> {
     const r = row(userId);
@@ -152,6 +151,42 @@ export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<
     tokens.set(userId, t);
     return t;
   }
+
+  return {
+    f,
+    row,
+    tokenRequest,
+    profile,
+    remember: (userId: number, t: { accessToken: string; expiresAt: number }) =>
+      tokens.set(userId, t),
+    forget: (userId: number) => tokens.delete(userId),
+    /** A live access token for the user, refreshing when fewer than 5 minutes remain. */
+    async accessToken(userId: number): Promise<TokenResult> {
+      const have = tokens.get(userId);
+      if (have && have.expiresAt - deps.now() > REFRESH_MARGIN) return have;
+      let p = refreshing.get(userId);
+      if (!p) {
+        p = refresh(userId).finally(() => refreshing.delete(userId));
+        refreshing.set(userId, p);
+      }
+      return p;
+    },
+  };
+}
+
+export type SpotifyTokens = ReturnType<typeof createSpotifyTokens>;
+
+export function spotifyRoutes(
+  deps: SpotifyDeps,
+  requireUser: MiddlewareHandler<AuthEnv>,
+  t: SpotifyTokens = createSpotifyTokens(deps),
+) {
+  const app = new Hono<AuthEnv>();
+  const flows = new Map<string, Flow>();
+  const { row, tokenRequest, profile } = t;
+  const sweep = () => {
+    for (const [k, v] of flows) if (v.expiresAt <= deps.now()) flows.delete(k);
+  };
 
   app.get('/spotify/login', requireUser, (c) => {
     const user = c.var.user;
@@ -229,7 +264,7 @@ export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<
         status,
         deps.now(),
       );
-    tokens.set(user.id, {
+    t.remember(user.id, {
       accessToken: out.body.access_token as string,
       expiresAt: deps.now() + (out.body.expires_in ?? 3600) * 1000,
     });
@@ -239,24 +274,12 @@ export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<
 
   app.post('/spotify/token', requireUser, async (c) => {
     c.header('Cache-Control', 'no-store');
-    const id = c.var.user.id;
-    const have = tokens.get(id);
-    let t: TokenResult | undefined =
-      have && have.expiresAt - deps.now() > REFRESH_MARGIN ? have : undefined;
-    if (!t) {
-      // One refresh per user at a time: Spotify may rotate the refresh token.
-      let p = refreshing.get(id);
-      if (!p) {
-        p = refresh(id).finally(() => refreshing.delete(id));
-        refreshing.set(id, p);
-      }
-      t = await p;
+    const r = await t.accessToken(c.var.user.id);
+    if ('error' in r) {
+      const status = r.error === 'unavailable' ? 503 : r.error === 'expired' ? 401 : 404;
+      return c.json({ error: `spotify.${r.error}` }, status);
     }
-    if ('error' in t) {
-      const status = t.error === 'unavailable' ? 503 : t.error === 'expired' ? 401 : 404;
-      return c.json({ error: `spotify.${t.error}` }, status);
-    }
-    return c.json(t);
+    return c.json(r);
   });
 
   app.get('/spotify/status', requireUser, (c) => {
@@ -283,7 +306,7 @@ export function spotifyRoutes(deps: SpotifyDeps, requireUser: MiddlewareHandler<
   app.delete('/spotify/connection', requireUser, (c) => {
     const id = c.var.user.id;
     deps.db.prepare("DELETE FROM connections WHERE user_id = ? AND provider = 'spotify'").run(id);
-    tokens.delete(id);
+    t.forget(id);
     audit(deps.db, deps.now(), id, 'spotify.disconnected');
     return c.json({ ok: true });
   });

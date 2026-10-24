@@ -86,6 +86,15 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX audit_log_at ON audit_log(at);
   `,
+  // M7: the shared Spotify-ID mappings for Navidrome tracks (LYRICS_INTEGRATION.md §4.3), keyed by
+  // the Navidrome server and track id; spotify_id NULL means "none found".
+  `
+  CREATE TABLE spotify_ids (
+    key TEXT PRIMARY KEY,
+    spotify_id TEXT,
+    expires_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export function openDb(path: string): Db {

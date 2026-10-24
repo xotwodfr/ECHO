@@ -280,6 +280,7 @@ paths:
         - { name: artist, in: query, schema: { type: string } }
         - { name: album, in: query, schema: { type: string } }
         - { name: durationMs, in: query, schema: { type: integer } }
+        - { name: isrc, in: query, description: 'Navidrome tracks: lets the server find a Spotify id for Spicy Lyrics, with the user''s opt-in (LYRICS_INTEGRATION.md §4.3)', schema: { type: string, pattern: '^[A-Za-z]{2}[A-Za-z0-9]{3}[0-9]{7}$' } }
       responses:
         '200':
           description: Found
@@ -288,6 +289,26 @@ paths:
         '404':
           description: No source had lyrics (the sources tried, with their outcomes)
           content: { application/json: { schema: { type: object, properties: { tried: { type: array, items: { type: object, properties: { source: { type: string }, outcome: { type: string } } } }, override: { $ref: '#/components/schemas/Override' } } } } }
+
+  /me/settings:
+    get:
+      summary: The user's preferences that follow them (SETTINGS_AND_SECURITY.md §7.1; M7 has one)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/UserSettings' } } } }
+    put:
+      summary: Change preferences (only known keys; anything else is refused)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                lyrics: { type: object, additionalProperties: false, properties: { useSpotifyForLookup: { type: boolean } } }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/UserSettings' } } } }
+        '400': { description: An unknown key or a wrong type }
 
   /me/tracks/{trackKey}/override:
     parameters:
@@ -412,6 +433,11 @@ components:
         offsetMs: { type: integer }
         lines: { type: array, items: { type: object } }
         fetchedAt: { type: string, format: date-time }
+    UserSettings:
+      type: object
+      properties:
+        version: { const: 2 }
+        lyrics: { type: object, properties: { useSpotifyForLookup: { type: boolean, default: false } } }
     AdminSettings:
       type: object
       properties:
