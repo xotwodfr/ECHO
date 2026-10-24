@@ -85,8 +85,15 @@ export function hardening(
       if (host !== origin.host && !health) return c.json({ error: 'misdirected' }, 421);
     }
     // CSRF (§5.3): cookie-authenticated unsafe methods must come from our own origin. Bearer
-    // tokens are not sent ambiently, so they are exempt.
-    if (!SAFE.has(c.req.method) && !c.req.header('authorization')?.startsWith('Bearer ')) {
+    // tokens are not sent ambiently, so they are exempt; so is a native client asking for its
+    // device token without any cookie and without an Origin (nothing ambient to ride on, API-02).
+    const nativeDeviceLogin =
+      c.req.path === '/api/v1/auth/device' && !c.req.header('cookie') && !c.req.header('origin');
+    if (
+      !SAFE.has(c.req.method) &&
+      !c.req.header('authorization')?.startsWith('Bearer ') &&
+      !nativeDeviceLogin
+    ) {
       const want = origin ? origin.origin : `${proto}://${host}`;
       if (c.req.header('origin') !== want) return c.json({ error: 'bad_origin' }, 403);
     }

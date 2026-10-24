@@ -181,6 +181,9 @@ blocks DNS-rebinding and misrouted traffic.
   `ECHO_PUBLIC_ORIGIN`. Otherwise 403.
 - Bearer-authenticated requests (native clients) are exempt from the Origin check. Bearer tokens
   aren't sent ambiently, so CSRF does not apply.
+- `POST /auth/device` with **no Cookie and no Origin header** is exempt too (M8): that is a native
+  client getting its token, with nothing ambient a forged request could carry. Browsers always send
+  Origin on POST, so a cross-site form still meets the check.
 - **No CORS headers.** Native clients aren't browsers and don't need them. Third-party web origins are
   not supported.
 

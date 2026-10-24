@@ -120,3 +120,26 @@ describe('response headers and limits (§5.4, §5.6)', () => {
     expect(res.status).toBe(413);
   });
 });
+
+describe('the native device login (API-02)', () => {
+  it('needs no Origin without cookies; with a cookie or a foreign Origin it is checked', async () => {
+    const { testDeps } = await import('./testing.ts');
+    const { app } = testDeps();
+    const post = (headers: Record<string, string>) =>
+      app.request('http://localhost/api/v1/auth/device', {
+        method: 'POST',
+        headers: { host: 'localhost', 'content-type': 'application/json', ...headers },
+        body: JSON.stringify({ username: 'x', password: 'y', name: 'Phone' }),
+      });
+    expect((await post({})).status).toBe(401); // reached the route: wrong credentials
+    expect((await post({ origin: 'https://evil.example' })).status).toBe(403);
+    expect((await post({ cookie: '__Host-echo_session=abc' })).status).toBe(403);
+    // Any other unsafe route without Origin stays refused.
+    const login = await app.request('http://localhost/api/v1/auth/login', {
+      method: 'POST',
+      headers: { host: 'localhost', 'content-type': 'application/json' },
+      body: '{}',
+    });
+    expect(login.status).toBe(403);
+  });
+});
