@@ -96,6 +96,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
           playing: playing(),
           mode: frame ? 'still' : scrub ? 'scrub' : 'run',
           features: f.features,
+          reduced: reduced.matches,
         });
         // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
         if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;

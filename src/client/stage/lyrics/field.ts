@@ -31,6 +31,7 @@ export interface FieldFrame {
   playing: boolean;
   mode: Mode;
   features?: Features;
+  reduced?: boolean;
 }
 
 interface Written {

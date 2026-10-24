@@ -78,6 +78,7 @@ export const LYRICS = {
     dotStepMs: 80,
   }, // §9.8
   build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 }, // §9.5, §9.6, §9.7
+  reduced: { crossfadeMs: 180, decayMs: 300, dotsAlpha: 0.6 }, // §10
   lineTimed: { endGapMs: 100, lastLineMs: 6000 }, // §9.2
   beat: {
     scaleMax: 0.012, // §12.3: 1 + 0.012·g·bassImpulse

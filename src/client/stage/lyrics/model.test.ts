@@ -609,3 +609,107 @@ describe('seek, scrub and still frames (§9.6, §10 of VISUALIZER_SPEC)', () => 
     expect(blurAt(0)).toBe(0);
   });
 });
+
+describe('reduced motion (LYRICS_EXPERIENCE.md §10, A11Y-05)', () => {
+  const reduced = { reduced: true };
+
+  it('slots are static: no travel, no drift, no background, no beat response', () => {
+    const m = model('pop-line');
+    const snaps = run(m, 0, 90_000, reduced);
+    const slots = new Map<string, Set<string>>(); // role/rank → distinct (y, z, scale-free)
+    for (const s of snaps)
+      for (const v of s.inst.values()) {
+        expect(v.role).not.toBe('bg'); // hidden
+        expect(v.y).toBe(v.ty); // placed at the slot, never travelling to it
+        expect(v.z).toBe(v.tz);
+        if (v.role === 'zone' && v.rank === 0) expect(v.scale).toBe(scaleAt(v.z)); // no pulse
+        if (v.role !== 'zone') continue;
+        const k = `${v.rank}`;
+        slots.set(k, (slots.get(k) ?? new Set()).add(`${v.z.toFixed(4)}`));
+      }
+    // No approach drift: each slot has one depth while the field is in its steady phase
+    // (the active line at 0, the ranks +1…+3 at their gap-dependent depths).
+    expect(slots.get('0')?.size).toBe(1);
+  });
+
+  it('a hand-over crossfades in place over 180 ms', () => {
+    const m = model('pop-line');
+    const snaps = run(m, 0, 60_000, reduced);
+    // Each line that becomes the active one: from the hand-over frame its opacity rises at a
+    // fixed rate to the slot's, in ~180 ms, without overshoot, at a position it never travels to.
+    let checked = 0;
+    for (let n = 1; n < snaps.length; n++) {
+      const s = snaps[n] as Snap;
+      for (const [i, v] of s.inst) {
+        const was = (snaps[n - 1] as Snap).inst.get(i);
+        if (v.rank !== 0 || v.role !== 'zone' || !was || was.rank <= 0) continue;
+        const end = snaps[n + Math.ceil(R_MS / FRAME) + 2]?.inst.get(i);
+        if (end?.rank !== 0) continue;
+        expect(end.opacity).toBeCloseTo(opacityAt(end.z), 2);
+        expect(v.y).toBe(v.ty);
+        for (let k = 0; k < Math.ceil(R_MS / FRAME); k++)
+          expect(
+            ((snaps[n + k] as Snap).inst.get(i) as { opacity: number }).opacity,
+          ).toBeLessThanOrEqual(opacityAt(end.z) + 1e-9);
+        checked++;
+      }
+    }
+    expect(checked).toBeGreaterThan(10);
+  });
+
+  it('decay is a 300 ms fade with no blur and no rise', () => {
+    const m = model('ballad-word');
+    const snaps = run(m, 0, 60_000, reduced);
+    let checked = 0;
+    for (const s of snaps)
+      for (const [i, v] of s.inst) {
+        if (v.role !== 'past') continue;
+        expect(v.blur).toBe(0);
+        const dt = s.t - (m.leftAt[i] as number);
+        if (dt > 60 && dt < 290) {
+          expect(v.opacity).toBeLessThanOrEqual(Math.max(0, 1 - dt / 300) + 1e-9);
+          checked++;
+        }
+      }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it('constant glow on the sweeping word, no emphasis, static interlude dots', () => {
+    const m = model('accents-word');
+    let glowed = 0;
+    for (let t = 0; t < 60_000; t += FRAME) {
+      m.update({
+        t,
+        dt: FRAME,
+        driftS: t / 1000,
+        playing: true,
+        mode: 'run',
+        W,
+        H,
+        reduced: true,
+        features: tracks.get(m)?.sample(t, FRAME),
+      });
+      for (const v of m.insts.values()) {
+        for (const g of v.glow) if (g > 0) glowed++;
+        for (const row of v.emph) for (const e of row) expect(e.x).toBe(0);
+        expect(v.glowR).toBe(LYRICS.glow.radius);
+        for (const g of v.glow) expect(g).toBeLessThanOrEqual(LYRICS.glow.alpha + 1e-9);
+      }
+      if (m.dots.opacity > 0) {
+        expect(m.dots.scale).toEqual([1, 1, 1]);
+        expect(m.dots.alpha).toEqual([0.6, 0.6, 0.6]);
+      }
+    }
+    expect(glowed).toBeGreaterThan(100);
+  });
+
+  it('the word sweep still runs (it carries timing, not motion)', () => {
+    const m = model('ballad-word');
+    const mid = run(m, 0, 20_000, reduced).find((s) =>
+      [...s.inst.values()].some((v) => v.p.some((p) => p > 0 && p < 1)),
+    );
+    expect(mid).toBeDefined();
+  });
+});
+
+const R_MS = LYRICS.reduced.crossfadeMs;

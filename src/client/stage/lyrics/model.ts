@@ -26,7 +26,7 @@ import {
 // hand-over stagger, decay, the background field, entering the zone, word sweep, glow and emphasis.
 // No DOM: `field.ts` writes what this computes, so all of it is unit-tested on frame simulations.
 
-const { zone: Z, decay: D, glow: G, interlude: IL, build: BUILD, stagger: ST } = LYRICS;
+const { zone: Z, decay: D, glow: G, interlude: IL, build: BUILD, stagger: ST, reduced: R } = LYRICS;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
@@ -123,6 +123,7 @@ export interface FrameInput {
   W: number;
   H: number;
   features?: Features; // §12.1; none: unavailable
+  reduced?: boolean; // §10: crossfade in place, no travel, drift, background, beats or emphasis
 }
 
 export interface FieldOptions {
@@ -149,6 +150,7 @@ export class FieldModel {
   private lastMode: Mode = 'run';
   private lastField: FieldState | null = null;
   private pause = 1;
+  private reduced = false;
   private homes: BG.Point[] = [];
   private homesFor = '';
   private dotsLeave = 0;
@@ -187,7 +189,9 @@ export class FieldModel {
     // A seek: targets jump and lines travel on the slow spring with no stagger. Leaving scrub mode
     // counts as one (§9.6).
     const seek = jumped || (this.lastMode === 'scrub' && f.mode !== 'scrub');
-    const direct = f.mode !== 'run' || first; // positions taken directly
+    this.reduced = !!f.reduced;
+    const reduced = this.reduced;
+    const direct = f.mode !== 'run' || first || reduced; // positions taken directly
     this.lastT = t;
     this.lastMode = f.mode;
 
@@ -207,7 +211,7 @@ export class FieldModel {
       sinceHandover: seek ? 0 : t - fs.from,
       vocal: vocalAt(activeLine?.words, !!activeLine, ft.mid, t),
       mode: f.mode,
-      reduced: false,
+      reduced,
     });
     this.beat = beat;
     // The background's paths run on their own clock, so a passage can slow or speed them (§12.3).
@@ -235,7 +239,7 @@ export class FieldModel {
       if (this.envelope(j, t) < 0.02) break;
       want.set(j, { role: 'past', rank: -1 - past++ });
     }
-    for (let k = 0; k < this.opts.budget && fs.next + 3 + k < n; k++)
+    for (let k = 0; k < (reduced ? 0 : this.opts.budget) && fs.next + 3 + k < n; k++)
       want.set(fs.next + 3 + k, { role: 'bg', rank: 4 + k });
 
     for (const [i, inst] of this.insts)
@@ -268,7 +272,7 @@ export class FieldModel {
         start: (this.lines[fs.next + k] as LyricLine).start,
         h: box(fs.next + k).h,
       });
-    const zt = zoneTargets(H, zoneBoxes, fs.phase, this.opts.drift ?? beat.drift);
+    const zt = zoneTargets(H, zoneBoxes, fs.phase, reduced ? 0 : (this.opts.drift ?? beat.drift));
 
     const corridorBottom = Math.max(
       ...zt.y.map((y, k) => y + ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2),
@@ -301,11 +305,11 @@ export class FieldModel {
     const pastTarget = new Map<number, { y: number; z: number }>();
     for (const [i] of pastOrder) {
       const dtLeft = t - (this.leftAt[i] as number);
-      const z = D.zEnd * (1 - Math.exp(-dtLeft / D.tauMs));
+      const z = reduced ? 0 : D.zEnd * (1 - Math.exp(-dtLeft / D.tauMs));
       const hs = box(i).h * scaleAt(z);
       const y = pastY - D.gapH * H - hs / 2;
       pastY = y - hs / 2;
-      pastTarget.set(i, { y: y - D.rise * H * clamp(dtLeft / DECAY_MS, 0, 1), z });
+      pastTarget.set(i, { y: reduced ? y : y - D.rise * H * clamp(dtLeft / DECAY_MS, 0, 1), z });
     }
 
     for (const [i, w] of want) {
@@ -378,7 +382,11 @@ export class FieldModel {
         step(inst.z, inst.tz, inst.params, dt);
       }
       inst.age += f.mode === 'still' ? BUILD.fadeInMs : dt;
+      const shown = inst.opacity;
       this.style(inst, w.role, t, f.dt, bgPlace, beat);
+      // §10: a hand-over is a crossfade in place, so opacity eases at a fixed rate.
+      if (reduced && f.mode === 'run')
+        inst.opacity = shown + clamp(inst.opacity - shown, -dt / R.crossfadeMs, dt / R.crossfadeMs);
       this.words(inst, t, f, seek || direct);
     }
 
@@ -398,6 +406,7 @@ export class FieldModel {
     const left = this.leftAt[i] as number;
     if (t < left) return 1;
     const o = this.coalesced.has(i) ? opacityAt(Z.dz) : 1;
+    if (this.reduced) return o * Math.max(0, 1 - (t - left) / R.decayMs); // fade only (§10)
     return o * Math.exp(-(t - left) / D.tauMs);
   }
 
@@ -461,7 +470,7 @@ export class FieldModel {
   ) {
     const z = inst.z.x;
     inst.scale = scaleAt(z);
-    const born = clamp(inst.age / BUILD.fadeInMs, 0, 1);
+    const born = this.reduced ? 1 : clamp(inst.age / BUILD.fadeInMs, 0, 1);
     if (role === 'bg' && bg) {
       inst.opacity = bg.opacity * born;
       inst.bucket = bg.bucket;
@@ -475,7 +484,7 @@ export class FieldModel {
       const left = this.leftAt[inst.i] as number;
       const k = 1 - Math.exp(-Math.max(0, t - left) / D.tauMs);
       inst.opacity = this.envelope(inst.i, t) * born;
-      inst.blur = D.blurMax * k;
+      inst.blur = this.reduced ? 0 : D.blurMax * k;
       inst.mix = 0;
       inst.fade = k;
       return;
@@ -564,6 +573,7 @@ export class FieldModel {
       gs.forEach((s, g) => {
         const on =
           f.mode !== 'scrub' &&
+          !this.reduced &&
           t >= w.start - LYRICS.emphasis.anticipateMs + g * e.stepMs &&
           t < w.end - LYRICS.emphasis.releaseMs;
         if (settle) snap(s, on ? 1 : 0);
@@ -581,8 +591,8 @@ export class FieldModel {
       for (let k = 0; k < 3; k++) {
         const ph = (since - k * IL.dotStepMs) / IL.cycleMs;
         const b = 0.5 - 0.5 * Math.cos(2 * Math.PI * ph);
-        d.scale[k] = 0.4 + 0.85 * b;
-        d.alpha[k] = 0.2 + 0.7 * b;
+        d.scale[k] = this.reduced ? 1 : 0.4 + 0.85 * b;
+        d.alpha[k] = this.reduced ? R.dotsAlpha : 0.2 + 0.7 * b;
       }
     } else {
       this.dotsLeave = still ? 0 : Math.max(0, this.dotsLeave - dt / IL.fadeMs);

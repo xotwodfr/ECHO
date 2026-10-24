@@ -468,3 +468,21 @@ test('scrub: lines follow the drag directly, then settle on the slow spring (LYR
     .toBeLessThanOrEqual(2);
   expect(Date.now() - released).toBeLessThan(900 + 200); // settle ≤ 900 ms, plus polling slack
 });
+
+test('reduced motion: the background field is hidden, the zone and the sweep stay (A11Y-05)', async ({
+  page,
+}) => {
+  const tl = timeline('ballad-word');
+  const active = tl.lines[2] as LyricLine;
+  const mid = (active.start + (active.end ?? active.start)) / 2;
+  await frame(page, 'ballad-word', mid);
+  const full = await lines(page);
+  expect(full.some((l) => l.parent === 'ly-bucket')).toBe(true);
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await frame(page, 'ballad-word', mid);
+  const reduced = await lines(page);
+  expect(reduced.some((l) => l.parent === 'ly-bucket')).toBe(false);
+  expect(main(reduced).find((l) => l.text === active.text)?.opacity).toBe(1);
+  await expect(page.locator('.ly-w.lit, .ly-w.sweep').first()).toBeAttached();
+});
