@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import type { LyricLine, LyricsDoc } from '../../../shared/types.ts';
+import type { FeatureSource, LyricLine, LyricsDoc } from '../../../shared/types.ts';
+import { featureTracks } from '../../fixtures/feature-tracks.ts';
+import { guideFeatures } from '../../fixtures/guide.ts';
 import { lyricFixtures } from '../../fixtures/lyrics.ts';
 import * as BG from './background.ts';
 import { sidesOf } from './layout.ts';
@@ -36,14 +38,20 @@ function boxesOf(doc: LyricsDoc, tl: Timeline): LineBox[] {
   });
 }
 
+const tracks = new WeakMap<FieldModel, FeatureSource>();
+
+/** A model of fixture `name`, which `run` plays with its paired Features track (guide.ts). */
 function model(name: string, budget = 24) {
   const doc = fx(name);
   const tl = buildTimeline(doc);
-  return new FieldModel(tl, boxesOf(doc, tl), {
+  const m = new FieldModel(tl, boxesOf(doc, tl), {
     seed: BG.hash(doc.trackKey),
     budget,
     dotsH: ROW,
   });
+  const track = featureTracks[guideFeatures[name] ?? ''];
+  if (track) tracks.set(m, track);
+  return m;
 }
 
 interface Snap {
@@ -68,7 +76,8 @@ function run(m: FieldModel, from: number, to: number, opts: Partial<FrameInput> 
   const out: Snap[] = [];
   const dt = 1000 / hz;
   for (let t = from; t <= to; t += dt) {
-    m.update({ t, dt, driftS: t / 1000, playing: true, mode: 'run', W, H, ...opts });
+    const features = tracks.get(m)?.sample(t, dt);
+    m.update({ t, dt, driftS: t / 1000, playing: true, mode: 'run', W, H, features, ...opts });
     out.push(snapshot(m, t));
   }
   return out;
@@ -311,7 +320,8 @@ describe('word sweep and glow (LYR-07, LYR-08)', () => {
           const words = (m.tl.lines[i] as LyricLine).words ?? [];
           const sweeping = words.findIndex((w) => s.t >= w.start && s.t < w.end);
           for (const [a, k] of glowing) {
-            expect(a).toBeLessThanOrEqual(LYRICS.glow.alpha + 1e-9);
+            // Sustained vocals raise it to 0.55 at most (§12.3; beat.test.ts).
+            expect(a).toBeLessThanOrEqual(LYRICS.glow.alphaMax + 1e-9);
             // The sweeping word, or an earlier one whose glow is decaying.
             expect(sweeping < 0 || k <= sweeping).toBe(true);
             if (k === sweeping) lit++;

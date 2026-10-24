@@ -80,7 +80,8 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     {
       songTime: () => frame?.ms ?? scrubStore.getState().ms ?? c.songTime(),
       // In deterministic mode with `fixture=`, the controller serves the recorded Features
-      // (§10), sampled at `frame.ms`. The M2 room does not read features yet (M3, M5).
+      // (§10), sampled at `frame.ms`. The lyric field reads them (LYRICS_EXPERIENCE.md §12); the
+      // room does from M5.
       features: c.features,
       palette: { step() {} }, // PaletteAnimator (OKLab transitions) in M4
       render: (f) => {
@@ -94,6 +95,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
           driftS: drift,
           playing: playing(),
           mode: frame ? 'still' : scrub ? 'scrub' : 'run',
+          features: f.features,
         });
         // In Still mode the loop ticks only for the lyric field; the room is drawn by renderOnce.
         if (!drawing || !renderer || (loop.mode === 'still' && f.dt > 0)) return;

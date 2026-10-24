@@ -79,5 +79,23 @@ export const LYRICS = {
   }, // §9.8
   build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 }, // §9.5, §9.6, §9.7
   lineTimed: { endGapMs: 100, lastLineMs: 6000 }, // §9.2
-  beat: { scaleMax: 0.012, zLean: 0.025, kickPx: 2, quietMs: 300 }, // §12
+  beat: {
+    scaleMax: 0.012, // §12.3: 1 + 0.012·g·bassImpulse
+    scaleCap: 0.015, // §12.4, after summing
+    zLean: 0.025,
+    kickPx: 2,
+    quietMs: 300, // §12.4: none after a hand-over
+    bassForce: 0.022, // per ms: a bass hit (≈ 45 ms of bassImpulse) peaks the spring at its level
+    sustainAttackMs: 120,
+    sustainReleaseMs: 400,
+    quietBelow: 0.2, // intensity, for quietForMs
+    quietForMs: 4000,
+    intenseAbove: 0.75,
+    passageMs: 2000, // quiet and intense passages blend in and out
+    quietSpeed: 0.6, // background drift speed
+    intenseSpeed: 1.4,
+    intenseDrift: 0.38, // approach drift fraction (§4.3: 0.30)
+    intenseGlow: 0.05,
+    setting: { subtle: 0.5, balanced: 1, expressive: 1.5 }, // §12.2, background terms only
+  },
 } as const;

@@ -79,6 +79,12 @@ export interface Placement {
   home: number; // how many times the line has re-homed (for tests and bucket changes)
 }
 
+/** §12.3: breathing amplitude (quiet passages halve it) and percussion kicks per bucket, px. */
+export interface BeatMod {
+  breathe: number;
+  kick: readonly number[];
+}
+
 export interface Corridor {
   x0: number;
   x1: number;
@@ -94,8 +100,8 @@ const smooth = (x: number) => {
 
 /**
  * Where background line `line` (starting at `start`) sits at song time `t` (ms). `driftS` is the
- * Stage's pool time in seconds (slowed while paused), which runs the wandering paths; the slow rise
- * follows song time so it is reproducible. `opacityAt` is the depth function o(z) (§4.1).
+ * background clock in seconds (the Stage's pool time, slowed while paused and by passage), which
+ * runs the wandering paths; the slow rise follows song time so it is reproducible. `opacityAt` is the depth function o(z) (§4.1).
  */
 export function place(
   seed: number,
@@ -110,6 +116,7 @@ export function place(
   corridor: Corridor,
   opacityAt: (z: number) => number,
   scaleAt: (z: number) => number,
+  beat: BeatMod = { breathe: 1, kick: [0, 0, 0] },
 ): Placement {
   const n = pts.length;
   if (n === 0) return { x: W / 2, y: H / 2, z: 1, opacity: 0, bucket: 2, home: 0 };
@@ -127,6 +134,11 @@ export function place(
     p = nextBottomHome(pts, line, k, H);
   }
   const age = ts - homeAt;
+  const bucket = bucketOf(depthAt(start, homeAt * 1000));
+  // A percussion kick moves the line along its own seeded direction, before the corridor caps so
+  // it cannot carry a line in.
+  const dir = TAU * rng(seed ^ Math.imul(line + 1, 0x85ebca6b))();
+  const kick = beat.kick[bucket] ?? 0;
   const y0 = p.y - rise * age;
   const life = Math.max(0, (p.y - TOP_FADE_H * H) / rise);
   const fadeOut = 1 - smooth((age - life) / FADE_S);
@@ -140,10 +152,13 @@ export function place(
   const cam = sway(driftS, W, H, z);
   // Lines are wide: the centre is kept far enough in that the whole scaled box stays on stage.
   const half = Math.min(W / 2, (box.w * scaleAt(z)) / 2 + 0.02 * W);
-  const x = Math.min(W - half, Math.max(half, p.x + B.ampX * W * amp * (s(0) + s(1, 0.5)) + cam.x));
-  const y = y0 + B.ampY * H * amp * (s(2) + s(3, 0.5)) + cam.y;
-  const breathe = 0.75 + 0.25 * (0.5 + 0.5 * s(4));
-  let opacity = opacityAt(z) * breathe * fadeIn * fadeOut;
+  const x = Math.min(
+    W - half,
+    Math.max(half, p.x + B.ampX * W * amp * (s(0) + s(1, 0.5)) + cam.x + Math.cos(dir) * kick),
+  );
+  const y = y0 + B.ampY * H * amp * (s(2) + s(3, 0.5)) + cam.y + Math.sin(dir) * kick;
+  const breath = 1 - 0.25 * beat.breathe * (0.5 - 0.5 * s(4)); // 0.75…1; quiet passages halve it
+  let opacity = opacityAt(z) * breath * fadeIn * fadeOut;
 
   // The reading corridor (§3.2): a line may cross it only at z ≥ 0.85 and opacity ≤ 0.10. The cap
   // eases in over 0.02 H outside the corridor, so it is complete at the edge and nothing pops.
@@ -159,7 +174,7 @@ export function place(
     zz = z + (Math.max(z, CORRIDOR_Z) - z) * k2;
     opacity += (Math.min(opacity, CORRIDOR_OPACITY, opacityAt(zz)) - opacity) * k2;
   }
-  return { x, y, z: zz, opacity, bucket: bucketOf(depthAt(start, homeAt * 1000)), home: k };
+  return { x, y, z: zz, opacity, bucket, home: k };
 }
 
 function nextBottomHome(pts: readonly Point[], line: number, k: number, H: number): Point {

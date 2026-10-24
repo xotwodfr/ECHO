@@ -12,6 +12,7 @@ interface Groove {
   snare: number[];
   hatsPerBeat: number; // 0: none
   level: number; // overall loudness, 0..1
+  voice?: number; // vocal-band gain, default 1: a ballad is carried by the voice
   intensity: (tMs: number) => number;
 }
 
@@ -47,6 +48,7 @@ function groove(g: Groove): FeatureSource {
         // The vocal band swells over two bars and rises with intensity.
         mid: clamp01(
           g.level *
+            (g.voice ?? 1) *
             (0.3 + 0.4 * intensity) *
             (0.75 + 0.25 * Math.sin((2 * Math.PI * t) / (2 * bar))),
         ),
@@ -70,6 +72,7 @@ export const featureTracks: Record<string, FeatureSource> = {
     snare: [],
     hatsPerBeat: 0,
     level: 0.55,
+    voice: 2.2,
     intensity: (t) => 0.12 + 0.38 * wave(t, 60_000),
   }),
   // 120 BPM four-on-the-floor-ish pop: kick 1 and 3, snare 2 and 4, eighth hats; verse and chorus

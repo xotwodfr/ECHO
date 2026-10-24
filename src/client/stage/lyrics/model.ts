@@ -1,5 +1,7 @@
-import type { LyricLine, LyricWord } from '../../../shared/types.ts';
+import type { Features, LyricLine, LyricWord } from '../../../shared/types.ts';
+import { SILENT_FEATURES } from '../../playback/features.ts';
 import * as BG from './background.ts';
+import { Beat, type BeatTerms, glowFor, type IntensitySetting, vocalAt } from './beat.ts';
 import type { Emphasis, Rect, Side } from './layout.ts';
 import { LYRICS } from './lyricsConfig.ts';
 import {
@@ -100,6 +102,7 @@ export interface Inst {
   backing: number[][]; // sweep per backing word
   wash: number; // line-timed lead sweep
   glow: number[]; // alpha per lead word
+  glowR: number; // glow radius, em (§12.3)
   emph: Spring[][]; // per lead word, per grapheme: 0 rest … 1 full emphasis
 }
 
@@ -119,13 +122,15 @@ export interface FrameInput {
   mode: Mode; // still: deterministic frame (everything settled); scrub: springs bypassed
   W: number;
   H: number;
+  features?: Features; // §12.1; none: unavailable
 }
 
 export interface FieldOptions {
   seed: number;
   budget: number; // background lines (§8.1, by tier)
   dotsH: number; // the dots' box at rank 0 (one row at active size)
-  drift?: number; // approach drift fraction (§4.3; §12.3 raises it in intense passages)
+  drift?: number; // approach drift fraction (§4.3), fixed; by default §12.3 raises it when intense
+  intensity?: IntensitySetting; // visuals.intensity (§12.2), default expressive
 }
 
 export class FieldModel {
@@ -136,6 +141,10 @@ export class FieldModel {
   leaving: Inst[] = [];
   dots: DotsView = { opacity: 0, scale: [1, 1, 1], alpha: [0, 0, 0] };
   key: { x: number; y: number } | null = null;
+  beat: BeatTerms | null = null;
+  private beats: Beat;
+  private bgS = Number.NaN; // background clock, s: the Stage drift clock at the passage's speed
+  private lastDriftS = 0;
   private lastT = Number.NaN;
   private lastMode: Mode = 'run';
   private lastField: FieldState | null = null;
@@ -153,6 +162,7 @@ export class FieldModel {
     this.boxes = boxes;
     this.opts = opts;
     this.lines = tl.lines;
+    this.beats = new Beat(opts.intensity);
     this.coalesced = new Set(tl.coalesced);
     // When each line leaves the anchor: the first span in which it is behind the field.
     this.leftAt = tl.lines.map(() => Number.POSITIVE_INFINITY);
@@ -188,6 +198,22 @@ export class FieldModel {
     // §6.1: the slow spring after an interlude, for the first line and at the end of the song.
     const slowHandover = handover && (prev.active < 0 || fs.active < 0);
     const n = this.lines.length;
+
+    const ft = f.features ?? SILENT_FEATURES.sample(t, dt);
+    const activeLine = fs.active >= 0 ? this.lines[fs.active] : undefined;
+    const beat = this.beats.update({
+      features: ft,
+      dt,
+      sinceHandover: seek ? 0 : t - fs.from,
+      vocal: vocalAt(activeLine?.words, !!activeLine, ft.mid, t),
+      mode: f.mode,
+      reduced: false,
+    });
+    this.beat = beat;
+    // The background's paths run on their own clock, so a passage can slow or speed them (§12.3).
+    if (f.mode === 'still' || Number.isNaN(this.bgS)) this.bgS = f.driftS;
+    else this.bgS += Math.max(0, f.driftS - this.lastDriftS) * beat.speed;
+    this.lastDriftS = f.driftS;
 
     const pauseTarget = f.playing ? 1 : G.paused;
     const pauseRate = (1 - G.paused) / (f.playing ? G.resumeMs : G.pauseMs);
@@ -242,7 +268,7 @@ export class FieldModel {
         start: (this.lines[fs.next + k] as LyricLine).start,
         h: box(fs.next + k).h,
       });
-    const zt = zoneTargets(H, zoneBoxes, fs.phase, this.opts.drift ?? Z.drift);
+    const zt = zoneTargets(H, zoneBoxes, fs.phase, this.opts.drift ?? beat.drift);
 
     const corridorBottom = Math.max(
       ...zt.y.map((y, k) => y + ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2),
@@ -305,13 +331,14 @@ export class FieldModel {
           i,
           (this.lines[i] as LyricLine).start,
           t,
-          f.driftS,
+          this.bgS,
           W,
           H,
           b,
           corridor,
           opacityAt,
           scaleAt,
+          beat,
         );
         tx = bgPlace.x;
         ty = bgPlace.y;
@@ -351,7 +378,7 @@ export class FieldModel {
         step(inst.z, inst.tz, inst.params, dt);
       }
       inst.age += f.mode === 'still' ? BUILD.fadeInMs : dt;
-      this.style(inst, w.role, t, f.dt, bgPlace);
+      this.style(inst, w.role, t, f.dt, bgPlace, beat);
       this.words(inst, t, f, seek || direct);
     }
 
@@ -417,13 +444,21 @@ export class FieldModel {
       backing: (this.lines[i]?.background ?? []).map((b) => (b.words ?? []).map(() => 0)),
       wash: 0,
       glow: words.map(() => 0),
+      glowR: LYRICS.glow.radius,
       emph: words.map((_, k) =>
         em[k]?.emphasis ? (em[k]?.graphemes ?? []).map(() => spring(0)) : [],
       ),
     };
   }
 
-  private style(inst: Inst, role: Role, t: number, dt: number, bg: BG.Placement | null) {
+  private style(
+    inst: Inst,
+    role: Role,
+    t: number,
+    dt: number,
+    bg: BG.Placement | null,
+    beat: BeatTerms,
+  ) {
     const z = inst.z.x;
     inst.scale = scaleAt(z);
     const born = clamp(inst.age / BUILD.fadeInMs, 0, 1);
@@ -453,6 +488,9 @@ export class FieldModel {
       if (k >= 1) inst.enter = null;
     }
     inst.opacity = o * born;
+    // Beats change size only, never opacity or luminance (§12.4): the active line pulses with the
+    // bass and +1…+3 lean toward the viewer; opacity and blur keep the unleaned depth.
+    inst.scale = inst.rank === 0 ? inst.scale * (1 + beat.pulse) : scaleAt(z - beat.lean);
     inst.blur = inst.rank <= 3 ? Math.min(blurAt(z), LYRICS.depth.zoneBlurCap) : blurAt(z);
     inst.mix = inkMixAt(z);
     inst.fade = 0;
@@ -475,7 +513,9 @@ export class FieldModel {
     const sweeping = words.findIndex((w) => t >= w.start && t < w.end);
     const lit = rank === 0 || (rank === 1 && sweeping >= 0);
     const slew = (G.slewPerS / 1000) * f.dt;
-    const target = lit && sweeping >= 0 ? G.alpha * this.pause : 0;
+    const look = glowFor(this.beat?.sustain ?? 0, this.beat?.glowAdd ?? 0);
+    inst.glowR = look.radius;
+    const target = lit && sweeping >= 0 ? look.alpha * this.pause : 0;
     const before = [...inst.glow];
     // A faint glow ends at 0 only when that step is itself within the slew.
     const end = (a: number, next: number) => (next < 0.005 && a <= slew ? 0 : next);

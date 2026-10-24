@@ -1,4 +1,4 @@
-import type { LyricsDoc } from '../../../shared/types.ts';
+import type { Features, LyricsDoc } from '../../../shared/types.ts';
 import { hash } from './background.ts';
 import { buildLine, type DocLayout, LINE_HEIGHT, type LineLayout, measureDoc } from './layout.ts';
 import { LYRICS } from './lyricsConfig.ts';
@@ -30,6 +30,7 @@ export interface FieldFrame {
   driftS: number;
   playing: boolean;
   mode: Mode;
+  features?: Features;
 }
 
 interface Written {
@@ -58,6 +59,7 @@ interface WordEl {
   state: 0 | 1 | 2; // unlit, sweeping, lit
   p: number;
   glow: number;
+  gr: number; // glow radius written, em
   // Emphasis (§5.5): grapheme spans and where each sits along the sweep, in px of the word.
   gs: { el: HTMLElement; off: number; w: number; e: number; p: number }[];
   ww: number;
@@ -150,7 +152,7 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
       const off = !gr || !r ? 0 : dir === 'rtl' ? r.x + r.w - (gr.x + gr.w) : gr.x - r.x;
       return { el: g, off, w: gr?.w || 1, e: -1, p: -1 };
     });
-    return { el, state: 0, p: -1, glow: 0, gs, ww: r?.w || 1 };
+    return { el, state: 0, p: -1, glow: 0, gr: LYRICS.glow.radius, gs, ww: r?.w || 1 };
   }
 
   function release(e: LineEl) {
@@ -181,7 +183,11 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
     }
   }
 
-  function writeGlow(w: WordEl, a: number) {
+  function writeGlow(w: WordEl, a: number, r: number) {
+    if (a > 0 && Math.abs(r - w.gr) >= 0.005) {
+      w.el.style.setProperty('--gr', r.toFixed(3));
+      w.gr = r;
+    }
     if (Math.abs(a - w.glow) < 0.005 && !(a === 0 && w.glow !== 0)) return;
     w.el.classList.toggle('glow', a > 0);
     if (a > 0) w.el.style.setProperty('--ga', a.toFixed(3));
@@ -234,7 +240,7 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
     if (inst.role === 'bg') return; // not word-lit (§8.2)
     e.words.forEach((we, k) => {
       writeWord(we, inst.p[k] as number);
-      writeGlow(we, inst.glow[k] as number);
+      writeGlow(we, inst.glow[k] as number, inst.glowR);
       const em = inst.emph[k];
       if (!em?.length) return;
       const lay = e.layout.words[k]?.emphasis;
