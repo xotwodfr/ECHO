@@ -1,0 +1,304 @@
+openapi: 3.1.0
+info:
+  title: ECHO API
+  version: '1'
+  description: >
+    The ECHO server's API (docs/TECHNICAL_ARCHITECTURE.md §6.2), started in M5 for every route built
+    so far. Same-origin JSON unless noted. Authentication is the `__Host-echo_session` cookie (web)
+    or a `Bearer echo_dt_…` device token (native clients). Cookie-authenticated unsafe methods need
+    `Origin` equal to ECHO's public origin (docs/SETTINGS_AND_SECURITY.md §5.3). Everything not in the
+    unauthenticated list of §5.5 answers 401 without a session. A test (src/server/openapi.test.ts)
+    keeps this file and the server's routes in step.
+servers:
+  - url: /api/v1
+security:
+  - session: []
+  - device: []
+
+paths:
+  /health:
+    get:
+      summary: Liveness
+      security: []
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { status: { const: ok } } } } } }
+
+  /session:
+    get:
+      summary: Who this browser is (never 401)
+      security: []
+      responses:
+        '200':
+          description: Signed in, anonymous, or setup open
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    required: [status, username, role, navidrome]
+                    properties:
+                      status: { const: signedIn }
+                      username: { type: string }
+                      role: { enum: [admin, user] }
+                      navidrome: { type: boolean, description: The user has a Navidrome connection }
+                  - type: object
+                    properties: { status: { enum: [anonymous, setup] } }
+
+  /setup:
+    get:
+      summary: Whether the one-time admin setup is open
+      security: []
+      responses:
+        '200': { description: Open, content: { application/json: { schema: { type: object, properties: { open: { const: true } } } } } }
+        '404': { description: An admin exists }
+    post:
+      summary: 'Setup step 1: admin username and password; returns the TOTP key to enrol'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, username, password]
+              properties:
+                token: { type: string, description: The setup token from the server log (the URL fragment) }
+                username: { type: string, pattern: '^[\w.-]{1,64}$' }
+                password: { type: string, minLength: 12, maxLength: 256 }
+      responses:
+        '200':
+          description: TOTP enrolment
+          content: { application/json: { schema: { type: object, properties: { otpauth: { type: string }, secret: { type: string } } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { description: Wrong or expired token, or an admin exists }
+
+  /setup/totp:
+    post:
+      summary: 'Setup step 2: a valid TOTP code creates the admin; recovery codes are shown once'
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [token, code], properties: { token: { type: string }, code: { type: string } } } } }
+      responses:
+        '200':
+          description: Admin created and signed in (sets the session cookie)
+          content: { application/json: { schema: { type: object, properties: { recoveryCodes: { type: array, items: { type: string }, minItems: 10, maxItems: 10 } } } } }
+        '400': { $ref: '#/components/responses/Error' }
+        '404': { description: Wrong or expired token }
+
+  /auth/login:
+    post:
+      summary: Password step of signing in
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [username, password], properties: { username: { type: string }, password: { type: string } } } } }
+      responses:
+        '200':
+          description: A session (cookie set, totpRequired false) or a TOTP challenge
+          content:
+            application/json:
+              schema: { type: object, properties: { totpRequired: { type: boolean }, challenge: { type: string } } }
+        '401': { description: Username or password is incorrect (also while locked) }
+        '429': { description: Rate limited (10/min, 100/day per client address) }
+
+  /auth/totp:
+    post:
+      summary: Second factor (a 6-digit code or a recovery code)
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [challenge, code], properties: { challenge: { type: string }, code: { type: string } } } } }
+      responses:
+        '200': { description: Signed in (cookie set) }
+        '401': { description: bad_code or challenge_expired }
+        '429': { description: Rate limited }
+
+  /auth/logout:
+    post:
+      summary: Ends this session
+      responses:
+        '200': { description: OK }
+
+  /me:
+    get:
+      summary: The signed-in user
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { username: { type: string }, role: { enum: [admin, user] } } } } } }
+
+  /me/connections/navidrome:
+    get:
+      summary: The user's Navidrome connection (the secret is never returned)
+      responses:
+        '200':
+          description: Connected or not
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected: { type: boolean }
+                  defaultUrl: { type: [string, 'null'] }
+                  url: { type: string }
+                  username: { type: string }
+                  auth: { enum: [password, apiKey] }
+                  serverVersion: { type: string }
+                  extensions: { type: array, items: { type: string } }
+                  secretSaved: { type: boolean }
+    put:
+      summary: Connect (tested before anything is stored)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                url: { type: string, description: 'Defaults to ECHO_NAVIDROME_URL; otherwise https and public, unless allow-listed' }
+                username: { type: string }
+                password: { type: string }
+                apiKey: { type: string, description: Instead of username and password, when the server supports it }
+      responses:
+        '200': { description: Connected, content: { application/json: { schema: { $ref: '#/components/schemas/ServerInfo' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+    delete:
+      summary: Disconnect
+      responses:
+        '200': { description: OK }
+
+  /me/connections/navidrome/test:
+    post:
+      summary: Test the stored connection
+      responses:
+        '200': { description: Reachable, content: { application/json: { schema: { $ref: '#/components/schemas/ServerInfo' } } } }
+        '400': { $ref: '#/components/responses/Problem' }
+        '404': { description: Not connected }
+
+  /navidrome/rest/{method}:
+    parameters:
+      - { name: method, in: path, required: true, schema: { type: string } }
+    get:
+      summary: Allow-listed Subsonic read methods, signed with the user's own credentials
+      description: >
+        ping, getOpenSubsonicExtensions, getLicense, getScanStatus, getArtists, getArtist, getAlbum,
+        getAlbumList2, getSong, getPlaylists, getPlaylist, getStarred2, search3, getLyrics,
+        getLyricsBySongId. Query parameters pass through, except auth and protocol ones.
+      responses:
+        '200': { description: The Subsonic response (`subsonic-response`) }
+        '403': { description: Method not allowed }
+        '409': { description: Not connected }
+        '502': { $ref: '#/components/responses/Problem' }
+    post:
+      summary: Allow-listed Subsonic methods that change state (star, unstar, scrobble), POST only so the Origin check applies
+      responses:
+        '200': { description: The Subsonic response }
+        '403': { description: Method not allowed }
+        '409': { description: Not connected }
+        '502': { $ref: '#/components/responses/Problem' }
+
+  /navidrome/stream/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: format, in: query, schema: { type: string, examples: [raw, opus] } }
+      - { name: maxBitRate, in: query, schema: { type: integer } }
+      - { name: timeOffset, in: query, schema: { type: integer }, description: Seconds, for transcodes }
+      - { name: uid, in: query, schema: { type: integer }, description: Signed URL (with exp and sig) }
+      - { name: exp, in: query, schema: { type: integer } }
+      - { name: sig, in: query, schema: { type: string } }
+    get:
+      summary: Audio stream, Range passed through, unbuffered (a session, a device token, or a signed URL)
+      security: [{ session: [] }, { device: [] }, {}]
+      responses:
+        '200': { description: Audio (audio/* only; anything else becomes application/octet-stream) }
+        '206': { description: Partial content }
+        '401': { description: No session and no valid signature }
+        '409': { description: Not connected }
+        '502': { description: Navidrome failed or answered with an error }
+
+  /navidrome/stream-url/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: A signed stream URL for clients that can send neither cookie nor header (6 h, one track, one user)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { url: { type: string }, expiresAt: { type: integer } } } } } }
+
+  /navidrome/cover/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: size, in: query, schema: { type: integer, minimum: 16, maximum: 2048 } }
+    get:
+      summary: Cover art (raster images only), cached privately for a week
+      responses:
+        '200': { description: Image }
+        '409': { description: Not connected }
+        '502': { description: Navidrome failed }
+
+  /palette/{albumKey}:
+    parameters:
+      - { name: albumKey, in: path, required: true, schema: { type: string, pattern: '^[\w:.-]{1,200}$' } }
+    get:
+      summary: The album's palette (docs/VISUALIZER_SPEC.md §6), computed on a miss and cached per Navidrome server
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Palette' } } } }
+        '400': { description: Bad album key }
+        '401': { description: No session (development servers answer for generated covers) }
+
+  /me/queue:
+    get:
+      summary: The user's saved queue
+      responses:
+        '200':
+          description: OK (queue null when none)
+          content: { application/json: { schema: { type: object, properties: { queue: { type: [object, 'null'] }, positionMs: { type: number }, updatedAt: { type: integer } } } } }
+    put:
+      summary: Save the queue (compare-and-set on updatedAt)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [queue, baseUpdatedAt]
+              properties:
+                queue: { type: object }
+                positionMs: { type: number }
+                baseUpdatedAt: { type: integer, description: The updatedAt this device last saw }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { type: object, properties: { updatedAt: { type: integer } } } } } }
+        '400': { description: Not a queue }
+        '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
+
+components:
+  securitySchemes:
+    session: { type: apiKey, in: cookie, name: __Host-echo_session }
+    device: { type: http, scheme: bearer, bearerFormat: echo_dt_… }
+  schemas:
+    ServerInfo:
+      type: object
+      properties:
+        serverInfo:
+          type: object
+          properties:
+            type: { type: string }
+            serverVersion: { type: string }
+            tracks: { type: integer }
+            extensions: { type: array, items: { type: string } }
+    Palette:
+      type: object
+      properties:
+        room: { type: string, description: CSS oklch() }
+        accent: { type: string }
+        highlight: { type: string }
+        glow: { type: string, description: With its alpha }
+        shadow: { type: string }
+        inkActive: { type: string }
+        source: { enum: [art, fallback] }
+        version: { type: integer }
+  responses:
+    Error:
+      description: An error code
+      content: { application/json: { schema: { type: object, properties: { error: { type: string }, detail: { type: string } } } } }
+    Problem:
+      description: A code and a message for the user
+      content: { application/json: { schema: { type: object, properties: { code: { type: string }, userMessage: { type: string } } } } }
