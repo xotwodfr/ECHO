@@ -106,6 +106,10 @@ export const strings = {
     now: 'Now playing',
     nextUp: 'Next up',
     rest: (source?: string) => (source ? `Then, from ${source}` : 'Then'),
+    moveUp: 'Move up',
+    moveDown: 'Move down',
+    remove: (title: string) => `Remove ${title}`,
+    clear: 'Clear queue',
   },
   ui: {
     play: 'Play',

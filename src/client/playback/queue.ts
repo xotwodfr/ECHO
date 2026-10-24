@@ -142,3 +142,55 @@ export function jump(q: QueueState, index: number): QueueState | null {
     history,
   };
 }
+
+/** Removes the upcoming track at `index` (its position in `upcoming()`), from either section. */
+export function removeAt(q: QueueState, index: number): QueueState {
+  if (index < q.nextUp.length) return { ...q, nextUp: q.nextUp.filter((_, i) => i !== index) };
+  const order = q.shuffleOrder ?? q.context.map((_, i) => i);
+  const target = order[index - q.nextUp.length];
+  return target === undefined ? q : withoutContext(q, new Set([target]));
+}
+
+/**
+ * Moves an upcoming track from `from` to `to` (positions in `upcoming()`), so the order that plays
+ * is exactly the order shown. A track that lands among "Next up" becomes one of them; one that
+ * lands in the album or playlist part joins it (in shuffle order when shuffle is on, so turning
+ * shuffle off still restores the list's own order around it).
+ */
+export function moveTo(q: QueueState, from: number, to: number): QueueState {
+  const t = upcoming(q)[from];
+  if (!t || from === to || to < 0 || to >= upcoming(q).length) return q;
+  const n = q.nextUp.length;
+  // Within the shuffled album part: only the play order changes; the album keeps its own order.
+  if (q.shuffleOrder && from >= n && to >= n) {
+    const shuffleOrder = [...q.shuffleOrder];
+    const [moved] = shuffleOrder.splice(from - n, 1);
+    shuffleOrder.splice(to - n, 0, moved as number);
+    return { ...q, shuffleOrder };
+  }
+  const r = removeAt(q, from);
+  if (
+    to < r.nextUp.length ||
+    (to === r.nextUp.length && from < q.nextUp.length && to < q.nextUp.length)
+  ) {
+    const nextUp = [...r.nextUp];
+    nextUp.splice(to, 0, t);
+    return { ...r, nextUp };
+  }
+  const p = to - r.nextUp.length;
+  if (r.shuffleOrder) {
+    const context = [...r.context, t];
+    const shuffleOrder = [...r.shuffleOrder];
+    shuffleOrder.splice(p, 0, context.length - 1);
+    return { ...r, context, shuffleOrder };
+  }
+  const context = [...r.context];
+  context.splice(p, 0, t);
+  return { ...r, context };
+}
+
+/** Clears everything upcoming; what plays now keeps playing. */
+export function clearUpcoming(q: QueueState): QueueState {
+  const { shuffleOrder: _, ...rest } = q;
+  return { ...rest, nextUp: [], context: [] };
+}

@@ -616,3 +616,8 @@ button {
 .album-sort {
   margin-bottom: var(--sp-5);
 }
+
+/* "Clear queue" under the upcoming rows (QUE-01). */
+.queue-upcoming + .btn {
+  margin-top: var(--sp-4);
+}

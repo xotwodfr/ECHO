@@ -169,6 +169,51 @@ describe('FakeProvider on a manual clock', () => {
   });
 });
 
+describe('queue edits (QUE-01)', () => {
+  const base = (shuffle = false) => {
+    const q = Q.startContext(Q.emptyQueue(), album, 0, ctx, 'navidrome', shuffle, random());
+    return Q.addToQueue(Q.addToQueue(q, track(8)), track(9)); // upcoming: t8 t9 | t2 t3 t4 t5
+  };
+  const ids = (q: QueueState) => titles(Q.upcoming(q));
+
+  it('moves within and across the sections; what plays is what is shown', () => {
+    expect(ids(base())).toEqual(['t8', 't9', 't2', 't3', 't4', 't5']);
+    expect(ids(Q.moveTo(base(), 0, 1))).toEqual(['t9', 't8', 't2', 't3', 't4', 't5']);
+    expect(ids(Q.moveTo(base(), 4, 2))).toEqual(['t8', 't9', 't4', 't2', 't3', 't5']);
+    // Alt+↓ on the last of Next up: it joins the album part after the first of it.
+    const down = Q.moveTo(base(), 1, 2);
+    expect(ids(down)).toEqual(['t8', 't2', 't9', 't3', 't4', 't5']);
+    expect(titles(down.nextUp)).toEqual(['t8']);
+    // Alt+↑ on the first of the album part: it joins Next up.
+    const up = Q.moveTo(base(), 2, 1);
+    expect(ids(up)).toEqual(['t8', 't2', 't9', 't3', 't4', 't5']);
+    expect(titles(up.nextUp)).toEqual(['t8', 't2', 't9']);
+    // Advancing plays the shown order.
+    let q: QueueState | null = Q.moveTo(base(), 5, 0);
+    const played: string[] = [];
+    while ((q = q && Q.advance(q))) played.push(q.now?.id ?? '');
+    expect(played).toEqual(['t5', 't8', 't9', 't2', 't3', 't4']);
+  });
+
+  it('moves under shuffle keep the shuffle, and turning it off restores the album order', () => {
+    const q = base(true);
+    const shown = ids(q);
+    const moved = Q.moveTo(q, 5, 2);
+    expect(ids(moved)).toEqual([shown[0], shown[1], shown[5], shown[2], shown[3], shown[4]]);
+    const off = Q.setShuffle(moved, false, random());
+    expect(titles(off.context)).toEqual(['t2', 't3', 't4', 't5']);
+  });
+
+  it('removes from either section, clears all, and ignores out-of-range moves', () => {
+    expect(ids(Q.removeAt(base(), 0))).toEqual(['t9', 't2', 't3', 't4', 't5']);
+    expect(ids(Q.removeAt(base(), 3))).toEqual(['t8', 't9', 't2', 't4', 't5']);
+    const cleared = Q.clearUpcoming(base(true));
+    expect(ids(cleared)).toEqual([]);
+    expect(cleared.now?.id).toBe('t1');
+    expect(Q.moveTo(base(), 0, 9)).toEqual(base());
+  });
+});
+
 describe('PlaybackController (§3 transport rules)', () => {
   const setup = () => {
     const clock = new ManualClock();

@@ -303,6 +303,17 @@ export function createPlaybackController(opts: {
       const next = Q.jump(queue.getState(), index);
       if (next) load(next, true);
     },
+
+    /** Queue edits (QUE-01), by position in `upcoming()`. */
+    move(from: number, to: number) {
+      queue.setState(Q.moveTo(queue.getState(), from, to), true);
+    },
+    remove(index: number) {
+      queue.setState(Q.removeAt(queue.getState(), index), true);
+    },
+    clear() {
+      queue.setState(Q.clearUpcoming(queue.getState()), true);
+    },
   };
 }
 

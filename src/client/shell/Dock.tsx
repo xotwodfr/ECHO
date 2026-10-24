@@ -1,3 +1,4 @@
+import type React from 'react';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { useStore } from 'zustand';
 import { connectionStore } from '../connection.ts';
@@ -6,7 +7,7 @@ import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
 import { nextView, type StageView, scrubStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
-import { IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
+import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
 import { Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
@@ -196,8 +197,45 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const c = usePlayback();
   const q = useQueue((x) => x);
   const status = usePlayer((p) => p.status);
+  const canEdit = usePlayer((p) => p.capabilities.canReorderQueue);
   const then = orderedContext(q);
+  const total = q.nextUp.length + then.length;
   const playing = status !== 'ended' && status !== 'idle';
+  const s = strings.queue;
+  // Upcoming rows can be moved (Alt+↑/↓, drag, the ⋯ menu) and removed (QUE-01).
+  const edit = (i: number, title: string) =>
+    canEdit
+      ? {
+          menu: [
+            ...(i > 0 ? [{ label: s.moveUp, onSelect: () => c.move(i, i - 1) }] : []),
+            ...(i < total - 1 ? [{ label: s.moveDown, onSelect: () => c.move(i, i + 1) }] : []),
+            { label: s.remove(title), onSelect: () => c.remove(i) },
+          ],
+          rowProps: {
+            draggable: true,
+            onDragStart: (e: React.DragEvent) =>
+              e.dataTransfer.setData('text/x-echo-queue', String(i)),
+            onDragOver: (e: React.DragEvent) => e.preventDefault(),
+            onDrop: (e: React.DragEvent) => {
+              const from = Number(e.dataTransfer.getData('text/x-echo-queue'));
+              if (Number.isInteger(from)) c.move(from, i);
+            },
+            onKeyDown: (e: React.KeyboardEvent) => {
+              if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+              e.preventDefault();
+              const to = e.key === 'ArrowUp' ? i - 1 : i + 1;
+              if (to < 0 || to >= total) return;
+              c.move(i, to);
+              // Focus follows the moved row once it has re-rendered.
+              requestAnimationFrame(() =>
+                document
+                  .querySelectorAll<HTMLElement>('.sheet .queue-upcoming .track-main')
+                  [to]?.focus(),
+              );
+            },
+          },
+        }
+      : {};
   const row = (t: (typeof then)[number], i: number | null) => (
     <TrackRow
       key={`${t.key}-${i ?? 'now'}`}
@@ -207,9 +245,9 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
       artwork={{ src: t.artwork[0]?.url, album: t.album.title }}
       nowPlaying={i === null && playing}
       onPlay={i === null ? c.resume : () => c.jump(i)}
+      {...(i === null ? {} : edit(i, t.title))}
     />
   );
-  const s = strings.queue;
   return (
     <Sheet open={open} onClose={onClose} title={s.title}>
       {/* Rows only while open: nothing to render (or re-render) behind a closed sheet. */}
@@ -220,19 +258,26 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
           <TrackList label={s.now}>{row(q.now, null)}</TrackList>
         </>
       )}
-      {open && q.nextUp.length > 0 && (
-        <>
-          <h3 className="sheet-section">{s.nextUp}</h3>
-          <TrackList label={s.nextUp}>{q.nextUp.map((t, i) => row(t, i))}</TrackList>
-        </>
-      )}
-      {open && then.length > 0 && (
-        <>
-          <h3 className="sheet-section">{s.rest(q.contextSource?.title)}</h3>
-          <TrackList label={s.rest(q.contextSource?.title)}>
-            {then.map((t, i) => row(t, q.nextUp.length + i))}
-          </TrackList>
-        </>
+      <div className="queue-upcoming">
+        {open && q.nextUp.length > 0 && (
+          <>
+            <h3 className="sheet-section">{s.nextUp}</h3>
+            <TrackList label={s.nextUp}>{q.nextUp.map((t, i) => row(t, i))}</TrackList>
+          </>
+        )}
+        {open && then.length > 0 && (
+          <>
+            <h3 className="sheet-section">{s.rest(q.contextSource?.title)}</h3>
+            <TrackList label={s.rest(q.contextSource?.title)}>
+              {then.map((t, i) => row(t, q.nextUp.length + i))}
+            </TrackList>
+          </>
+        )}
+      </div>
+      {open && canEdit && total > 0 && (
+        <Button variant="tertiary" onClick={c.clear}>
+          {s.clear}
+        </Button>
       )}
     </Sheet>
   );

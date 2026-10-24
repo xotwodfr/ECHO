@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode, useState } from 'react';
+import { type CSSProperties, type HTMLAttributes, type ReactNode, useState } from 'react';
 import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
 import type { Force } from './controls.tsx';
@@ -55,6 +55,8 @@ export interface TrackRowProps {
   onPlay: () => void;
   menu?: MenuItem[];
   force?: Force;
+  /** Extra attributes on the row: keyboard and drag handling where a list can be reordered. */
+  rowProps?: HTMLAttributes<HTMLLIElement>;
 }
 
 /** Track row (§9.3): the whole row plays; numbers right-aligned and tabular. */
@@ -67,6 +69,7 @@ export function TrackRow(p: TrackRowProps) {
       data-now-playing={p.nowPlaying || undefined}
       data-force={p.force}
       aria-current={p.nowPlaying || undefined}
+      {...p.rowProps}
     >
       {p.number !== undefined && <span className="track-num num">{p.number}</span>}
       {p.artwork && <Artwork size="row" src={p.artwork.src} title={p.artwork.album} />}

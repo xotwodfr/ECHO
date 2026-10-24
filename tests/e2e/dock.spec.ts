@@ -414,3 +414,70 @@ test.describe('task 3 polish', () => {
     await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   });
 });
+
+test('the queue reorders with Alt+arrows and its menu, removes and clears (QUE-01)', async ({
+  page,
+}) => {
+  await start(page, '/library/album/al-harbour');
+  await page.getByRole('button', { name: 'Play Ferry at Six' }).click();
+  await page.clock.runFor(LOAD_MS);
+  await dock(page).getByRole('button', { name: 'Queue' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Queue' });
+  const rest = sheet.getByRole('list', { name: 'Then, from Harbour Lights' });
+  const order = () => rest.locator('.track-title').allInnerTexts();
+  await expect
+    .poll(order)
+    .toEqual([
+      'Low Tide Radio',
+      'Salt on the Window',
+      'Lighthouse Keeper',
+      'Moorings',
+      'The Long Way Home',
+    ]);
+
+  // Alt+↓ on the focused row moves it down; focus stays with it.
+  await rest.getByRole('button', { name: 'Play Low Tide Radio' }).focus();
+  await page.keyboard.press('Alt+ArrowDown');
+  await expect
+    .poll(order)
+    .toEqual([
+      'Salt on the Window',
+      'Low Tide Radio',
+      'Lighthouse Keeper',
+      'Moorings',
+      'The Long Way Home',
+    ]);
+  await expect(rest.getByRole('button', { name: 'Play Low Tide Radio' })).toBeFocused();
+  await page.keyboard.press('Alt+ArrowUp');
+  await expect
+    .poll(order)
+    .toEqual([
+      'Low Tide Radio',
+      'Salt on the Window',
+      'Lighthouse Keeper',
+      'Moorings',
+      'The Long Way Home',
+    ]);
+
+  // The ⋯ menu: move down, remove.
+  await rest.getByRole('button', { name: 'More for Moorings' }).click();
+  await page.getByRole('menuitem', { name: 'Move down' }).click();
+  await expect
+    .poll(order)
+    .toEqual([
+      'Low Tide Radio',
+      'Salt on the Window',
+      'Lighthouse Keeper',
+      'The Long Way Home',
+      'Moorings',
+    ]);
+  await rest.getByRole('button', { name: 'More for Salt on the Window' }).click();
+  await page.getByRole('menuitem', { name: 'Remove Salt on the Window' }).click();
+  await expect
+    .poll(order)
+    .toEqual(['Low Tide Radio', 'Lighthouse Keeper', 'The Long Way Home', 'Moorings']);
+
+  await sheet.getByRole('button', { name: 'Clear queue' }).click();
+  await expect(rest).toHaveCount(0);
+  await expect(title(page)).toHaveText('Ferry at Six'); // what plays keeps playing
+});

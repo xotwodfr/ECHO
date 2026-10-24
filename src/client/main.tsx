@@ -62,6 +62,13 @@ const showLyrics = (track: ReturnType<typeof controller.player.getState>['track'
   });
 controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
 
+// OS media keys and lock-screen controls (PLAYBACK_ARCHITECTURE.md §5; PLAY-07): the provider sets
+// play, pause and seek; next and previous go through the queue.
+if ('mediaSession' in navigator) {
+  navigator.mediaSession.setActionHandler('nexttrack', () => controller.next());
+  navigator.mediaSession.setActionHandler('previoustrack', () => controller.previous());
+}
+
 // The queue follows a signed-in user across sessions and devices (M5).
 if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().show(m));
 
