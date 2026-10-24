@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import type { AuthDeps } from './auth/routes.ts';
-import { createSealer } from './crypto.ts';
+import { createSealer, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { type AppDeps, createApp } from './index.ts';
 import { fallbackPalette } from './palette/extract.ts';
@@ -23,6 +23,13 @@ export function testDeps(over: Partial<AppDeps> = {}) {
   const deps: AppDeps = {
     palette,
     auth,
+    navidrome: {
+      db: auth.db,
+      sealer: auth.sealer,
+      now: auth.now,
+      defaultUrl: null,
+      streamKey: subkey(randomBytes(32), 'stream-url'),
+    },
     http: { publicOrigin: null, trustedProxy: [] },
     socketAddress: () => '203.0.113.7',
     ...over,

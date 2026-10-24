@@ -12,6 +12,7 @@ export interface Config {
   dataDir: string; // database and caches (/data in the container)
   masterKeyFile: string; // the Docker secret (SETTINGS_AND_SECURITY.md §3.2)
   trustedProxy: string[]; // addresses or IPv4 CIDRs whose X-Forwarded-* are honoured (§5.1)
+  navidromeUrl: string | null; // the default, always-allowed internal Navidrome URL (§6.1)
 }
 
 type Env = Record<string, string | undefined>;
@@ -38,6 +39,7 @@ export function loadConfig(env: Env = process.env): Config {
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean),
+    navidromeUrl: env.ECHO_NAVIDROME_URL || null,
   };
 }
 

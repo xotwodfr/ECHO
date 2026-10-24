@@ -5,11 +5,12 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { createLoginLimiter } from './auth/ratelimit.ts';
-import { type AuthDeps, authRoutes, hasAdmin, startSetup } from './auth/routes.ts';
+import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { LOG_LEVELS, type LogLevel, loadConfig } from './config.ts';
-import { createSealer, loadMasterKey } from './crypto.ts';
+import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
+import { type NavidromeDeps, navidromeRoutes } from './navidrome/routes.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 
@@ -19,6 +20,7 @@ const ALBUM_KEY = /^[\w:.-]{1,200}$/;
 export interface AppDeps {
   palette: PaletteService;
   auth: AuthDeps;
+  navidrome: NavidromeDeps;
   http: HttpConfig;
   /** The TCP peer; tests stand in for the Node socket. */
   socketAddress?: (c: Context) => string;
@@ -51,6 +53,7 @@ export function createApp(deps: AppDeps) {
   });
 
   app.route('/api/v1', authRoutes(deps.auth));
+  app.route('/api/v1', navidromeRoutes(deps.navidrome, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -110,6 +113,13 @@ if (import.meta.main) {
   const app = createApp({
     palette,
     auth,
+    navidrome: {
+      db: auth.db,
+      sealer: auth.sealer,
+      now: Date.now,
+      defaultUrl: config.navidromeUrl,
+      streamKey: subkey(master, 'stream-url'),
+    },
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>

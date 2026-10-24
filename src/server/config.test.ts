@@ -10,6 +10,7 @@ describe('loadConfig', () => {
       dataDir: './data',
       masterKeyFile: '/run/secrets/echo_master_key',
       trustedProxy: [],
+      navidromeUrl: null,
     });
   });
 
@@ -37,6 +38,7 @@ describe('loadConfig', () => {
       dataDir: './data',
       masterKeyFile: '/run/secrets/echo_master_key',
       trustedProxy: [],
+      navidromeUrl: null,
     });
   });
 
