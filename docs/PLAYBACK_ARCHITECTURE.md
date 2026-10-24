@@ -346,6 +346,9 @@ repeat-all wraps → else stop. The previous `now` goes into `history`.
 
 The Queue sheet for Spotify renders `GET /me/player/queue` (refreshed on open and on each track
 change), read-only, with "Queue managed by Spotify. Items can be added but not reordered."
+**As built (M7):** the sheet mirrors the SDK state's `next_tracks` (the next two), refreshed on
+every state change; the full `GET /me/player/queue` read is a follow-up. Spotify queues are not
+saved to `/me/queue` (Spotify keeps its own across devices).
 
 ---
 

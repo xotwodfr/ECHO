@@ -41,6 +41,8 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
   let timer: ReturnType<typeof setTimeout> | null = null;
   async function save() {
     timer = null;
+    // Spotify keeps its own queue across devices; the saved queue stays the library's.
+    if (c.queue.getState().provider === 'spotify') return;
     const p = c.player.getState();
     const body = {
       queue: trimQueue(c.queue.getState()),

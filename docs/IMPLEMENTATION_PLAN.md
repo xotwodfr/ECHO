@@ -250,6 +250,11 @@ G1/G2 (**on** by owner decision, with admin kill switches), and the Spotify-ID l
 
 **Dependencies:** M5, M6.
 
+**Progress:** tasks 1–8 built and tested against a fake SDK, a fake Web API and a mock accounts
+service (2026-10-24; record in `docs/reviews/M7.md`). The manual checklist (PLAY-08/09 and the M
+parts of SP-01, SRCH-02, REL-04, BRW-02) needs a Spotify app, a Premium account, and deployment
+behind HTTPS (M5 task 12).
+
 **Tasks:**
 1. **Re-verify** against live Spotify docs: player endpoints for new Development Mode apps,
    `/me/library` paths, whether `streaming` alone suffices, CSP hosts for the SDK. Update
