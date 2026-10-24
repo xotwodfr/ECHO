@@ -3,6 +3,7 @@ import { ApiError, api } from '../api.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Pill } from '../ui/controls.tsx';
 import { ConfirmDialog } from '../ui/overlays.tsx';
+import { BlockError, SectionLoading } from '../ui/states.tsx';
 
 // Account → Password, Two-factor, Sessions & devices, Delete account (SETTINGS_AND_SECURITY.md
 // §4.3–§4.6, §10; IMPLEMENTATION_PLAN.md M8 task 2), and the invite page (§4.2).
@@ -51,12 +52,22 @@ export function TotpKey({ otpauth, secret }: { otpauth: string; secret: string }
 }
 
 export function AccountBlocks() {
-  const [account, setAccount] = useState<Account | null>(null);
+  const [account, setAccount] = useState<Account | 'error' | null>(null);
   const load = useCallback(() => {
-    void api<Account>('/me/account').then(setAccount, () => undefined);
+    void api<Account>('/me/account').then(setAccount, () => setAccount('error'));
   }, []);
   useEffect(load, [load]);
-  if (!account) return null;
+  if (!account) return <SectionLoading title={t.password} rows={3} />;
+  if (account === 'error')
+    return (
+      <BlockError
+        what={strings.states.blockFailed}
+        onRetry={() => {
+          setAccount(null);
+          load();
+        }}
+      />
+    );
   return (
     <>
       <PasswordBlock />
@@ -285,7 +296,7 @@ function SessionsBlock() {
     void api<Session[]>('/me/sessions').then(setList, () => setList([]));
   }, []);
   useEffect(load, [load]);
-  if (!list) return null;
+  if (!list) return <SectionLoading title={t.sessions} />;
   const others = list.filter((s) => !s.current).length;
   return (
     <section className="connection" aria-labelledby="acc-sessions">

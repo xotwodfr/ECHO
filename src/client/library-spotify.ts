@@ -81,6 +81,7 @@ export function createSpotifyLibrary(): Library {
   const loaded = new Set<string>();
   const listeners = new Set<() => void>();
   let version = 0;
+  let status: 'loading' | 'ready' | 'error' = 'loading';
   const changed = () => {
     version++;
     for (const l of listeners) l();
@@ -96,7 +97,13 @@ export function createSpotifyLibrary(): Library {
         '/v1/me/albums',
         { query: { limit: PAGE, offset } },
       ).catch(() => null);
-      const page = r?.items ?? [];
+      if (!r) {
+        status = albums.length ? 'ready' : 'error';
+        changed();
+        return;
+      }
+      status = 'ready';
+      const page = r.items ?? [];
       for (const { album } of page) {
         // Saved albums come with their first tracks; an album over 50 tracks loads the rest when opened.
         const a = albumOf(album);
@@ -104,7 +111,7 @@ export function createSpotifyLibrary(): Library {
         albums = [...albums.filter((x) => x.id !== a.id), a];
       }
       changed();
-      if (!r?.next) break;
+      if (!r.next) break;
     }
   }
   void loadSaved();
@@ -115,6 +122,12 @@ export function createSpotifyLibrary(): Library {
     },
     album: (id) => byId.get(id),
     search: () => ({ tracks: [], albums: [] }),
+    status: () => status,
+    retry() {
+      status = 'loading';
+      changed();
+      void loadSaved();
+    },
     async loadAlbum(id) {
       if (loaded.has(id) || !id.startsWith(PREFIX)) return byId.get(id);
       const a = await spotifyApi<SpAlbum>(`/v1/albums/${encodeURIComponent(raw(id))}`).catch(
@@ -211,6 +224,18 @@ export function combineLibraries(nav: Library | null, sp: Library): Library {
     },
     album: (id) => owner(id).album(id),
     search: (q) => nav.search(q),
+    // Ready once either has albums; an error only when both failed.
+    status() {
+      const a = nav.status?.() ?? 'ready';
+      const b = sp.status?.() ?? 'ready';
+      if (a === 'ready' || b === 'ready') return 'ready';
+      return a === 'error' && b === 'error' ? 'error' : 'loading';
+    },
+    loadedAt: () => nav.loadedAt?.() ?? null,
+    retry() {
+      nav.retry?.();
+      sp.retry?.();
+    },
     loadAlbum: (id) => owner(id).loadAlbum?.(id) ?? Promise.resolve(owner(id).album(id)),
     ...(nav.sort && { sort: nav.sort, setSort: nav.setSort }),
     async playlists() {

@@ -68,6 +68,8 @@ export function createNavidromeLibrary(): Library {
   const loaded = new Set<string>();
   const listeners = new Set<() => void>();
   let version = 0;
+  let status: 'loading' | 'ready' | 'error' = 'loading';
+  let loadedAt: number | null = null;
   const changed = () => {
     version++;
     for (const l of listeners) l();
@@ -82,7 +84,13 @@ export function createNavidromeLibrary(): Library {
         `/navidrome/rest/getAlbumList2?type=${sort}&size=${PAGE}&offset=${offset}`,
       ).catch(() => null);
       if (gen !== generation) return;
-      const page = r?.['subsonic-response'].albumList2?.album ?? [];
+      if (!r) {
+        // What was loaded stays on screen; with nothing loaded the block shows its error.
+        status = albums.length ? 'ready' : 'error';
+        changed();
+        return;
+      }
+      const page = r['subsonic-response'].albumList2?.album ?? [];
       for (const a of page) {
         const known = byId.get(a.id);
         const album = known && loaded.has(a.id) ? known : albumOf(a);
@@ -90,6 +98,8 @@ export function createNavidromeLibrary(): Library {
         next.push(album);
       }
       albums = [...next];
+      status = 'ready';
+      loadedAt = Date.now();
       changed();
       if (page.length < PAGE) break;
     }
@@ -132,6 +142,13 @@ export function createNavidromeLibrary(): Library {
         : [...albums, album];
       changed();
       return album;
+    },
+    status: () => status,
+    loadedAt: () => loadedAt,
+    retry() {
+      status = 'loading';
+      changed();
+      void loadAll();
     },
     sort: () => sort,
     setSort(next) {

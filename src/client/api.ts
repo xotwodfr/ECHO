@@ -1,4 +1,7 @@
 import { reportDown } from './connection.ts';
+import { sessionExpired, sessionStore } from './session.ts';
+
+const signedIn = () => sessionStore.getState().status === 'signedIn';
 
 // The ECHO server's API (TECHNICAL_ARCHITECTURE.md §6.2): same-origin JSON with the session cookie.
 // No answer at all marks the server unreachable, and a proxy reporting Navidrome unreachable marks
@@ -42,6 +45,9 @@ export async function api<T>(
   if (!res.ok) {
     const e = new ApiError(res.status, (body ?? {}) as Record<string, string>);
     if (e.code === 'navidrome.unreachable') reportDown('navidrome');
+    // A signed-in page whose session ended: sign in again in place (REL-05).
+    if (res.status === 401 && e.code === 'unauthenticated' && signedIn())
+      sessionExpired.setState({ expired: true });
     throw e;
   }
   return body as T;

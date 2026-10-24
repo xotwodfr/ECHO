@@ -881,10 +881,14 @@
   text-overflow: ellipsis;
 }
 
-.tile-title,
-.tile--loading .bar--body {
+.tile-title {
   margin-top: var(--sp-2);
   font-weight: 500;
+}
+
+/* The title's gap plus the bar's own half-leading: the skeleton is the tile's exact height. */
+.tile--loading .bar--body {
+  margin-top: calc(var(--sp-2) + (var(--lh-body) - var(--fs-body)) / 2);
 }
 
 .tile-artist {

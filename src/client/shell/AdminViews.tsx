@@ -3,6 +3,7 @@ import { ApiError, api } from '../api.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Pill } from '../ui/controls.tsx';
 import { ConfirmDialog } from '../ui/overlays.tsx';
+import { BlockError, SectionLoading } from '../ui/states.tsx';
 import { AdminServerSection } from './SpotifyViews.tsx';
 
 // Settings → Admin (SETTINGS_AND_SECURITY.md §4.2, §7.2, §7.3; IMPLEMENTATION_PLAN.md M8 task 3):
@@ -73,7 +74,12 @@ function UsersSection() {
     load();
   };
 
-  if (!users) return error ? <p className="field-error">{error}</p> : null;
+  if (!users)
+    return error ? (
+      <BlockError what={error} onRetry={load} />
+    ) : (
+      <SectionLoading title={t.users} rows={4} />
+    );
   return (
     <section className="connection" aria-labelledby="admin-users">
       <h3 id="admin-users">{t.users}</h3>
@@ -218,7 +224,7 @@ function AuditSection() {
     setRows((r) => [...(before ? (r ?? []) : []), ...next]);
   }, []);
   useEffect(() => void page(), [page]);
-  if (!rows) return null;
+  if (!rows) return <SectionLoading title={t.audit} rows={4} />;
   return (
     <section className="connection" aria-labelledby="admin-audit">
       <h3 id="admin-audit">{t.audit}</h3>

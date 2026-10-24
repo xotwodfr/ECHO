@@ -17,7 +17,7 @@ import {
 } from '../view.ts';
 import { InviteView } from './AccountViews.tsx';
 import { AdminSection } from './AdminViews.tsx';
-import { AccountSection, LoginView, SetupView } from './AuthViews.tsx';
+import { AccountSection, LoginView, SessionExpiredSheet, SetupView } from './AuthViews.tsx';
 import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
 import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
@@ -295,6 +295,7 @@ function Frame() {
       <Dock stage={route.view === 'listen'} />
       <ToastRegion />
       <ReplaceQueueDialog />
+      <SessionExpiredSheet />
     </div>
   );
 }

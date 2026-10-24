@@ -211,6 +211,18 @@ export const strings = {
       bad_username: 'Usernames use letters, digits, dot, dash and underscore.',
     } as Record<string, string>,
   },
+  states: {
+    retry: 'Retry',
+    lastGood: (t: string) => `Last loaded at ${t}.`,
+    stale: (t: string) => `Navidrome is unreachable. Showing what was loaded at ${t}.`,
+    libraryFailed: "Couldn't load your library.",
+    playlistsFailed: "Couldn't load playlists.",
+    starredFailed: "Couldn't load starred tracks.",
+    albumFailed: "Couldn't load this album.",
+    searchFailed: "Search didn't answer.",
+    blockFailed: "Couldn't load this.",
+    connectServer: 'Connect a server',
+  },
   notFound: { title: 'Page not found', body: 'There is nothing at this address.' },
   auth: {
     signIn: 'Sign in',
@@ -237,6 +249,8 @@ export const strings = {
       'Each code signs you in once if you lose your authenticator. Store them somewhere safe: they are not shown again.',
     continue: 'Continue',
     passwordHint: 'At least 12 characters.',
+    expiredTitle: 'Sign in again',
+    expiredIntro: 'Your session ended. Sign in to carry on where you were.',
   },
   navidrome: {
     title: 'Navidrome',

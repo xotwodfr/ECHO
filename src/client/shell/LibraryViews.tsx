@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import { ALBUM_SORTS, type Album, albumDurationMs, type Playlist } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
-import { Button, ProviderMark } from '../ui/controls.tsx';
+import { Button, buttonClass, ProviderMark } from '../ui/controls.tsx';
 import { formatTime } from '../ui/logic.ts';
 import { AlbumGrid, AlbumTile, Artwork, TrackList, TrackRow } from '../ui/media.tsx';
+import { BlockEmpty, BlockError, FreshnessNote, GridLoading, RowsLoading } from '../ui/states.tsx';
 import type { LibraryTab } from '../view.ts';
+import { Link } from './link.tsx';
 
 // S2 Library, S6 Album detail and S3 Search (PRODUCT_SPEC.md §6.3, §6.4) over the library source.
 // Without one (production until M5) they show their empty states.
@@ -86,12 +88,32 @@ function Albums({ albums }: { albums: Album[] }) {
 export function LibraryContent({ tab }: { tab: LibraryTab }) {
   const library = useLibrary();
   const s = strings.library;
-  if (!library) return <p className="empty">{s.empty}</p>;
+  if (!library)
+    return (
+      <BlockEmpty
+        text={s.empty}
+        action={
+          <Link className={buttonClass('secondary')} to={{ view: 'settings', section: 'account' }}>
+            {strings.states.connectServer}
+          </Link>
+        }
+      />
+    );
+  const status = library.status?.() ?? 'ready';
   if (tab === 'albums')
     return (
       <>
         {library.setSort && <SortSwitch />}
-        <Albums albums={library.albums} />
+        <FreshnessNote loadedAt={library.loadedAt?.()} />
+        {status === 'loading' && !library.albums.length ? (
+          <GridLoading />
+        ) : status === 'error' && !library.albums.length ? (
+          <BlockError what={strings.states.libraryFailed} onRetry={library.retry} />
+        ) : library.albums.length ? (
+          <Albums albums={library.albums} />
+        ) : (
+          <p className="empty">{s.empty}</p>
+        )}
       </>
     );
   if (tab === 'playlists' && library.playlists) return <Playlists />;
@@ -141,11 +163,14 @@ function SortSwitch() {
 function Playlists() {
   const library = useLibrary();
   const c = usePlayback();
-  const [list, setList] = useState<Playlist[] | null>(null);
-  useEffect(() => {
-    void library?.playlists?.().then(setList, () => setList([]));
+  const [list, setList] = useState<Playlist[] | 'error' | null>(null);
+  const load = useCallback(() => {
+    setList(null);
+    void library?.playlists?.().then(setList, () => setList('error'));
   }, [library]);
-  if (!list) return null;
+  useEffect(load, [load]);
+  if (!list) return <RowsLoading label={strings.library.tabs.playlists} />;
+  if (list === 'error') return <BlockError what={strings.states.playlistsFailed} onRetry={load} />;
   if (!list.length) return <p className="empty">{strings.library.noPlaylists}</p>;
   const play = async (p: Playlist) => {
     const tracks = (await library?.playlistTracks?.(p.id)) ?? [];
@@ -168,11 +193,14 @@ function Playlists() {
 /** A server library's starred tracks. */
 function Starred() {
   const library = useLibrary();
-  const [tracks, setTracks] = useState<Track[] | null>(null);
-  useEffect(() => {
-    void library?.starred?.().then(setTracks, () => setTracks([]));
+  const [tracks, setTracks] = useState<Track[] | 'error' | null>(null);
+  const load = useCallback(() => {
+    setTracks(null);
+    void library?.starred?.().then(setTracks, () => setTracks('error'));
   }, [library]);
-  if (!tracks) return null;
+  useEffect(load, [load]);
+  if (!tracks) return <RowsLoading label={strings.library.tabs.starred} media />;
+  if (tracks === 'error') return <BlockError what={strings.states.starredFailed} onRetry={load} />;
   if (!tracks.length) return <p className="empty">{strings.library.noStarred}</p>;
   return (
     <TrackList label={strings.library.tabs.starred}>
@@ -186,8 +214,13 @@ export function AlbumView({ id }: { id: string }) {
   const library = useLibrary();
   const c = usePlayback();
   const a = library?.album(id);
+  // A server library fetches the album (and its tracks) when it is opened: until then, its
+  // skeleton, not "missing".
+  const [loading, setLoading] = useState(!!library?.loadAlbum);
   useEffect(() => {
-    void library?.loadAlbum?.(id);
+    if (!library?.loadAlbum) return setLoading(false);
+    setLoading(true);
+    void library.loadAlbum(id).finally(() => setLoading(false));
   }, [library, id]);
   const s = strings.album;
   // While this album is what plays, its Play button controls it instead of restarting it.
@@ -195,6 +228,7 @@ export function AlbumView({ id }: { id: string }) {
   const isCurrent = useQueue((q) => q.contextSource?.kind === 'album' && q.contextSource.id === id);
   const live = isCurrent && status !== 'idle' && status !== 'ended';
   const playing = live && ['playing', 'loading', 'buffering'].includes(status);
+  if (!a && loading) return <AlbumLoading />;
   if (!a)
     return (
       <>
@@ -229,9 +263,29 @@ export function AlbumView({ id }: { id: string }) {
           </div>
         </div>
       </header>
-      <TrackList label={a.title} ruled>
-        <Rows tracks={a.tracks} context={albumContext(a)} numbered />
-      </TrackList>
+      {loading && !a.tracks.length ? (
+        <RowsLoading label={a.title} />
+      ) : (
+        <TrackList label={a.title} ruled>
+          <Rows tracks={a.tracks} context={albumContext(a)} numbered />
+        </TrackList>
+      )}
+    </>
+  );
+}
+
+/** S6 while the album loads: the header and rows in flat bars at their real sizes (§10). */
+function AlbumLoading() {
+  return (
+    <>
+      <header className="detail-head" aria-busy="true">
+        <span className="art art--detail" aria-hidden="true" />
+        <div className="detail-meta" aria-hidden="true">
+          <span className="bar bar--body" />
+          <span className="bar bar--small" />
+        </div>
+      </header>
+      <RowsLoading label={strings.album.title} />
     </>
   );
 }
@@ -243,21 +297,36 @@ export function SearchResults({ q }: { q: string }) {
   const library = useLibrary();
   const s = strings.search;
   // A server library searches on the server, 200 ms after typing stops (PRODUCT_SPEC.md §6.4).
-  const [remote, setRemote] = useState<{ q: string; tracks: Track[]; albums: Album[] } | null>(
-    null,
-  );
+  const [remote, setRemote] = useState<{
+    q: string;
+    tracks: Track[];
+    albums: Album[];
+    failed?: boolean;
+  } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the search (Retry)
   useEffect(() => {
     if (!library?.searchRemote || !q) return;
     const id = setTimeout(() => {
       void library.searchRemote?.(q).then(
         (r) => setRemote({ q, ...r }),
-        () => setRemote({ q, tracks: [], albums: [] }),
+        () => setRemote({ q, tracks: [], albums: [], failed: true }),
       );
     }, 200);
     return () => clearTimeout(id);
-  }, [library, q]);
+  }, [library, q, attempt]);
   if (!q) return <p className="empty">{s.prompt}</p>;
-  if (library?.searchRemote && remote?.q !== q) return null; // waiting for the server
+  if (library?.searchRemote && remote?.q !== q) return <RowsLoading label={s.tracks} media />;
+  if (remote?.failed)
+    return (
+      <BlockError
+        what={strings.states.searchFailed}
+        onRetry={() => {
+          setRemote(null);
+          setAttempt((n) => n + 1);
+        }}
+      />
+    );
   const found = (library?.searchRemote ? remote : library?.search(q)) ?? { tracks: [], albums: [] };
   if (!found.tracks.length && !found.albums.length) return <p className="empty">{s.none(q)}</p>;
   // Grouped by provider, Navidrome first, each group marked when both appear (SRCH-02).

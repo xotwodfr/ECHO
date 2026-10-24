@@ -5,6 +5,7 @@ import { sessionStore } from '../session.ts';
 import { type DrmResult, drmGuidance, probeWidevine } from '../spotify/drm.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Toggle } from '../ui/controls.tsx';
+import { SectionLoading } from '../ui/states.tsx';
 
 // Settings → Account → Spotify (SETTINGS_AND_SECURITY.md §6.2, §8) and, for admins, Admin → Server
 // → Spotify app and Lyrics (§6.3, §7.2). Connecting is a top-level navigation to ECHO's server,
@@ -39,7 +40,7 @@ export function SpotifyConnection() {
     void spotifyStatus().then(setSt, () => undefined);
     void probeWidevine().then(setDrm);
   }, []);
-  if (!st) return null;
+  if (!st) return <SectionLoading title={t.title} />;
 
   const resultText = result && (t.result[result] ?? null);
   const c = st.connection;
@@ -129,7 +130,8 @@ export function AdminServerSection() {
       setClientId(r.spotify.clientId ?? '');
     });
   }, [isAdmin]);
-  if (!isAdmin || !s) return null;
+  if (!isAdmin) return null;
+  if (!s) return <SectionLoading title={a.title} rows={4} />;
 
   async function put(body: unknown) {
     setError(null);

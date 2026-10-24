@@ -180,6 +180,26 @@ button {
   margin: 0 0 var(--sp-4);
 }
 
+/* Block states (DESIGN_SYSTEM.md §10): inside the block, one sentence, one action. */
+.block-error,
+.block-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.block-error p {
+  margin: 0;
+  color: var(--text);
+}
+
+.freshness {
+  margin: 0 0 var(--sp-4);
+  color: var(--warning);
+  font-size: var(--fs-small);
+}
+
 /* See AlbumGrid in ui/media.tsx for the column arithmetic. */
 .album-grid {
   display: grid;

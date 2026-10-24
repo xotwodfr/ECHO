@@ -23,6 +23,13 @@ export interface Library {
   subscribe?(onChange: () => void): () => void;
   /** Bumped on every change (with `subscribe`), so React can re-render. */
   version?(): number;
+  /**
+   * Server libraries: the album list's state (DESIGN_SYSTEM.md §10) and when it last loaded, so
+   * a block can show its skeleton, its error with Retry, or a freshness note.
+   */
+  status?(): 'loading' | 'ready' | 'error';
+  loadedAt?(): number | null;
+  retry?(): void;
   /** Server libraries: the album order (PRODUCT_SPEC.md §6.3). */
   sort?(): AlbumSort;
   setSort?(sort: AlbumSort): void;

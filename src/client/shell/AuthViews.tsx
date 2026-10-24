@@ -1,9 +1,19 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { ApiError, api } from '../api.ts';
-import { login, logout, sessionStore, setupFinish, setupStart, totp } from '../session.ts';
+import {
+  login,
+  logout,
+  sessionExpired,
+  sessionStore,
+  setupFinish,
+  setupStart,
+  totp,
+} from '../session.ts';
 import { strings } from '../strings.ts';
 import { Button, Field } from '../ui/controls.tsx';
+import { Sheet } from '../ui/overlays.tsx';
+import { SectionLoading } from '../ui/states.tsx';
 import { AccountBlocks } from './AccountViews.tsx';
 import { SpotifyConnection } from './SpotifyViews.tsx';
 
@@ -22,7 +32,8 @@ function messageOf(err: unknown) {
   );
 }
 
-export function LoginView() {
+/** Sign in; `onDone` replaces the reload home (the sign-in sheet returns to the same screen). */
+export function LoginView({ onDone = home }: { onDone?: () => void } = {}) {
   const [step, setStep] = useState<{ challenge: string } | null>(null);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -38,10 +49,10 @@ export function LoginView() {
       if (!step) {
         const r = await login(username, password);
         if (r.totpRequired && r.challenge) setStep({ challenge: r.challenge });
-        else home();
+        else onDone();
       } else {
         await totp(step.challenge, code.trim());
-        home();
+        onDone();
       }
     } catch (err) {
       setError(messageOf(err));
@@ -243,14 +254,17 @@ function NavidromeConnection() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (conn === null) {
-    void api<Connection>('/me/connections/navidrome').then((c) => {
-      setConn(c);
-      setUrl(c.url ?? c.defaultUrl ?? '');
-      setUsername(c.username ?? '');
-    });
-    return null;
-  }
+  useEffect(() => {
+    void api<Connection>('/me/connections/navidrome').then(
+      (c) => {
+        setConn(c);
+        setUrl(c.url ?? c.defaultUrl ?? '');
+        setUsername(c.username ?? '');
+      },
+      () => setConn({ connected: false }),
+    );
+  }, []);
+  if (conn === null) return <SectionLoading title={n.title} rows={3} />;
 
   async function save(e: FormEvent) {
     e.preventDefault();
@@ -344,5 +358,24 @@ function NavidromeConnection() {
         </form>
       )}
     </section>
+  );
+}
+
+/** REL-05: the session ended; sign in again over the current screen, then carry on there. */
+export function SessionExpiredSheet() {
+  const { expired } = useStore(sessionExpired);
+  return (
+    <Sheet
+      open={expired}
+      onClose={() => sessionExpired.setState({ expired: false })}
+      title={s.expiredTitle}
+    >
+      {expired && (
+        <>
+          <p>{s.expiredIntro}</p>
+          <LoginView onDone={() => sessionExpired.setState({ expired: false })} />
+        </>
+      )}
+    </Sheet>
   );
 }

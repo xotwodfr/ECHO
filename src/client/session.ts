@@ -21,6 +21,12 @@ export type SessionState =
 
 export const sessionStore = createStore<SessionState>()(() => ({ status: 'unknown' }));
 
+/**
+ * The session ended while the app was open (expired or revoked): a sign-in sheet opens over the
+ * current screen and closes on success, so the user returns to where they were (REL-05).
+ */
+export const sessionExpired = createStore<{ expired: boolean }>()(() => ({ expired: false }));
+
 export async function loadSession(): Promise<SessionState> {
   const state = await api<SessionState>('/session').catch(
     (): SessionState => ({ status: 'offline' }),
