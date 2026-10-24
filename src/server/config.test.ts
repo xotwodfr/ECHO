@@ -12,6 +12,8 @@ describe('loadConfig', () => {
       trustedProxy: [],
       navidromeUrl: null,
       devFixtures: false,
+      lrclibUrl: 'https://lrclib.net',
+      spicyUrl: 'https://api.spicylyrics.org',
     });
   });
 
@@ -41,6 +43,8 @@ describe('loadConfig', () => {
       trustedProxy: [],
       navidromeUrl: null,
       devFixtures: false,
+      lrclibUrl: 'https://lrclib.net',
+      spicyUrl: 'https://api.spicylyrics.org',
     });
   });
 

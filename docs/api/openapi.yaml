@@ -269,6 +269,43 @@ paths:
         '400': { description: Not a queue }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
+  /lyrics:
+    get:
+      summary: The track's lyrics (cache first, then the sources), with the user's override for it
+      parameters:
+        - { name: trackKey, in: query, required: true, schema: { type: string, pattern: '^[\w:.-]{1,200}$' } }
+        - { name: title, in: query, schema: { type: string } }
+        - { name: artist, in: query, schema: { type: string } }
+        - { name: album, in: query, schema: { type: string } }
+        - { name: durationMs, in: query, schema: { type: integer } }
+        - { name: isrc, in: query, schema: { type: string } }
+        - { name: spotifyId, in: query, schema: { type: string } }
+        - { name: navidromeId, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Found
+          content: { application/json: { schema: { type: object, properties: { doc: { $ref: '#/components/schemas/LyricsDoc' }, override: { $ref: '#/components/schemas/Override' } } } } }
+        '400': { description: Bad track key }
+        '404':
+          description: No source had lyrics (the sources tried, with their outcomes)
+          content: { application/json: { schema: { type: object, properties: { tried: { type: array, items: { type: object, properties: { source: { type: string }, outcome: { type: string } } } }, override: { $ref: '#/components/schemas/Override' } } } } }
+
+  /me/tracks/{trackKey}/override:
+    parameters:
+      - { name: trackKey, in: path, required: true, schema: { type: string } }
+    get:
+      summary: The user's timing offset and source pin for a track
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Override' } } } }
+    put:
+      summary: Set the timing offset (±10 s) and/or the source pin (null clears it)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/Override' } } }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/Override' } } } }
+        '400': { description: Out of range or an unknown source }
+
   /admin/settings:
     get:
       summary: Server settings (admins only); secrets are reported as saved or not, never returned
@@ -298,6 +335,24 @@ components:
     session: { type: apiKey, in: cookie, name: __Host-echo_session }
     device: { type: http, scheme: bearer, bearerFormat: echo_dt_… }
   schemas:
+    Override:
+      type: object
+      properties:
+        offsetMs: { type: integer, minimum: -10000, maximum: 10000 }
+        pinnedSource: { enum: [navidrome, spicy, lrclib, navidrome-plain, null] }
+    LyricsDoc:
+      type: object
+      description: docs/LYRICS_INTEGRATION.md §5 (version 1)
+      required: [version, trackKey, sync, source, attribution, offsetMs, lines, fetchedAt]
+      properties:
+        version: { const: 1 }
+        trackKey: { type: string }
+        sync: { enum: [word, line, none] }
+        source: { enum: [navidrome, spicy, lrclib, navidrome-plain, fixture] }
+        attribution: { type: object, properties: { text: { type: string }, links: { type: array, items: { type: object, properties: { label: { type: string }, href: { type: string } } } } } }
+        offsetMs: { type: integer }
+        lines: { type: array, items: { type: object } }
+        fetchedAt: { type: string, format: date-time }
     AdminSettings:
       type: object
       properties:

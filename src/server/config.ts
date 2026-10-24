@@ -14,6 +14,8 @@ export interface Config {
   trustedProxy: string[]; // addresses or IPv4 CIDRs whose X-Forwarded-* are honoured (§5.1)
   navidromeUrl: string | null; // the default, always-allowed internal Navidrome URL (§6.1)
   devFixtures: boolean; // development and E2E only: generated-cover palettes without a session
+  lrclibUrl: string; // LYRICS_INTEGRATION.md S3 (overridable for E2E mocks)
+  spicyUrl: string; // S2
 }
 
 type Env = Record<string, string | undefined>;
@@ -42,6 +44,8 @@ export function loadConfig(env: Env = process.env): Config {
       .filter(Boolean),
     navidromeUrl: env.ECHO_NAVIDROME_URL || null,
     devFixtures: env.ECHO_DEV_FIXTURES === '1',
+    lrclibUrl: (env.ECHO_LRCLIB_URL || 'https://lrclib.net').replace(/\/+$/, ''),
+    spicyUrl: (env.ECHO_SPICY_URL || 'https://api.spicylyrics.org').replace(/\/+$/, ''),
   };
 }
 

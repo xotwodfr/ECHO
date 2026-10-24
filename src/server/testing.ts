@@ -1,9 +1,14 @@
 import { randomBytes } from 'node:crypto';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import type { AuthDeps } from './auth/routes.ts';
 import { createSealer, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { type AppDeps, createApp } from './index.ts';
+import { createLyricsCache } from './lyrics/cache.ts';
+import { createResolver } from './lyrics/resolve.ts';
 import { fallbackPalette } from './palette/extract.ts';
 import type { PaletteService } from './palette/service.ts';
 
@@ -29,6 +34,15 @@ export function testDeps(over: Partial<AppDeps> = {}) {
       now: auth.now,
       defaultUrl: null,
       streamKey: subkey(randomBytes(32), 'stream-url'),
+    },
+    lyrics: {
+      db: auth.db,
+      cache: createLyricsCache({ dir: mkdtempSync(join(tmpdir(), 'echo-lyrics-')), now: auth.now }),
+      resolver: createResolver({
+        clock: { now: auth.now, setTimeout, clearTimeout: (h) => clearTimeout(h as never) },
+      }),
+      sourcesFor: () => [],
+      scopeFor: () => 'none',
     },
     http: { publicOrigin: null, trustedProxy: [] },
     devFixtures: true,

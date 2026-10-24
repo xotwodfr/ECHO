@@ -5,7 +5,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
-import { adminRoutes } from './admin.ts';
+import { adminRoutes, spicyKey } from './admin.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
@@ -13,8 +13,18 @@ import { LOG_LEVELS, type LogLevel, loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
+import { createLyricsCache } from './lyrics/cache.ts';
+import { createResolver } from './lyrics/resolve.ts';
+import { type LyricsDeps, lyricsRoutes } from './lyrics/routes.ts';
+import {
+  lrclibSource,
+  navidromePlainSource,
+  navidromeSource,
+  spicySource,
+} from './lyrics/sources.ts';
 import {
   type NavidromeDeps,
+  navidromeClientFor,
   navidromeCovers,
   navidromeRoutes,
   navidromeUrlOf,
@@ -30,6 +40,7 @@ export interface AppDeps {
   palette: PaletteService;
   auth: AuthDeps;
   navidrome: NavidromeDeps;
+  lyrics: LyricsDeps;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -77,6 +88,7 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', navidromeRoutes(deps.navidrome, requireUser(deps.auth)));
   app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth)));
+  app.route('/api/v1', lyricsRoutes(deps.lyrics, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -146,10 +158,39 @@ if (import.meta.main) {
       return fromNavidrome ?? (config.devFixtures ? libraryCover(key) : null);
     },
   });
+  const lyricsCache = createLyricsCache({
+    dir: join(config.dataDir, 'cache', 'lyrics'),
+    now: Date.now,
+  });
+  // The daily sweep: expired entries out (Spicy's 30 days are hard), the cache under 200 MB.
+  const sweep = () =>
+    void lyricsCache.sweep().then(
+      (r) => r.deleted && log('info', 'lyrics cache swept', r),
+      (err: unknown) => log('warn', 'lyrics cache sweep failed', { detail: String(err) }),
+    );
+  sweep();
+  setInterval(sweep, 86_400_000).unref();
+  const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
+  const lyrics: LyricsDeps = {
+    db: auth.db,
+    cache: lyricsCache,
+    resolver: createResolver(),
+    scopeFor: (userId) => navidromeUrlOf(auth.db, userId),
+    sourcesFor: (userId) => {
+      const client = () => navidromeClientFor(navidrome, userId);
+      return [
+        navidromeSource(client),
+        spicySource({ baseUrl: config.spicyUrl, key: () => spicyKey(auth.db, auth.sealer) }),
+        lrclibSource({ baseUrl: config.lrclibUrl, userAgent }),
+        navidromePlainSource(client),
+      ];
+    },
+  };
   const app = createApp({
     palette,
     auth,
     navidrome,
+    lyrics,
     devFixtures: config.devFixtures,
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });
