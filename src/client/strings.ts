@@ -89,6 +89,51 @@ export const strings = {
     secretSaved: '•••••••• Saved',
     reload: 'Connected. Loading your library…',
   },
+  spotify: {
+    title: 'Spotify',
+    connect: 'Connect Spotify',
+    reconnect: 'Reconnect',
+    disconnect: 'Disconnect',
+    notConfigured: 'The admin has not set up a Spotify app on this server yet.',
+    seatsFull: 'All 5 Spotify seats on this server are taken. Ask the admin to free one.',
+    connected: (name: string | null) => `Connected${name ? ` as ${name}` : ''}`,
+    status: {
+      connected: 'Connected',
+      expired: 'Sign-in expired',
+      premium_required: 'Spotify playback needs Premium.',
+      not_on_user_list:
+        "This Spotify account isn't on the app's user list. Ask the ECHO admin to add it in the Spotify Developer Dashboard.",
+    } as Record<string, string>,
+    result: {
+      denied: 'Spotify sign-in was cancelled.',
+      bad_state: 'That Spotify sign-in expired or came from another session. Start again.',
+      failed: "Couldn't finish the Spotify sign-in. Try again.",
+      seats_full: 'All 5 Spotify seats on this server are taken.',
+      not_configured: 'The admin has not set up a Spotify app on this server yet.',
+    } as Record<string, string>,
+    reconnecting: 'Reconnecting to Spotify…',
+    retry: 'Retry',
+    expired: 'Spotify sign-in expired.',
+    premium: 'Spotify playback needs Premium.',
+    playbackFailed: "Spotify couldn't play this track.",
+    unavailable: "Spotify isn't answering. Try again in a moment.",
+    playingOn: (device: string) => `Playing on ${device}`,
+    playHere: 'Play here',
+    queueNote: 'Queue managed by Spotify. Items can be added but not reordered.',
+    playNextBecomesAdd: 'Spotify can only add to the end of its queue.',
+    replaceQueue: (provider: string) => `Replace the queue with this ${provider} music?`,
+    replace: 'Replace',
+    cancel: 'Cancel',
+    openIn: 'Open in Spotify',
+    drm: {
+      firefox:
+        'Firefox needs DRM turned on to play Spotify: Settings → General → Digital Rights Management (DRM) Content → "Play DRM-controlled content". Then reload ECHO.',
+      chromium:
+        'This Chromium has no Widevine, which Spotify needs. On Arch, install chromium-widevine from the AUR (or use Google Chrome), then restart the browser.',
+      other:
+        "This browser can't play protected audio (Widevine), which Spotify needs. Try Chrome or Firefox.",
+    },
+  },
   dock: {
     label: 'Player',
     idle: 'Nothing playing',

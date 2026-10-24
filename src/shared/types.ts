@@ -56,6 +56,10 @@ export interface ProviderState {
   positionAt: number;
   paused: boolean;
   buffering: boolean;
+  /** Spotify plays its own queue: what it says comes next, and its shuffle and repeat. */
+  upcoming?: Track[];
+  shuffle?: boolean;
+  repeat?: 'off' | 'all' | 'one';
 }
 
 export interface Features {
@@ -141,8 +145,14 @@ export interface PlaybackProvider {
   setVolume(v: number): Promise<void>; // 0..1 UI value
   preload?(next: Track): Promise<void>;
 
-  playContext?(ctx: PlayContext, offset: number): Promise<void>;
+  /** Spotify plays lists server-side: an album or playlist by its URI, other lists as track URIs. */
+  playContext?(ctx: PlayContext, offset: number, tracks: Track[]): Promise<void>;
   enqueue?(track: Track): Promise<void>;
+  /** Providers that own their queue (Spotify) move through it themselves. */
+  skipNext?(): Promise<void>;
+  skipPrevious?(): Promise<void>;
+  setShuffle?(on: boolean): Promise<void>;
+  setRepeat?(mode: 'off' | 'all' | 'one'): Promise<void>;
 
   on(event: 'state', cb: (s: ProviderState) => void): Unsubscribe;
   on(event: 'ended', cb: () => void): Unsubscribe;
