@@ -95,6 +95,7 @@ export const strings = {
     lyricsPlaceholder: 'Lyrics will appear here.',
     unsynced: 'Lyrics aren’t time-synced for this track',
     sheetLabel: 'Lyrics',
+    transcriptLabel: 'Lyrics',
   },
   playback: {
     playingNext: (title: string) => `Playing “${title}” next`,

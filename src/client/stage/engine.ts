@@ -10,7 +10,7 @@ import {
 import { createLyricField, type LyricField } from './lyrics/field.ts';
 import { paletteUniforms, readPalette } from './palette.ts';
 import { StageRenderer, type Tier } from './renderer.ts';
-import { lyricHost, lyricsStore, scrubStore, stageStatus } from './status.ts';
+import { lyricHost, lyricPrefs, lyricsStore, scrubStore, stageStatus } from './status.ts';
 
 // The Stage engine (TECHNICAL_ARCHITECTURE.md §4): mounted once by React, then imperative. Loaded
 // lazily with three.js when the Stage first opens (PERF-05: three.js loads with the Stage).
@@ -135,6 +135,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     if (!el) return;
     field = createLyricField(el, {
       tier,
+      announce: lyricPrefs.getState().announce,
       onReady: () => {
         loop.renderOnce();
         loop.wake();
@@ -143,6 +144,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     void field.setDoc(lyricsStore.getState().doc);
   };
   const offHost = lyricHost.subscribe((s, prev) => s.el !== prev.el && mountField(s.el));
+  const offPrefs = lyricPrefs.subscribe((s) => field?.setAnnounce(s.announce));
   const offDoc = lyricsStore.subscribe((s) => void field?.setDoc(s.doc));
   mountField(lyricHost.getState().el);
 
@@ -205,6 +207,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       loop.dispose();
       offHost();
       offDoc();
+      offPrefs();
       field?.dispose();
       observer.disconnect();
       reduced.removeEventListener('change', onReducedChange);

@@ -486,3 +486,38 @@ test('reduced motion: the background field is hidden, the zone and the sweep sta
   expect(main(reduced).find((l) => l.text === active.text)?.opacity).toBe(1);
   await expect(page.locator('.ly-w.lit, .ly-w.sweep').first()).toBeAttached();
 });
+
+test('transcript: a hidden ordered list of every line, aria-current on the active one (A11Y-04)', async ({
+  page,
+}) => {
+  const tl = timeline('ballad-word');
+  const active = tl.lines[2] as LyricLine;
+  await frame(page, 'ballad-word', (active.start + (active.end ?? active.start)) / 2);
+  const list = page.getByRole('list', { name: 'Lyrics' });
+  await expect(list.getByRole('listitem')).toHaveCount(tl.lines.length);
+  await expect(list.locator('[aria-current="true"]')).toHaveText(active.text);
+  await expect(list.locator('[aria-current]')).toHaveCount(1);
+  // The field itself is hidden from assistive technology; the transcript is not.
+  await expect(page.locator('.ly-scene').first()).toHaveAttribute('aria-hidden', 'true');
+  await expect(page.locator('.ly-field')).not.toHaveAttribute('aria-hidden');
+});
+
+test('announcements are off by default and, when on, speak the active line (A11Y-04)', async ({
+  page,
+}) => {
+  const tl = timeline('ballad-word');
+  const next = tl.lines[2] as LyricLine;
+  await playGuide(page, 'ballad-word', next.start / 1000 - 2);
+  const live = page.locator('.ly-field [role="status"]');
+  await dock(page).getByRole('button', { name: 'Pause' }).click();
+  await expect(dock(page)).toHaveAttribute('data-status', 'paused');
+  await page.evaluate(() => {
+    (
+      window as unknown as { __echoLyricPrefs: { setState(s: object): void } }
+    ).__echoLyricPrefs.setState({
+      announce: true,
+    });
+  });
+  await dock(page).getByRole('button', { name: 'Play', exact: true }).click();
+  await expect.poll(() => live.textContent(), { timeout: 8000 }).toBe(next.text);
+});

@@ -401,6 +401,11 @@ export class FieldModel {
     this.updateKey(fs, W, H);
   }
 
+  /** The line being sung at the last update, or −1. */
+  get active() {
+    return this.lastField?.active ?? -1;
+  }
+
   /** The decay envelope of past line `i` at `t`, from 1 (or +1's opacity if it never led). */
   envelope(i: number, t: number) {
     const left = this.leftAt[i] as number;

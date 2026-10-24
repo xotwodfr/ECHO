@@ -59,3 +59,6 @@ export const scrubStore = createStore<{ ms: number | null }>()(() => ({ ms: null
 
 /** Where the lyric field draws: set by the Lyrics view, mounted into by the engine. */
 export const lyricHost = createStore<{ el: HTMLElement | null }>()(() => ({ el: null }));
+
+/** Lyric preferences (Settings → Lyrics, M8): "Announce lyric lines" is opt-in, default off. */
+export const lyricPrefs = createStore<{ announce: boolean }>()(() => ({ announce: false }));

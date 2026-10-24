@@ -7,7 +7,7 @@ import './ui/ui.css';
 import './stage/stage.css';
 import { createPlaybackController } from './playback/controller.ts';
 import { Shell } from './shell/Shell.tsx';
-import { lyricsStore } from './stage/status.ts';
+import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { createViewStore } from './view.ts';
 
@@ -27,6 +27,9 @@ if (frame?.fixture) {
   features = (await fixtures?.loadFeatureFixture(frame.fixture)) ?? undefined;
   if (!fixtures) console.error('Deterministic mode: this build has no Features fixtures');
 }
+
+// Development builds let e2e flip the Settings → Lyrics preferences that have no UI yet (M8).
+if (__ECHO_FIXTURES__) Object.assign(window, { __echoLyricPrefs: lyricPrefs });
 
 const controller = createPlaybackController({
   provider: fixtures?.createFixtureProvider() ?? null,

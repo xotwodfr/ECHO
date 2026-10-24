@@ -1,4 +1,6 @@
 import type { Features, LyricsDoc } from '../../../shared/types.ts';
+import { strings } from '../../strings.ts';
+import { Announcer } from './announce.ts';
 import { hash } from './background.ts';
 import { buildLine, type DocLayout, LINE_HEIGHT, type LineLayout, measureDoc } from './layout.ts';
 import { LYRICS } from './lyricsConfig.ts';
@@ -72,11 +74,16 @@ const div = (cls: string) => {
   return d;
 };
 
-export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?: () => void }) {
+export function createLyricField(
+  host: HTMLElement,
+  opts: { tier: Tier; announce?: boolean; onReady?: () => void },
+) {
   const tier = TIERS[opts.tier];
   host.classList.add('ly-field');
-  host.setAttribute('aria-hidden', 'true');
+  // The animated field is hidden from assistive technology; the transcript and the live region
+  // beside it are not (§11).
   const measure = div('ly-measure');
+  measure.setAttribute('aria-hidden', 'true');
   const buckets = [0, 1, 2].map((b) => {
     const d = div('ly-bucket');
     d.style.filter = tier.blur ? `blur(${tier.blur[b]}px)` : '';
@@ -91,8 +98,18 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
     return d;
   });
   const scene = div('ly-scene');
+  scene.setAttribute('aria-hidden', 'true');
   scene.append(...buckets, main, dotsEl);
-  host.append(measure, scene);
+  const transcript = document.createElement('ol');
+  transcript.className = 'visually-hidden';
+  transcript.setAttribute('aria-label', strings.stage.transcriptLabel);
+  const live = div('visually-hidden');
+  live.setAttribute('role', 'status');
+  live.setAttribute('aria-live', 'polite');
+  host.append(measure, scene, transcript, live);
+  const announcer = new Announcer();
+  let announce = !!opts.announce;
+  let current: HTMLElement | null = null; // the transcript item with aria-current
 
   const pool: HTMLElement[] = [];
   let W = 0;
@@ -314,6 +331,9 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
     recede();
     clear();
     doc = next;
+    transcript.replaceChildren();
+    current = null;
+    live.textContent = '';
     const gen = ++build;
     if (!next || next.sync === 'none') return;
     const text = next.lines.map((l) => l.text).join(' ');
@@ -343,6 +363,14 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
         budget: tier.budget,
         dotsH: layout.fontPx * LINE_HEIGHT,
       });
+    if (!transcript.childElementCount)
+      transcript.append(
+        ...tl.lines.map((l) => {
+          const li = document.createElement('li');
+          li.textContent = l.text;
+          return li;
+        }),
+      );
     scene.style.setProperty('--ly-dot', `${LYRICS.interlude.dotEm * layout.fontPx}px`);
     // Development builds expose the measured boxes, so e2e can run the timing tables on the
     // browser's real layout (LYR-05, LYR-27). Compiled out of the image.
@@ -392,11 +420,24 @@ export function createLyricField(host: HTMLElement, opts: { tier: Tier; onReady?
       if (!model) return null;
       model.update({ ...f, W, H });
       render(f.dt);
+      const a = model.active;
+      const item = (transcript.children[a] as HTMLElement | undefined) ?? null;
+      if (item !== current) {
+        current?.removeAttribute('aria-current');
+        item?.setAttribute('aria-current', 'true');
+        current = item;
+      }
+      const say = announcer.update(a, model.lines[a]?.text ?? '', f.dt, announce, f.mode !== 'run');
+      if (say !== null) live.textContent = say;
       const k = model.key;
       return k ? { x: k.x, y: (k.y * H) / (H + dock) } : null; // the room spans the dock too
     },
     get active() {
       return !!model;
+    },
+    /** Settings → Lyrics → "Announce lyric lines" (§11). */
+    setAnnounce(on: boolean) {
+      announce = on;
     },
     dispose() {
       build++;
