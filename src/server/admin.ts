@@ -1,6 +1,9 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
+import { deleteUser, isLastAdmin } from './account.ts';
 import { audit } from './audit.ts';
-import type { AuthEnv } from './auth/routes.ts';
+import type { AuthDeps, AuthEnv } from './auth/routes.ts';
+import { revokeOthers } from './auth/sessions.ts';
 import type { Sealer } from './crypto.ts';
 import type { Db } from './db/db.ts';
 
@@ -42,6 +45,12 @@ function putSetting(db: Db, key: string, value: unknown) {
   ).run(key, JSON.stringify(value));
 }
 
+/** "Require TOTP for all" (§4.2, §7.2): users without it must enrol before anything else. */
+export const requireTotpForAll = (db: Db) => setting(db, 'auth.requireTotpForAll', false);
+
+export const INVITE_TTL = 72 * 3_600_000;
+export const inviteHash = (token: string) => createHash('sha256').update(token).digest('hex');
+
 export function spotifySettings(db: Db): SpotifySettings {
   return {
     clientId: setting<string | null>(db, 'spotify.clientId', null),
@@ -61,13 +70,11 @@ export const requireAdmin: MiddlewareHandler<AuthEnv> = async (c, next) => {
   await next();
 };
 
-export function adminRoutes(
-  deps: { db: Db; sealer: Sealer; now: () => number },
-  requireUser: MiddlewareHandler<AuthEnv>,
-) {
+export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthEnv>) {
   const app = new Hono<AuthEnv>();
   const view = () => ({
     lyrics: { spicyKeySaved: spicyKey(deps.db, deps.sealer) !== null },
+    auth: { requireTotpForAll: requireTotpForAll(deps.db) },
     spotify: {
       ...spotifySettings(deps.db),
       seats: { used: spotifySeatsUsed(deps.db), max: SPOTIFY_SEATS },
@@ -80,6 +87,7 @@ export function adminRoutes(
     let b: {
       lyrics?: { spicyKey?: unknown };
       spotify?: { clientId?: unknown; gates?: { artPalette?: unknown; syncedLyrics?: unknown } };
+      auth?: { requireTotpForAll?: unknown };
     };
     try {
       b = await c.req.json();
@@ -96,6 +104,9 @@ export function adminRoutes(
       gates.some(([k, v]) => !['artPalette', 'syncedLyrics'].includes(k) || typeof v !== 'boolean')
     )
       return c.json({ error: 'bad_gate' }, 400);
+    const totpAll = b.auth?.requireTotpForAll;
+    if (totpAll !== undefined && typeof totpAll !== 'boolean')
+      return c.json({ error: 'bad_setting' }, 400);
     const key = b.lyrics?.spicyKey;
     if (key !== undefined) {
       if (key !== null && (typeof key !== 'string' || !/^sl_sk_[\w-]{8,200}$/.test(key.trim())))
@@ -123,7 +134,182 @@ export function adminRoutes(
       putSetting(deps.db, `spotify.gates.${k}`, v);
       audit(deps.db, deps.now(), c.var.user.id, 'admin.spotify_gate', { [k]: v });
     }
+    if (typeof totpAll === 'boolean') {
+      putSetting(deps.db, 'auth.requireTotpForAll', totpAll);
+      audit(deps.db, deps.now(), c.var.user.id, 'admin.require_totp', { on: totpAll });
+    }
     return c.json(view());
+  });
+
+  // ---- users (M8 task 3) ----
+  const admin = [requireUser, requireAdmin] as const;
+  const target = (id: string) =>
+    deps.db
+      .prepare('SELECT id, username, role, disabled FROM users WHERE id = ?')
+      .get(Number(id)) as
+      | { id: number; username: string; role: 'admin' | 'user'; disabled: number }
+      | undefined;
+
+  app.get('/admin/users', ...admin, (c) => {
+    const rows = deps.db
+      .prepare(
+        `SELECT u.id, u.username, u.role, u.disabled, u.totp_enabled, u.created_at,
+           (SELECT MAX(last_seen_at) FROM sessions s WHERE s.user_id = u.id) AS last_seen,
+           EXISTS (SELECT 1 FROM connections WHERE user_id = u.id AND provider = 'spotify') AS spotify,
+           EXISTS (SELECT 1 FROM connections WHERE user_id = u.id AND provider = 'navidrome') AS navidrome
+         FROM users u ORDER BY u.username`,
+      )
+      .all() as {
+      id: number;
+      username: string;
+      role: string;
+      disabled: number;
+      totp_enabled: number;
+      created_at: number;
+      last_seen: number | null;
+      spotify: number;
+      navidrome: number;
+    }[];
+    const t = deps.now();
+    return c.json(
+      rows.map((r) => ({
+        id: r.id,
+        username: r.username,
+        role: r.role,
+        disabled: !!r.disabled,
+        totpEnabled: !!r.totp_enabled,
+        createdAt: r.created_at,
+        lastSeenAt: r.last_seen,
+        lockedForMs: deps.limiter.lockedFor(r.username, t),
+        connections: { navidrome: !!r.navidrome, spotify: !!r.spotify },
+      })),
+    );
+  });
+
+  app.patch('/admin/users/:id', ...admin, async (c: Context<AuthEnv>) => {
+    const u = target(c.req.param('id') as string);
+    if (!u) return c.json({ error: 'not_found' }, 404);
+    let b: { role?: unknown; disabled?: unknown };
+    try {
+      b = await c.req.json();
+    } catch {
+      return c.json({ error: 'bad_user' }, 400);
+    }
+    if (b.role !== undefined && b.role !== 'admin' && b.role !== 'user')
+      return c.json({ error: 'bad_role' }, 400);
+    if (b.disabled !== undefined && typeof b.disabled !== 'boolean')
+      return c.json({ error: 'bad_user' }, 400);
+    const demotes = b.role === 'user' || b.disabled === true;
+    if (demotes && isLastAdmin(deps.db, u.id)) return c.json({ error: 'last_admin' }, 409);
+    if (b.role === 'admin') {
+      // An admin always has TOTP (§4.5): promotion waits until the user has enrolled.
+      const totp = deps.db.prepare('SELECT totp_enabled FROM users WHERE id = ?').pluck().get(u.id);
+      if (!totp) return c.json({ error: 'needs_totp' }, 409);
+    }
+    if (b.role) deps.db.prepare('UPDATE users SET role = ? WHERE id = ?').run(b.role, u.id);
+    if (typeof b.disabled === 'boolean') {
+      deps.db.prepare('UPDATE users SET disabled = ? WHERE id = ?').run(b.disabled ? 1 : 0, u.id);
+      if (b.disabled) revokeOthers(deps.db, u.id, null); // signed out everywhere
+    }
+    audit(deps.db, deps.now(), c.var.user.id, 'admin.user_changed', {
+      userId: u.id,
+      ...(b.role !== undefined && { role: b.role }),
+      ...(b.disabled !== undefined && { disabled: b.disabled }),
+    });
+    return c.json({ ok: true });
+  });
+
+  app.post('/admin/users/:id/unlock', ...admin, (c) => {
+    const u = target(c.req.param('id'));
+    if (!u) return c.json({ error: 'not_found' }, 404);
+    deps.limiter.unlock(u.username);
+    audit(deps.db, deps.now(), c.var.user.id, 'admin.user_unlocked', { userId: u.id });
+    return c.json({ ok: true });
+  });
+
+  app.delete('/admin/users/:id', ...admin, (c) => {
+    const u = target(c.req.param('id'));
+    if (!u) return c.json({ error: 'not_found' }, 404);
+    // Their own account goes through Account → Delete (password + TOTP).
+    if (u.id === c.var.user.id) return c.json({ error: 'use_account_deletion' }, 409);
+    if (isLastAdmin(deps.db, u.id)) return c.json({ error: 'last_admin' }, 409);
+    deleteUser(deps.db, u.id, deps.now(), c.var.user.id);
+    return c.json({ ok: true });
+  });
+
+  // ---- invites (§4.2): single use, 72 h, stored hashed ----
+  app.post('/admin/invites', ...admin, async (c: Context<AuthEnv>) => {
+    let b: { username?: unknown } = {};
+    try {
+      b = await c.req.json();
+    } catch {}
+    const username = typeof b.username === 'string' ? b.username.trim() : null;
+    if (username !== null && username !== '' && !/^[\w.-]{1,64}$/.test(username))
+      return c.json({ error: 'bad_username' }, 400);
+    const token = randomBytes(32).toString('base64url');
+    const expiresAt = deps.now() + INVITE_TTL;
+    deps.db
+      .prepare(
+        'INSERT INTO invites (token_hash, created_by, username, expires_at) VALUES (?, ?, ?, ?)',
+      )
+      .run(inviteHash(token), c.var.user.id, username || null, expiresAt);
+    audit(deps.db, deps.now(), c.var.user.id, 'admin.invite_created');
+    // The token is shown once, as a link the admin sends out of band.
+    return c.json({ token, path: `/invite#${token}`, expiresAt }, 201);
+  });
+
+  app.get('/admin/invites', ...admin, (c) => {
+    const rows = deps.db
+      .prepare(
+        `SELECT token_hash, username, expires_at FROM invites
+         WHERE used_by IS NULL AND expires_at > ? ORDER BY expires_at`,
+      )
+      .all(deps.now()) as { token_hash: string; username: string | null; expires_at: number }[];
+    return c.json(
+      rows.map((r) => ({
+        id: r.token_hash.slice(0, 16),
+        username: r.username,
+        expiresAt: r.expires_at,
+      })),
+    );
+  });
+
+  app.delete('/admin/invites/:id', ...admin, (c) => {
+    const id = c.req.param('id');
+    if (!/^[0-9a-f]{16}$/.test(id)) return c.json({ error: 'not_found' }, 404);
+    const gone = deps.db
+      .prepare('DELETE FROM invites WHERE substr(token_hash, 1, 16) = ? AND used_by IS NULL')
+      .run(id).changes;
+    if (!gone) return c.json({ error: 'not_found' }, 404);
+    audit(deps.db, deps.now(), c.var.user.id, 'admin.invite_revoked');
+    return c.json({ ok: true });
+  });
+
+  // ---- audit log viewer ----
+  app.get('/admin/audit', ...admin, (c) => {
+    const before = Number(c.req.query('before') ?? Number.MAX_SAFE_INTEGER);
+    const limit = Math.min(200, Math.max(1, Number(c.req.query('limit') ?? 50) || 50));
+    const rows = deps.db
+      .prepare(
+        `SELECT a.id, a.at, a.event, a.detail, u.username FROM audit_log a
+         LEFT JOIN users u ON u.id = a.user_id WHERE a.id < ? ORDER BY a.id DESC LIMIT ?`,
+      )
+      .all(Number.isFinite(before) ? before : Number.MAX_SAFE_INTEGER, limit) as {
+      id: number;
+      at: number;
+      event: string;
+      detail: string | null;
+      username: string | null;
+    }[];
+    return c.json(
+      rows.map((r) => ({
+        id: r.id,
+        at: r.at,
+        event: r.event,
+        username: r.username,
+        detail: r.detail ? JSON.parse(r.detail) : null,
+      })),
+    );
   });
 
   return app;

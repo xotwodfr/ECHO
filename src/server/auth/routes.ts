@@ -1,4 +1,4 @@
-import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { audit } from '../audit.ts';
@@ -67,7 +67,7 @@ const sameToken = (a: string, b: string) => {
 };
 
 /** 10 single-use recovery codes, `xxxx-xxxx-xxxx` from an unambiguous alphabet. */
-function newRecoveryCodes() {
+export function newRecoveryCodes() {
   const alphabet = 'abcdefghijkmnpqrstuvwxyz23456789';
   return Array.from({ length: 10 }, () =>
     [0, 1, 2]
@@ -76,7 +76,7 @@ function newRecoveryCodes() {
   );
 }
 
-async function body(c: Context): Promise<Record<string, unknown>> {
+export async function body(c: Context): Promise<Record<string, unknown>> {
   try {
     const b = await c.req.json();
     return b && typeof b === 'object' ? (b as Record<string, unknown>) : {};
@@ -84,9 +84,9 @@ async function body(c: Context): Promise<Record<string, unknown>> {
     return {};
   }
 }
-const str = (v: unknown, max = 512) => (typeof v === 'string' && v.length <= max ? v : null);
+export const str = (v: unknown, max = 512) => (typeof v === 'string' && v.length <= max ? v : null);
 
-function setSessionCookie(c: Context, token: string) {
+export function setSessionCookie(c: Context, token: string) {
   setCookie(c, SESSION_COOKIE, token, {
     secure: true,
     httpOnly: true,
@@ -96,6 +96,21 @@ function setSessionCookie(c: Context, token: string) {
   });
 }
 
+/** What a user who must still enrol TOTP ("require TOTP for all") may do meanwhile. */
+const ENROLMENT_PATHS = [
+  '/api/v1/me/account',
+  '/api/v1/me/totp/start',
+  '/api/v1/me/totp/enable',
+  '/api/v1/auth/logout',
+];
+
+const totpForAll = (db: Db) => {
+  const row = db
+    .prepare("SELECT value_json FROM server_settings WHERE key = 'auth.requireTotpForAll'")
+    .get() as { value_json: string | null } | undefined;
+  return row?.value_json === 'true';
+};
+
 /** The signed-in user (cookie or bearer device token), or 401. */
 export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
   return async (c, next) => {
@@ -103,10 +118,17 @@ export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
     const token = bearer ?? getCookie(c, SESSION_COOKIE);
     const user = token ? resolveSession(deps.db, token, deps.now()) : null;
     if (!user) return c.json({ error: 'unauthenticated' }, 401);
+    if (!user.totpEnabled && !ENROLMENT_PATHS.includes(c.req.path) && totpForAll(deps.db))
+      return c.json({ error: 'totp_enrolment_required' }, 403);
     c.set('user', user);
     await next();
   };
 }
+
+const INVITE_TTL_CHECK = (
+  row: { expires_at: number; used_by: number | null } | undefined,
+  t: number,
+) => !!row && row.used_by === null && row.expires_at > t;
 
 export function authRoutes(deps: AuthDeps) {
   const { db, sealer, limiter, now } = deps;
@@ -283,6 +305,157 @@ export function authRoutes(deps: AuthDeps) {
     return c.json({ ok: true });
   });
 
+  // ---- invites (§4.2): single use, 72 h; TOTP when the admin requires it for all ----
+
+  const pendingInvites = new Map<
+    string,
+    { username: string; hash: string; secret: string; expiresAt: number }
+  >();
+  const inviteRow = (token: unknown) => {
+    const t = str(token, 128);
+    if (!t) return null;
+    const h = createHash('sha256').update(t).digest('hex');
+    const row = db
+      .prepare('SELECT token_hash, username, expires_at, used_by FROM invites WHERE token_hash = ?')
+      .get(h) as
+      | { token_hash: string; username: string | null; expires_at: number; used_by: number | null }
+      | undefined;
+    return INVITE_TTL_CHECK(row, now()) ? (row as NonNullable<typeof row>) : null;
+  };
+
+  /** Creates the invited user and spends the invite in one step; null if it was spent meanwhile. */
+  const redeem = (
+    invite: { token_hash: string },
+    p: { username: string; hash: string; secret?: string; step?: number },
+  ) =>
+    db.transaction(() => {
+      const uid = Number(
+        db
+          .prepare(
+            `INSERT INTO users (username, password_hash, role, totp_enabled, totp_last_step, created_at)
+             VALUES (?, ?, 'user', ?, ?, ?)`,
+          )
+          .run(p.username, p.hash, p.secret ? 1 : 0, p.step ?? null, now()).lastInsertRowid,
+      );
+      const spent = db
+        .prepare('UPDATE invites SET used_by = ? WHERE token_hash = ? AND used_by IS NULL')
+        .run(uid, invite.token_hash).changes;
+      if (!spent) throw new Error('invite spent');
+      if (p.secret)
+        db.prepare('UPDATE users SET totp_secret_enc = ? WHERE id = ?').run(
+          sealer.seal(p.secret, { table: 'users', rowId: uid, column: 'totp_secret_enc' }),
+          uid,
+        );
+      return uid;
+    })();
+
+  app.get('/invite', (c) => c.json({ requireTotp: totpForAll(db) }));
+
+  app.post('/invite', async (c) => {
+    const b = await body(c);
+    if (!limiter.ipAllows(c.var.ip, now())) return c.json({ error: 'rate_limited' }, 429);
+    const invite = inviteRow(b.token);
+    if (!invite) return c.json({ error: 'invite_invalid' }, 404);
+    const username = (invite.username ?? str(b.username, 64)?.trim()) || '';
+    if (!/^[\w.-]{1,64}$/.test(username)) return c.json({ error: 'bad_username' }, 400);
+    if (db.prepare('SELECT 1 FROM users WHERE username = ?').get(username))
+      return c.json({ error: 'username_taken' }, 409);
+    const password = str(b.password, 1024);
+    const problem = password === null ? 'required' : passwordProblem(password);
+    if (problem || password === null)
+      return c.json({ error: 'bad_password', detail: problem }, 400);
+    const hash = await hashSecret(password);
+    if (totpForAll(db)) {
+      const secret = newTotpSecret();
+      pendingInvites.set(invite.token_hash, {
+        username,
+        hash,
+        secret,
+        expiresAt: now() + CHALLENGE_TTL * 2,
+      });
+      return c.json({ totpRequired: true, otpauth: otpauthUri(username, secret), secret });
+    }
+    let uid: number;
+    try {
+      uid = redeem(invite, { username, hash });
+    } catch {
+      return c.json({ error: 'invite_invalid' }, 404);
+    }
+    audit(db, now(), uid, 'invite.redeemed');
+    setSessionCookie(c, createSession(db, uid, 'web', now(), { ipHint: ipHint(c.var.ip) }));
+    return c.json({ totpRequired: false });
+  });
+
+  app.post('/invite/totp', async (c) => {
+    const b = await body(c);
+    const invite = inviteRow(b.token);
+    const p = invite && pendingInvites.get(invite.token_hash);
+    if (!invite || !p || p.expiresAt <= now()) return c.json({ error: 'invite_invalid' }, 404);
+    const step = verifyTotp(p.secret, str(b.code, 16) ?? '', now(), null);
+    if (step === null) return c.json({ error: 'bad_code' }, 400);
+    let uid: number;
+    try {
+      uid = redeem(invite, { ...p, step });
+    } catch {
+      return c.json({ error: 'invite_invalid' }, 404);
+    }
+    pendingInvites.delete(invite.token_hash);
+    const codes = newRecoveryCodes();
+    const hashes = await Promise.all(codes.map((code) => hashSecret(code, CODE_PARAMS)));
+    const ins = db.prepare('INSERT INTO recovery_codes (user_id, code_hash) VALUES (?, ?)');
+    for (const h of hashes) ins.run(uid, h);
+    audit(db, now(), uid, 'invite.redeemed', { totp: true });
+    setSessionCookie(c, createSession(db, uid, 'web', now(), { ipHint: ipHint(c.var.ip) }));
+    return c.json({ recoveryCodes: codes });
+  });
+
+  // ---- device tokens for native clients (§4.6, API-02): credentials + TOTP in one request ----
+
+  app.post('/auth/device', async (c) => {
+    const b = await body(c);
+    const username = str(b.username, 64)?.trim() ?? '';
+    const password = str(b.password, 1024) ?? '';
+    const name = str(b.name, 64)?.trim();
+    const t = now();
+    if (!name) return c.json({ error: 'bad_device_name' }, 400);
+    if (!limiter.ipAllows(c.var.ip, t)) return c.json({ error: 'rate_limited' }, 429);
+    if (limiter.lockedFor(username, t)) {
+      await verifySecret(password, await DUMMY_HASH);
+      return c.json(GENERIC, 401);
+    }
+    const user = db
+      .prepare('SELECT id, password_hash, totp_enabled, disabled FROM users WHERE username = ?')
+      .get(username) as
+      | { id: number; password_hash: string; totp_enabled: number; disabled: number }
+      | undefined;
+    const ok = await verifySecret(password, user?.password_hash ?? (await DUMMY_HASH));
+    if (!user || !ok || user.disabled) {
+      if (limiter.fail(username, t)) audit(db, t, user?.id ?? null, 'login.locked', { username });
+      audit(db, t, user?.id ?? null, 'login.failed', {
+        username,
+        ip: ipHint(c.var.ip),
+        device: true,
+      });
+      return c.json(GENERIC, 401);
+    }
+    limiter.succeed(username);
+    if (user.totp_enabled) {
+      if (b.code === undefined) return c.json({ error: 'totp_required' }, 401);
+      const { secondFactor } = await import('../account.ts');
+      if (!(await secondFactor(deps, user.id, b.code))) {
+        if (limiter.failSecond(username, t))
+          audit(db, t, user.id, 'login.locked', { factor: 'totp' });
+        audit(db, t, user.id, 'login.totp_failed', { device: true });
+        return c.json({ error: 'bad_code' }, 401);
+      }
+      limiter.succeedSecond(username);
+    }
+    const token = createSession(db, user.id, 'device', t, { name, ipHint: ipHint(c.var.ip) });
+    audit(db, t, user.id, 'device.created', { name });
+    c.header('Cache-Control', 'no-store');
+    return c.json({ token }, 201);
+  });
+
   app.post('/auth/logout', requireUser(deps), (c) => {
     const user = (c as unknown as Context<AuthEnv>).var.user;
     revokeSession(db, user.sessionHash);
@@ -308,6 +481,7 @@ export function authRoutes(deps: AuthDeps) {
         username: user.username,
         role: user.role,
         navidrome: !!nd,
+        mustEnrolTotp: !user.totpEnabled && totpForAll(db),
       });
     }
     return c.json({ status: hasAdmin(db) ? 'anonymous' : 'setup' });

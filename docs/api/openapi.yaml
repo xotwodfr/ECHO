@@ -41,6 +41,7 @@ paths:
                       username: { type: string }
                       role: { enum: [admin, user] }
                       navidrome: { type: boolean, description: The user has a Navidrome connection }
+                      mustEnrolTotp: { type: boolean, description: '"Require TOTP for all" is on and this user has none yet' }
                   - type: object
                     properties: { status: { enum: [anonymous, setup] } }
 
@@ -113,6 +114,68 @@ paths:
         '200': { description: Signed in (cookie set) }
         '401': { description: bad_code or challenge_expired }
         '429': { description: Rate limited }
+
+  /auth/device:
+    post:
+      summary: 'A device token for a native client (SETTINGS_AND_SECURITY.md §4.6): credentials and, when enabled, the TOTP or recovery code in one request'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password, name]
+              properties:
+                username: { type: string }
+                password: { type: string }
+                code: { type: string, description: TOTP or recovery code (required when the account has TOTP) }
+                name: { type: string, maxLength: 64, description: 'Shown in Sessions & devices' }
+      responses:
+        '201': { description: Created; the token is shown once, content: { application/json: { schema: { type: object, required: [token], properties: { token: { type: string, pattern: '^echo_dt_' } } } } } }
+        '400': { description: No device name }
+        '401': { description: 'Wrong credentials (generic), totp_required, or bad_code' }
+        '429': { description: Rate limited }
+
+  /invite:
+    get:
+      summary: Whether redeeming an invite will ask for TOTP enrolment
+      security: []
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, required: [requireTotp], properties: { requireTotp: { type: boolean } } } } } }
+    post:
+      summary: 'Redeem an invite (§4.2): single use, 72 h. Without "require TOTP for all" this creates the user and signs them in'
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                username: { type: string, description: Ignored when the invite presets one }
+                password: { type: string, minLength: 12 }
+      responses:
+        '200':
+          description: 'Created (totpRequired false, session cookie set), or the TOTP key to enrol first'
+          content: { application/json: { schema: { type: object, required: [totpRequired], properties: { totpRequired: { type: boolean }, otpauth: { type: string }, secret: { type: string } } } } }
+        '400': { description: Bad username or password }
+        '404': { description: Unknown, used or expired invite }
+        '409': { description: Username taken }
+        '429': { description: Rate limited }
+  /invite/totp:
+    post:
+      summary: 'Redeem step 2 when TOTP is required: a valid code creates the user; recovery codes are shown once'
+      security: []
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [token, code], properties: { token: { type: string }, code: { type: string } } } } }
+      responses:
+        '200': { description: Created and signed in, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryCodes' } } } }
+        '400': { description: Wrong code }
+        '404': { description: Unknown, used or expired invite }
 
   /auth/logout:
     post:
@@ -290,6 +353,115 @@ paths:
           description: No source had lyrics (the sources tried, with their outcomes)
           content: { application/json: { schema: { type: object, properties: { tried: { type: array, items: { type: object, properties: { source: { type: string }, outcome: { type: string } } } }, override: { $ref: '#/components/schemas/Override' } } } } }
 
+  /me/account:
+    get:
+      summary: The signed-in user's account
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [username, role, createdAt, totpEnabled, recoveryCodesLeft]
+                properties:
+                  username: { type: string }
+                  role: { enum: [admin, user] }
+                  createdAt: { type: integer }
+                  totpEnabled: { type: boolean }
+                  recoveryCodesLeft: { type: integer }
+  /me/password:
+    post:
+      summary: Change the password (§4.3); every other session and device is signed out
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [current, next], properties: { current: { type: string }, next: { type: string, minLength: 12 } } } } }
+      responses:
+        '200': { description: Changed, content: { application/json: { schema: { type: object, required: [ok, revoked], properties: { ok: { const: true }, revoked: { type: integer } } } } } }
+        '400': { description: The new password breaks the policy }
+        '403': { description: Wrong current password }
+  /me/sessions:
+    get:
+      summary: Sessions & devices (§4.6), the user's own
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, kind, createdAt, lastSeenAt, current]
+                  properties:
+                    id: { type: string, description: The stored hash (it cannot sign anyone in) }
+                    kind: { enum: [web, device] }
+                    name: { type: [string, 'null'] }
+                    createdAt: { type: integer }
+                    lastSeenAt: { type: integer }
+                    location: { type: [string, 'null'], description: 'IPv4 /24 or IPv6 /48' }
+                    current: { type: boolean }
+  /me/sessions/{id}:
+    delete:
+      summary: Revoke one of the user's own sessions or devices
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Revoked }
+        '404': { description: Not one of the user's }
+  /me/sessions/revoke-others:
+    post:
+      summary: Sign out everywhere else
+      responses:
+        '200': { description: Revoked, content: { application/json: { schema: { type: object, required: [ok, revoked], properties: { ok: { const: true }, revoked: { type: integer } } } } } }
+  /me/totp/start:
+    post:
+      summary: 'Begin TOTP enrolment (password): the key, kept 10 min until a code confirms it'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [password], properties: { password: { type: string } } } } }
+      responses:
+        '200': { description: The key, content: { application/json: { schema: { type: object, required: [otpauth, secret], properties: { otpauth: { type: string }, secret: { type: string } } } } } }
+        '403': { description: Wrong password }
+        '409': { description: TOTP is already on }
+  /me/totp/enable:
+    post:
+      summary: Confirm enrolment with one valid code; recovery codes are shown once
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [code], properties: { code: { type: string } } } } }
+      responses:
+        '200': { description: On, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryCodes' } } } }
+        '400': { description: Wrong code }
+        '409': { description: No enrolment in progress, or it expired }
+  /me/totp/disable:
+    post:
+      summary: Turn TOTP off (password + a current code); not for admins
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PasswordAndCode' } } }
+      responses:
+        '200': { description: Off }
+        '403': { description: 'Wrong password or code, or an admin (admins keep TOTP)' }
+  /me/recovery-codes:
+    post:
+      summary: New recovery codes (password + a current code); the old ones stop working
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PasswordAndCode' } } }
+      responses:
+        '200': { description: New codes, shown once, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryCodes' } } } }
+        '403': { description: Wrong password or code }
+  /me:
+    delete:
+      summary: 'Delete the account (§10, ACC-03): password, and the code when TOTP is on; everything of the user goes'
+      requestBody:
+        required: true
+        content: { application/json: { schema: { $ref: '#/components/schemas/PasswordAndCode' } } }
+      responses:
+        '200': { description: Deleted; the session cookie is cleared }
+        '403': { description: Wrong password or code }
+        '409': { description: The last admin }
+
   /me/settings:
     get:
       summary: The user's preferences that follow them (SETTINGS_AND_SECURITY.md §7.1; M7 has one)
@@ -326,6 +498,90 @@ paths:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/Override' } } } }
         '400': { description: Out of range or an unknown source }
 
+  /admin/users:
+    get:
+      summary: Every user (admins only)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required: [id, username, role, disabled, totpEnabled, createdAt, lockedForMs, connections]
+                  properties:
+                    id: { type: integer }
+                    username: { type: string }
+                    role: { enum: [admin, user] }
+                    disabled: { type: boolean }
+                    totpEnabled: { type: boolean }
+                    createdAt: { type: integer }
+                    lastSeenAt: { type: [integer, 'null'] }
+                    lockedForMs: { type: integer }
+                    connections: { type: object, properties: { navidrome: { type: boolean }, spotify: { type: boolean } } }
+        '403': { description: Not an admin }
+  /admin/users/{id}:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    patch:
+      summary: Promote or demote, disable or enable (disabling signs the user out everywhere)
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, additionalProperties: false, properties: { role: { enum: [admin, user] }, disabled: { type: boolean } } } } }
+      responses:
+        '200': { description: Changed }
+        '400': { description: Bad value }
+        '403': { description: Not an admin }
+        '404': { description: No such user }
+        '409': { description: 'last_admin, or needs_totp (an admin always has TOTP)' }
+    delete:
+      summary: Delete another user and all their data
+      responses:
+        '200': { description: Deleted }
+        '403': { description: Not an admin }
+        '404': { description: No such user }
+        '409': { description: 'Yourself (use DELETE /me) or the last admin' }
+  /admin/users/{id}/unlock:
+    parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
+    post:
+      summary: Lift a login lockout
+      responses:
+        '200': { description: Unlocked }
+        '403': { description: Not an admin }
+        '404': { description: No such user }
+  /admin/invites:
+    get:
+      summary: Pending invites
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { type: object, required: [id, expiresAt], properties: { id: { type: string }, username: { type: [string, 'null'] }, expiresAt: { type: integer } } } } } } }
+        '403': { description: Not an admin }
+    post:
+      summary: 'A new invite: single use, 72 h; the token is shown once'
+      requestBody:
+        content: { application/json: { schema: { type: object, properties: { username: { type: string, description: Preset username } } } } }
+      responses:
+        '201': { description: Created, content: { application/json: { schema: { type: object, required: [token, path, expiresAt], properties: { token: { type: string }, path: { type: string }, expiresAt: { type: integer } } } } } }
+        '400': { description: Bad username }
+        '403': { description: Not an admin }
+  /admin/invites/{id}:
+    delete:
+      summary: Revoke a pending invite
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Revoked }
+        '403': { description: Not an admin }
+        '404': { description: No such pending invite }
+  /admin/audit:
+    get:
+      summary: The audit log, newest first
+      parameters:
+        - { name: before, in: query, schema: { type: integer }, description: An entry id; older entries }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { type: object, required: [id, at, event], properties: { id: { type: integer }, at: { type: integer }, event: { type: string }, username: { type: [string, 'null'] }, detail: { type: [object, 'null'] } } } } } } }
+        '403': { description: Not an admin }
+
   /admin/settings:
     get:
       summary: Server settings (admins only); secrets are reported as saved or not, never returned
@@ -345,6 +601,7 @@ paths:
                   type: object
                   properties:
                     spicyKey: { type: [string, 'null'], pattern: '^sl_sk_', description: The Spicy Lyrics secret key (null removes it) }
+                auth: { type: object, properties: { requireTotpForAll: { type: boolean, description: Users without TOTP must enrol before anything else } } }
                 spotify:
                   type: object
                   properties:
@@ -433,6 +690,14 @@ components:
         offsetMs: { type: integer }
         lines: { type: array, items: { type: object } }
         fetchedAt: { type: string, format: date-time }
+    RecoveryCodes:
+      type: object
+      required: [recoveryCodes]
+      properties: { recoveryCodes: { type: array, minItems: 10, maxItems: 10, items: { type: string, pattern: '^[a-z2-9]{4}-[a-z2-9]{4}-[a-z2-9]{4}$' } } }
+    PasswordAndCode:
+      type: object
+      required: [password]
+      properties: { password: { type: string }, code: { type: string, description: TOTP or recovery code } }
     UserSettings:
       type: object
       properties:
@@ -442,6 +707,7 @@ components:
       type: object
       properties:
         lyrics: { type: object, properties: { spicyKeySaved: { type: boolean } } }
+        auth: { type: object, properties: { requireTotpForAll: { type: boolean } } }
         spotify:
           type: object
           properties:

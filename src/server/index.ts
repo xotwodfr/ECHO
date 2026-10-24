@@ -6,6 +6,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
+import { accountRoutes } from './account.ts';
 import { adminRoutes, spicyKey, spotifySettings } from './admin.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
@@ -120,6 +121,7 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', lyricsRoutes(deps.lyrics, requireUser(deps.auth)));
   app.route('/api/v1', spotifyRoutes(deps.spotify, requireUser(deps.auth), deps.spotifyTokens));
   app.route('/api/v1', settingsRoutes(deps.auth.db, requireUser(deps.auth)));
+  app.route('/api/v1', accountRoutes(deps.auth, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.

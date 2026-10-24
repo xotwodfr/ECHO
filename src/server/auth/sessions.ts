@@ -23,6 +23,7 @@ export interface SessionUser {
   role: 'admin' | 'user';
   sessionHash: string;
   kind: SessionKind;
+  totpEnabled: boolean;
 }
 
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -57,7 +58,7 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
   const h = hashToken(token);
   const row = db
     .prepare(
-      `SELECT s.kind, s.last_seen_at, s.expires_at, u.id, u.username, u.role, u.disabled
+      `SELECT s.kind, s.last_seen_at, s.expires_at, u.id, u.username, u.role, u.disabled, u.totp_enabled
        FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id_hash = ?`,
     )
     .get(h) as
@@ -69,6 +70,7 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
         username: string;
         role: 'admin' | 'user';
         disabled: number;
+        totp_enabled: number;
       }
     | undefined;
   if (!row) return null;
@@ -83,7 +85,14 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
       now + life.slide,
       h,
     );
-  return { id: row.id, username: row.username, role: row.role, sessionHash: h, kind: row.kind };
+  return {
+    id: row.id,
+    username: row.username,
+    role: row.role,
+    sessionHash: h,
+    kind: row.kind,
+    totpEnabled: !!row.totp_enabled,
+  };
 }
 
 export const revokeSession = (db: Db, sessionHash: string) =>

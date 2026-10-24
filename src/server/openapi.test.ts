@@ -5,7 +5,7 @@ import { testDeps } from './testing.ts';
 // docs/api/openapi.yaml and the server's routes stay in step (IMPLEMENTATION_PLAN.md M5 task 13):
 // every /api/v1 route is documented, and nothing is documented that does not exist.
 
-const METHODS = ['get', 'put', 'post', 'delete'];
+const METHODS = ['get', 'put', 'post', 'patch', 'delete'];
 
 function documented() {
   const out = new Set<string>();
@@ -14,7 +14,7 @@ function documented() {
     const p = /^ {2}(\/\S*):\s*$/.exec(line);
     if (p) path = p[1] as string;
     else if (/^\S/.test(line)) path = null; // left the paths block
-    const m = /^ {4}(get|put|post|delete):/.exec(line);
+    const m = /^ {4}(get|put|post|patch|delete):/.exec(line);
     if (path && m) out.add(`${(m[1] as string).toUpperCase()} ${path}`);
   }
   return out;
@@ -50,6 +50,10 @@ describe('the unauthenticated surface (SEC-02, SETTINGS_AND_SECURITY.md §5.5)',
     'POST /setup/totp',
     'POST /auth/login',
     'POST /auth/totp',
+    'POST /auth/device',
+    'GET /invite',
+    'POST /invite',
+    'POST /invite/totp',
     'GET /navidrome/stream/{id}', // a signed URL; without one it is 401 too (below)
   ]);
 

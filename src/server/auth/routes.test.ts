@@ -270,6 +270,7 @@ describe('sessions (§4.6)', () => {
       username: 'ada',
       role: 'admin',
       navidrome: false,
+      mustEnrolTotp: false,
     });
   });
 

@@ -432,7 +432,7 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
       .prepare('SELECT id, username, role FROM users WHERE id = ? AND disabled = 0')
       .get(Number(uid)) as Pick<SessionUser, 'id' | 'username' | 'role'> | undefined;
     if (!row) return c.json({ error: 'unauthenticated' }, 401);
-    c.set('user', { ...row, sessionHash: '', kind: 'device' });
+    c.set('user', { ...row, sessionHash: '', kind: 'device', totpEnabled: true });
     await next();
   };
 
