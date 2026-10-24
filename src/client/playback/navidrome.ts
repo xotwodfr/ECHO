@@ -8,8 +8,8 @@ import type {
   Unsubscribe,
 } from '../../shared/types.ts';
 import { api } from '../api.ts';
+import { AnalyserFeatures } from './analyser.ts';
 import { type AudioPath, createAudioPath } from './audio.ts';
-import { SILENT_FEATURES } from './features.ts';
 
 // NavidromeProvider (PLAYBACK_ARCHITECTURE.md §5): the signed-in user's own Navidrome through
 // ECHO's proxy. Raw when the browser can play the file (native seeking over Range), else Opus 192
@@ -40,6 +40,8 @@ export class NavidromeProvider implements PlaybackProvider {
   readonly label = 'Navidrome';
 
   private readonly audio: AudioPath;
+  /** Live features from the analyser tap (VISUALIZER_SPEC.md §3), aligned to what is audible. */
+  private readonly live: AnalyserFeatures;
   private track: NavidromeTrack | null = null;
   private loading = false;
   private loads = 0;
@@ -67,6 +69,11 @@ export class NavidromeProvider implements PlaybackProvider {
   ) {
     this.opts = opts;
     this.audio = createAudioPath(el);
+    this.live = new AnalyserFeatures({
+      tap: () => this.audio.analyser(),
+      latencyMs: () => this.audio.latencyMs(),
+      playing: () => !el.paused,
+    });
     el.preload = 'auto';
     const sync = () => this.emitState();
     for (const e of ['play', 'pause', 'seeked'] as const) el.addEventListener(e, sync);
@@ -202,7 +209,7 @@ export class NavidromeProvider implements PlaybackProvider {
   }
 
   features(): FeatureSource {
-    return SILENT_FEATURES; // AnalyserFeatures (VISUALIZER_SPEC.md §3) reads this.audio.analyser()
+    return this.live;
   }
 
   audioClock() {
