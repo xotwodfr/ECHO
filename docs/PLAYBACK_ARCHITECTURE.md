@@ -113,7 +113,8 @@ Authorization Code with **PKCE**, run by ECHO's server (details and token storag
 | `user-read-playback-state`, `user-modify-playback-state` | devices, transfer, play, seek, shuffle, repeat, volume, queue add [C] |
 | `user-read-currently-playing` | currently playing and queue read [C] |
 | `user-library-read`, `playlist-read-private` | browse saved albums and the user's playlists (MVP-β, optional) |
-| `user-read-email`, `user-read-private` | Commonly required by the SDK in practice [R]. **Verify in M7** whether `streaming` alone suffices; drop them if so. |
+| `user-read-private` | Required by Search [C: scopes doc, 2026-10-24] and returns `product`, which ECHO reads to say "Spotify playback needs Premium" before the SDK fails. |
+| `user-read-email` | No endpoint ECHO uses needs it, and the SDK reference names no scopes [C]; Spotify's own SDK example still requests it [R]. Kept until the M7 manual checklist shows the SDK plays without it (one constant, `SPOTIFY_SCOPES`). |
 
 The client asks the server for the **current user's** access token (`POST /api/v1/spotify/token`)
 whenever the SDK calls `getOAuthToken`, and before Web API calls. Access tokens last 3600 s [C]. The
@@ -122,7 +123,11 @@ server refreshes per user when fewer than 5 minutes remain.
 ### 4.3 SDK lifecycle
 
 1. Load `https://sdk.scdn.co/spotify-player.js` **only after** Spotify is connected (no third-party
-   script for Navidrome-only users).
+   script for Navidrome-only users). The script opens a hidden iframe at
+   `https://sdk.scdn.co/embedded/index.html` with `allow="encrypted-media; autoplay"`; the player
+   runs inside it [C: the script itself, 2026-10-24]. ECHO's CSP therefore needs `sdk.scdn.co` in
+   `script-src` and `frame-src`, `api.spotify.com` in `connect-src` and `i.scdn.co` in `img-src`,
+   which it already has (`src/server/http.ts`).
 2. On `onSpotifyWebPlaybackSDKReady`: `new Spotify.Player({ name: 'ECHO', getOAuthToken, volume })`.
    Listen for `ready`, `not_ready`, `player_state_changed`, `autoplay_failed`,
    `initialization_error`, `authentication_error`, `account_error`, `playback_error` [C].
@@ -151,12 +156,12 @@ All calls go **from the browser** with the short-lived access token. The refresh
 the server. Rate limiting: on `429`, honour `Retry-After`. The adapter keeps one in-flight request
 per endpoint.
 
-| Need | Endpoint (verify exact paths against the post-Feb-2026 reference in M7) |
+| Need | Endpoint (checked against the February 2026 migration guide, 2026-10-24) |
 |---|---|
-| Transfer / play / pause / seek / next / previous / shuffle / repeat / volume | `/v1/me/player/*` [C: scopes doc; not listed as changed in the Feb 2026 guide] |
+| Transfer / play / pause / seek / next / previous / shuffle / repeat / volume | `/v1/me/player/*` [C: unchanged in the Feb 2026 guide] |
 | Queue read / add | `GET /v1/me/player/queue`, `POST /v1/me/player/queue?uri=` |
 | User playlists | `GET /v1/me/playlists`. Playlist items via `/playlists/{id}/items` (renamed from `/tracks`). Only playlists the user owns or collaborates on are readable [C: Feb 2026 guide] |
-| Saved albums | the Feb 2026 generic `/me/library` endpoints [C: guide; exact path to verify in M7] |
+| Saved albums | `GET /v1/me/albums` (unchanged). Saving and checking use the generic `PUT`/`DELETE /v1/me/library` and `GET /v1/me/library/contains` with Spotify URIs [C: Feb 2026 guide] |
 | Search | `GET /v1/search`, **limit ≤ 10** (default 5) [C] |
 | Single track | `GET /v1/tracks/{id}` (batch `GET /tracks` removed [C]) |
 
