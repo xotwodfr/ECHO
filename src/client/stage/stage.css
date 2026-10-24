@@ -154,9 +154,14 @@
   letter-spacing: -0.022em;
   text-align: center;
   text-wrap: balance;
-  /* Ink mixes toward the room with depth (--m) and the lit colour dies into ink as a line decays
-     (--f, §7). */
-  --unlit: color-mix(in oklab, var(--lyric-ink-active), var(--art-room) calc(var(--m, 0) * 100%));
+  /* Unsung ink sits 22% toward the room so the sweep reads against it (≥ 7:1 up to a room of
+     L 0.30; M3 design review); it mixes further with depth (--m). The lit colour dies into ink as
+     a line decays (--f, §7). */
+  --unlit: color-mix(
+    in oklab,
+    var(--lyric-ink-active),
+    var(--art-room) calc(min(1, 0.22 + var(--m, 0)) * 100%)
+  );
   --lit: color-mix(in oklab, var(--lit-base), var(--lyric-ink-active) calc(var(--f, 0) * 100%));
   color: var(--unlit);
 }

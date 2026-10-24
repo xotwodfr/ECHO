@@ -10,7 +10,7 @@ const TOP_FADE_H = 0.08; // lines that rise past 0.08 H fade out and re-home at 
 const FADE_S = 1.5;
 const LONG_RANGE_MS = 60_000;
 const CORRIDOR_Z = 0.85;
-const CORRIDOR_OPACITY = 0.1;
+export const CORRIDOR_OPACITY = 0.1;
 
 /** FNV-1a: a stable 32-bit seed from a track key. */
 export function hash(text: string) {

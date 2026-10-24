@@ -117,7 +117,7 @@ describe('the active line (LYR-02)', () => {
           if (v.role === 'zone' && v.rank === 0) next.set(i, since.get(i) ?? s.t);
         since = next;
         for (const [i, from] of since) {
-          if (s.t - from < 600) continue; // still arriving from +1 (2% settle ≤ 0.46 s)
+          if (s.t - from < 800) continue; // still arriving: 2 px of a slow hand-over (ζ 1) ≤ 0.8 s
           const v = s.inst.get(i);
           expect(Math.abs((v?.y ?? 0) - Y0)).toBeLessThanOrEqual(2);
           checked++;
@@ -128,6 +128,11 @@ describe('the active line (LYR-02)', () => {
   );
 });
 
+const MIN_GAP = Math.min(
+  LYRICS.zone.clearH,
+  LYRICS.zone.gapShrinkMin * LYRICS.zone.gapH * LYRICS.zone.gapClamp[0],
+);
+
 describe('the transition zone (LYR-03, LYR-05)', () => {
   it.each(['ballad-word', 'pop-line', 'duet-word', 'long-lines'])(
     '%s: +1…+3 below the active line, fading and blurring with distance, never overlapping it',
@@ -135,6 +140,7 @@ describe('the transition zone (LYR-03, LYR-05)', () => {
       const m = model(name);
       const snaps = run(m, 0, 110_000);
       let checked = 0;
+      let behindSeen = 0;
       for (const s of snaps) {
         const zone = [...s.inst.values()]
           .filter((v) => v.role === 'zone')
@@ -150,12 +156,17 @@ describe('the transition zone (LYR-03, LYR-05)', () => {
           const v = up[k] as (typeof up)[number];
           const vi = [...s.inst].find(([, x]) => x === v)?.[0] as number;
           const top = v.y - ((m.boxes[vi] as LineBox).h * v.scale) / 2;
-          expect(top).toBeGreaterThanOrEqual(activeBottom + 0.02 * H - 0.5);
+          // 0.02 H clear, or the §4.3 overflow floor (gaps at 0.5 × 0.04 H × 0.8) on lines too
+          // tall for the zone (long-lines); never overlapping (LYR-03).
+          expect(top).toBeGreaterThanOrEqual(activeBottom + MIN_GAP * H - 1);
           const prev = up[k - 1];
           // +3 that did not fit waits at background depth behind +2, at the same height (§4.3).
           const behind = v.rank === 3 && v.tz >= LYRICS.zone.zBackground;
-          if (prev && behind) expect(v.opacity).toBeLessThan(prev.opacity);
-          else if (prev) {
+          if (prev && behind) {
+            expect(v.opacity).toBeLessThan(prev.opacity);
+            expect(v.opacity).toBeLessThanOrEqual(0.1 + 1e-9); // the corridor cap (design review)
+            behindSeen++;
+          } else if (prev) {
             expect(v.y).toBeGreaterThan(prev.y);
             expect(v.opacity).toBeLessThan(prev.opacity);
             expect(v.blur).toBeGreaterThan(prev.blur);
@@ -165,6 +176,7 @@ describe('the transition zone (LYR-03, LYR-05)', () => {
         checked++;
       }
       expect(checked).toBeGreaterThan(300);
+      if (name === 'long-lines') expect(behindSeen).toBeGreaterThan(0);
     },
   );
 
@@ -180,7 +192,7 @@ describe('the transition zone (LYR-03, LYR-05)', () => {
       const to = (tl.handovers[a + 1] ?? from) as number;
       if (to - from < 3000 || tl.coalesced.includes(a)) continue;
       const ys: number[] = [];
-      // The hand-over's own travel (the slow spring after the intro overshoots by ≤ 0.6%) is not
+      // The hand-over's own travel (the slow spring arriving) is not
       // drift: sampling starts once it has settled, and the overshoot is bounded below.
       for (let t = from + 1200; t < to; t += 100) {
         const s = snaps[Math.round(t / FRAME)];
@@ -211,7 +223,7 @@ describe('the transition zone (LYR-03, LYR-05)', () => {
       const b = snaps[k] as Snap;
       for (const [i, v] of b.inst) {
         const u = a.inst.get(i);
-        if (u && u.rank === 1 && v.rank === 1) expect(v.y - u.y).toBeLessThan(0.1);
+        if (u && u.rank === 1 && v.rank === 1) expect(v.y - u.y).toBeLessThan(0.01); // < 1/100 px
       }
     }
   });

@@ -195,7 +195,7 @@ background-image: linear-gradient(90deg,
 
 | Variable | Value |
 |---|---|
-| `--unlit` | `--lyric-ink-active` at 100% (≥ 7:1 vs room; `DESIGN_SYSTEM.md` §3.4) |
+| `--unlit` | `--lyric-ink-active` mixed 22% toward `--art-room` (≥ 7:1 vs room up to a room of L 0.30; `DESIGN_SYSTEM.md` §3.4). At 100% ink the sung and unsung words were nearly the same colour and the sweep barely read (M3 design review) |
 | `--lit-edge` | `--art-highlight` |
 | `--lit` | `color-mix(in oklab, var(--text) 82%, var(--art-highlight))` (warm white tinted by the cover) |
 | Edge softness | 0.35em ahead of the edge, 0.60em behind it (prior art: 0.5em AMLL, 0.55em Spicy) |
@@ -296,7 +296,7 @@ exact for a constant target over `dt`, so it is stable at 30, 60, 120 and 144 Hz
 | Spring | f (Hz) | ζ | Settle (2%) | Used for |
 |---|---|---|---|---|
 | `line.normal` | 2.0 → 2.35 (adaptive, below) | 1.0 | ≈ 0.39–0.46 s | `y`, `z` of ranks −1…+3 at hand-over |
-| `line.slow` | 1.45 | 0.85 | ≈ 0.46 s | after seek, after interlude, first line, end of song |
+| `line.slow` | 1.45 | 1.0 | ≈ 0.64 s | after seek, after interlude, first line, end of song. Critically damped since the M3 tuning session: at ζ 0.85, +1 sank back by up to 0.44 px while it settled (LYR-05) |
 | `line.enter` | 1.1 | 0.95 | ≈ 0.76 s | background line entering the transition zone |
 | `emphasis.lift` | 1.2 | 0.75 | — | §5.5 |
 | `beat.impulse` | 2.0 | 0.5 | — | §12 (bass and onset kicks) |
@@ -310,8 +310,7 @@ f    = 2.0 + 0.35 · (1 − n)^0.2
 ```
 
 Settle times are for the exact solution from rest (M3 task 5, checked against RK4). Below ζ = 1 the
-overshoot stays inside the 2% band, so `slow` and `enter` settle sooner than the draft's estimates
-(0.75 s and 0.85 s).
+overshoot stays inside the 2% band, so `enter` settles sooner than the draft's estimate (0.85 s).
 
 Equivalent AMLL stiffness at mass 1: k = (2πf)² ≈ 158–218. This matches AMLL's 170–220 range.
 
@@ -480,7 +479,7 @@ the AMLL rule):
   time with springs bypassed (direct position), and the word sweep jumps. No stagger, no emphasis, no
   beat response. This gives cheap, exact feedback while dragging.
 - **On release, or on a keyboard/programmatic seek:** targets jump, and springs use `line.slow`
-  (f 1.45, ζ 0.85) with no stagger. Lines that should not exist in the new state (decaying lines from
+  (f 1.45, ζ 1) with no stagger. Lines that should not exist in the new state (decaying lines from
   the old position) fade out in 160 ms. Background lines re-home deterministically for the new `t`.
 - Seeking into the middle of a word: `p_w` starts mid-word. No emphasis lift is replayed.
 - Seek confirmation lag (Spotify): optimistic `t` from the clock is used. If the provider reports a
@@ -692,36 +691,112 @@ down only after the environment has already stepped down):
 ## 15. Tuning file
 
 All constants above live in `src/client/stage/lyrics/lyricsConfig.ts` as one exported frozen object,
-grouped by section number, e.g.:
+grouped by section number. The values below are the file as of the M3 tuning session (2026-10-24):
 
 ```ts
 export const LYRICS = {
-  anchorY: 0.40,                       // §3.2
-  maxWidth: 0.64, maxRows: 2, shrinkMax: 0.12,          // §3.3
-  depth: { scaleK: 0.30, opacity: [[0,1],[0.22,.74],[0.44,.54],[0.66,.40],[0.8,.24],[1,.12]],
-           blur: [[0,0],[0.22,1],[0.44,2],[0.66,3.2],[0.8,4],[0.9,6],[1,8]], zoneBlurCap: 4 }, // §4.1
-  zone: { dz: 0.22, zMax: 0.72, zBackground: 0.78, gapH: 0.040, gapRefMs: 3200, gapClamp: [0.8, 1.5],
-          gapShrinkMin: 0.5, bottom: 0.86, drift: 0.30, approachK: 0.35, clearH: 0.02, approachZFloor: 0.65 }, // §4.2, §4.3
-  sweep: { edgeAhead: 0.35, edgeBehind: 0.60, holdGapMs: 300, minWordMs: 60 },  // §5.1
-  glow: { radius: 0.18, radiusMax: 0.26, alpha: 0.35, alphaMax: 0.55, decayMs: 220, decayFastMs: 120,
-          riseMs: 90, slewPerS: 1.5, paused: 0.6, pauseMs: 600, resumeMs: 300 },   // §5.2, §9.6, §9.9, §12.5
-  wash: { ms: 420 },                                                              // §9.2
-  handover: { leadMinMs: 120, leadMaxMs: 300, coalesceMs: 350 },                  // §5.3, §9.9
+  anchorY: 0.4, // §3.2
+  maxWidth: 0.64, // §3.3
+  maxRows: 2,
+  shrinkMax: 0.12,
+  depth: {
+    scaleK: 0.3, // §4.1
+    opacity: [
+      [0, 1],
+      [0.22, 0.74],
+      [0.44, 0.54],
+      [0.66, 0.4],
+      [0.8, 0.24],
+      [1, 0.12],
+    ],
+    blur: [
+      [0, 0],
+      [0.22, 1],
+      [0.44, 2],
+      [0.66, 3.2],
+      [0.8, 4],
+      [0.9, 6],
+      [1, 8],
+    ],
+    zoneBlurCap: 4,
+  },
+  zone: {
+    dz: 0.22, // §4.2, §4.3
+    zMax: 0.72,
+    zBackground: 0.78,
+    gapH: 0.04,
+    gapRefMs: 3200,
+    gapClamp: [0.8, 1.5],
+    gapShrinkMin: 0.5,
+    bottom: 0.86,
+    drift: 0.3,
+    approachK: 0.35, // rank +1 closes 35% of its clearance
+    clearH: 0.02, // and keeps at least this much
+    approachZFloor: 0.65,
+  },
+  sweep: { edgeAhead: 0.35, edgeBehind: 0.6, holdGapMs: 300, minWordMs: 60 }, // §5.1
+  glow: {
+    radius: 0.18, // §5.2
+    radiusMax: 0.26,
+    alpha: 0.35,
+    alphaMax: 0.55,
+    decayMs: 220,
+    decayFastMs: 120, // words < 150 ms (§9.9)
+    riseMs: 90,
+    slewPerS: 1.5, // photosensitivity (§12.5): alpha never changes faster
+    paused: 0.6, // §9.6: dims to 60% over 600 ms, restores over 300 ms
+    pauseMs: 600,
+    resumeMs: 300,
+  },
+  wash: { ms: 420 }, // §9.2 line-timed lines
+  handover: { leadMinMs: 120, leadMaxMs: 300, coalesceMs: 350 }, // §5.3, §9.9
   emphasis: { minMs: 1000, minG: 2, maxG: 7, anticipateMs: 400, releaseMs: 250, swellMax: 0.08 }, // §5.5
-  springs: { normal: [2.0, 2.35, 1.0], slow: [1.45, 0.85], enter: [1.1, 0.95], lift: [1.2, 0.75], impulse: [2.0, 0.5] }, // §6.1
-  stagger: { baseMs: 50, decay: 1.05 },             // §6.3
+  springs: {
+    normal: [2.0, 2.35, 1.0], // §6.1
+    slow: [1.45, 1.0], // critically damped: +1 never drifts back down after a slow hand-over (LYR-05)
+    enter: [1.1, 0.95],
+    lift: [1.2, 0.75],
+    impulse: [2.0, 0.5],
+  },
+  stagger: { baseMs: 50, decay: 1.05 }, // §6.3
   decay: { tauMs: 520, rise: 0.05, zEnd: 0.35, blurMax: 6, maxPast: 2, gapH: 0.035, dropMs: 120 }, // §7
   background: { budget: [24, 12, 6, 0], minDist: 0.16, ampX: 0.022, ampY: 0.018, rise: 0.004 }, // §8
-  interlude: { minGapMs: 7000, cycleMs: 4000, leaveMs: 500, enterMs: 750, fadeMs: 250, dotEm: 0.22,
-               dotStepMs: 80 },                                                   // §9.8
-  build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 },                        // §9.5, §9.6, §9.7
-  lineTimed: { endGapMs: 100, lastLineMs: 6000 },   // §9.2
-  beat: { scaleMax: 0.012, zLean: 0.025, kickPx: 2, quietMs: 300 },               // §12
+  interlude: {
+    minGapMs: 7000,
+    cycleMs: 4000,
+    leaveMs: 500,
+    enterMs: 750,
+    fadeMs: 250,
+    dotEm: 0.22,
+    dotStepMs: 80,
+  }, // §9.8
+  build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 }, // §9.5, §9.6, §9.7
+  reduced: { crossfadeMs: 180, decayMs: 300, dotsAlpha: 0.6 }, // §10
+  lineTimed: { endGapMs: 100, lastLineMs: 6000 }, // §9.2
+  beat: {
+    scaleMax: 0.012, // §12.3: 1 + 0.012·g·bassImpulse
+    scaleCap: 0.015, // §12.4, after summing
+    zLean: 0.025,
+    kickPx: 2,
+    quietMs: 300, // §12.4: none after a hand-over
+    bassForce: 0.022, // per ms: a bass hit (≈ 45 ms of bassImpulse) peaks the spring at its level
+    sustainAttackMs: 120,
+    sustainReleaseMs: 400,
+    quietBelow: 0.2, // intensity, for quietForMs
+    quietForMs: 4000,
+    intenseAbove: 0.75,
+    passageMs: 2000, // quiet and intense passages blend in and out
+    quietSpeed: 0.6, // background drift speed
+    intenseSpeed: 1.4,
+    intenseDrift: 0.38, // approach drift fraction (§4.3: 0.30)
+    intenseGlow: 0.05,
+    setting: { subtle: 0.5, balanced: 1, expressive: 1.5 }, // §12.2, background terms only
+  },
 } as const;
 ```
 
-Visual tuning sessions in M3 adjust only this file. Changed values are written back into this
-document so it remains the source of truth.
+Visual tuning sessions adjust only this file. Changed values are written back here, so this
+document remains the source of truth.
 
 ---
 

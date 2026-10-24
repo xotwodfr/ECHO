@@ -60,7 +60,7 @@ export const LYRICS = {
   emphasis: { minMs: 1000, minG: 2, maxG: 7, anticipateMs: 400, releaseMs: 250, swellMax: 0.08 }, // §5.5
   springs: {
     normal: [2.0, 2.35, 1.0], // §6.1
-    slow: [1.45, 0.85],
+    slow: [1.45, 1.0], // critically damped: +1 never drifts back down after a slow hand-over (LYR-05)
     enter: [1.1, 0.95],
     lift: [1.2, 0.75],
     impulse: [2.0, 0.5],

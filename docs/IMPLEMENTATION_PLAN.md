@@ -86,57 +86,9 @@ fallback room.
 
 **Dependencies:** M1.
 
-**Progress:** tasks 1–7 done (2026-10-23; record in `docs/reviews/M2.md`, "M2 close-out audit").
-Task 7's one remaining FAIL, Settings `blank-gap` on the Preferences placeholder, is **deferred to
-M8 task 1 with owner approval**: deferred, not passed. Criteria passed: DS-01 and DS-02 (both
-re-checked at M9), DS-06, VIS-07, A11Y-10. **M2 cannot close yet:** DS-04 needs M3's active line,
-DS-08 needs M7, PERF-04's analyser clause needs M5, and VIS-09 needs an owner-run 10-bit capture.
-The CI e2e job now runs in Playwright's pinned image under Xvfb (verified locally); no remote CI
-run has happened yet.
-
-**Tasks:**
-1. `viewStore` with history sync and deep links. Shell layout per `DESIGN_SYSTEM.md` §5 (grid
-   arithmetic comment in the album grid). **Done.**
-2. UI components with all states: Button variants, IconButton, Slider (scrubber, volume;
-   `role="slider"`), Sheet, Menu, Dialog, Toast, Field, Toggle, Pill, track row, album tile,
-   connection status row, and the sign-in form (S8) visuals. **Done** (on `/__ui`).
-3. Dock with a `FakeProvider` (implements `PlaybackProvider` on a virtual clock) and fixture library
-   data, so the shell is navigable without a server. **Done** (development builds).
-4. Stage engine: loop order (`TECHNICAL_ARCHITECTURE.md` §4.2), visibility stop, `StageRenderer`
-   (room pass, composite with vignette, scrims, tone map, **blue-noise dither**), DPR cap, resize,
-   context loss, the CSS fallback room. **Done** (bloom, energy, halation and the probe pass
-   arrive with their consumers: M3–M5).
-5. Chrome auto-hide on the Stage (3 s idle), view modes (Lyrics/Cover/Visual) with placeholders.
-   **Done.**
-6. Deterministic mode `?frame&seed&fixture&tier`. **Done** (`fixture` loads recorded Features,
-   format in `VISUALIZER_SPEC.md` §10; the real fixture tracks are M3 task 2).
-7. **taste-skill check:** `node ~/.claude/skills/design-taste-frontend/scripts/inspect.mjs --app` on
-   Library, Settings and `/__ui`. Fix every FAIL. Critique answers (app-screens §2.7) go in
-   `docs/reviews/M2.md`. **Done; one FAIL deferred to M8 with owner approval** (Settings
-   `blank-gap`, see Progress).
-   The script audits one URL per run; on a machine without system Chromium, set `CHROME_PATH` to
-   Playwright's Chromium. `edge-text` relies on a local skill patch (`LOCAL-PATCHES.md` in the
-   skill) that measures clipped text where it is visible.
-
-**Tests and verification:** V snapshots of every component state and the Listen stage (Ambient,
-Still) at 4 viewports. E for context loss and hidden tab on Chromium and Firefox. Squint-test
-screenshot.
-
-**Completion:** DS-01, DS-02, DS-04, DS-06, DS-08, VIS-07, VIS-09, PERF-04, A11Y-10 pass.
-
----
-
-## M3 — Floating-lyrics renderer with realistic mock data
-
-**Deliverables:** the complete lyric field (`LYRICS_EXPERIENCE.md` §3–§16) driven by fixture
-documents, synthetic guide audio and recorded features. This is the signature, built in isolation.
-
-**Dependencies:** M2.
-
-**Progress:** tasks 1–7 done (2026-10-23; record in `docs/reviews/M3.md`). LYR-01, -04, -06,
--09, -10, -12, -14, -17, -18 and -20 pass. LYR-05 is open on a sub-pixel spring overshoot for task 11
-to decide. The other M3 criteria pass their unit and browser checks and wait for their V baselines,
-taken after the tuning session (task 11). The listening test needs a person.
+**Progress:** tasks 1–12 done (2026-10-24; record in `docs/reviews/M3.md`). The tuning (task 11)
+was a first pass on fixtures by Claude; the owner's look in motion, the listening test and the Orca
+pass remain, and the V baselines are taken after them. Motion = Off moved to M9 with A11Y-06.
 
 **Tasks:**
 1. Write the fixture `LyricsDoc`s (original text; `LYRICS_EXPERIENCE.md` §16, with

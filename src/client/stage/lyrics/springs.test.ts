@@ -61,7 +61,7 @@ describe('springs (LYRICS_EXPERIENCE.md §6.1)', () => {
     ['line.normal at 2.35 Hz', lineNormal(100), 0.39],
     // The draft table said 0.75 and 0.85 s; the exact solution (checked against RK4 below) settles
     // sooner, because ζ < 1 overshoots by less than the 2% band. Corrected in the spec.
-    ['line.slow', SPRINGS.slow, 0.46],
+    ['line.slow', SPRINGS.slow, 0.64], // ζ 1 since the M3 tuning session (LYR-05)
     ['line.enter', SPRINGS.enter, 0.76],
   ] as const)('%s settles (2%%) in ≈ %f s (§6.1 table)', (_, p, s) => {
     expect(settle(p)).toBeCloseTo(s, 1);
@@ -97,8 +97,9 @@ describe('springs (LYRICS_EXPERIENCE.md §6.1)', () => {
       return m;
     };
     expect(min(lineNormal(800))).toBeGreaterThan(-1e-9); // ζ = 1: no overshoot
-    expect(min(SPRINGS.slow)).toBeLessThan(0); // ζ 0.85 overshoots a little
-    expect(min(SPRINGS.slow)).toBeGreaterThan(-0.02);
+    expect(min(SPRINGS.slow)).toBeGreaterThan(-1e-9); // ζ 1 since task 11: no overshoot
+    expect(min(SPRINGS.enter)).toBeLessThan(0); // ζ 0.95 overshoots a little
+    expect(min(SPRINGS.enter)).toBeGreaterThan(-0.02);
   });
 
   it('clamps dt to 100 ms: a 10 s gap moves no further than one 100 ms step', () => {

@@ -142,20 +142,25 @@ export function zoneSlots(H: number, boxes: readonly Box[]): Zone {
     return y;
   };
   const last = boxes.length - 1;
-  const bottom = (y: number[]) => (y[last] as number) + half(last);
+  const bottom = (y: number[], i: number) => (y[i] as number) + half(i);
   const limit = Z.bottom * H;
+  // Shrink all gaps uniformly (to half at most) until line `i` ends on the limit. Its bottom is
+  // linear in the gap factor.
+  const gapsFor = (i: number) => {
+    const full = bottom(place(1), i);
+    if (full <= limit) return 1;
+    const tight = bottom(place(0), i);
+    return Math.max(Z.gapShrinkMin, (limit - tight) / (full - tight));
+  };
 
-  let y = place(1);
+  let y = place(gapsFor(last));
   let background3 = false;
-  if (last > 0 && bottom(y) > limit) {
-    // Bottom is linear in the gap factor k: shrink all gaps uniformly, to half at most.
-    const tight = bottom(place(0));
-    y = place(Math.max(Z.gapShrinkMin, (limit - tight) / (bottom(y) - tight)));
-    if (last === 3 && bottom(y) > limit) {
-      background3 = true;
-      z[3] = Z.zBackground;
-      y[3] = y[2] as number;
-    }
+  if (last === 3 && bottom(y, 3) > limit) {
+    // +3 still does not fit: it waits behind +2, and the zone is fitted to +2.
+    background3 = true;
+    y = place(gapsFor(2));
+    z[3] = Z.zBackground;
+    y[3] = y[2] as number;
   }
   return { y, z, background3 };
 }
@@ -163,7 +168,7 @@ export function zoneSlots(H: number, boxes: readonly Box[]): Zone {
 /**
  * Spring targets for ranks 0…+3 at progress `phase` (§4.3 approach drift): upcoming lines glide
  * part of the way toward the next slot while the active line is sung. +1 closes 35% of its
- * clearance and never comes nearer than 0.02 H to the active box.
+ * clearance; no line comes nearer than 0.02 H to the box above it.
  */
 export function zoneTargets(
   H: number,
@@ -179,15 +184,27 @@ export function zoneTargets(
   const sz = (i: number) => slots.z[i] as number;
   if (boxes.length > 1) {
     const h0 = (boxes[0] as Box).h;
-    const h1 = (boxes[1] as Box).h * scaleAt(sz(1));
+    // Growing toward z 0 enlarges +1's box; it may grow only as far as still fits at its slot,
+    // 0.02 H clear of the active box (a 3-row line otherwise reaches into the clearance).
+    const room = 2 * (sy(1) - sy(0) - h0 / 2 - Z.clearH * H);
+    const zFit = (1 - room / (boxes[1] as Box).h) / LYRICS.depth.scaleK;
+    z[1] = Math.min(sz(1), Math.max(lerp(sz(1), 0, d), Z.approachZFloor * sz(1), zFit));
+    const h1 = (boxes[1] as Box).h * scaleAt(z[1] as number);
     const clearance = Math.max(0, sy(1) - sy(0) - h0 / 2 - h1 / 2 - Z.clearH * H);
     y[1] = sy(1) - Z.approachK * clearance * d;
-    z[1] = Math.max(lerp(sz(1), 0, d), Z.approachZFloor * sz(1));
   }
   for (let k = 2; k < boxes.length; k++) {
     if (k === 3 && slots.background3) continue;
-    y[k] = lerp(sy(k), sy(k - 1), d);
-    z[k] = lerp(sz(k), sz(k - 1), d);
+    // Like +1, a drifting line keeps 0.02 H clear of the box above it (M3 design review): tall
+    // wrapped lines would otherwise slide into each other. Never below its own slot. Its depth
+    // follows the share of the drift it actually made, so a held line does not grow past the
+    // bottom it was fitted to.
+    const above =
+      (y[k - 1] as number) + ((boxes[k - 1] as Box).h * scaleAt(z[k - 1] as number)) / 2;
+    const clear = above + ((boxes[k] as Box).h * scaleAt(sz(k))) / 2 + Z.clearH * H;
+    y[k] = Math.max(lerp(sy(k), sy(k - 1), d), Math.min(sy(k), clear));
+    const span = sy(k) - sy(k - 1);
+    z[k] = lerp(sz(k), sz(k - 1), span > 0 ? (sy(k) - (y[k] as number)) / span : d);
   }
   return { y, z, background3: slots.background3 };
 }

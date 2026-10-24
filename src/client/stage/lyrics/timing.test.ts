@@ -272,7 +272,6 @@ describe('timing: transition zone', () => {
     const slots = zoneSlots(H, boxes);
     const sy = (i: number) => slots.y[i] as number;
     const sz = (i: number) => slots.z[i] as number;
-    const clearance = sy(1) - sy(0) - ROW / 2 - (ROW * scaleAt(sz(1))) / 2 - 0.02 * H;
     for (const [phase, eased] of [
       [0, 0],
       [0.5, 0.5],
@@ -280,16 +279,38 @@ describe('timing: transition zone', () => {
     ] as const) {
       const d = 0.3 * eased;
       const { y, z } = zoneTargets(H, boxes, phase);
+      // Clearance at +1's drifted (larger) size.
+      const clearance = sy(1) - sy(0) - ROW / 2 - (ROW * scaleAt(z[1] as number)) / 2 - 0.02 * H;
       expect(y[0]).toBeCloseTo(sy(0));
       expect(y[1]).toBeCloseTo(sy(1) - 0.35 * clearance * d);
       expect(z[1]).toBeCloseTo(sz(1) * (1 - d));
       for (const k of [2, 3]) {
-        expect(y[k]).toBeCloseTo(sy(k) + (sy(k - 1) - sy(k)) * d);
-        expect(z[k]).toBeCloseTo(sz(k) + (sz(k - 1) - sz(k)) * d);
+        // Toward the slot above, but never within 0.02 H of the box above (M3 design review);
+        // depth follows the share of the drift actually made.
+        const above = (y[k - 1] as number) + (ROW * scaleAt(z[k - 1] as number)) / 2;
+        const clear = above + (ROW * scaleAt(sz(k))) / 2 + 0.02 * H;
+        const share = (sy(k) - (y[k] as number)) / (sy(k) - sy(k - 1));
+        expect(z[k]).toBeCloseTo(sz(k) + (sz(k - 1) - sz(k)) * share);
+        expect(share).toBeLessThanOrEqual(d + 1e-9);
+        expect(y[k]).toBeCloseTo(Math.max(sy(k) + (sy(k - 1) - sy(k)) * d, Math.min(sy(k), clear)));
+        expect(y[k]).toBeLessThanOrEqual(sy(k) + 1e-9);
       }
     }
     // An intense passage (drift 0.38) hits rank +1's depth floor of 0.65 z.
     expect(zoneTargets(H, boxes, 1, 0.38).z[1]).toBeCloseTo(0.65 * sz(1));
+  });
+
+  it('drifting +2 and +3 never overlap the box above, even with tall wrapped lines', () => {
+    for (const rows of [1, 2, 3])
+      for (const phase of [0, 0.25, 0.5, 0.75, 1]) {
+        const boxes: Box[] = [0, 3200, 6400, 9600].map((start) => ({ start, h: rows * ROW }));
+        const { y, z, background3 } = zoneTargets(H, boxes, phase, 0.38);
+        const half = (k: number) => ((boxes[k] as Box).h * scaleAt(z[k] as number)) / 2;
+        for (let k = 2; k < (background3 ? 3 : 4); k++) {
+          const gap = (y[k] as number) - half(k) - ((y[k - 1] as number) + half(k - 1));
+          expect(gap).toBeGreaterThanOrEqual(Math.min(0.02 * H, 0.5 * 0.04 * H * 0.8) - 1e-9);
+        }
+      }
   });
 
   it('overflowing lines shrink the gaps to half, then send +3 to background depth', () => {

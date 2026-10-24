@@ -58,6 +58,7 @@ export const washAt = (line: LyricLine, t: number) => {
 };
 
 const DECAY_MS = D.tauMs * Math.log(50); // until the envelope reaches 0.02 (≈ 2 s)
+const BEHIND_MS = 300; // +3 dims to the corridor cap while it waits behind +2
 const ENTER_MS = 760; // the line.enter move (§6.1, §8.5): opacity blends over it
 const SEEK_JUMP_MS = 150; // §9.6, the AMLL rule
 const STAGGER = [0, 0, 1, 2, 3].map((k) =>
@@ -90,6 +91,7 @@ export interface Inst {
   tz: number;
   age: number; // ms since created, for the fade-in
   enter: { from: number; age: number } | null; // bg → zone: opacity blends from its last value
+  behind: number; // 0…1: capped while it waits behind +2 (§4.3)
   leaving: { ms: number; age: number; from: number } | null;
   // Outputs, read by field.ts:
   scale: number;
@@ -151,6 +153,7 @@ export class FieldModel {
   private lastField: FieldState | null = null;
   private pause = 1;
   private reduced = false;
+  private behind = false; // +3 waits at background depth behind +2 (§4.3)
   private homes: BG.Point[] = [];
   private homesFor = '';
   private dotsLeave = 0;
@@ -273,6 +276,7 @@ export class FieldModel {
         h: box(fs.next + k).h,
       });
     const zt = zoneTargets(H, zoneBoxes, fs.phase, reduced ? 0 : (this.opts.drift ?? beat.drift));
+    this.behind = zt.background3;
 
     const corridorBottom = Math.max(
       ...zt.y.map((y, k) => y + ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2),
@@ -447,6 +451,7 @@ export class FieldModel {
       tz: z,
       age: still ? BUILD.fadeInMs : 0,
       enter: null,
+      behind: 0,
       leaving: null,
       scale: 1,
       opacity: 0,
@@ -495,6 +500,13 @@ export class FieldModel {
       return;
     }
     let o = opacityAt(z);
+    // +3 waiting behind +2 overlaps it: it keeps the reading corridor's cap, so it reads as depth,
+    // not as a second line printed through the first (M3 design review). Eased per line, so
+    // neither the wait nor the hand-over that ends it pops.
+    const wait = inst.rank === 3 && this.behind ? 1 : 0;
+    const step = this.lastMode === 'still' ? 1 : dt / BEHIND_MS;
+    inst.behind = clamp(inst.behind + (wait ? step : -step), 0, 1);
+    o = lerp(o, Math.min(o, BG.CORRIDOR_OPACITY), inst.behind);
     if (inst.enter) {
       inst.enter.age += dt;
       const k = clamp(inst.enter.age / ENTER_MS, 0, 1);
