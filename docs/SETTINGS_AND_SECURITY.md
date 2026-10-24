@@ -212,8 +212,9 @@ Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=()
 
 - Styles are set via the CSSOM (`element.style`), which `style-src` doesn't block. There are no inline
   scripts or styles.
-- The exact hosts the Spotify SDK loads are [A: verify in M7 from CSP violation reports]. Only the
-  observed hosts are added.
+- The Spotify SDK loads its script and one iframe from `sdk.scdn.co` (verified in M7 from the
+  script itself); the iframe's own requests fall under its origin's policy, not ECHO's. CSP
+  violation reports (`report-uri /api/v1/csp-report`, M8) showed none across the full E2E run.
 - `Permissions-Policy` denies `display-capture` and `microphone`, a structural guarantee that ECHO
   never captures audio (`VISUALIZER_SPEC.md` §2.3).
 
@@ -385,9 +386,10 @@ Tests time out at 8 s and name the step that failed.
 | Action | Effect |
 |---|---|
 | Disconnect Navidrome (user) | Confirm (names the server). Stops Navidrome playback for this user, clears their Navidrome queue, deletes the connection row (secret included), and drops client caches. Shared caches (palette, lyrics) stay, because they contain no user data. |
-| Disconnect Spotify (user) | Confirm. `player.disconnect()` in open clients (via the next token request failing), deletes the refresh token, and evicts the in-memory access token. The dialog notes: "To remove ECHO's access completely, also remove it in your Spotify account's Apps page" (PKCE has no revocation endpoint [A: verify M8]). Frees a Spotify seat. |
+| Disconnect Spotify (user) | Confirm. `player.disconnect()` in open clients (via the next token request failing), deletes the refresh token, and evicts the in-memory access token. The dialog notes: "To remove ECHO's access completely, also remove it in your Spotify account's Apps page" (Spotify's Web API offers no token revocation endpoint [C]). Frees a Spotify seat. As built (M8),
+  Disconnect deletes the row at once; the dialog note is a follow-up. |
 | Revoke a session or device | Immediate. The next request with it gets 401. |
-| Delete my account | Typed confirmation + password + TOTP. Deletes the user, sessions, connections, settings, queue and overrides. Audit entries are kept, anonymised. The last admin cannot delete themselves. |
+| Delete my account | A confirm dialog + password + TOTP (or a recovery code). Deletes the user, sessions, connections (with their ciphertext), settings, queue, overrides, recovery codes, invites they created, and their audit rows; one anonymous `account.deleted` line remains (M8). The last admin cannot delete themselves. |
 | Admin disables a user | Revokes all their sessions. Login is refused. Data is kept. |
 | Admin deletes a user | As "delete my account" |
 | Remove the Spicy key (admin) | Deletes the key and purges all Spicy cache entries |

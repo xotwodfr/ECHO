@@ -113,7 +113,7 @@ dependencies.
 
 | Package | Version | Why it's here | Why not something smaller |
 |---|---|---|---|
-| node (runtime, Docker base `node:24.22.0-trixie-slim`, pinned by digest) | 24.22.0 | Server, tooling | Debian 13 since M1: bookworm left regular security support on 2026-07-11, and its zlib carried a critical scanner finding (`docs/reviews/M1.md`) |
+| node (build `node:24.22.0-trixie`; runtime `gcr.io/distroless/nodejs24-debian13` since M9; both pinned by digest) | 24.22 | Server, tooling | Debian 13 since M1 (`docs/reviews/M1.md`). The distroless runtime has no shell, package manager, util-linux, ncurses or perl: 0 HIGH/CRITICAL findings, so SEC-10 passes (`docs/reviews/M9.md`) |
 | typescript | 7.0.2 | Types | **Gate (M1):** fall back to 5.9.x if tooling breaks |
 | vite | 8.3.3 | Dev server, build | — |
 | react, react-dom | 19.3.0 | Web shell | Forms, lists, sheets, focus management |
@@ -380,8 +380,8 @@ echo.example.com {
 ```
 
 ECHO trusts `X-Forwarded-For`/`X-Forwarded-Proto` **only** from the Caddy container's address
-(configurable `ECHO_TRUSTED_PROXY`, default: the compose network's gateway range [A: pin exactly in
-M5]).
+(`ECHO_TRUSTED_PROXY`: a comma-separated list of addresses or IPv4 CIDRs; **empty by default**, so
+nothing is trusted until the operator names Caddy's address, as built in M5).
 
 **Running TypeScript on the server (M1):** the server's `.ts` files run directly on Node 24's
 built-in type stripping (`node src/server/index.ts`), so the server has no build step. tsconfig sets
@@ -465,7 +465,7 @@ echo/
 | Stage | How |
 |---|---|
 | Development | `pnpm dev` (Vite + server, HMR) on a workstation, against the mock Subsonic server or the real Navidrome on the OptiPlex |
-| MVP deployment | Multi-stage `Dockerfile` (build on `node:24-trixie`, run on `node:24-trixie-slim` (Debian 13, changed in M1), non-root, read-only rootfs). Built locally or by CI and pushed to GHCR. `docker compose pull && docker compose up -d` |
+| MVP deployment | Multi-stage `Dockerfile` (build on `node:24-trixie`, run on distroless `nodejs24-debian13` (M9; Debian 13 since M1), uid 1000, read-only rootfs). Admin commands: `docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts backup \| verify \| rotate-master-key`. Built locally or by CI and pushed to GHCR. `docker compose pull && docker compose up -d` |
 | Migrations | Run automatically at start inside a transaction. The server refuses to start on a failed migration and keeps the old schema |
 | Updates | Tagged images (`echo:0.x.y`). Release notes list migrations. No auto-update |
 | First start | The server prints a one-time **setup URL** (`https://echo.example.com/setup#<token>`, 30 min TTL) to the container log. Opening it creates the admin account (password + mandatory TOTP) |

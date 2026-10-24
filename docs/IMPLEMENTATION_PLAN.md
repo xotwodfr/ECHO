@@ -331,6 +331,12 @@ performance pass, the soak test, the final design critique and polish.
 
 **Dependencies:** M1–M8.
 
+**Progress:** all code-side work done (2026-10-24; record in `docs/reviews/M9.md`): governor and
+first-run tier, perf probes, windowed library, accessibility suite, critique fixes, docs. SEC-10
+passes strictly on a distroless runtime. Open: the reference-client tuning, Orca, the five-second
+test, the 8 h soak and the on-box DEP-04 run, all needing the owner's machines, people, or the
+deployment (M5 task 12).
+
 **Tasks:**
 1. Record the reference clients (Q-AC-1): **the owner's everyday laptop** (performance floor) and
    **the gaming PC** (T0 ceiling). Profile both. Tune tier thresholds, the first-run tier heuristic

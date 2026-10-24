@@ -409,6 +409,10 @@ stays far below this:
   `Minimal`. It is stored per device. A manual choice disables the governor except for an emergency step-down below 20 fps
   sustained for 3 s.
 
+**As built (M9):** `src/client/stage/governor.ts`, fed by the engine on frames that draw the room;
+GPU time is not wired yet (the frame-interval EMA alone decides). The lyric field keeps the tier it
+was mounted with until the Stage is reopened; the room follows every change. Unit tests: PERF-02.
+
 ### 8.3 Budgets (reference machine, `ACCEPTANCE_CRITERIA.md` §0)
 
 - T0 at 2560×1440: GPU ≤ 8 ms per frame, total main thread ≤ 6 ms (stage loop ≤ 4 ms, of which lyric

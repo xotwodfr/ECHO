@@ -504,7 +504,7 @@ the fallback (achromatic) palette and are overwritten at runtime.
   /* component sizes (§5, §8, §9; added in M2) */
   --rule: 1px; --focus-ring: 2px; --trace: 2px; --dot: 4px;
   --icon: 20px; --hit-lg: 40px; --play: 56px; --tile-play: 32px; --search-h: 32px; --menu-item-h: 32px;
-  --tile-min: 168px; --art-row: 40px; --art-dock: 64px; --art-detail: 240px; --art-cover-max: 640px;
+  --tile-min: 168px; /* phones: --tile-min-compact 132px, two columns at 390 (M9) */ --art-row: 40px; --art-dock: 64px; --art-detail: 240px; --art-cover-max: 640px;
   --scrub-track: 4px; --scrub-thumb: 12px; --scrub-hit: 24px; --volume-w: 96px;
   --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
   --sheet-w: 400px; --signin-w: 360px;

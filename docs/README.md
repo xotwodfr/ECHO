@@ -54,8 +54,8 @@ hand.
 
 All decisions from the 2026-10-22 clarifying round are logged in
 [DESIGN_RESEARCH.md §7.1](DESIGN_RESEARCH.md#71-product-owner-decisions-2026-10-22). Two items stay
-open until M1: the **typeface** (decided by eye from the specimen) and the **reference laptop
-model** (recorded in M9).
+open until M1: the **typeface** (decided in M1) and the **reference laptop model** (still to be
+recorded by the owner: M9 task 1, see `docs/reviews/M9.md`).
 
 ## Conventions
 
