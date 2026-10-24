@@ -9,13 +9,14 @@ WORKDIR /app
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 COPY index.html vite.config.ts tsconfig.json ./
 COPY src ./src
 RUN ECHO_SPECIMEN=0 pnpm build && CI=true pnpm prune --prod
 
 FROM node:24.22.0-trixie-slim@sha256:a6155384446670e9719bdc4fd0ebe4d4b29fb32a8d6aa523da3547a6cfbcf22c
-ENV NODE_ENV=production ECHO_PORT=8080
+ENV NODE_ENV=production ECHO_PORT=8080 ECHO_DATA_DIR=/data
 WORKDIR /app
 # /data must exist and belong to uid 1000 so a fresh named volume inherits that ownership.
 # npm and corepack are never used at runtime; removing them drops their bundled dependencies
@@ -27,6 +28,7 @@ COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/src/server ./src/server
+COPY --from=build /app/src/shared ./src/shared
 COPY scripts/verify-hardware.ts ./scripts/
 USER 1000:1000
 EXPOSE 8080

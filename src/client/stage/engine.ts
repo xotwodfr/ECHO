@@ -1,3 +1,4 @@
+import { paletteStore } from '../palette/live.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import type { FrameParams } from '../view.ts';
 import {
@@ -83,7 +84,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       // (§10), sampled at `frame.ms`. The lyric field reads them (LYRICS_EXPERIENCE.md §12); the
       // room does from M5.
       features: c.features,
-      palette: { step() {} }, // PaletteAnimator (OKLab transitions) in M4
+      palette: { step() {} }, // the shell's PaletteAnimator writes :root; see offPalette below
       render: (f) => {
         // Deterministic: the room as Ambient draws it after `ms` of playback at full rate.
         const flow = frame ? (AMBIENT_FLOW_PER_S * frame.ms) / 1000 : f.flow;
@@ -145,6 +146,12 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   };
   const offHost = lyricHost.subscribe((s, prev) => s.el !== prev.el && mountField(s.el));
   const offPrefs = lyricPrefs.subscribe((s) => field?.setAnnounce(s.announce));
+  // The palette animates the --art-* properties at shell level; the room follows them.
+  const offPalette = paletteStore.subscribe((s, prev) => {
+    if (s.version === prev.version || !drawing || !renderer) return;
+    renderer.setPalette(paletteUniforms(readPalette()));
+    if (loop.mode === 'still') loop.renderOnce();
+  });
   const offDoc = lyricsStore.subscribe((s) => void field?.setDoc(s.doc));
   mountField(lyricHost.getState().el);
 
@@ -207,6 +214,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       loop.dispose();
       offHost();
       offDoc();
+      offPalette();
       offPrefs();
       field?.dispose();
       observer.disconnect();

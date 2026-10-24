@@ -3,7 +3,12 @@ import { loadConfig } from './config.ts';
 
 describe('loadConfig', () => {
   it('uses the documented defaults', () => {
-    expect(loadConfig({})).toEqual({ port: 8080, logLevel: 'info', publicOrigin: null });
+    expect(loadConfig({})).toEqual({
+      port: 8080,
+      logLevel: 'info',
+      publicOrigin: null,
+      dataDir: './data',
+    });
   });
 
   it('treats empty values as unset', () => {
@@ -20,6 +25,7 @@ describe('loadConfig', () => {
       port: 8787,
       logLevel: 'debug',
       publicOrigin: 'https://echo.example.com',
+      dataDir: './data',
     });
   });
 

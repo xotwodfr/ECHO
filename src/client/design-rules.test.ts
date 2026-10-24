@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { DUR_PALETTE_MS } from './palette/animator.ts';
 import { COVER_OUT_MS } from './shell/StageViews.tsx';
 import { CHROME_IN_MS, CHROME_OUT_MS } from './stage/loop.ts';
 import { TOAST_EXIT_MS } from './ui/logic.ts';
@@ -32,6 +33,10 @@ const RAW = [
 // Each allowed raw value needs a technical reason.
 const ALLOW = [
   { re: /^\s*@media\b/, reason: 'media queries cannot read custom properties (breakpoints, §5)' },
+  {
+    re: /`oklch\(\$\{lch\}/,
+    reason: 'the palette animator serialises computed colours, not design values (§3.3)',
+  },
 ];
 
 describe('DS-01: no raw design values outside tokens.css', () => {
@@ -63,6 +68,7 @@ describe('DS-01: no raw design values outside tokens.css', () => {
     expect(tokens).toContain(`--dur-pop: ${CHROME_IN_MS}ms`);
     expect(tokens).toContain(`--dur-art: ${CHROME_OUT_MS}ms`);
     expect(tokens).toContain(`--dur-art-out: ${COVER_OUT_MS}ms`);
+    expect(tokens).toContain(`--dur-palette: ${DUR_PALETTE_MS}ms`);
   });
 });
 

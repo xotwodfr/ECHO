@@ -455,6 +455,14 @@ test('scrub: lines follow the drag directly, then settle on the slow spring (LYR
   }
   const target = tl.lines[9] as LyricLine;
   await page.mouse.move(x((target.start + 1500) / 1000), y, { steps: 2 });
+  // Release only once the drag is there: Firefox can deliver the button-up before the last move,
+  // and the seek would land a line early.
+  await expect
+    .poll(async () => main(await lines(page)).find((v) => v.text === target.text)?.cy ?? 0, {
+      timeout: 500,
+      intervals: [16],
+    })
+    .toBeCloseTo(0.4 * H, 0);
   await page.mouse.up();
   const released = Date.now();
   await expect

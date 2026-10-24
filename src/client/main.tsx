@@ -5,6 +5,7 @@ import './tokens.css';
 import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
+import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
 import { Shell } from './shell/Shell.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
@@ -45,6 +46,9 @@ const showLyrics = (track: ReturnType<typeof controller.player.getState>['track'
     doc: fixtures?.fixtureLyrics(track) ?? null,
   });
 controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
+
+// The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
+startPalette(controller, { instant: !!frame });
 
 // `fixture=<lyric fixture>` also cues its guide track (LYRICS_EXPERIENCE.md §16).
 const cueId = frame?.track ?? (frame?.fixture ? fixtures?.guideTrackId(frame.fixture) : undefined);

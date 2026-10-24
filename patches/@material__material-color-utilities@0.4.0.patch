@@ -1,0 +1,36 @@
+diff --git a/package.json b/package.json
+index 30ca4ac79453a16cf6a124eb126575af26146a69..93e538d7b3b4531d0cc5e06beeba5c2a1bad42f0 100644
+--- a/package.json
++++ b/package.json
+@@ -40,6 +40,11 @@
+       "types": "./index.d.ts",
+       "import": "./index.js",
+       "default": "./index.js"
++    },
++    "./quantize/*": {
++      "types": "./quantize/*.d.ts",
++      "import": "./quantize/*.js",
++      "default": "./quantize/*.js"
+     }
+   },
+   "scripts": {
+@@ -49,11 +54,17 @@
+   },
+   "wireit": {
+     "build": {
+-      "dependencies": ["build:ts"]
++      "dependencies": [
++        "build:ts"
++      ]
+     },
+     "build:ts": {
+       "command": "tsc --pretty",
+-      "files": ["tsconfig.json", "**/*.ts", "!**/*.d.ts"],
++      "files": [
++        "tsconfig.json",
++        "**/*.ts",
++        "!**/*.d.ts"
++      ],
+       "output": [
+         ".tsbuildinfo",
+         "**/*.js",

@@ -9,6 +9,7 @@ export interface Config {
   port: number;
   logLevel: LogLevel;
   publicOrigin: string | null;
+  dataDir: string; // database and caches (/data in the container)
 }
 
 type Env = Record<string, string | undefined>;
@@ -29,6 +30,7 @@ export function loadConfig(env: Env = process.env): Config {
     port,
     logLevel: logLevel as LogLevel,
     publicOrigin: parseOrigin(env.ECHO_PUBLIC_ORIGIN),
+    dataDir: env.ECHO_DATA_DIR || './data',
   };
 }
 
