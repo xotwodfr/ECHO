@@ -18,6 +18,12 @@ import {
 /** The requesting user, for covers that come from their own connection (null: no session). */
 export interface LoadContext {
   userId: number | null;
+  /**
+   * Whose covers these are, for keys that are not global: the user's Navidrome URL. Entries are
+   * shared only within one scope, so a user on another server cannot poison or read the palette
+   * of an album id on this one. Null: a global key (generated fixtures).
+   */
+  scope?: string | null;
 }
 export type CoverLoader = (albumKey: string, ctx: LoadContext) => Promise<Buffer | null>;
 
@@ -35,7 +41,7 @@ export function createPaletteService(opts: { dir: string; load: CoverLoader }) {
     }
   }
 
-  async function compute(key: string, ctx: LoadContext): Promise<Palette> {
+  async function compute(key: string, id: string, ctx: LoadContext): Promise<Palette> {
     const image = await opts.load(key, ctx);
     if (!image) return fallbackPalette();
     let palette: Palette;
@@ -47,20 +53,21 @@ export function createPaletteService(opts: { dir: string; load: CoverLoader }) {
     }
     // Write-then-rename, so a reader never sees half a file.
     await mkdir(opts.dir, { recursive: true });
-    const tmp = `${file(key)}.${process.pid}.tmp`;
+    const tmp = `${file(id)}.${process.pid}.tmp`;
     await writeFile(tmp, JSON.stringify(palette));
-    await rename(tmp, file(key));
+    await rename(tmp, file(id));
     return palette;
   }
 
   return {
     async get(key: string, ctx: LoadContext = { userId: null }): Promise<Palette> {
-      const hit = await cached(key);
+      const id = ctx.scope ? `${ctx.scope}|${key}` : key;
+      const hit = await cached(id);
       if (hit) return hit;
-      let p = inflight.get(key);
+      let p = inflight.get(id);
       if (!p) {
-        p = compute(key, ctx).finally(() => inflight.delete(key));
-        inflight.set(key, p);
+        p = compute(key, id, ctx).finally(() => inflight.delete(id));
+        inflight.set(id, p);
       }
       return p;
     },

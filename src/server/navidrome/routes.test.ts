@@ -301,3 +301,36 @@ describe('palettes for Navidrome albums (VISUALIZER_SPEC.md §6.1)', () => {
     expect(await covers(s.ada.id, 'al-3')).toBeNull();
   });
 });
+
+describe('palette cache scope (security review)', () => {
+  it('an album id from another server neither reads nor poisons this server’s palette', async () => {
+    const other = await startMockSubsonic(); // a second Navidrome with the same album ids
+    try {
+      const s = setup();
+      s.db
+        .prepare("INSERT INTO server_settings (key, value_json) VALUES ('navidrome.allowList', ?)")
+        .run(JSON.stringify([other.url]));
+      await s.connect(PASS); // ada: the default server
+      const bo = s.userCookie('bo');
+      expect((await s.connect({ ...PASS, url: other.url }, bo.cookie)).status).toBe(200);
+      other.coverType = 'image/svg+xml'; // bo's server gives nothing usable for al-1
+      const covers = navidromeCovers(s.deps.navidrome);
+      const palette = createPaletteService({
+        dir: mkdtempSync(join(tmpdir(), 'echo-pal-')),
+        load: async (key, { userId }) => (userId !== null ? covers(userId, key.slice(10)) : null),
+      });
+      const app = createApp({ ...s.deps, palette, devFixtures: false });
+      const get = (cookie: string) =>
+        app.request('http://localhost/api/v1/palette/navidrome:al-1', {
+          headers: { host: 'localhost', cookie },
+        });
+      // ada's art palette is cached first; bo must not be served it…
+      expect(await (await get(s.ada.cookie)).json()).toMatchObject({ source: 'art' });
+      expect(await (await get(bo.cookie)).json()).toMatchObject({ source: 'fallback' });
+      // …and bo's server cannot overwrite ada's entry.
+      expect(await (await get(s.ada.cookie)).json()).toMatchObject({ source: 'art' });
+    } finally {
+      await other.close();
+    }
+  });
+});

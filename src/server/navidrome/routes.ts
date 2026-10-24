@@ -101,6 +101,14 @@ function problemOf(err: unknown): Problem {
   return { code: 'navidrome.failed', userMessage: 'Something went wrong talking to Navidrome.' };
 }
 
+/** The user's Navidrome URL (the palette cache's scope), or 'none'. */
+export function navidromeUrlOf(db: Db, userId: number) {
+  const row = db
+    .prepare("SELECT config_json FROM connections WHERE user_id = ? AND provider = 'navidrome'")
+    .get(userId) as { config_json: string } | undefined;
+  return row ? (JSON.parse(row.config_json) as Stored).url.replace(/\/+$/, '') : 'none';
+}
+
 /**
  * A cover's bytes from the user's own Navidrome, for palette extraction (VISUALIZER_SPEC.md §6.1);
  * null when the user has no connection or the answer is not a raster image.

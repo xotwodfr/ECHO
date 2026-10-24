@@ -12,9 +12,15 @@ import { LOG_LEVELS, type LogLevel, loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
-import { type NavidromeDeps, navidromeCovers, navidromeRoutes } from './navidrome/routes.ts';
+import {
+  type NavidromeDeps,
+  navidromeCovers,
+  navidromeRoutes,
+  navidromeUrlOf,
+} from './navidrome/routes.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
+import { queueRoutes } from './queue.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -56,12 +62,19 @@ export function createApp(deps: AppDeps) {
     const user = token ? resolveSession(deps.auth.db, token, deps.auth.now()) : null;
     // Signed in, or a development server answering for its generated covers (E2E).
     if (!user && !deps.devFixtures) return c.json({ error: 'unauthenticated' }, 401);
+    // A Navidrome album id means something only on its own server: scope it to the user's.
+    const scope = key.startsWith('navidrome:')
+      ? user
+        ? navidromeUrlOf(deps.auth.db, user.id)
+        : 'none'
+      : null;
     c.header('Cache-Control', 'private, max-age=3600');
-    return c.json(await deps.palette.get(key, { userId: user?.id ?? null }));
+    return c.json(await deps.palette.get(key, { userId: user?.id ?? null, scope }));
   });
 
   app.route('/api/v1', authRoutes(deps.auth));
   app.route('/api/v1', navidromeRoutes(deps.navidrome, requireUser(deps.auth)));
+  app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
