@@ -18,6 +18,7 @@ afterAll(() => mock.close());
 /** Routes with no per-user data or identifiers (health, who-am-I, setup and sign-in steps). */
 const NO_USER_DATA = [
   'GET /health',
+  'POST /csp-report',
   'GET /session',
   'GET /setup',
   'POST /setup',

@@ -17,8 +17,12 @@ mkdirSync(e2eDir, { recursive: true });
 if (!existsSync(keyFile))
   writeFileSync(keyFile, randomBytes(32).toString('base64'), { mode: 0o600 });
 
+// CSP violation reports of the whole run land here; the isolated csp spec checks it is empty.
+export const CSP_REPORTS = join(e2eDir, 'csp-reports.jsonl');
+
 export default defineConfig({
   testDir: 'tests/e2e',
+  globalSetup: './tests/e2e/global-setup.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   reporter: process.env.CI ? 'github' : 'list',
@@ -27,7 +31,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: /photosensitivity|reliability|states/,
+      testIgnore: /photosensitivity|reliability|states|csp/,
       use: {
         ...devices['Desktop Chrome'],
         // WebGL 2 in software, the same everywhere (TECHNICAL_ARCHITECTURE.md §8).
@@ -47,13 +51,13 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testIgnore: /photosensitivity|reliability|states/,
+      testIgnore: /photosensitivity|reliability|states|csp/,
     },
     // Run on their own, after the rest: A11Y-08 reads the stage back every frame for 10 s, and the
     // reliability and states specs break the shared mock Navidrome on purpose.
     {
       name: 'isolated',
-      testMatch: /(photosensitivity|reliability|states)\.spec\.ts/,
+      testMatch: /(photosensitivity|reliability|states|csp)\.spec\.ts/,
       workers: 1, // reliability and states both break the shared mock: one test at a time
       dependencies: ['chromium', 'firefox'],
       use: {
@@ -91,6 +95,7 @@ export default defineConfig({
         ECHO_SPOTIFY_ACCOUNTS_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_API_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_SPOTIFY_IMAGE_URL: `http://127.0.0.1:${mockPort}`,
+        ECHO_CSP_REPORT_FILE: CSP_REPORTS,
       },
       url: `http://127.0.0.1:${port}/api/v1/health`,
       reuseExistingServer: !process.env.CI,

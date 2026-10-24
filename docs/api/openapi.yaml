@@ -23,6 +23,15 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: object, properties: { status: { const: ok } } } } } }
 
+  /csp-report:
+    post:
+      summary: 'Content-Security-Policy violation reports from browsers (report-uri): logged, never stored; 20 a minute per address'
+      security: []
+      requestBody:
+        content: { application/csp-report: { schema: { type: object } }, application/json: { schema: { type: object } } }
+      responses:
+        '204': { description: Received }
+
   /session:
     get:
       summary: Who this browser is (never 401)

@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
 import { getConnInfo } from '@hono/node-server/conninfo';
@@ -62,6 +63,8 @@ export interface AppDeps {
   devFixtures?: boolean;
   /** The redacting logger (log.ts); silent when absent (tests). */
   log?: Log;
+  /** E2E: CSP violation reports are also appended here, for the run's final check (SEC-08). */
+  cspReportFile?: string;
   /** The TCP peer; tests stand in for the Node socket. */
   socketAddress?: (c: Context) => string;
 }
@@ -85,6 +88,24 @@ export function createApp(deps: AppDeps) {
   );
 
   // Liveness only: unauthenticated and minimal (docs/TECHNICAL_ARCHITECTURE.md §6.2).
+  // CSP violation reports from browsers (report-uri): unauthenticated, small, rate limited, and
+  // only ever logged (SEC-08).
+  const reports = new Map<string, number[]>();
+  app.post('/api/v1/csp-report', async (c) => {
+    const t = Date.now();
+    const recent = (reports.get(c.var.ip) ?? []).filter((x) => t - x < 60_000);
+    if (recent.length >= 20) return c.body(null, 204);
+    reports.set(c.var.ip, [...recent, t]);
+    const text = (await c.req.text()).slice(0, 8192);
+    let report: unknown = text;
+    try {
+      report = (JSON.parse(text) as { 'csp-report'?: unknown })['csp-report'] ?? JSON.parse(text);
+    } catch {}
+    log('warn', 'csp violation', { report });
+    if (deps.cspReportFile) appendFileSync(deps.cspReportFile, `${JSON.stringify(report)}\n`);
+    return c.body(null, 204);
+  });
+
   app.get('/api/v1/health', (c) => {
     c.header('Cache-Control', 'no-store');
     return c.json({ status: 'ok' });
@@ -258,6 +279,7 @@ if (import.meta.main) {
     spotifyTokens,
     devFixtures: config.devFixtures,
     log,
+    ...(process.env.ECHO_CSP_REPORT_FILE && { cspReportFile: process.env.ECHO_CSP_REPORT_FILE }),
     http: { publicOrigin: config.publicOrigin, trustedProxy: config.trustedProxy },
   });
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>

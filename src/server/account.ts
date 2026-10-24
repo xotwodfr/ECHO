@@ -237,11 +237,12 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
   app.post('/me/totp/start', requireUser, async (c) => {
     const b = await body(c);
     const user = c.var.user;
-    // On, and readable: nothing to enrol. Unreadable (a restore without the master key, signed
-    // in with a recovery code): enrolling again replaces it.
-    if (userRow(user.id)?.totp_enabled && totpReadable(user.id))
-      return c.json({ error: 'totp_already_on' }, 409);
-    const refused = await reauth(c, b, false);
+    // On, and readable: nothing to enrol. Unreadable (a restore without the master key): it may
+    // be replaced, but only with a second factor too (a recovery code), never by password alone
+    // (security review).
+    const on = !!userRow(user.id)?.totp_enabled;
+    if (on && totpReadable(user.id)) return c.json({ error: 'totp_already_on' }, 409);
+    const refused = await reauth(c, b, on);
     if (refused) return refused;
     const secret = newTotpSecret();
     enrolling.set(user.id, { secret, expiresAt: now() + ENROL_TTL });

@@ -141,14 +141,10 @@ describe('backup and restore drill (DEP-03)', () => {
       cookie,
     );
     expect(again.status).toBe(200);
-    const start = await call(
-      s.app,
-      'POST',
-      '/api/v1/me/totp/start',
-      { password: PASSWORD },
-      cookie,
-    );
-    expect(start.status).toBe(200);
+    // Replacing the unreadable TOTP needs a second factor as well: password alone is refused.
+    const totpStart = (b: object) => call(s.app, 'POST', '/api/v1/me/totp/start', b, cookie);
+    expect((await totpStart({ password: PASSWORD })).status).toBe(403);
+    expect((await totpStart({ password: PASSWORD, code: p.recoveryCodes[2] })).status).toBe(200);
   });
 
   it('rotating the master key re-seals everything; the old key opens nothing afterwards', async () => {

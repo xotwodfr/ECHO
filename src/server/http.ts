@@ -31,6 +31,8 @@ export const SECURITY_HEADERS: Record<string, string> = {
     "frame-ancestors 'none'",
     "base-uri 'none'",
     "form-action 'self' https://accounts.spotify.com",
+    // Violations are reported to the server's log (SEC-08: none during the full E2E run).
+    'report-uri /api/v1/csp-report',
   ].join('; '),
   'Referrer-Policy': 'no-referrer',
   'X-Content-Type-Options': 'nosniff',
@@ -89,10 +91,13 @@ export function hardening(
     // device token without any cookie and without an Origin (nothing ambient to ride on, API-02).
     const nativeDeviceLogin =
       c.req.path === '/api/v1/auth/device' && !c.req.header('cookie') && !c.req.header('origin');
+    // The browser sends CSP reports itself; they change nothing but a log line.
+    const cspReport = c.req.path === '/api/v1/csp-report';
     if (
       !SAFE.has(c.req.method) &&
       !c.req.header('authorization')?.startsWith('Bearer ') &&
-      !nativeDeviceLogin
+      !nativeDeviceLogin &&
+      !cspReport
     ) {
       const want = origin ? origin.origin : `${proto}://${host}`;
       if (c.req.header('origin') !== want) return c.json({ error: 'bad_origin' }, 403);
