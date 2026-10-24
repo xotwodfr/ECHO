@@ -30,6 +30,13 @@ describe('shortcutFor (PRODUCT_SPEC.md §7)', () => {
     expect(shortcutFor(key(k, mods), 'other', false)).toBe(action);
   });
 
+  it('[ and ] shift the lyrics on the Stage only (LYR-25)', () => {
+    expect(shortcutFor(key('['), 'other', true)).toBe('lyricsEarlier');
+    expect(shortcutFor(key(']'), 'other', true)).toBe('lyricsLater');
+    expect(shortcutFor(key(']'), 'other', false)).toBeNull();
+    expect(shortcutFor(key('['), 'text', true)).toBeNull();
+  });
+
   it('view keys only on the Stage: V cycles, C cover, L lyrics', () => {
     expect(shortcutFor(key('v'), 'other', true)).toBe('viewCycle');
     expect(shortcutFor(key('c'), 'other', true)).toBe('viewCover');

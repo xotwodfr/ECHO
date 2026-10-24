@@ -131,7 +131,9 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         const drift = frame ? frame.ms / 1000 : f.drift;
         const scrub = scrubStore.getState().ms !== null;
         const key = field?.update({
-          t: f.t,
+          // The user's offset for this track shifts the lyric clock only, never the features
+          // (LYRICS_EXPERIENCE.md §9.13): +150 ms shows the words 150 ms later.
+          t: f.t - lyricsStore.getState().offsetMs,
           dt: f.dt,
           driftS: drift,
           playing: playing(),

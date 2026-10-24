@@ -328,8 +328,12 @@
 .slider-bubble {
   position: absolute;
   bottom: calc(100% + var(--sp-1));
-  left: calc(var(--value) * 100%);
+  left: calc(var(--bubble, var(--value)) * 100%);
   translate: -50% 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-1);
+  max-width: var(--form-w);
   padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r-control);
   background: var(--surface-2);
@@ -1279,4 +1283,13 @@
     justify-content: flex-start;
     margin-top: var(--sp-2);
   }
+}
+
+/* The lyric line at the pointed time (PLAY-10). */
+.slider-preview {
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }

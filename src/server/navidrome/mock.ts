@@ -19,6 +19,8 @@ export interface Faults {
   slowMs: number; // every response waits
   unauthorized: boolean; // HTTP 401 for everything
   breakStreamAt: number | null; // a stream body stops after this many bytes
+  lyricsDelayMs: number; // the mock LRCLIB answers this late
+  lrclibStatus: number; // and with this status (200: normal)
 }
 
 const SAMPLE_RATE = 8000;
@@ -111,7 +113,14 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
   const username = opts.username ?? 'ada';
   const password = opts.password ?? 'navidrome-pass';
   const apiKey = opts.apiKey ?? null;
-  const faults: Faults = { down: false, slowMs: 0, unauthorized: false, breakStreamAt: null };
+  const faults: Faults = {
+    down: false,
+    slowMs: 0,
+    unauthorized: false,
+    breakStreamAt: null,
+    lyricsDelayMs: 0,
+    lrclibStatus: 200,
+  };
   const starred = new Set<string>(['al-1-t2']);
   const scrobbles: { id: string; submission: boolean }[] = [];
   const requests: URLSearchParams[] = [];
@@ -154,7 +163,33 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       faults.slowMs = Number(q.get('slowMs') ?? 0);
       faults.unauthorized = q.get('unauthorized') === '1';
       faults.breakStreamAt = q.has('breakStreamAt') ? Number(q.get('breakStreamAt')) : null;
+      faults.lyricsDelayMs = Number(q.get('lyricsDelayMs') ?? 0);
+      faults.lrclibStatus = Number(q.get('lrclibStatus') ?? 200);
       return res.end('ok');
+    }
+    // A mock LRCLIB (ECHO_LRCLIB_URL in E2E): "Glass Weather" tracks have synced lyrics.
+    if (req.url?.startsWith('/api/get')) {
+      const q = new URL(req.url, 'http://mock').searchParams;
+      await new Promise((r) => setTimeout(r, faults.lyricsDelayMs));
+      const send = (status: number, body: unknown) => {
+        res.writeHead(status, { 'content-type': 'application/json' });
+        res.end(JSON.stringify(body));
+      };
+      if (faults.lrclibStatus !== 200)
+        return send(faults.lrclibStatus, { message: 'mock failure' });
+      const title = q.get('track_name') ?? '';
+      const song = SONGS.find((x) => x.title === title && x.album === 'Glass Weather');
+      if (!song) return send(404, { code: 404, name: 'TrackNotFound' });
+      return send(200, {
+        trackName: song.title,
+        artistName: song.artist,
+        albumName: song.album,
+        duration: song.duration,
+        instrumental: false,
+        plainLyrics: 'Glass in the morning\nRain on the window',
+        syncedLyrics:
+          '[00:01.00]Glass in the morning\n[00:05.00]Rain on the window\n[00:09.00]Light coming through',
+      });
     }
     if (faults.down) return req.socket.destroy();
     if (faults.slowMs) await new Promise((r) => setTimeout(r, faults.slowMs));

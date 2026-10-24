@@ -282,6 +282,13 @@
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   transition: opacity var(--dur-pop) var(--ease-out);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.stage-attribution a {
+  color: inherit;
 }
 
 .shell[data-chrome="hidden"] .stage-attribution {
@@ -369,4 +376,54 @@
   to {
     opacity: 0;
   }
+}
+
+/* Waiting for lyrics (LYRICS_EXPERIENCE.md §9.5): the interlude dots at the active anchor, then
+   "Finding lyrics…" beneath. */
+.stage-waiting {
+  position: absolute;
+  top: calc((100% - var(--dock)) * 0.4);
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-3);
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+.stage-dots {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.stage-dots span {
+  width: var(--sp-2);
+  height: var(--sp-2);
+  border-radius: 50%;
+  background: var(--lyric-ink-active);
+  opacity: 0.6;
+}
+
+.stage-waiting-text {
+  color: var(--faint);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+/* No lyrics (§9.4): under the cover, 14px --muted, the sources tried behind ⓘ. */
+.stage-missing {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--dock) + var(--sp-2));
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  text-align: center;
+}
+
+.stage-missing-info {
+  margin-left: var(--sp-2);
+  cursor: help;
 }

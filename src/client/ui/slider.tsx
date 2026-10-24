@@ -23,8 +23,10 @@ type SliderProps = {
   variant: 'scrubber' | 'volume';
   /** Buffered end (scrubber), same unit as the value. */
   buffered?: number;
-  /** Shown above the pointer while dragging (scrubber time bubble). */
+  /** Shown above the pointer while dragging or hovering (scrubber time bubble). */
   bubble?: (v: number) => string;
+  /** A second line in the bubble (the lyric line at that time, PLAY-10). */
+  preview?: (v: number) => string | null;
   /** The wheel moves the value by one step (volume). */
   wheel?: boolean;
   disabled?: boolean;
@@ -46,6 +48,7 @@ export function Slider({
   variant,
   buffered,
   bubble,
+  preview,
   wheel,
   disabled,
   disabledReason,
@@ -54,7 +57,9 @@ export function Slider({
   const ref = useRef<HTMLDivElement>(null);
   const reasonId = useId();
   const [drag, setDrag] = useState<number | null>(null);
+  const [hover, setHover] = useState<number | null>(null);
   const shown = drag ?? value;
+  const pointed = drag ?? hover;
   const span = max - min || 1;
   const frac = (v: number) => clamp((v - min) / span, 0, 1);
 
@@ -99,6 +104,7 @@ export function Slider({
         {
           '--value': frac(shown),
           '--buffered': buffered === undefined ? 0 : frac(buffered),
+          '--bubble': frac(pointed ?? shown),
         } as CSSProperties
       }
       onKeyDown={(e) => {
@@ -118,16 +124,21 @@ export function Slider({
         onInput?.(v);
       }}
       onPointerMove={(e) => {
-        if (drag === null) return;
+        if (drag === null) {
+          if (bubble && !disabled && e.pointerType === 'mouse') setHover(at(e));
+          return;
+        }
         const v = at(e);
         setDrag(v);
         onInput?.(v);
       }}
       onPointerUp={() => {
+        setHover(null); // released: no bubble until the pointer moves again
         if (drag === null) return;
         setDrag(null);
         onChange(drag);
       }}
+      onPointerLeave={() => setHover(null)}
       onPointerCancel={() => {
         setDrag(null);
         onCancel?.();
@@ -138,9 +149,12 @@ export function Slider({
         <span className="slider-fill" />
       </span>
       <span className="slider-thumb" />
-      {bubble && (drag !== null || force === 'drag') && (
-        <span className="slider-bubble num" aria-hidden="true">
-          {bubble(shown)}
+      {bubble && (pointed !== null || force === 'drag') && (
+        <span className="slider-bubble" aria-hidden="true">
+          <span className="num">{bubble(pointed ?? shown)}</span>
+          {preview?.(pointed ?? shown) && (
+            <span className="slider-preview">{preview(pointed ?? shown)}</span>
+          )}
         </span>
       )}
       {disabled && disabledReason && (
@@ -166,6 +180,8 @@ export function Scrubber(props: {
   onSeek: (ms: number) => void;
   /** The time being dragged to, null when the drag ends (the lyric field's scrub mode). */
   onScrub?: (ms: number | null) => void;
+  /** The lyric line at a time, for the bubble (PLAY-10). */
+  preview?: (ms: number) => string | null;
   disabled?: boolean;
   disabledReason?: string;
   force?: 'hover' | 'focus' | 'drag';
@@ -198,6 +214,7 @@ export function Scrubber(props: {
         buffered={props.bufferedMs}
         valueText={(v) => (empty ? strings.ui.noTrack : scrubberText(v, props.durationMs ?? 0))}
         bubble={formatTime}
+        preview={props.preview}
         onInput={setLive}
         onChange={(v) => {
           props.onSeek(v);

@@ -85,6 +85,8 @@ export default defineConfig({
         ECHO_DATA_DIR: join(e2eDir, 'data'),
         ECHO_DEV_FIXTURES: '1',
         ECHO_NAVIDROME_URL: `http://127.0.0.1:${mockPort}`,
+        ECHO_LRCLIB_URL: `http://127.0.0.1:${mockPort}`,
+        ECHO_SPICY_URL: `http://127.0.0.1:${mockPort}`,
       },
       url: `http://127.0.0.1:${port}/api/v1/health`,
       reuseExistingServer: !process.env.CI,

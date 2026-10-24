@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
-import { usePlayer } from '../playback/context.tsx';
+import { pinLyricsSource } from '../lyrics/loader.ts';
+import { usePlayer, useTicker } from '../playback/context.tsx';
 import { lyricHost, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
+import { Menu } from '../ui/overlays.tsx';
 import { Link } from './link.tsx';
 
 // What sits on the Stage above the room (PRODUCT_SPEC.md §6.1): the top chrome, and the view mode's
@@ -44,9 +46,32 @@ export function StageContent() {
   return <LyricsView />;
 }
 
-/** Lyrics (LYRICS_EXPERIENCE.md): the floating field, the static sheet when untimed (§9.3). */
+/**
+ * Lyrics (LYRICS_EXPERIENCE.md): the floating field, the static sheet when untimed (§9.3), and the
+ * wait for them (§9.5): nothing for 600 ms (most answers come from the cache in < 50 ms), then the
+ * interlude dots, with "Finding lyrics…" from 1.5 s; Cover mode with "No lyrics found" when there
+ * are none (§9.4). A late answer replaces Cover mode as soon as it arrives.
+ */
 function LyricsView() {
-  const doc = useStore(lyricsStore, (s) => s.doc);
+  const { doc, state, since, tried } = useStore(lyricsStore);
+  useTicker(state === 'waiting', 100);
+  if (state === 'missing') return <MissingLyrics tried={tried} />;
+  if (state === 'waiting') {
+    const waited = performance.now() - since;
+    if (waited < WAIT_DOTS_MS) return null;
+    return (
+      <div className="stage-waiting" role="status">
+        <span className="stage-dots" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        {waited >= WAIT_TEXT_MS && (
+          <span className="stage-waiting-text">{strings.stage.finding}</span>
+        )}
+      </div>
+    );
+  }
   if (!doc)
     return (
       <div className="stage-lyrics" aria-hidden="true">
@@ -56,7 +81,90 @@ function LyricsView() {
   return (
     <>
       {doc.sync === 'none' ? <LyricSheet doc={doc} /> : <LyricHost />}
-      {doc.sync !== 'none' && <p className="stage-attribution">{doc.attribution.text}</p>}
+      {doc.sync !== 'none' && (
+        <div className="stage-attribution">
+          <AttributionText attribution={doc.attribution} />
+          <SourceMenu />
+        </div>
+      )}
+    </>
+  );
+}
+
+const WAIT_DOTS_MS = 600;
+const WAIT_TEXT_MS = 1500;
+const SOURCE_NAMES: Record<string, string> = {
+  navidrome: 'Your library',
+  spicy: 'Spicy Lyrics',
+  lrclib: 'LRCLIB',
+  'navidrome-plain': 'Your library (plain text)',
+};
+
+/** The attribution line (LYRICS_INTEGRATION.md §8), its named parts linked; it cannot be hidden. */
+function AttributionText({ attribution }: { attribution: LyricsDoc['attribution'] }) {
+  const parts: ReactNode[] = [];
+  let rest = attribution.text;
+  for (const [i, l] of (attribution.links ?? []).entries()) {
+    const at = rest.indexOf(l.label);
+    if (at < 0) continue;
+    parts.push(rest.slice(0, at));
+    parts.push(
+      <a key={i} href={l.href} target="_blank" rel="noopener noreferrer">
+        {l.label}
+      </a>,
+    );
+    rest = rest.slice(at + l.label.length);
+  }
+  parts.push(rest);
+  return <span>{parts}</span>;
+}
+
+/** ⓘ: which source this is, and "always use this source for this track" (§4.1 pins). */
+function SourceMenu() {
+  const { doc, pinnedSource } = useStore(lyricsStore);
+  if (!doc || doc.source === 'fixture') return null;
+  const mark = (on: boolean, label: string) => (on ? `${label} ✓` : label);
+  return (
+    <Menu
+      label={strings.stage.sourceMenu}
+      icon="info"
+      items={[
+        {
+          label: mark(!pinnedSource, strings.stage.sourceAuto),
+          onSelect: () => void pinLyricsSource(null),
+        },
+        ...Object.entries(SOURCE_NAMES).map(([id, name]) => ({
+          label: mark(pinnedSource === id, strings.stage.sourceUse(name)),
+          onSelect: () => void pinLyricsSource(id),
+        })),
+      ]}
+    />
+  );
+}
+
+/** §9.4: Cover mode, "No lyrics found" beneath, and the sources tried behind ⓘ. */
+function MissingLyrics({ tried }: { tried: { source: string; outcome: string }[] }) {
+  const id = useId();
+  const list = tried.length
+    ? tried
+        .map(
+          (t) =>
+            `${SOURCE_NAMES[t.source] ?? t.source}: ${strings.stage.outcomes[t.outcome as keyof typeof strings.stage.outcomes] ?? t.outcome}`,
+        )
+        .join(' · ')
+    : strings.stage.noAnswer;
+  return (
+    <>
+      <CoverView />
+      <p className="stage-missing">
+        {strings.stage.noLyrics}
+        <span className="stage-missing-info" title={list} aria-describedby={id}>
+          ⓘ
+        </span>
+        <span className="visually-hidden" id={id}>
+          {strings.stage.tried} {list}
+        </span>
+      </p>
     </>
   );
 }

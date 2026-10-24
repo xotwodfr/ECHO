@@ -2,10 +2,11 @@ import type React from 'react';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { useStore } from 'zustand';
 import { connectionStore } from '../connection.ts';
+import { lineAt, nudgeLyrics } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { orderedContext, upcoming } from '../playback/queue.ts';
-import { nextView, type StageView, scrubStore, stageView } from '../stage/status.ts';
+import { lyricsStore, nextView, type StageView, scrubStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
@@ -150,6 +151,10 @@ function DockScrubber() {
       durationMs={s.track?.durationMs}
       onSeek={c.seek}
       onScrub={(ms) => scrubStore.setState({ ms })}
+      preview={(ms) => {
+        const l = lyricsStore.getState();
+        return lineAt(l.doc, ms - l.offsetMs);
+      }}
       disabled={!s.track || !s.capabilities.canSeek}
       disabledReason={s.track ? strings.dock.noSeek : strings.dock.idle}
     />
@@ -171,6 +176,8 @@ function useShortcuts(stage: boolean, toggleQueue: () => void) {
       volumeUp: () => c.setVolume(c.player.getState().volume + VOLUME_STEP),
       volumeDown: () => c.setVolume(c.player.getState().volume - VOLUME_STEP),
       mute: c.toggleMute,
+      lyricsEarlier: () => nudgeLyrics(-1),
+      lyricsLater: () => nudgeLyrics(1),
       shuffle: c.toggleShuffle,
       repeat: c.cycleRepeat,
       queue: toggleQueue,

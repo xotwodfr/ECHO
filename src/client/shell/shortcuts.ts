@@ -1,6 +1,5 @@
 // Transport and Stage view shortcuts from the keyboard map (PRODUCT_SPEC.md §7). Pure, so the
-// rules are tested as a table. Offsets ([ ], M6), F, G-sequences and the ? sheet arrive with the
-// features they control.
+// rules are tested as a table. F, G-sequences and the ? sheet arrive with the features they control.
 
 export type Shortcut =
   | 'toggle'
@@ -18,7 +17,9 @@ export type Shortcut =
   | 'queue'
   | 'viewCycle'
   | 'viewCover'
-  | 'viewLyrics';
+  | 'viewLyrics'
+  | 'lyricsEarlier'
+  | 'lyricsLater';
 
 /**
  * Where the key was pressed. `text`: shortcuts never fire (§7). `control`: a focused button,
@@ -54,6 +55,9 @@ export function shortcutFor(e: Key, target: KeyTarget, stage: boolean): Shortcut
     v: 'viewCycle',
     c: 'viewCover',
     l: 'viewLyrics',
+    // The lyric timing offset, ±50 ms (LYRICS_EXPERIENCE.md §9.13).
+    '[': 'lyricsEarlier',
+    ']': 'lyricsLater',
   };
   const k = e.key.toLowerCase();
   return letters[k] ?? (stage ? (stageLetters[k] ?? null) : null);

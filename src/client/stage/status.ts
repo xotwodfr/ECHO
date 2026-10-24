@@ -48,12 +48,30 @@ export const nextView = (v: StageView): StageView =>
 export const stageChrome = createStore<{ hidden: boolean }>()(() => ({ hidden: false }));
 
 /**
- * The current track's lyrics (TECHNICAL_ARCHITECTURE.md §5.4 `lyricsStore`). M3 fills it from the
- * fixture documents of the guide tracks; the lyrics loader writes it from M6.
+ * The current track's lyrics (TECHNICAL_ARCHITECTURE.md §5.4 `lyricsStore`; the state timeline of
+ * LYRICS_EXPERIENCE.md §9.5): waiting since `since` (performance.now()), ready with a document, or
+ * missing with the sources tried. `offsetMs` and `pinnedSource` are the user's override for the
+ * track. Filled by the lyrics loader (lyrics/loader.ts), or with fixture documents in development.
  */
-export const lyricsStore = createStore<{ trackKey: string | null; doc: LyricsDoc | null }>()(
-  () => ({ trackKey: null, doc: null }),
-);
+export interface LyricsState {
+  trackKey: string | null;
+  doc: LyricsDoc | null;
+  state: 'idle' | 'waiting' | 'ready' | 'missing';
+  since: number;
+  tried: { source: string; outcome: string }[];
+  offsetMs: number;
+  pinnedSource: string | null;
+}
+
+export const lyricsStore = createStore<LyricsState>()(() => ({
+  trackKey: null,
+  doc: null,
+  state: 'idle',
+  since: 0,
+  tried: [],
+  offsetMs: 0,
+  pinnedSource: null,
+}));
 
 /** The scrubber's time while it is dragged (LYRICS_EXPERIENCE.md §9.6 scrub mode), else null. */
 export const scrubStore = createStore<{ ms: number | null }>()(() => ({ ms: null }));

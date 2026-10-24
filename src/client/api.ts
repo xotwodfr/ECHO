@@ -8,11 +8,14 @@ export class ApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly userMessage: string | null;
+  /** The whole error body (e.g. the lyric sources tried with a 404). */
+  readonly body: Record<string, unknown>;
   constructor(status: number, body: { error?: string; code?: string; userMessage?: string }) {
     super(body.code ?? body.error ?? `HTTP ${status}`);
     this.status = status;
     this.code = body.code ?? body.error ?? `http_${status}`;
     this.userMessage = body.userMessage ?? null;
+    this.body = body as Record<string, unknown>;
   }
 }
 

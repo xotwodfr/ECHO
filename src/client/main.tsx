@@ -6,6 +6,7 @@ import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
 import { createNavidromeLibrary } from './library-navidrome.ts';
+import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
@@ -55,12 +56,15 @@ const controller = createPlaybackController({
 
 // Lyrics: the guide tracks sing their fixture documents (LYRICS_EXPERIENCE.md §16) until the
 // lyrics loader arrives (M6).
-const showLyrics = (track: ReturnType<typeof controller.player.getState>['track']) =>
-  lyricsStore.setState({
-    trackKey: track?.key ?? null,
-    doc: fixtures?.fixtureLyrics(track) ?? null,
-  });
-controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
+// A signed-in user with Navidrome gets them from the server (M6).
+if (ownLibrary) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
+else {
+  const showLyrics = (track: ReturnType<typeof controller.player.getState>['track']) => {
+    const doc = fixtures?.fixtureLyrics(track) ?? null;
+    lyricsStore.setState({ trackKey: track?.key ?? null, doc, state: doc ? 'ready' : 'idle' });
+  };
+  controller.player.subscribe((s, prev) => s.track !== prev.track && showLyrics(s.track));
+}
 
 // OS media keys and lock-screen controls (PLAYBACK_ARCHITECTURE.md §5; PLAY-07): the provider sets
 // play, pause and seek; next and previous go through the queue.
