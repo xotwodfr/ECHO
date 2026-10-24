@@ -59,7 +59,7 @@ describe('S3 LRCLIB', () => {
     expect(calls[0]?.url).toBe(
       'https://lrclib.test/api/get?track_name=Harbour+Lights+1&artist_name=Lowfield&album_name=Harbour+Lights&duration=200',
     );
-    expect((calls[0]?.init?.headers as Record<string, string>)['User-Agent']).toBe(
+    expect((calls[0]?.init?.headers as Record<string, string> | undefined)?.['User-Agent']).toBe(
       'ECHO/1 (+repo)',
     );
     expect(o).toMatchObject({
@@ -128,7 +128,7 @@ describe('S2 Spicy Lyrics', () => {
     expect(spicySource({ baseUrl: 'x', key: () => null, fetch: f }).eligible(withId)).toBe(false);
     const o = await keyed.fetch(withId, signal);
     expect(calls[0]?.url).toBe('https://spicy.test/v1/lyrics/4cOdK2wGLETKBW3PvgPWqT');
-    expect((calls[0]?.init?.headers as Record<string, string>).Authorization).toBe(
+    expect((calls[0]?.init?.headers as Record<string, string> | undefined)?.Authorization).toBe(
       `Bearer ${FAKE_SK_1}`,
     );
     expect(o).toMatchObject({

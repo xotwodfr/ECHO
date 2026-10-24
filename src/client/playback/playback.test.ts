@@ -191,7 +191,11 @@ describe('queue edits (QUE-01)', () => {
     // Advancing plays the shown order.
     let q: QueueState | null = Q.moveTo(base(), 5, 0);
     const played: string[] = [];
-    while ((q = q && Q.advance(q))) played.push(q.now?.id ?? '');
+    for (;;) {
+      q = q && Q.advance(q);
+      if (!q) break;
+      played.push(q.now?.id ?? '');
+    }
     expect(played).toEqual(['t5', 't8', 't9', 't2', 't3', 't4']);
   });
 
@@ -268,7 +272,9 @@ describe('PlaybackController (§3 transport rules)', () => {
     const fail = (code: string) =>
       (
         provider as unknown as { listeners: { error: Set<(e: object) => void> } }
-      ).listeners.error.forEach((cb) => cb({ code, retriable: true, userMessage: 'x' }));
+      ).listeners.error.forEach((cb) => {
+        cb({ code, retriable: true, userMessage: 'x' });
+      });
     fail('navidrome.stream');
     expect(s().track?.id).toBe('t2');
     expect(notes).toContain('This track could not be played. Skipped to the next.');

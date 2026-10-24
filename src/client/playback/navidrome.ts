@@ -114,7 +114,8 @@ export class NavidromeProvider implements PlaybackProvider {
       if (__ECHO_FIXTURES__ && this.endedAt) {
         // PLAY-04: how long the hand-over took, for E2E.
         const w = window as unknown as { __echoGaps?: number[] };
-        (w.__echoGaps ??= []).push(performance.now() - this.endedAt);
+        w.__echoGaps ??= [];
+        w.__echoGaps.push(performance.now() - this.endedAt);
         this.endedAt = 0;
       }
       this.emitState();

@@ -51,8 +51,7 @@ export function parseLrc(text: string): Parsed {
     // One line can carry several start tags (a repeated chorus).
     for (const t of tags) {
       const start = lrcTime(t[1] as string, t[2] as string);
-      const shift =
-        parsedWords && parsedWords.length ? start - (parsedWords[0]?.start ?? start) : 0;
+      const shift = parsedWords?.length ? start - (parsedWords[0]?.start ?? start) : 0;
       timed.push({
         text: textOnly,
         start,
