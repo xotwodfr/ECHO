@@ -279,10 +279,13 @@ short ones:
     as in AMLL), on a spring (f = 1.2 Hz, ζ = 0.75).
   - **Swell:** scale to `1 + 0.05·a`, where `a = min(1.2, (dur − 1000)/1500 + 0.6)`; the last word of
     a line gets `a × 1.4`, capped at a +8% swell. Graphemes start in sequence, `dur / 2.5 / n` apart.
+  - **Spread:** graphemes push apart from the word's middle by `min(0.04, 0.03·a)` em each per step
+    from the middle (mirrored in right-to-left lines), as AMLL and Spicy Lyrics do (2026-10-25,
+    SYNCED_LYRICS_RESEARCH.md).
   - **Glow:** the word's glow follows its graphemes' peak.
   - The emphasis releases **250 ms before** the word ends, so the line is calm again before the
     hand-over.
-- **Caps:** swell ≤ 8%, lift ≤ 0.08em. The prior-art maximum of +12% swell was judged too much for
+- **Caps:** swell ≤ 8%, lift ≤ 0.08em, spread ≤ 0.04em per step. The prior-art maximum of +12% swell was judged too much for
   ECHO's larger type.
 
 ### 5.6 Background vocals and multiple vocalists

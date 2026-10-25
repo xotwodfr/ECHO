@@ -290,12 +290,15 @@ export function createLyricField(
       const em = inst.emph[k];
       if (!em?.length) return;
       const lay = e.layout.words[k]?.emphasis;
+      // Letters also push a little apart from the word's middle (mirrored right to left).
+      const mid = (we.gs.length - 1) / 2;
+      const side = e.layout.dir === 'rtl' ? -1 : 1;
       we.gs.forEach((g, i) => {
         const v = em[i]?.x ?? 0;
         if (Math.abs(v - g.e) < 0.002 || !lay) return;
         g.el.style.transform =
           v > 0.001
-            ? `translateY(${(-lay.lift * v).toFixed(4)}em) scale(${(1 + lay.swell * v).toFixed(4)})`
+            ? `translate(${(side * lay.spread * v * (i - mid)).toFixed(4)}em, ${(-lay.lift * v).toFixed(4)}em) scale(${(1 + lay.swell * v).toFixed(4)})`
             : '';
         g.e = v;
       });

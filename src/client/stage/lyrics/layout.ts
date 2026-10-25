@@ -55,12 +55,14 @@ export function fitLine(rowsAt: (wdth: number, size: number) => number): Fit {
 export interface Emphasis {
   swell: number; // peak scale − 1, ≤ 0.08
   lift: number; // peak lift in em, ≤ 0.08
+  spread: number; // peak push apart per grapheme from the word's middle, em, ≤ 0.04 (AMLL, Spicy)
   stepMs: number; // graphemes start this far apart
 }
 
 const E = LYRICS.emphasis;
 const LIFT_EM = 0.05;
 const LIFT_MAX_EM = 0.08;
+const SPREAD_MAX_EM = 0.04;
 const NO_EMPHASIS_BELOW_MS = 150; // rap words (§9.9)
 
 /**
@@ -76,6 +78,7 @@ export function emphasisOf(w: LyricWord, last: boolean): Emphasis | null {
   return {
     swell: Math.min(E.swellMax, 0.05 * a),
     lift: Math.min(LIFT_MAX_EM, LIFT_EM),
+    spread: Math.min(SPREAD_MAX_EM, 0.03 * a),
     stepMs: dur / 2.5 / n,
   };
 }
