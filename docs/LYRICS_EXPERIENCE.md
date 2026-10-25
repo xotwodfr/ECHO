@@ -166,6 +166,19 @@ target_z(rank k) = lerp( z(k), z(k−1), drift )               (rank 1: toward 0
   (everyone singing) stay centred (M3).
 - A small horizontal **parallax** (§8.4) applies to background lines only.
 
+### 4.5 Hover and tilt (2026-10-25)
+
+- **Hover:** +1…+3 drift around their slots, so they read as hovering rather than as a list. Per axis
+  two sines (0.7 at 0.05–0.12 Hz, 0.3 at 1.7× that), speed and phase from the track seed and the line
+  index, on the Stage drift clock (it slows while paused; a seek does not move it). Amplitude 0.6% W
+  and 0.5% H at +1, ×1.2 at +2, ×1.4 at +3. Over the last 1600 ms before its hand-over a line's hover
+  eases out (`k³` of the time left), reaching exactly zero as it takes the anchor. The offset is added
+  to the spring target, so rank changes and seeks carry it smoothly (`hoverAt`, model.ts).
+- **Tilt:** the active line leans back by up to 1.2° (`rotateX`, sin πφ) and swivels by up to
+  ±1.6° (`rotateY`, sin 2πφ) over its progress φ, under `perspective(1200px)`. Both are zero at
+  either end of a line, so a hand-over never steps; it runs on the slow spring, which carries seeks.
+- Neither applies under reduced motion (§10) or in still frames.
+
 ---
 
 ## 5. Word illumination
@@ -207,11 +220,13 @@ soft edge covers (see "One edge along the line" below).
 **Sweep across syllables:** syllables of one word (`isPartOfWord`) share a visual word. The sweep
 moves through each syllable span with its own timing and no gap, so the light reads as continuous.
 
-**Lift:** unsung words of the lead line sit 0.05em low; a word rises to its baseline when the sweep
-reaches it, over its own length and never under a second (`--lift-ms` on the span, `--ease-out`;
-AMLL and Spicy Lyrics use the same rule), so short words are still rising as the next set off and the
-line drifts up as one. A CSS transition on the class the sweep already sets: no per-frame writes.
-Scrub and still frames snap; reduced motion has no lift.
+**Lift and swell:** unsung words of the lead line sit 0.05em low; a word rises to its baseline from
+its start, over its own length and never under a second (ease-out cubic; AMLL and Spicy Lyrics use
+the same rule), so short words are still rising as the next set off and the line drifts up as one.
+It also swells to 1.05 in its first 140 ms (at most half its length) and settles at 1.02 by its end,
+so sung words rest slightly larger than unsung ones. Held words (§5.5) and rap words (< 150 ms) only
+settle to 1.02. Both are functions of song time (`wordMotion`, model.ts) written by the frame loop,
+so a seek or scrub lands on the right state and nothing drifts from the audio. Reduced motion: none.
 
 **One edge along the line (2026-10-25, after Spicy Lyrics' refreshed sweep):** the words are laid
 end to end on one strip and a single soft edge crosses each in that word's time (`lineEdges`,
@@ -575,9 +590,11 @@ option, Motion = Off, is described below.
 |---|---|---|
 | Hand-over | springs + stagger | **Crossfade in place over 180 ms.** Lines are placed at their slots with no travel; the outgoing line fades while the incoming one brightens |
 | Approach drift | yes | none (slots static) |
+| Hover of +1…+3, tilt of the active line (§4.5) | yes | none |
 | Word sweep | yes | **yes**. It is a colour change that carries timing information, not motion |
 | Glow | modulated | constant 0.35 alpha on the sweeping word |
 | Emphasis lift and swell | yes | none |
+| Word lift and swell (§5.1) | yes | none: words sit at rest size, the sweep alone shows timing |
 | Decay | rise + blur + fade | fade only, 300 ms |
 | Background field | 24 lines drifting | hidden |
 | Parallax | yes | none |
@@ -750,6 +767,11 @@ export const LYRICS = {
     clearH: 0.02, // and keeps at least this much
     approachZFloor: 0.65,
   },
+  // §4.5: +1…+3 hover, fractions of W and H at +1 (×1.2 at +2, ×1.4 at +3), gone by the hand-over
+  hover: { ampX: 0.006, ampY: 0.005, landMs: 1600, minHz: 0.05, maxHz: 0.12 },
+  // §5.1: a sung word rises 0.05em and swells to `peak`, settling at `rest` (unsung words: 1)
+  word: { liftEm: 0.05, peak: 1.05, rest: 1.02, popMs: 140, settleMs: 400 },
+  tilt: { x: 1.2, y: 1.6, perspectivePx: 1200 }, // §4.5: the active line leans with its progress, deg
   sweep: { edgeAhead: 0.35, edgeBehind: 0.6, holdGapMs: 300, minWordMs: 60 }, // §5.1
   glow: {
     radius: 0.18, // §5.2

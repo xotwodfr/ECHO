@@ -10,10 +10,12 @@ import {
   blurAt,
   FieldModel,
   type FrameInput,
+  hoverAt,
   type Inst,
   type LineBox,
   lineEdges,
   opacityAt,
+  wordMotion,
 } from './model.ts';
 import { SPRINGS } from './springs.ts';
 import { buildTimeline, scaleAt, type Timeline } from './timing.ts';
@@ -42,13 +44,14 @@ function boxesOf(doc: LyricsDoc, tl: Timeline): LineBox[] {
 const tracks = new WeakMap<FieldModel, FeatureSource>();
 
 /** A model of fixture `name`, which `run` plays with its paired Features track (guide.ts). */
-function model(name: string, budget = 24) {
+function model(name: string, budget = 24, hover?: number) {
   const doc = fx(name);
   const tl = buildTimeline(doc);
   const m = new FieldModel(tl, boxesOf(doc, tl), {
     seed: BG.hash(doc.trackKey),
     budget,
     dotsH: ROW,
+    hover,
   });
   const track = featureTracks[guideFeatures[name] ?? ''];
   if (track) tracks.set(m, track);
@@ -183,7 +186,7 @@ describe('the transition zone (LYR-03, LYR-05)', () => {
 
   it('LYR-05 on the ballad: +1 rises monotonically while a line is sung (every 100 ms), staying clear of the active box', () => {
     const doc = fx('ballad-word');
-    const m = model('ballad-word');
+    const m = model('ballad-word', 24, 0); // the approach drift alone; the hover is §4.5's test
     const snaps = run(m, 0, 100_000);
     const tl = m.tl;
     let lines = 0;
@@ -753,5 +756,158 @@ describe('the sweep along the line (§5.1, lineEdges)', () => {
 
   it('before the line, every word is unreached', () => {
     expect(lineEdges(words, widths, -10).every((p) => p < -1000)).toBe(true);
+  });
+});
+
+describe('hover and tilt (§4.5)', () => {
+  const HV = LYRICS.hover;
+
+  it('hover stays within its amplitude, differs per line, and is gone at the hand-over', () => {
+    let peak = 0;
+    for (let s = 0; s < 120; s += 0.25) {
+      const h = hoverAt(7, 3, s, 10_000, 1, W, H);
+      expect(Math.abs(h.x)).toBeLessThanOrEqual(HV.ampX * W + 1e-9);
+      expect(Math.abs(h.y)).toBeLessThanOrEqual(HV.ampY * H + 1e-9);
+      peak = Math.max(peak, Math.abs(h.x));
+      // Continuous: a frame moves it a fraction of a pixel.
+      const n = hoverAt(7, 3, s + 1 / 60, 10_000, 1, W, H);
+      expect(Math.abs(n.x - h.x)).toBeLessThan(0.2);
+    }
+    expect(peak).toBeGreaterThan(0.5 * HV.ampX * W);
+    expect(hoverAt(7, 3, 12, 10_000, 1, W, H)).not.toEqual(hoverAt(7, 4, 12, 10_000, 1, W, H));
+    expect(hoverAt(7, 3, 12, 0, 1, W, H)).toEqual({ x: 0, y: 0 });
+    expect(hoverAt(7, 3, 12, -500, 1, W, H)).toEqual({ x: 0, y: 0 });
+    // It eases out: half way through the landing only an eighth is left.
+    const far = hoverAt(7, 3, 12, HV.landMs, 1, W, H);
+    const mid = hoverAt(7, 3, 12, HV.landMs / 2, 1, W, H);
+    expect(mid.x).toBeCloseTo(far.x / 8, 6);
+  });
+
+  it('upcoming lines hover; the active line lands in its slot with no tilt left at the hand-over', () => {
+    const still = model('ballad-word', 24, 0);
+    const moving = model('ballad-word');
+    const a = run(still, 0, 40_000);
+    const b = run(moving, 0, 40_000);
+    let apart = 0;
+    for (let k = 0; k < a.length; k++)
+      for (const [i, v] of (b[k] as Snap).inst) {
+        const u = (a[k] as Snap).inst.get(i);
+        if (u && v.rank >= 1 && v.rank <= 3) apart = Math.max(apart, Math.abs(v.x - u.x));
+      }
+    expect(apart).toBeGreaterThan(2);
+    // Hovering lines keep the 0.02 H clearance to the line above (§4.3), or the gap the same frame
+    // has without hover where the beat's lean already takes a pixel of it (§12.3).
+    const gapOf = (snap: Snap, i: number) => {
+      const v = snap.inst.get(i);
+      const above = snap.inst.get(i - 1);
+      if (!v || !above || v.role !== 'zone' || above.role !== 'zone' || v.rank < 1 || v.rank > 2)
+        return null;
+      if (Math.abs(v.ty - v.y) > 0.25 || Math.abs(above.ty - above.y) > 0.25) return null; // settled
+      return (
+        v.y -
+        ((moving.boxes[i] as LineBox).h * v.scale) / 2 -
+        (above.y + ((moving.boxes[i - 1] as LineBox).h * above.scale) / 2)
+      );
+    };
+    let checked = 0;
+    for (let k = 0; k < b.length; k++)
+      for (const i of (b[k] as Snap).inst.keys()) {
+        const gap = gapOf(b[k] as Snap, i);
+        const base = gapOf(a[k] as Snap, i);
+        if (gap === null || base === null) continue;
+        expect(gap).toBeGreaterThanOrEqual(Math.min(0.02 * H, base) - 0.5);
+        checked++;
+      }
+    expect(checked).toBeGreaterThan(500);
+    // Once a line holds the anchor its targets carry no hover: both runs agree.
+    for (let k = 0; k < a.length; k++)
+      for (const [i, v] of (b[k] as Snap).inst)
+        if (v.rank === 0) expect(v.ty).toBeCloseTo((a[k] as Snap).inst.get(i)?.ty ?? v.ty, 6);
+    // The tilt eases back toward flat by a line's end and never steps across a hand-over.
+    const m = model('ballad-word');
+    const h = m.tl.handovers[3] as number;
+    run(m, 0, h - 1000);
+    let last = m.insts.get(2) as Inst;
+    let prev = { rx: last.rx.x, ry: last.ry.x };
+    for (let t = h - 1000 + FRAME; t < h + 1000; t += FRAME) {
+      run(m, t, t);
+      const a = m.insts.get(m.active) as Inst;
+      if (a === last) {
+        expect(Math.abs(a.rx.x - prev.rx) + Math.abs(a.ry.x - prev.ry)).toBeLessThan(0.05);
+      }
+      last = a;
+      prev = { rx: a.rx.x, ry: a.ry.x };
+    }
+    expect(Math.abs(prev.rx) + Math.abs(prev.ry)).toBeLessThan(1);
+    run(m, h + 1000 + FRAME, (m.tl.lines[3] as LyricLine).start + 1500);
+    const act = m.insts.get(3) as Inst;
+    expect(act.rank).toBe(0);
+    expect(act.rx.x).toBeLessThan(-0.3); // leaning back mid-line
+  });
+
+  it('seeking back and forward mid-line moves every line continuously, hover and tilt included', () => {
+    const m = model('ballad-word');
+    const tl = m.tl;
+    const mid = (j: number) => ((tl.lines[j] as LyricLine).start + (tl.ends[j] as number)) / 2;
+    const path = [
+      ...run(m, 0, mid(4)),
+      ...run(m, mid(1), mid(1) + 3000), // back
+      ...run(m, mid(6), mid(6) + 3000), // forward
+    ];
+    for (let k = 1; k < path.length; k++) {
+      const p = path[k - 1] as Snap;
+      const q = path[k] as Snap;
+      for (const [i, v] of q.inst) {
+        const u = p.inst.get(i);
+        if (!u || v.opacity < 0.01 || u.opacity < 0.01) continue;
+        expect(Math.abs(v.y - u.y)).toBeLessThan(0.08 * H);
+        expect(Math.abs(v.x - u.x)).toBeLessThan(0.08 * W);
+      }
+    }
+  });
+
+  it('reduced motion: no hover, no tilt, words at rest', () => {
+    const m = model('ballad-word');
+    const n = model('ballad-word', 24, 0);
+    const a = run(m, 0, 30_000, { reduced: true });
+    const b = run(n, 0, 30_000, { reduced: true });
+    for (let k = 0; k < a.length; k++)
+      for (const [i, v] of (a[k] as Snap).inst) expect(v.x).toBe((b[k] as Snap).inst.get(i)?.x);
+    for (const inst of m.insts.values()) {
+      expect(inst.rx.x).toBe(0);
+      expect(inst.ry.x).toBe(0);
+      expect(inst.wy.every((y) => y === 0)).toBe(true);
+      expect(inst.ws.every((s) => s === 1)).toBe(true);
+    }
+  });
+});
+
+describe('word lift and swell (§5.1)', () => {
+  const WM = LYRICS.word;
+  const w = { text: 'light', start: 1000, end: 1600, isPartOfWord: false };
+
+  it('unsung words sit low at scale 1; a sung word swells, then rests slightly larger', () => {
+    expect(wordMotion(w, 0, false)).toEqual({ y: WM.liftEm, s: 1 });
+    expect(wordMotion(w, w.start + WM.popMs, false).s).toBeCloseTo(WM.peak, 6);
+    expect(wordMotion(w, w.end, false).s).toBeCloseTo(WM.rest, 6);
+    expect(wordMotion(w, w.start + 1000, false)).toEqual({ y: 0, s: WM.rest });
+    expect(wordMotion(w, 99_000, false)).toEqual({ y: 0, s: WM.rest });
+  });
+
+  it('is continuous in time, so the frame loop never steps it', () => {
+    for (let t = 900; t < 2800; t += 1) {
+      const a = wordMotion(w, t, false);
+      const b = wordMotion(w, t + 1, false);
+      expect(Math.abs(b.s - a.s)).toBeLessThan(0.002);
+      expect(Math.abs(b.y - a.y)).toBeLessThan(0.001);
+    }
+  });
+
+  it('held and rap words do not pop: they only settle', () => {
+    for (let t = 1000; t < 3000; t += 10)
+      expect(wordMotion(w, t, true).s).toBeLessThanOrEqual(WM.rest + 1e-9);
+    const rap = { text: 'go', start: 0, end: 90, isPartOfWord: false };
+    for (let t = 0; t < 600; t += 5)
+      expect(wordMotion(rap, t, false).s).toBeLessThanOrEqual(WM.rest + 1e-9);
   });
 });

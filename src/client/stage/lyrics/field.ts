@@ -47,6 +47,8 @@ interface Written {
   x: number;
   y: number;
   s: number;
+  rx: number;
+  ry: number;
   o: number;
   b: number;
   m: number;
@@ -76,6 +78,8 @@ interface WordEl {
   // How far past each end the soft edge still shows on this word, as a share of its width (§5.1).
   ahead: number;
   behind: number;
+  my: number; // written rise (em) and scale (model.ts wordMotion)
+  ms: number;
 }
 
 const div = (cls: string) => {
@@ -170,7 +174,19 @@ export function createLyricField(
       words,
       backing,
       wash,
-      w: { x: Number.NaN, y: 0, s: 0, o: 0, b: -1, m: -1, f: -1, bucket: -2, still: 0 },
+      w: {
+        x: Number.NaN,
+        y: 0,
+        s: 0,
+        rx: 0,
+        ry: 0,
+        o: 0,
+        b: -1,
+        m: -1,
+        f: -1,
+        bucket: -2,
+        still: 0,
+      },
     };
   }
 
@@ -197,6 +213,8 @@ export function createLyricField(
       ww,
       ahead: (LYRICS.sweep.edgeAhead * em) / ww,
       behind: (LYRICS.sweep.edgeBehind * em) / ww,
+      my: Number.NaN,
+      ms: Number.NaN,
     };
   }
 
@@ -250,13 +268,23 @@ export function createLyricField(
     const x = inst.x.x - e.layout.w / 2;
     const y = inst.y.x - e.layout.h / 2;
     const s = inst.scale;
+    const rx = Math.abs(inst.rx.x) < 0.005 ? 0 : inst.rx.x;
+    const ry = Math.abs(inst.ry.x) < 0.005 ? 0 : inst.ry.x;
     if (
       Math.abs(x - w.x) >= 0.1 ||
       Math.abs(y - w.y) >= 0.1 ||
       Math.abs(s - w.s) >= 0.0005 ||
+      Math.abs(rx - w.rx) >= 0.005 ||
+      Math.abs(ry - w.ry) >= 0.005 ||
       Number.isNaN(w.x)
     ) {
-      e.root.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
+      const tilt =
+        rx || ry
+          ? ` perspective(${LYRICS.tilt.perspectivePx}px) rotateX(${rx.toFixed(3)}deg) rotateY(${ry.toFixed(3)}deg)`
+          : '';
+      e.root.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)${tilt} scale(${s.toFixed(4)})`;
+      w.rx = rx;
+      w.ry = ry;
       if (w.still >= WILL_CHANGE_MS || Number.isNaN(w.x))
         e.root.style.willChange = 'transform, opacity';
       w.x = x;
@@ -286,6 +314,14 @@ export function createLyricField(
     if (inst.role === 'bg') return; // not word-lit (§8.2)
     e.words.forEach((we, k) => {
       writeWord(we, inst.edge[k] as number);
+      const my = inst.wy[k] ?? 0;
+      const ms = inst.ws[k] ?? 1;
+      if (Math.abs(my - we.my) >= 0.0005 || Math.abs(ms - we.ms) >= 0.0005 || Number.isNaN(we.my)) {
+        we.el.style.transform =
+          my === 0 && ms === 1 ? '' : `translateY(${my.toFixed(4)}em) scale(${ms.toFixed(4)})`;
+        we.my = my;
+        we.ms = ms;
+      }
       writeGlow(we, inst.glow[k] as number, inst.glowR);
       const em = inst.emph[k];
       if (!em?.length) return;
@@ -449,8 +485,6 @@ export function createLyricField(
     /** One frame (§4.2 step 4). Returns the key light's position (stage uv, y down), if any. */
     update(f: FieldFrame) {
       if (!model) return null;
-      host.classList.toggle('ly-reduced', !!f.reduced);
-      host.classList.toggle('ly-instant', f.mode !== 'run'); // scrub and still frames snap
       model.update({ ...f, W, H });
       render(f.dt);
       const a = model.active;

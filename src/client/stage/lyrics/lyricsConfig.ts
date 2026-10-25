@@ -42,6 +42,11 @@ export const LYRICS = {
     clearH: 0.02, // and keeps at least this much
     approachZFloor: 0.65,
   },
+  // §4.5: +1…+3 hover, fractions of W and H at +1 (×1.2 at +2, ×1.4 at +3), gone by the hand-over
+  hover: { ampX: 0.006, ampY: 0.005, landMs: 1600, minHz: 0.05, maxHz: 0.12 },
+  // §5.1: a sung word rises 0.05em and swells to `peak`, settling at `rest` (unsung words: 1)
+  word: { liftEm: 0.05, peak: 1.05, rest: 1.02, popMs: 140, settleMs: 400 },
+  tilt: { x: 1.2, y: 1.6, perspectivePx: 1200 }, // §4.5: the active line leans with its progress, deg
   sweep: { edgeAhead: 0.35, edgeBehind: 0.6, holdGapMs: 300, minWordMs: 60 }, // §5.1
   glow: {
     radius: 0.18, // §5.2

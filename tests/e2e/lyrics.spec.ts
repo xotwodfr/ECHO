@@ -255,7 +255,13 @@ test.describe('layout on real measurements', () => {
     );
     const tl = timeline('ballad-word');
     expect(m.boxes.length).toBe(tl.lines.length);
-    const model = new FieldModel(tl, m.boxes, { seed: 1, budget: 0, dotsH: m.fontPx * 1.12 });
+    // The approach drift alone: the hover (§4.5) is unit-tested, clearance included.
+    const model = new FieldModel(tl, m.boxes, {
+      seed: 1,
+      budget: 0,
+      dotsH: m.fontPx * 1.12,
+      hover: 0,
+    });
     const FRAME = 1000 / 60;
     const ys = new Map<number, number[]>();
     for (let t = 0; t < 220_000; t += FRAME) {

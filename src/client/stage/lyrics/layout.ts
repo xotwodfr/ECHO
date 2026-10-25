@@ -204,9 +204,6 @@ function appendWords(parent: HTMLElement, words: LyricWord[], emphasis: boolean)
     }
     const s = document.createElement('span');
     s.className = 'ly-w';
-    // The lift (stage.css) runs over the word's own length, never under a second, so short words
-    // are still rising as the next set off and the line drifts up as one (AMLL, Spicy Lyrics).
-    s.style.setProperty('--lift-ms', `${Math.max(1000, Math.round(w.end - w.start))}ms`);
     const em = emphasis && emphasisOf(w, k === words.length - 1);
     if (em) {
       s.classList.add('ly-emph');

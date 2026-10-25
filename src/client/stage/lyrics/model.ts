@@ -26,7 +26,18 @@ import {
 // hand-over stagger, decay, the background field, entering the zone, word sweep, glow and emphasis.
 // No DOM: `field.ts` writes what this computes, so all of it is unit-tested on frame simulations.
 
-const { zone: Z, decay: D, glow: G, interlude: IL, build: BUILD, stagger: ST, reduced: R } = LYRICS;
+const {
+  zone: Z,
+  decay: D,
+  glow: G,
+  interlude: IL,
+  build: BUILD,
+  stagger: ST,
+  reduced: R,
+  hover: HV,
+  word: WM,
+  tilt: TILT,
+} = LYRICS;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
@@ -104,6 +115,55 @@ export function lineEdges(words: LyricWord[], widths: number[], t: number): numb
   });
 }
 
+/**
+ * Upcoming lines hover around their slots (§4.5): two slow sines per axis, speed and phase per line
+ * from the track's seed, on the Stage drift clock `s` (seconds), so a seek never moves them. The
+ * hover eases out to exactly nothing at the line's hand-over, `untilMs` away.
+ */
+export function hoverAt(
+  seed: number,
+  i: number,
+  s: number,
+  untilMs: number,
+  rank: number,
+  W: number,
+  H: number,
+) {
+  const r = BG.rng(seed ^ Math.imul(i + 1, 0x9e3779b1));
+  const wave = () => {
+    const hz = HV.minHz + (HV.maxHz - HV.minHz) * r();
+    const ph = 2 * Math.PI * r();
+    const ph2 = 2 * Math.PI * r();
+    return (
+      0.7 * Math.sin(2 * Math.PI * hz * s + ph) + 0.3 * Math.sin(2 * Math.PI * hz * 1.7 * s + ph2)
+    );
+  };
+  const a = clamp(untilMs / HV.landMs, 0, 1) ** 3 * (0.8 + 0.2 * rank);
+  const x = wave() * HV.ampX * W * a;
+  return { x, y: wave() * HV.ampY * H * a };
+}
+
+/**
+ * A lead word's own motion (§5.1), from time alone so a seek lands on it: it rises over max(1 s,
+ * its length), and swells to `peak` in its first 140 ms, settling at `rest` by its end. Held words
+ * swell per letter instead (§5.5) and rap words are too quick to pop (§9.9): they only settle.
+ */
+export function wordMotion(w: LyricWord, t: number, emphasised: boolean) {
+  const dur = w.end - w.start;
+  const u = clamp((t - w.start) / Math.max(1000, dur), 0, 1);
+  const pop = Math.max(1, Math.min(WM.popMs, dur / 2));
+  const peak = emphasised || dur < 150 ? WM.rest : WM.peak;
+  const a = clamp((t - w.start) / pop, 0, 1);
+  const b = clamp((t - w.start - pop) / Math.max(WM.settleMs, dur - pop), 0, 1);
+  return {
+    y: WM.liftEm * (1 - u) ** 3,
+    s:
+      a < 1
+        ? 1 + (peak - 1) * (1 - (1 - a) ** 3)
+        : WM.rest + (peak - WM.rest) * (1 - b * b * (3 - 2 * b)),
+  };
+}
+
 /** Line-timed wash (§9.2): 420 ms from the line's start, eased out. */
 export const washAt = (line: LyricLine, t: number) => {
   const x = clamp((t - line.start) / LYRICS.wash.ms, 0, 1);
@@ -160,6 +220,10 @@ export interface Inst {
   glow: number[]; // alpha per lead word
   glowR: number; // glow radius, em (§12.3)
   emph: Spring[][]; // per lead word, per grapheme: 0 rest … 1 full emphasis
+  wy: number[]; // per lead word: drop below its rest, em (wordMotion)
+  ws: number[]; // per lead word: scale
+  rx: Spring; // tilt, deg (§4.5): the active line only
+  ry: Spring;
 }
 
 export interface DotsView {
@@ -187,6 +251,7 @@ export interface FieldOptions {
   budget: number; // background lines (§8.1, by tier)
   dotsH: number; // the dots' box at rank 0 (one row at active size)
   drift?: number; // approach drift fraction (§4.3), fixed; by default §12.3 raises it when intense
+  hover?: number; // hover amplitude (§4.5), default 1; tests measure the drift alone with 0
   intensity?: IntensitySetting; // visuals.intensity (§12.2), default expressive
 }
 
@@ -299,8 +364,13 @@ export class FieldModel {
     for (let k = 0; k < (reduced ? 0 : this.opts.budget) && fs.next + 3 + k < n; k++)
       want.set(fs.next + 3 + k, { role: 'bg', rank: 4 + k });
 
+    // Background places are a function of time, so a seek would teleport them: they fade out where
+    // they are and fade in at their new places instead (§4.5).
     for (const [i, inst] of this.insts)
-      if (!want.has(i) || (want.get(i)?.role === 'bg' && inst.role !== 'bg')) {
+      if (
+        !want.has(i) ||
+        (want.get(i)?.role === 'bg' && (inst.role !== 'bg' || (seek && f.mode !== 'scrub')))
+      ) {
         this.insts.delete(i);
         const decayed = !seek && inst.role === 'past' && this.envelope(i, t) < 0.02;
         if (f.mode === 'still' || decayed) continue; // gone at once
@@ -331,6 +401,14 @@ export class FieldModel {
       });
     const zt = zoneTargets(H, zoneBoxes, fs.phase, reduced ? 0 : (this.opts.drift ?? beat.drift));
     this.behind = zt.background3;
+    // Vertical hover keeps the 0.02 H clearance: each line may use half the spare room on either
+    // side of it, so two neighbours swinging toward each other still never come nearer (§4.5).
+    const half = (k: number) => ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2;
+    const spare = (k: number) =>
+      k >= zoneBoxes.length
+        ? Number.POSITIVE_INFINITY
+        : (zt.y[k] as number) - half(k) - (zt.y[k - 1] as number) - half(k - 1) - Z.clearH * H;
+    const hoverRoomY = (rank: number) => Math.max(0, Math.min(spare(rank), spare(rank + 1)) / 2);
 
     const corridorBottom = Math.max(
       ...zt.y.map((y, k) => y + ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2),
@@ -406,6 +484,15 @@ export class FieldModel {
         ty = bgPlace.y;
         tz = bgPlace.z;
       }
+      // The hover rides on the target, so the springs carry it through every change of rank.
+      const hover = this.opts.hover ?? 1;
+      if (w.role === 'zone' && w.rank > 0 && hover && !reduced && f.mode !== 'still') {
+        const until = (this.tl.handovers[i] as number) - t;
+        const h = hoverAt(seed, i, f.driftS, until, w.rank, W, H);
+        const room = hoverRoomY(w.rank);
+        tx += h.x * hover;
+        ty += clamp(h.y * hover, -room, room);
+      }
 
       if (!inst) {
         inst = this.create(i, w.role, w.rank, tx, ty, tz, f.mode === 'still');
@@ -438,6 +525,18 @@ export class FieldModel {
         step(inst.x, inst.tx, inst.params, dt);
         step(inst.y, inst.ty, inst.params, dt);
         step(inst.z, inst.tz, inst.params, dt);
+      }
+      // Tilt (§4.5): the active line leans back and swivels with its progress, flat at both ends
+      // of the line, so hand-overs never step; a seek turns it on the slow spring.
+      const lean = w.role === 'zone' && w.rank === 0 && !reduced ? fs.phase : -1;
+      const rx = lean < 0 ? 0 : -TILT.x * Math.sin(Math.PI * lean);
+      const ry = lean < 0 ? 0 : TILT.y * Math.sin(2 * Math.PI * lean);
+      if (direct) {
+        snap(inst.rx, rx);
+        snap(inst.ry, ry);
+      } else {
+        step(inst.rx, rx, SPRINGS.slow, dt);
+        step(inst.ry, ry, SPRINGS.slow, dt);
       }
       inst.age += f.mode === 'still' ? BUILD.fadeInMs : dt;
       const shown = inst.opacity;
@@ -522,6 +621,10 @@ export class FieldModel {
       emph: words.map((_, k) =>
         em[k]?.emphasis ? (em[k]?.graphemes ?? []).map(() => spring(0)) : [],
       ),
+      wy: words.map(() => (this.reduced ? 0 : WM.liftEm)),
+      ws: words.map(() => 1),
+      rx: spring(0),
+      ry: spring(0),
     };
   }
 
@@ -590,6 +693,14 @@ export class FieldModel {
       inst.backing[j] = lineEdges(b.words ?? [], [], t);
     });
     inst.wash = words.length ? 0 : washAt(line, t);
+    const boxes = this.boxes[inst.i]?.words ?? [];
+    for (let k = 0; k < words.length; k++) {
+      const m = this.reduced
+        ? { y: 0, s: 1 }
+        : wordMotion(words[k] as LyricWord, t, !!boxes[k]?.emphasis);
+      inst.wy[k] = m.y;
+      inst.ws[k] = m.s;
+    }
 
     // Glow (§5.2): the sweeping word of the line being sung (rank 0, or a line sweeping at +1).
     const sweeping = words.findIndex((w) => t >= w.start && t < w.end);
@@ -637,9 +748,8 @@ export class FieldModel {
 
     // Emphasis (§5.5): graphemes lift and swell in sequence from 400 ms before the word, and
     // release 250 ms before its end. None while scrubbing; a seek lands on the state, no replay.
-    const em = this.boxes[inst.i]?.words ?? [];
     for (let k = 0; k < words.length; k++) {
-      const e = em[k]?.emphasis;
+      const e = boxes[k]?.emphasis;
       const gs = inst.emph[k] as Spring[];
       if (!e || gs.length === 0) continue;
       const w = words[k] as LyricWord;
