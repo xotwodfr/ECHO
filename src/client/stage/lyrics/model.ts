@@ -145,22 +145,20 @@ export function hoverAt(
 
 /**
  * A lead word's own motion (§5.1), from time alone so a seek lands on it: it rises over max(1 s,
- * its length), and swells to `peak` in its first 140 ms, settling at `rest` by its end. Held words
- * swell per letter instead (§5.5) and rap words are too quick to pop (§9.9): they only settle.
+ * its length); while it is sung it swells to `peak` (in its first 140 ms, at most half of it), so
+ * the word being sung is the largest on the line, and eases back to 1 over 300 ms after its end.
+ * Held words swell per letter instead (§5.5).
  */
 export function wordMotion(w: LyricWord, t: number, emphasised: boolean) {
   const dur = w.end - w.start;
   const u = clamp((t - w.start) / Math.max(1000, dur), 0, 1);
   const pop = Math.max(1, Math.min(WM.popMs, dur / 2));
-  const peak = emphasised || dur < 150 ? WM.rest : WM.peak;
-  const a = clamp((t - w.start) / pop, 0, 1);
-  const b = clamp((t - w.start - pop) / Math.max(WM.settleMs, dur - pop), 0, 1);
+  const up = clamp((t - w.start) / pop, 0, 1);
+  const down = clamp((t - w.end) / WM.releaseMs, 0, 1);
+  const peak = emphasised ? 1 : WM.peak;
   return {
     y: WM.liftEm * (1 - u) ** 3,
-    s:
-      a < 1
-        ? 1 + (peak - 1) * (1 - (1 - a) ** 3)
-        : WM.rest + (peak - WM.rest) * (1 - b * b * (3 - 2 * b)),
+    s: 1 + (peak - 1) * (1 - (1 - up) ** 3) * (1 - down * down * (3 - 2 * down)),
   };
 }
 

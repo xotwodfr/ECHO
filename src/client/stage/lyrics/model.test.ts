@@ -886,12 +886,12 @@ describe('word lift and swell (§5.1)', () => {
   const WM = LYRICS.word;
   const w = { text: 'light', start: 1000, end: 1600, isPartOfWord: false };
 
-  it('unsung words sit low at scale 1; a sung word swells, then rests slightly larger', () => {
+  it('the word being sung is the largest: unsung and sung words sit at scale 1', () => {
     expect(wordMotion(w, 0, false)).toEqual({ y: WM.liftEm, s: 1 });
     expect(wordMotion(w, w.start + WM.popMs, false).s).toBeCloseTo(WM.peak, 6);
-    expect(wordMotion(w, w.end, false).s).toBeCloseTo(WM.rest, 6);
-    expect(wordMotion(w, w.start + 1000, false)).toEqual({ y: 0, s: WM.rest });
-    expect(wordMotion(w, 99_000, false)).toEqual({ y: 0, s: WM.rest });
+    expect(wordMotion(w, w.end, false).s).toBeCloseTo(WM.peak, 6);
+    expect(wordMotion(w, w.end + WM.releaseMs, false).s).toBe(1);
+    expect(wordMotion(w, 99_000, false)).toEqual({ y: 0, s: 1 });
   });
 
   it('is continuous in time, so the frame loop never steps it', () => {
@@ -903,11 +903,7 @@ describe('word lift and swell (§5.1)', () => {
     }
   });
 
-  it('held and rap words do not pop: they only settle', () => {
-    for (let t = 1000; t < 3000; t += 10)
-      expect(wordMotion(w, t, true).s).toBeLessThanOrEqual(WM.rest + 1e-9);
-    const rap = { text: 'go', start: 0, end: 90, isPartOfWord: false };
-    for (let t = 0; t < 600; t += 5)
-      expect(wordMotion(rap, t, false).s).toBeLessThanOrEqual(WM.rest + 1e-9);
+  it('held words swell per letter instead (§5.5), so the word itself stays at 1', () => {
+    for (let t = 0; t < 3000; t += 10) expect(wordMotion(w, t, true).s).toBe(1);
   });
 });
