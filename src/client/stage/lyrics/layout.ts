@@ -10,7 +10,7 @@ export const LINE_HEIGHT_CJK = 1.2;
 const WDTH_MIN = 82; // Mona Sans condenses before it shrinks
 const WDTH_STEP = 2;
 const SIZE_STEP = 0.02;
-const BG_SIZE = 0.62; // backing vocals under their lead line (§5.6)
+export const BG_SIZE = 0.62; // backing vocals under their lead line (§5.6)
 
 const RTL = /[\p{Script=Hebrew}\p{Script=Arabic}\p{Script=Syriac}\p{Script=Thaana}\p{Script=Nko}]/u;
 const CJK = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u;
@@ -201,6 +201,9 @@ function appendWords(parent: HTMLElement, words: LyricWord[], emphasis: boolean)
     }
     const s = document.createElement('span');
     s.className = 'ly-w';
+    // The lift (stage.css) runs over the word's own length, never under a second, so short words
+    // are still rising as the next set off and the line drifts up as one (AMLL, Spicy Lyrics).
+    s.style.setProperty('--lift-ms', `${Math.max(1000, Math.round(w.end - w.start))}ms`);
     const em = emphasis && emphasisOf(w, k === words.length - 1);
     if (em) {
       s.classList.add('ly-emph');

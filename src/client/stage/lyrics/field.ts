@@ -2,7 +2,14 @@ import type { Features, LyricsDoc } from '../../../shared/types.ts';
 import { strings } from '../../strings.ts';
 import { Announcer } from './announce.ts';
 import { hash } from './background.ts';
-import { buildLine, type DocLayout, LINE_HEIGHT, type LineLayout, measureDoc } from './layout.ts';
+import {
+  BG_SIZE,
+  buildLine,
+  type DocLayout,
+  LINE_HEIGHT,
+  type LineLayout,
+  measureDoc,
+} from './layout.ts';
 import { LYRICS } from './lyricsConfig.ts';
 import { blurAt, FieldModel, type Inst, type Mode } from './model.ts';
 import { buildTimeline } from './timing.ts';
@@ -66,6 +73,9 @@ interface WordEl {
   // Emphasis (§5.5): grapheme spans and where each sits along the sweep, in px of the word.
   gs: { el: HTMLElement; off: number; w: number; e: number; p: number }[];
   ww: number;
+  // How far past each end the soft edge still shows on this word, as a share of its width (§5.1).
+  ahead: number;
+  behind: number;
 }
 
 const div = (cls: string) => {
@@ -140,14 +150,19 @@ export function createLyricField(
     root.dataset.side = lay.side;
     const lead = root.firstElementChild as HTMLElement;
     const spans = (parent: Element) => [...parent.querySelectorAll<HTMLElement>('.ly-w')];
-    const words = line.words ? spans(lead).map((el, k) => wordEl(el, lay.words[k], lay.dir)) : [];
+    const em = layout.fontPx * lay.fit.size;
+    const words = line.words
+      ? spans(lead).map((el, k) => wordEl(el, lay.words[k], lay.dir, em))
+      : [];
     const subs = [...root.querySelectorAll('.ly-bg')];
     const backing = line.words
-      ? subs.map((sub, j) => spans(sub).map((el, k) => wordEl(el, lay.backing[j]?.[k], lay.dir)))
+      ? subs.map((sub, j) =>
+          spans(sub).map((el, k) => wordEl(el, lay.backing[j]?.[k], lay.dir, em * BG_SIZE)),
+        )
       : [];
     const wash = line.words
       ? null
-      : wordEl(lead.querySelector('.ly-w') as HTMLElement, undefined, lay.dir);
+      : wordEl(lead.querySelector('.ly-w') as HTMLElement, undefined, lay.dir, 0);
     root.style.opacity = '0';
     return {
       root,
@@ -163,14 +178,26 @@ export function createLyricField(
     el: HTMLElement,
     lay: LineLayout['words'][number] | undefined,
     dir: string,
+    em: number,
   ): WordEl {
     const r = lay?.rect;
+    const ww = r?.w || 1;
     const gs = [...el.querySelectorAll<HTMLElement>('.ly-g')].map((g, i) => {
       const gr = lay?.graphemes[i];
       const off = !gr || !r ? 0 : dir === 'rtl' ? r.x + r.w - (gr.x + gr.w) : gr.x - r.x;
       return { el: g, off, w: gr?.w || 1, e: -1, p: -1 };
     });
-    return { el, state: 0, p: -1, glow: 0, gr: LYRICS.glow.radius, gs, ww: r?.w || 1 };
+    return {
+      el,
+      state: 0,
+      p: -1,
+      glow: 0,
+      gr: LYRICS.glow.radius,
+      gs,
+      ww,
+      ahead: (LYRICS.sweep.edgeAhead * em) / ww,
+      behind: (LYRICS.sweep.edgeBehind * em) / ww,
+    };
   }
 
   function release(e: LineEl) {
@@ -180,8 +207,9 @@ export function createLyricField(
     if (pool.length < POOL) pool.push(e.root);
   }
 
+  /** `p`: where the line's edge is through this word (model.ts lineEdges); the wash: 0…1. */
   function writeWord(w: WordEl, p: number) {
-    const state = p <= 0 ? 0 : p >= 1 ? 2 : 1;
+    const state = p <= -w.ahead ? 0 : p >= 1 + w.behind ? 2 : 1;
     if (state !== w.state) {
       w.el.classList.toggle('sweep', state === 1);
       w.el.classList.toggle('lit', state === 2);
@@ -257,7 +285,7 @@ export function createLyricField(
     }
     if (inst.role === 'bg') return; // not word-lit (§8.2)
     e.words.forEach((we, k) => {
-      writeWord(we, inst.p[k] as number);
+      writeWord(we, inst.edge[k] as number);
       writeGlow(we, inst.glow[k] as number, inst.glowR);
       const em = inst.emph[k];
       if (!em?.length) return;

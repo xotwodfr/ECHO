@@ -58,6 +58,52 @@ export const unlitMixAt = (z: number) =>
 export const sweepAt = (w: LyricWord, t: number) =>
   clamp((t - w.start) / Math.max(w.end - w.start, LYRICS.sweep.minWordMs), 0, 1);
 
+/** After a word ends with nothing right after it, its trailing fade clears over this long. */
+const SETTLE_MS = 250;
+const UNREACHED = -1e6;
+
+/**
+ * The sweep as one soft edge along the whole line (§5.1; Spicy Lyrics' refreshed sweep): the words
+ * laid end to end, `widths` px each, the edge crossing each word in that word's time. A word's value
+ * is how far the edge is through it, so it runs past 1 while the fade behind the edge still covers
+ * its end, and below 0 while the fade ahead already touches its start: the light flows from word to
+ * word instead of stopping at each. Across a hold gap (> holdGapMs) nothing ahead is lit: the next
+ * words stay unreached until they start, and the last word's fade clears over SETTLE_MS.
+ */
+export function lineEdges(words: LyricWord[], widths: number[], t: number): number[] {
+  const W = words.map((_, k) => Math.max(1, widths[k] ?? 1));
+  const X: number[] = [];
+  let x = 0;
+  for (const w of W) {
+    X.push(x);
+    x += w;
+  }
+  let edge = 0;
+  let next = 0; // the first word not started
+  while (next < words.length && t >= (words[next] as LyricWord).start) {
+    edge = (X[next] as number) + (W[next] as number) * sweepAt(words[next] as LyricWord, t);
+    next++;
+  }
+  // The fade ahead reaches words not yet started, up to the first hold gap.
+  let reach = next - 1;
+  while (
+    reach >= 0 &&
+    reach + 1 < words.length &&
+    (words[reach + 1] as LyricWord).start - (words[reach] as LyricWord).end <=
+      LYRICS.sweep.holdGapMs
+  )
+    reach++;
+  const spill = reach >= next;
+  return words.map((w, k) => {
+    if (k >= next) return k <= reach ? (edge - (X[k] as number)) / (W[k] as number) : UNREACHED;
+    const along = (edge - (X[k] as number)) / (W[k] as number);
+    // Nothing after it yet: the fade behind the edge clears on its own.
+    return k === next - 1 && t > w.end && !spill
+      ? Math.max(along, 1 + ((t - w.end) / SETTLE_MS) * 4)
+      : along;
+  });
+}
+
 /** Line-timed wash (§9.2): 420 ms from the line's start, eased out. */
 export const washAt = (line: LyricLine, t: number) => {
   const x = clamp((t - line.start) / LYRICS.wash.ms, 0, 1);
@@ -107,8 +153,9 @@ export interface Inst {
   bucket: number; // −1: main container
   mix: number; // ink toward the room (§4.1)
   fade: number; // past lines: lit colour toward ink (§7)
-  p: number[]; // sweep per lead word
-  backing: number[][]; // sweep per backing word
+  p: number[]; // sweep per lead word: time through it, 0…1
+  edge: number[]; // where the line's soft edge is per lead word, for drawing (lineEdges)
+  backing: number[][]; // sweep per backing word, drawn the same way (lineEdges)
   wash: number; // line-timed lead sweep
   glow: number[]; // alpha per lead word
   glowR: number; // glow radius, em (§12.3)
@@ -467,7 +514,8 @@ export class FieldModel {
       mix: 0,
       fade: 0,
       p: words.map(() => 0),
-      backing: (this.lines[i]?.background ?? []).map((b) => (b.words ?? []).map(() => 0)),
+      edge: words.map(() => UNREACHED),
+      backing: (this.lines[i]?.background ?? []).map((b) => (b.words ?? []).map(() => UNREACHED)),
       wash: 0,
       glow: words.map(() => 0),
       glowR: LYRICS.glow.radius,
@@ -535,10 +583,11 @@ export class FieldModel {
     if (inst.role === 'bg') return; // background lines are not word-lit (§8.2)
     const words = line.words ?? [];
     for (let k = 0; k < words.length; k++) inst.p[k] = sweepAt(words[k] as LyricWord, t);
+    const widths = (this.boxes[inst.i]?.words ?? []).map((b) => b.rect.w);
+    inst.edge = lineEdges(words, widths, t);
+    // Backing words have no measured boxes here: equal widths.
     (line.background ?? []).forEach((b, j) => {
-      (b.words ?? []).forEach((w, k) => {
-        (inst.backing[j] as number[])[k] = sweepAt(w, t);
-      });
+      inst.backing[j] = lineEdges(b.words ?? [], [], t);
     });
     inst.wash = words.length ? 0 : washAt(line, t);
 

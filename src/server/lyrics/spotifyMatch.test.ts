@@ -221,6 +221,48 @@ describe('the library sweep', () => {
     expect(w.urls.length).toBe(before);
   });
 
+  it('MusicBrainz busy (503): retried with backoff; a track it keeps refusing waits for the next run', async () => {
+    const songs = [song(1, { isrc: 'AAAAA0000001' }), song(2, { isrc: 'AAAAA0000002' })];
+    const lib = library(songs);
+    const inner = web({ isrc: { AAAAA0000002: 'mb-2' }, mbid: { 'mb-2': [ID_A] } });
+    let busy = 0;
+    const slept: number[] = [];
+    const f = (async (u: string, init?: RequestInit) => {
+      if (String(u).includes('AAAAA0000001')) return new Response('{}', { status: 503 });
+      if (String(u).includes('AAAAA0000002') && busy++ < 1)
+        return new Response('{}', { status: 503, headers: { 'retry-after': '3' } });
+      return inner.f(u, init);
+    }) as unknown as typeof fetch;
+    const { m } = matcher({
+      fetch: f,
+      libraries: async () => [{ scope: 'nd', client: lib.client }],
+      sleep: async (ms) => {
+        slept.push(ms);
+      },
+    });
+    await m.sweep();
+    expect(slept).toContain(3000); // its Retry-After
+    expect(slept).toEqual(expect.arrayContaining([2000, 4000, 8000, 16000]));
+    expect(m.match('nd', 's2')).toMatchObject({ ids: [ID_A], method: 'lb-mbid' });
+    expect(m.match('nd', 's1')?.tried).not.toContain('lb-mbid');
+    expect(m.status().error).toBeNull();
+  });
+
+  it('a server that repeats the same page forever ends the pass (security review)', async () => {
+    let calls = 0;
+    const page = Array.from({ length: 500 }, (_, i) => song(i));
+    const client = {
+      call: async () => {
+        calls++;
+        return { searchResult3: { song: page } };
+      },
+    } as unknown as SubsonicClient;
+    const { m } = matcher({ fetch: web({}).f, libraries: async () => [{ scope: 'nd', client }] });
+    await m.sweep();
+    expect(calls).toBe(2);
+    expect(m.counts('nd').tracks).toBe(500);
+  });
+
   it('switched off in Admin, it does not run; an error stops it and is reported', async () => {
     const lib = library([song(1)]);
     const off = matcher({

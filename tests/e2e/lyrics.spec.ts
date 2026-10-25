@@ -83,7 +83,7 @@ test.describe('deterministic frames', () => {
     }
   });
 
-  test('word sweep: earlier words lit, the sweeping word at its time, later words unlit (LYR-07)', async ({
+  test('word sweep: earlier words lit, the sweeping word at its time, later words unlit, one edge across (LYR-07)', async ({
     page,
   }) => {
     const line = timeline('accents-word').lines[1] as LyricLine;
@@ -107,9 +107,13 @@ test.describe('deterministic frames', () => {
       }));
     }, line.text);
     expect(states).toHaveLength(words.length);
+    // One soft edge along the line (§5.1): the words next to the sung one may still, or already,
+    // carry its fade; past them everything is lit before and unlit after.
     states.forEach((s, j) => {
-      if (j < k) expect(s.cls).toContain('lit');
-      if (j > k) expect(s.cls).not.toMatch(/lit|sweep/);
+      if (j < k - 1) expect(s.cls).toContain('lit');
+      if (j === k - 1) expect(s.cls).toMatch(/lit|sweep/);
+      if (j === k + 1) expect(s.cls).not.toMatch(/\blit\b/);
+      if (j > k + 1) expect(s.cls).not.toMatch(/lit|sweep/);
     });
     expect(states[k]?.cls).toContain('sweep');
     if (!states[k]?.cls.includes('ly-emph')) {

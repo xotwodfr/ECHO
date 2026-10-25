@@ -243,7 +243,7 @@
 .ly-scene .ly-lead .ly-w:not(.ly-wash) {
   display: inline-block;
   transform: translateY(0.05em);
-  transition: transform var(--dur-lift) var(--ease-out);
+  transition: transform var(--lift-ms, var(--dur-lift)) var(--ease-out);
 }
 
 .ly-scene .ly-lead .ly-w:not(.ly-wash):is(.sweep, .lit),

@@ -200,16 +200,25 @@ background-image: linear-gradient(90deg,
 | `--lit` | `color-mix(in oklab, var(--text) 82%, var(--art-highlight))` (warm white tinted by the cover) |
 | Edge softness | 0.35em ahead of the edge, 0.60em behind it (prior art: 0.5em AMLL, 0.55em Spicy) |
 
-Words before the sweeping word are fully `--lit` (static gradient, no writes). Words after it are
-fully `--unlit`. Per frame the cost is **one property write on one span**. The previous word is
-written once more to settle at `--p: 100%`.
+Words well before the sweeping word are fully `--lit` (static gradient, no writes); words well
+after it are fully `--unlit`. Per frame the cost is a property write on the one to three spans the
+soft edge covers (see "One edge along the line" below).
 
 **Sweep across syllables:** syllables of one word (`isPartOfWord`) share a visual word. The sweep
 moves through each syllable span with its own timing and no gap, so the light reads as continuous.
 
 **Lift:** unsung words of the lead line sit 0.05em low; a word rises to its baseline when the sweep
-reaches it, over `--dur-lift` (700 ms, `--ease-out`), a CSS transition on the class the sweep
-already sets (no per-frame writes). Scrub and still frames snap; reduced motion has no lift.
+reaches it, over its own length and never under a second (`--lift-ms` on the span, `--ease-out`;
+AMLL and Spicy Lyrics use the same rule), so short words are still rising as the next set off and the
+line drifts up as one. A CSS transition on the class the sweep already sets: no per-frame writes.
+Scrub and still frames snap; reduced motion has no lift.
+
+**One edge along the line (2026-10-25, after Spicy Lyrics' refreshed sweep):** the words are laid
+end to end on one strip and a single soft edge crosses each in that word's time (`lineEdges`,
+model.ts). The fade ahead of the edge spills into the next word and the fade behind it stays on the
+previous one until the edge has moved 0.60em on, so the light flows from word to word instead of
+going out at the end of each box and coming back at the start of the next. The word being sung still
+has `--p` equal to its time through it. The previous word is therefore briefly `sweep`, not `lit`.
 
 **Gaps inside a line:** if the next word starts more than 300 ms after the previous ends, the light
 rests at the end of the previous word (a sustained "hold"), with no pre-lighting of the next word.

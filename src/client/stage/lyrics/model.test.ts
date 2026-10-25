@@ -12,6 +12,7 @@ import {
   type FrameInput,
   type Inst,
   type LineBox,
+  lineEdges,
   opacityAt,
 } from './model.ts';
 import { SPRINGS } from './springs.ts';
@@ -725,3 +726,32 @@ describe('reduced motion (LYRICS_EXPERIENCE.md §10, A11Y-05)', () => {
 });
 
 const R_MS = LYRICS.reduced.crossfadeMs;
+
+describe('the sweep along the line (§5.1, lineEdges)', () => {
+  const w = (start: number, end: number) => ({ text: 'x', start, end, isPartOfWord: false });
+  const words = [w(0, 400), w(400, 800), w(1500, 2000)]; // a 700 ms hold before the third
+  const widths = [100, 50, 100];
+
+  it('one edge crosses the words in their time: behind it past 1, ahead below 0', () => {
+    const [a, b, c] = lineEdges(words, widths, 300);
+    expect(a).toBeCloseTo(0.75); // the edge, 75% through the first word
+    expect(b).toBeCloseTo(-0.5); // 25 px before the second: its fade may already touch it
+    expect(c).toBeLessThan(-1000); // across the hold gap: not lit early
+    const [a2, b2] = lineEdges(words, widths, 500);
+    expect(a2).toBeCloseTo(1.125); // 12.5 px past its end: the trailing fade still on it
+    expect(b2).toBeCloseTo(0.25);
+  });
+
+  it('at a hold the edge rests, and the last word’s fade clears on its own', () => {
+    const at = (t: number) => lineEdges(words, widths, t);
+    expect(at(800)[1]).toBeCloseTo(1);
+    expect(at(800 + 250)[1]).toBeGreaterThanOrEqual(5);
+    expect(at(1000)[2]).toBeLessThan(-1000);
+    expect(at(1750)[2]).toBeCloseTo(0.5);
+    expect(at(2300)[2]).toBeGreaterThanOrEqual(5);
+  });
+
+  it('before the line, every word is unreached', () => {
+    expect(lineEdges(words, widths, -10).every((p) => p < -1000)).toBe(true);
+  });
+});

@@ -18,9 +18,12 @@ type Method = Matcher | 'manual';
 const RANK: Record<Method, number> = { manual: 4, spotify: 3, 'lb-mbid': 2, 'lb-meta': 1 };
 const RETRY_NONE_MS = 30 * 86_400_000;
 const PAGE = 500; // songs per search3 page
+const MAX_PAGES = 400; // 200,000 tracks per Navidrome server
 const LB_BATCH = 100;
 const LB_GAP_MS = 1000;
 const MB_GAP_MS = 1100; // MusicBrainz asks for at most one request a second
+const MB_GIVE_UP = 20; // refusals in a row that end the MusicBrainz pass
+const RETRIES = 4;
 const SPOTIFY_GAP_MS = 250;
 const ON_PLAY_TIMEOUT_MS = 1500; // inside the resolver's 4.5 s
 const SPOTIFY_ID = /^[0-9A-Za-z]{22}$/;
@@ -148,13 +151,29 @@ export function createSpotifyMatcher(deps: MatchDeps) {
 
   // ---- matchers ----
 
+  /**
+   * A request to a rate-limited service: a 429 or 5xx is retried after its Retry-After, else 2, 4,
+   * 8 then 16 s (MusicBrainz answers 503 when it is busy, even to polite clients).
+   */
+  async function polite(url: string, init: RequestInit, timeoutMs: number) {
+    for (let attempt = 0; ; attempt++) {
+      const res = await f(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+      if (!(res.status === 429 || res.status >= 500) || attempt >= RETRIES) return res;
+      const after = Number(res.headers.get('retry-after'));
+      await sleep(after > 0 && after < 120 ? after * 1000 : 2000 * 2 ** attempt);
+    }
+  }
+
   async function lbPost(path: string, body: unknown[]) {
-    const res = await f(`${deps.listenbrainzUrl}${path}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', 'user-agent': deps.userAgent },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(30_000),
-    });
+    const res = await polite(
+      `${deps.listenbrainzUrl}${path}`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'user-agent': deps.userAgent },
+        body: JSON.stringify(body),
+      },
+      30_000,
+    );
     if (!res.ok) throw new Error(`listenbrainz ${res.status}`);
     return (await res.json()) as { spotify_track_ids?: string[] }[];
   }
@@ -203,10 +222,11 @@ export function createSpotifyMatcher(deps: MatchDeps) {
 
   /** The first MusicBrainz recording with this ISRC, or null. */
   async function mbRecording(isrc: string): Promise<string | null> {
-    const res = await f(`${deps.musicbrainzUrl}/ws/2/isrc/${encodeURIComponent(isrc)}?fmt=json`, {
-      headers: { 'user-agent': deps.userAgent, accept: 'application/json' },
-      signal: AbortSignal.timeout(15_000),
-    });
+    const res = await polite(
+      `${deps.musicbrainzUrl}/ws/2/isrc/${encodeURIComponent(isrc)}?fmt=json`,
+      { headers: { 'user-agent': deps.userAgent, accept: 'application/json' } },
+      15_000,
+    );
     if (res.status === 404) return null;
     if (!res.ok) throw new Error(`musicbrainz ${res.status}`);
     const b = (await res.json()) as { recordings?: { id: string }[] };
@@ -276,7 +296,10 @@ export function createSpotifyMatcher(deps: MatchDeps) {
     const token = await deps.spotifyAppToken();
     // Pass 1: every song, the fast matchers.
     status.phase = 'scan';
-    for (let offset = 0; !stop; offset += PAGE) {
+    // A user may connect any allowed server: one that pages forever, or repeats itself, ends the
+    // pass instead of holding the sweep (security review).
+    let firstOfLast = '';
+    for (let offset = 0; !stop && offset < MAX_PAGES * PAGE; offset += PAGE) {
       const r = await client.call('search3', {
         query: '',
         songCount: String(PAGE),
@@ -286,7 +309,8 @@ export function createSpotifyMatcher(deps: MatchDeps) {
       });
       const songs = ((r.searchResult3 as { song?: Record<string, unknown>[] } | undefined)?.song ??
         []) as Record<string, unknown>[];
-      if (!songs.length) break;
+      if (!songs.length || String(songs[0]?.id) === firstOfLast) break;
+      firstOfLast = String(songs[0]?.id);
       const metas = songs.map(metaOf).filter((t) => t.title && t.artist);
       for (const t of metas) saveMeta(scope, t);
       status.scanned += songs.length;
@@ -319,12 +343,24 @@ export function createSpotifyMatcher(deps: MatchDeps) {
          AND (isrc IS NOT NULL OR mbid IS NOT NULL) AND (',' || tried || ',') NOT LIKE '%,lb-mbid,%'`,
       )
       .all(scope) as Row[];
+    // A track MusicBrainz keeps refusing is left for the next run; many in a row end the pass.
+    let failures = 0;
     for (let i = 0; i < left.length && !stop; i += 50) {
       const batch: { row: Row; mbid: string | null }[] = [];
       for (const row of left.slice(i, i + 50)) {
         if (stop) return;
-        const mbid = row.mbid ?? (row.isrc ? await mbRecording(row.isrc) : null);
-        if (!row.mbid) await sleep(MB_GAP_MS);
+        let mbid: string | null = row.mbid;
+        if (!mbid && row.isrc) {
+          try {
+            mbid = await mbRecording(row.isrc);
+            failures = 0;
+          } catch (err) {
+            if (++failures >= MB_GIVE_UP) throw err;
+            await sleep(MB_GAP_MS);
+            continue;
+          }
+          await sleep(MB_GAP_MS);
+        }
         batch.push({ row, mbid });
       }
       const found = batch.filter((b) => b.mbid);
