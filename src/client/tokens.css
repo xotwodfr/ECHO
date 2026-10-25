@@ -32,6 +32,7 @@
   --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
   --gap: 16px; --gutter: 32px; --sidebar: 224px; --dock: 88px;
   --form-w: 420px;   /* sign-in, setup and connection forms (M5) */
+  --prefs-w: 600px;  /* Settings → Preferences under M3: button groups on one line */
 
   /* shape */
   --r-pill: 999px; --r-control: 8px; --r-panel: 16px; --r-art: 4px; --r-art-lg: 8px;
@@ -60,5 +61,113 @@
   --ease-out: cubic-bezier(.16,1,.3,1);
   --ease-in-out: cubic-bezier(.65,0,.35,1);
   --ease-exit: cubic-bezier(.4,0,1,1);
+
+  /* ---------- Material 3 Expressive: the shell (DESIGN_SYSTEM.md §3.1, §4, §6, §9, §11) ----------
+     The Stage, the lyrics and the dock's player controls keep the tokens above (§1). */
+
+  /* colour: dark M3 Expressive scheme (2025 spec), runtime-overwritten from the album's accent
+     (palette/m3.ts); these are the Sodium-seeded fallback */
+  --md-sys-color-primary: #FFD396; --md-sys-color-on-primary: #6A4500;
+  --md-sys-color-primary-container: #F9C373; --md-sys-color-on-primary-container: #5E3D00;
+  --md-sys-color-secondary: #C2C5DD; --md-sys-color-on-secondary: #3B3F52;
+  --md-sys-color-secondary-container: #212537; --md-sys-color-on-secondary-container: #9FA3B9;
+  --md-sys-color-tertiary: #B2C5FF; --md-sys-color-on-tertiary: #163C88;
+  --md-sys-color-tertiary-container: #9EB7FF; --md-sys-color-on-tertiary-container: #03317E;
+  --md-sys-color-error: #FE7453; --md-sys-color-on-error: #450900;
+  --md-sys-color-error-container: #881F05; --md-sys-color-on-error-container: #FF9B82;
+  --md-sys-color-surface: #170C01; --md-sys-color-surface-dim: #170C01; --md-sys-color-surface-bright: #3E2802;
+  --md-sys-color-surface-container-lowest: #000000; --md-sys-color-surface-container-low: #1D1101;
+  --md-sys-color-surface-container: #261701; --md-sys-color-surface-container-high: #2D1C01;
+  --md-sys-color-surface-container-highest: #362202;
+  --md-sys-color-on-surface: #FFE1BA; --md-sys-color-on-surface-variant: #C7A678;
+  --md-sys-color-outline: #8E7147; --md-sys-color-outline-variant: #5C441F;
+  --md-sys-color-inverse-surface: #FFF8F4; --md-sys-color-inverse-on-surface: #63523B;
+  --md-sys-color-inverse-primary: #7F5710; --md-sys-color-scrim: #000000; --md-sys-color-shadow: #000000;
+  --md-sys-color-success: #98D68C; --md-sys-color-on-success: #003A05;
+  --md-sys-color-success-container: #185217; --md-sys-color-on-success-container: #B3F3A6;
+  --md-sys-color-warning: #FCBB4D; --md-sys-color-on-warning: #442C00;
+  --md-sys-color-warning-container: #614000; --md-sys-color-on-warning-container: #FFDDAF;
+
+  /* type: the M3 type scale (weight size/line; the family is --font-ui, added where used, so the
+     player view's override reaches it); emphasized roles one weight step up (Expressive) */
+  --font-ui: "Roboto Flex", system-ui, sans-serif;
+  --md-sys-typescale-display-small: 400 36px/44px;
+  --md-sys-typescale-headline-large: 400 32px/40px;
+  --md-sys-typescale-headline-large-emphasized: 600 32px/40px;
+  --md-sys-typescale-headline-medium: 400 28px/36px;
+  --md-sys-typescale-headline-small: 400 24px/32px;
+  --md-sys-typescale-title-large: 400 22px/28px;
+  --md-sys-typescale-title-large-emphasized: 600 22px/28px;
+  --md-sys-typescale-title-medium: 500 16px/24px;
+  --md-sys-typescale-title-small: 500 14px/20px;
+  --md-sys-typescale-body-large: 400 16px/24px;
+  --md-sys-typescale-body-medium: 400 14px/20px;
+  --md-sys-typescale-body-small: 400 12px/16px;
+  --md-sys-typescale-label-large: 500 14px/20px;
+  --md-sys-typescale-label-large-emphasized: 700 14px/20px;
+  --md-sys-typescale-label-medium: 500 12px/16px;
+  --md-sys-typescale-label-small: 500 11px/16px;
+  --md-sys-tracking-title-medium: 0.15px; --md-sys-tracking-small: 0.1px;
+  --md-sys-tracking-body-large: 0.5px; --md-sys-tracking-body-medium: 0.25px;
+  --md-sys-tracking-body-small: 0.4px; --md-sys-tracking-label: 0.5px;
+
+  /* shape: the Expressive corner scale */
+  --md-sys-shape-corner-extra-small: 4px; --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px; --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-large-increased: 20px; --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-large-increased: 32px; --md-sys-shape-corner-full: 999px;
+
+  /* elevation (dark: surfaces carry it as tone; shadows on floating surfaces only) */
+  --md-sys-elevation-level1: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  --md-sys-elevation-level2: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
+  --md-sys-elevation-level3: 0 1px 3px rgba(0,0,0,.3), 0 4px 8px 3px rgba(0,0,0,.15);
+
+  /* state layers */
+  --md-sys-state-hover: 0.08; --md-sys-state-focus: 0.1; --md-sys-state-pressed: 0.1;
+  --md-sys-state-dragged: 0.16;
+  --md-sys-disabled-content: 38%; --md-sys-disabled-container: 12%;
+  --md-focus-ring: 3px; --md-focus-offset: 2px;
+
+  /* motion: Expressive springs as linear() easings, spatial (position, size, shape) and effects
+     (colour, opacity); generated from M3's stiffness and damping, see §11.1 */
+  --md-sys-motion-spring-fast-spatial: linear(0, 0.042, 0.147, 0.287, 0.44, 0.59, 0.726, 0.842, 0.934, 1.003, 1.05, 1.079, 1.092, 1.094, 1.088, 1.077, 1.063, 1.049, 1.035, 1.022, 1.012, 1.004, 0.998, 0.994, 0.992, 0.991, 0.991, 0.992, 0.993, 0.994, 0.996, 0.997, 1);
+  --md-sys-motion-spring-fast-spatial-duration: 350ms;
+  --md-sys-motion-spring-default-spatial: linear(0, 0.029, 0.099, 0.195, 0.301, 0.409, 0.512, 0.607, 0.69, 0.763, 0.823, 0.873, 0.913, 0.944, 0.968, 0.985, 0.997, 1.006, 1.011, 1.014, 1.015, 1.015, 1.014, 1.013, 1.011, 1.01, 1.008, 1.007, 1.005, 1.004, 1.003, 1.002, 1);
+  --md-sys-motion-spring-default-spatial-duration: 420ms;
+  --md-sys-motion-spring-fast-effects: linear(0, 0.051, 0.162, 0.293, 0.421, 0.537, 0.635, 0.716, 0.782, 0.833, 0.874, 0.905, 0.929, 0.947, 0.961, 0.971, 0.979, 0.984, 0.988, 0.992, 0.994, 0.996, 0.997, 0.998, 1);
+  --md-sys-motion-spring-fast-effects-duration: 140ms;
+  --md-sys-motion-spring-default-effects: linear(0, 0.053, 0.167, 0.301, 0.431, 0.547, 0.645, 0.726, 0.791, 0.841, 0.881, 0.911, 0.934, 0.951, 0.964, 0.973, 0.981, 0.986, 0.99, 0.992, 0.995, 0.996, 0.997, 0.998, 1);
+  --md-sys-motion-spring-default-effects-duration: 220ms;
+
+  /* component sizes (M3 specs) */
+  --md-button-h: 40px; --md-button-pad: 16px; --md-icon-button: 40px;
+  --md-field-h: 56px; --md-search-h: 56px; --md-list-1: 56px; --md-list-2: 72px;
+  --md-nav-item-h: 56px; --md-nav-indicator-h: 32px; --md-menu-item-h: 48px;
+  --md-switch-w: 52px; --md-switch-h: 32px; --md-switch-handle-off: 16px;
+  --md-switch-handle-on: 24px; --md-switch-handle-pressed: 28px; --md-switch-outline: 2px;
+  --md-chip-h: 32px; --md-snackbar-h: 48px; --md-tab-h: 48px; --md-tab-indicator: 3px;
+  --md-dialog-pad: 24px; --md-outline: 1px; --md-field-focus: 2px; --md-button-group-gap: 2px;
+}
+
+/* The player view (the Stage on Listen, and the dock's player controls) keeps Reverb Chamber
+   (§1): the M3 roles the shared components read map back to its neutral tokens there. */
+.shell[data-view="listen"] .canvas,
+:is(.dock-meta, .dock-transport, .dock-scrub, .dock-right) {
+  --md-sys-color-primary: var(--text); --md-sys-color-on-primary: var(--ground);
+  --md-sys-color-secondary: var(--focus);
+  --md-sys-color-secondary-container: var(--surface-3);
+  --md-sys-color-on-secondary-container: var(--text);
+  --md-sys-color-surface: var(--ground);
+  --md-sys-color-surface-container-low: var(--surface-1);
+  --md-sys-color-surface-container: var(--surface-2);
+  --md-sys-color-surface-container-high: var(--surface-2);
+  --md-sys-color-surface-container-highest: var(--surface-3);
+  --md-sys-color-on-surface: var(--text); --md-sys-color-on-surface-variant: var(--muted);
+  --md-sys-color-outline: var(--control); --md-sys-color-outline-variant: var(--line);
+  --md-sys-color-error: var(--negative);
+  --font-ui: var(--font);
+  --md-focus-ring: var(--focus-ring);
+  font-family: var(--font);
+  letter-spacing: normal;
 }
 .num { font-variant-numeric: tabular-nums; }

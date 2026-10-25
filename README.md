@@ -8,7 +8,7 @@ lyric field in an audio-reactive room lit by the album cover.
 until Cloudflare's minimum TLS version is raised to 1.2), the first sign-in checks and on-box backup
 drill, and the owner-side checks on the reference laptop and gaming PC (tier tuning, 8 h soak, Orca,
 five-second test). Each milestone's record is in [`docs/reviews/`](docs/reviews/); the design and
-plan live in [`docs/`](docs/README.md), which is the source of truth. Typeface: **Mona Sans**.
+plan live in [`docs/`](docs/README.md), which is the source of truth. Typefaces: **Mona Sans** (Stage, lyrics, player) and **Roboto Flex** (the Shell, which is Material 3 Expressive with colour from the playing album).
 
 Licence: [AGPL-3.0](LICENSE). Fonts: SIL OFL 1.1 (`src/client/fonts/OFL-*.txt`).
 

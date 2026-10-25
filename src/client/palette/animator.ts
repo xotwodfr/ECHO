@@ -44,9 +44,14 @@ function cssOf([L, a, b, alpha]: Lab) {
   return alpha < 1 ? `oklch(${lch} / ${alpha.toFixed(3)})` : `oklch(${lch})`;
 }
 
-export function createPaletteAnimator(initial: Roles) {
-  const parse = (r: Roles) =>
-    Object.fromEntries(ROLES.map((k) => [k, labOf(r[k])])) as Record<Role, Lab>;
+/**
+ * Animates any set of colour roles: the artwork roles above, and the shell's M3 scheme derived from
+ * them (m3.ts). Every role the initial set names is interpolated.
+ */
+export function createPaletteAnimator<K extends string = Role>(initial: Record<K, string>) {
+  const keys = Object.keys(initial) as K[];
+  const parse = (r: Record<K, string>) =>
+    Object.fromEntries(keys.map((k) => [k, labOf(r[k])])) as Record<K, Lab>;
   let now = parse(initial);
   let from = now;
   let to = now;
@@ -54,7 +59,7 @@ export function createPaletteAnimator(initial: Roles) {
 
   return {
     /** Starts a transition to `target` from whatever is on screen now. */
-    retarget(target: Roles) {
+    retarget(target: Record<K, string>) {
       from = now;
       to = parse(target);
       t = 0;
@@ -66,12 +71,12 @@ export function createPaletteAnimator(initial: Roles) {
       if (t > 1 - 1e-9) t = 1; // 72 frames of 1000/60 ms sum to just under 1200
       const k = easeInOut(t);
       now = Object.fromEntries(
-        ROLES.map((r) => [r, from[r].map((v, i) => v + ((to[r][i] as number) - v) * k)]),
-      ) as Record<Role, Lab>;
+        keys.map((r) => [r, from[r].map((v, i) => v + ((to[r][i] as number) - v) * k)]),
+      ) as Record<K, Lab>;
       return true;
     },
     /** Jumps to `target` with no transition (deterministic frames). */
-    set(target: Roles) {
+    set(target: Record<K, string>) {
       now = from = to = parse(target);
       t = 1;
     },
@@ -79,14 +84,14 @@ export function createPaletteAnimator(initial: Roles) {
       return t < 1;
     },
     /** The roles on screen, as CSS colours. */
-    css(): Roles {
-      return Object.fromEntries(ROLES.map((r) => [r, cssOf(now[r])])) as Roles;
+    css(): Record<K, string> {
+      return Object.fromEntries(keys.map((r) => [r, cssOf(now[r])])) as Record<K, string>;
     },
     /** The roles on screen in OKLab (tests: ΔE between frames). */
-    lab(): Record<Role, Lab> {
+    lab(): Record<K, Lab> {
       return now;
     },
   };
 }
 
-export type PaletteAnimator = ReturnType<typeof createPaletteAnimator>;
+export type PaletteAnimator<K extends string = Role> = ReturnType<typeof createPaletteAnimator<K>>;

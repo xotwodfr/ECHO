@@ -49,7 +49,7 @@ hand.
 | Audio-reactive visuals | Navidrome only (Web Audio in the client on same-origin streams). Spotify has no PCM access, so its visuals are Ambient. Default intensity **Expressive** | VISUALIZER_SPEC §2, §7.4 |
 | Spotify | One admin-owned Spotify app (Development Mode: ≤ 5 Spotify users). Per-user PKCE. Web Playback SDK. Strict artwork and attribution rules. Gates G1 (cover colours) and G2 (synced lyrics) **on** by owner decision, with admin kill switches | PLAYBACK_ARCHITECTURE §4 |
 | Lyrics | Best sync level wins: user's own files (Navidrome) > Spicy Lyrics (owner's key, server-side, Spotify ID; Navidrome tracks matched in the background) > NetEase > LRCLIB. Shared server cache | LYRICS_INTEGRATION §4 |
-| Typeface | **Mona Sans** (Latin only), chosen from the M1 specimen. Geologica kept in the specimen for comparison, not shipped | DESIGN_SYSTEM §4, reviews/M1-type.md |
+| Typeface | **Mona Sans** (Latin only) for the Stage and player, chosen from the M1 specimen; **Roboto Flex** for the Shell under Material 3 (2026-10-25). Geologica kept in the specimen for comparison, not shipped | DESIGN_SYSTEM §0, §4, reviews/M1-type.md |
 | Palette | Extracted on the server (sharp + material quantiser), roles constrained in OKLCH, interpolated in OKLab, contrast solved against the brightest room pixels | VISUALIZER_SPEC §6, DESIGN_SYSTEM §3 |
 | Licence | AGPL-3.0 | TECHNICAL_ARCHITECTURE §9 |
 

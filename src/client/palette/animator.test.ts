@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { createPaletteAnimator, DUR_PALETTE_MS, ROLES, type Roles } from './animator.ts';
+import {
+  createPaletteAnimator,
+  DUR_PALETTE_MS,
+  type PaletteAnimator,
+  ROLES,
+  type Roles,
+} from './animator.ts';
 
 // VIS-04: OKLab interpolation over 1200 ms, no frame-to-frame ΔE_ok jump > 0.02, continuous retarget.
 
@@ -36,7 +42,7 @@ const dE = (a: number[], b: number[]) =>
     (a[2] as number) - (b[2] as number),
   );
 
-function maxStep(run: (step: () => void) => void, anim: ReturnType<typeof createPaletteAnimator>) {
+function maxStep(run: (step: () => void) => void, anim: PaletteAnimator) {
   let worst = 0;
   let prev = anim.lab();
   run(() => {

@@ -140,7 +140,7 @@ Playwright 384 in Chromium, Firefox and the isolated project). Evidence per crit
 | ID | Criterion | Method | MS |
 |---|---|---|---|
 | DS-01 | No raw colour, size, duration or easing values in component code. Everything references tokens (`grep` script for hex/px/ms literals outside `tokens.css` and `lyricsConfig.ts`, with an allow-list) | I | M2, M9 |
-| DS-02 | Shell screens: no gradients, glows, backdrop blur, shadows at rest, monospace, tracked capitals, emoji or icon-in-tinted-square. Coloured pixels ≤ 3% excluding artwork | I + script on screenshots | M2, M9 |
+| DS-02 | Shell screens: no gradients, glows, backdrop blur, monospace, transformed capitals, emoji or icon-in-tinted-square; letter-spacing only from the M3 tracking tokens, shadows only from the M3 elevation tokens on floating surfaces. *(2026-10-25: the ≤ 3% coloured-pixel budget is retired with Material 3, whose surfaces take the album's tone by design; DESIGN_SYSTEM.md §3.2)* | I + script on the stylesheets | M2, M9 |
 | DS-03 | Mona Sans (the M1 typeface decision) actually renders, verified via `document.fonts` and computed style. `tnum` changes digit widths (or the `system-ui` numeral fallback of `DESIGN_SYSTEM.md` §4.1 is applied). *Wording aligned with the decision in M1: it previously named the pending candidate and Noto fallbacks, which §4.1 excludes* | E | M1 |
 | DS-04 | Squint test: a 16 px Gaussian-blurred 1440×900 Listen screenshot shows exactly three dominant masses (active line, dock, room) | V + M review | M2, M9 |
 | DS-05 | Five-second test: 3 of 3 people (or 3 independent model reviews of the screenshot) can say "a music player showing the song's lyrics" | M | M9 |

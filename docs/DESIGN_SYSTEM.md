@@ -1,6 +1,6 @@
 # ECHO — Design System
 
-Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
+Status: **Draft 3** · 2026-10-25: Shell moved to Material 3 Expressive (§0) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design research](DESIGN_RESEARCH.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
 This is the visual language of the whole application: tokens, component rules and the reason each
@@ -10,9 +10,91 @@ effect exists. Implementation must take every colour, size, duration and easing 
 Direction name: **Reverb Chamber**. The screen is a dark acoustic room, and sound shows up in it as
 light that arrives, reflects and decays. (Chosen in `DESIGN_RESEARCH.md` §4.)
 
+**2026-10-25: the Shell is Material 3 Expressive** (owner decision: "make the design system (not the
+lyrics or player view) material 3"). §0 is normative for the Shell and supersedes the Shell parts of
+§1–§11 where they disagree; those places say so. Reverb Chamber stays the rule for the **player
+view**: the Stage (Listen, its chrome, lyrics, Cover and Visual modes) and the dock's player controls.
+
+---
+
+## 0. Material 3 Expressive in the Shell
+
+Decisions (owner, 2026-10-25): colour from the album art (dynamic), dark theme only, **Roboto Flex**,
+the **Expressive** flavour (2025 spec).
+
+**Colour.** `palette/m3.ts` builds the dark `SchemeExpressive` scheme (material-color-utilities,
+spec 2025) from the playing album's `--art-accent` as the seed, Sodium `#E3B26B` when nothing plays,
+and publishes every role as `--md-sys-color-*` (primary, secondary, tertiary, error and their
+containers and on-colours; surface, surface-dim/bright, the five surface containers, on-surface,
+on-surface-variant, outline, outline-variant, inverse roles, scrim, shadow). Success and warning are
+M3 custom colours (`#7FD6A0`, `#E5A93B` harmonised to the seed; tones 80/20/30/90). The roles animate
+with the artwork palette (1200 ms, OKLab, `animator.ts`), so a track change re-tints the whole Shell.
+`tokens.css` holds the Sodium scheme as the fallback. Every M3 contrast pair is tested for several
+seeds (`m3.test.ts`: on-surface on surface ≥ 7:1, on-X on X ≥ 4.5:1, outline on surface ≥ 3:1).
+
+**Type.** Roboto Flex (variable: `opsz` 8–144, `wdth` 25–151, `wght` 100–1000; SIL OFL 1.1,
+`fonts/OFL-RobotoFlex.txt`; self-hosted Latin + Latin-Ext). The M3 type scale as
+`--md-sys-typescale-<role>` (weight size/line, the family added from `--font-ui` where used) with
+the M3 tracking as `--md-sys-tracking-*`; Expressive emphasized roles are one weight step up.
+Screen h1: headline-medium; h2: title-large; album title: headline-large emphasized; body:
+body-medium; meta: body-small; buttons, tabs, menus: label-large or title-small.
+
+**Shape.** The Expressive corner scale `--md-sys-shape-corner-*`: 4 / 8 / 12 / 16 / 20 / 28 / 32 /
+full. Buttons and icon buttons are round and **square off on press** (full → 8px) on the fast
+spatial spring; the album FAB rounds on press.
+
+**Elevation.** Tonal: surface containers carry it. Shadows (`--md-sys-elevation-level1…3`) only on
+floating surfaces: the album FAB (1), side sheet (1), menu (2), slider bubble (2), dialog (3),
+snackbar (3).
+
+**States.** M3 state layers as the content colour mixed over the container: hover 8%, focus 10%,
+pressed 10%, dragged 16%. Disabled: content 38%, container 12% of on-surface; the label of a disabled
+switch row stays on-surface-variant (it says what is unavailable). Focus: 3px `secondary` outline,
+2px offset.
+
+**Motion.** Expressive springs as CSS `linear()` easings generated from M3's stiffness and damping
+(spatial: fast 800/0.6, default 380/0.8; effects: fast 3800/1, default 1600/1), each with its
+settle time as a duration token. Spatial springs move shape, size and position (they overshoot a
+little); effects springs move colour and opacity. Reduced motion keeps colour and opacity only.
+
+**Components** (ui.css, main.css):
+
+| ECHO component | M3 component | Notes |
+|---|---|---|
+| Sidebar | Navigation drawer (standard), surface-container-low | 56px items; the current one on a secondary-container pill. Below 720px: navigation bar, surface-container (text labels; ECHO's nav has no icons) |
+| Search field | Search bar | 56px, full corner, surface-container-high |
+| Library / Settings tabs | Secondary tabs | 48px, 3px primary indicator, outline-variant divider |
+| Primary / secondary / tertiary / destructive button | Filled / outlined / text / outlined in error | 40px (small) |
+| Icon button | Standard icon button | 40px, state-layer circle |
+| Choice rows (Settings, album order) | Connected button group | 2px gaps, the chosen one fills (primary) and rounds fully |
+| Toggle | Switch | 52×32, handle 16 → 24 (28 pressed) |
+| Field | Outlined text field | 56px, 4px corner, 2px primary outline on focus. **Deviation:** the label stays above the field instead of floating in the outline (no markup change; it is always visible and never overlaps a value) |
+| Status pill | Tonal label | success / warning / error containers, surface-container-highest for neutral |
+| Track rows | List items | 56px, 72px with art; rounded state layer; selected = secondary-container; now playing = primary |
+| Album tile | Card without fill | hover state layer on a 20px-corner surround; cover 12px corner; play = small FAB in primary-container |
+| Menu | Menu (Expressive) | surface-container, 16px corner, 48px items |
+| Queue / help sheet | Modal side sheet | surface-container-low, 16px leading corners |
+| Dialog | Basic dialog | surface-container-high, 28px corner, 24px padding, scrim 32% |
+| Toast | Snackbar | inverse-surface, 4px corner, 48px |
+
+**The player view.** `tokens.css` ends with one block that maps the M3 roles the shared components
+read back to Reverb Chamber's neutral tokens inside `.shell[data-view="listen"] .canvas` and the
+dock's four player areas (meta, transport, scrubber, right), and sets Mona Sans there; `ui.css` keeps
+Reverb Chamber's geometry for buttons and icon buttons there. The Listen and Cover screenshots are
+pixel-identical to before the change. The dock bar's own background on Shell screens is
+surface-container, so the bar sits in the Shell's colour; its controls keep their look. The queue
+and help sheets are Shell (M3).
+
+**Retired with M3:** the ≤ 3% coloured-pixel budget (§3.2; M3 surfaces take the album's tone by
+design), "primary buttons are inverted", "no shadow at rest except `--shadow-float`" and "tracking 0"
+in the Shell. Still banned in the Shell: gradients, glows, glass and backdrop blur, monospace,
+transformed capitals (DS-02, `design-rules.test.ts`).
+
 ---
 
 ## 1. Two zones, two rule sets
+
+*(Shell column: superseded by §0 where it disagrees; the Stage column is unchanged.)*
 
 ECHO has two visual zones with different rules. Most generic music apps fail by blurring the
 boundary: glass and glow leak into the browsing tools, or dashboard chrome leaks onto the stage.
@@ -53,6 +135,9 @@ well-applied kit". ECHO replaces each default with a choice that comes from its 
 
 ### 3.1 Neutral shell tokens
 
+*(2026-10-25: these are now the **player view's** tokens; the Shell takes its colour from the M3
+scheme, §0.)*
+
 All values were checked in sRGB with the WCAG 2.x formula (script in `DESIGN_RESEARCH.md` §6.2).
 
 | Token | Hex | OKLCH (approx.) | Use | Contrast notes |
@@ -81,6 +166,8 @@ navy/slate darks (taste-skill colour.md §9, app-screens §13). Artwork can of c
 dynamic palette is the album's colour, not a shell colour.
 
 ### 3.2 Colour budget
+
+*(2026-10-25: retired for the Shell with Material 3, §0. The Stage rules below still hold.)*
 
 - Shell screens: coloured pixels (anything not on the neutral ramp) **≤ 3%**, excluding cover art.
   The accent touches only the now-playing indicator and the progress fill.
@@ -140,8 +227,8 @@ enough. Rules:
 ### 4.1 Families
 
 **ECHO's typeface is Mona Sans** (owner decision 2026-10-23, from the M1 Stage specimen; record and
-measurements in `docs/reviews/M1-type.md`). One family for **both** Stage and Shell. The owner needs
-Latin script only.
+measurements in `docs/reviews/M1-type.md`). The owner needs Latin script only. *(2026-10-25: Mona
+Sans is the Stage's and the player view's face; the Shell uses Roboto Flex under Material 3, §0.)*
 
 | | **Mona Sans** |
 |---|---|
@@ -184,6 +271,9 @@ Fonts are **self-hosted** (woff2, Latin + Latin-Ext subsets) and served by the E
 third-party font CDN.
 
 ### 4.2 Shell type scale (taste-skill sheet sizes, kept)
+
+*(2026-10-25: the Shell uses the M3 type scale in Roboto Flex, §0. These sizes remain for the dock's
+player controls and the Stage's chrome.)*
 
 | Token | Size / line height | Weight | Use |
 |---|---|---|---|
@@ -241,6 +331,8 @@ User setting **Lyric size**: 85% / 100% / 115% / 130%, a multiplier on `--ly-act
 ---
 
 ## 6. Surfaces, elevation, blur
+
+*(Shell: superseded by §0's tonal elevation, M3 shadows and corner scale. Blur rules unchanged.)*
 
 - **Elevation is lightness, never shadow, at rest** (sheet's move): ground → surface-1 → surface-2 →
   surface-3. A surface that floats (menu, popover, tooltip, dialog, toast) additionally gets
@@ -300,6 +392,9 @@ Every effect has a purpose. Anything not on this list does not ship.
 ---
 
 ## 9. Components
+
+*(Shell: the M3 components of §0 replace §9.1, §9.3–§9.7. §9.2 Transport is the player's and
+unchanged.)*
 
 Each component lists its states. All interactive components have **default, hover, pressed,
 focus-visible, disabled**, and loading where relevant. Focus is always a 2px `--focus` outline at a
@@ -398,6 +493,8 @@ taste-skill app-screens §11, applied:
 ---
 
 ## 11. Motion system
+
+*(Shell feedback motion uses the M3 Expressive springs of §0; the Stage's two clocks are unchanged.)*
 
 ECHO runs **two clocks** that never mix (research principle 9):
 

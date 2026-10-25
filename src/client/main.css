@@ -1,27 +1,23 @@
 /* Shell frame (DESIGN_SYSTEM.md §5). Every value comes from tokens.css; the one exception is the
    breakpoint, because media queries cannot read custom properties (DS-01 allow-list). */
 
+/* The shell is Material 3 Expressive (DESIGN_SYSTEM.md §1): Roboto Flex on the M3 surface. */
 body {
   margin: 0;
-  background: var(--ground);
-  color: var(--text);
-  font-family: var(--font);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-medium);
 }
 
 h1 {
-  font-size: var(--fs-title);
-  line-height: var(--lh-title);
-  font-weight: 600;
-  margin: 0 0 var(--sp-4);
+  font: var(--md-sys-typescale-headline-medium) var(--font-ui);
+  margin: 0 0 var(--sp-5);
 }
 
 h2 {
-  font-size: var(--fs-section);
-  line-height: var(--lh-section);
-  font-weight: 500;
-  margin: var(--sp-5) 0 var(--sp-2);
+  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  margin: var(--sp-6) 0 var(--sp-3);
 }
 
 h1:focus {
@@ -35,7 +31,14 @@ button {
   font: inherit;
 }
 
+/* M3 focus indicator: 3px in secondary, 2px out (the player view: Reverb Chamber's 2px ring). */
 :focus-visible {
+  outline: var(--md-focus-ring) solid var(--md-sys-color-secondary);
+  outline-offset: var(--md-focus-offset);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
+  :focus-visible {
   outline: var(--focus-ring) solid var(--focus);
   outline-offset: var(--focus-ring);
 }
@@ -49,7 +52,7 @@ button {
   white-space: nowrap;
 }
 
-/* Frame: sidebar | canvas over a full-width dock. No top bar (§5, recorded redraw). */
+/* Frame: navigation drawer | canvas over a full-width dock. No top bar (§5, recorded redraw). */
 .shell {
   display: grid;
   grid-template-columns: var(--sidebar) minmax(0, 1fr);
@@ -57,25 +60,28 @@ button {
   height: 100dvh;
 }
 
+/* M3 standard navigation drawer: items 56px, the active one on a secondary-container pill. */
 .sidebar {
   grid-area: 1 / 1;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-5);
-  padding: var(--sp-5) var(--sp-4);
-  border-right: var(--rule) solid var(--line);
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--sp-3);
+  background: var(--md-sys-color-surface-container-low);
+  border-radius: 0 var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0;
 }
 
 .wordmark {
   margin: 0;
-  padding: 0 var(--sp-3);
-  font-size: var(--fs-section);
-  font-weight: 600;
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--md-sys-color-primary);
+  font: var(--md-sys-typescale-title-large-emphasized) var(--font-ui);
 }
 
 .sidebar ul {
   display: flex;
   flex-direction: column;
+  gap: var(--sp-1);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -84,34 +90,40 @@ button {
 .sidebar li {
   display: flex;
   align-items: center;
-  min-height: var(--nav-pitch);
+  min-height: var(--md-nav-item-h);
 }
 
-.sidebar a,
-.tabs a {
+.sidebar a {
   display: flex;
   align-items: center;
   flex: 1;
-  height: var(--search-h);
-  padding: 0 var(--sp-3);
-  border-radius: var(--r-control);
-  color: var(--muted);
+  height: var(--md-nav-item-h);
+  padding: 0 var(--sp-4);
+  border-radius: var(--md-sys-shape-corner-full);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
   text-decoration: none;
-  transition: color var(--dur-hover) ease;
+  transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects);
 }
 
-.sidebar a:hover,
-.tabs a:hover {
-  color: var(--text);
+.sidebar a:hover {
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
+  color: var(--md-sys-color-on-surface);
 }
 
-.sidebar a[aria-current="page"],
-.tabs a[aria-current="page"] {
-  color: var(--text);
-  background: var(--surface-3);
+.sidebar a[aria-current="page"] {
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
+  font: var(--md-sys-typescale-label-large-emphasized) var(--font-ui);
 }
 
-/* Search lives in the sidebar as a 32px field with a `/` hint. */
+/* M3 search bar in the drawer: 56px, full corner, a `/` hint at its end. */
 .search-field {
   position: relative;
   display: flex;
@@ -122,27 +134,37 @@ button {
 .search-field input {
   flex: 1;
   min-width: 0;
-  height: var(--search-h);
+  height: var(--md-search-h);
   box-sizing: border-box;
-  padding: 0 var(--sp-6) 0 var(--sp-3);
-  border: var(--rule) solid var(--control);
-  border-radius: var(--r-pill);
-  background: var(--surface-2);
+  padding: 0 var(--sp-7) 0 var(--sp-5);
+  border: 0;
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-high);
+  color: var(--md-sys-color-on-surface);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-large);
+  transition: background-color var(--dur-hover) ease;
+}
+
+.search-field input:hover {
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+    var(--md-sys-color-surface-container-high)
+  );
 }
 
 .search-field input::placeholder {
-  color: var(--faint);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .search-field .hint {
   position: absolute;
-  right: var(--sp-3);
+  right: var(--sp-5);
   top: 50%;
   translate: 0 -50%;
-  color: var(--faint);
-  font: inherit;
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
 }
 
 .shell .search-compact {
@@ -155,15 +177,96 @@ button {
   padding: var(--gutter);
 }
 
+/* M3 secondary tabs: 48px, a 3px primary indicator under the current one, a divider below. */
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-1);
   margin-bottom: var(--sp-5);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .tabs a {
-  flex: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--md-tab-h);
+  padding: 0 var(--sp-4);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
+  text-decoration: none;
+  transition: background-color var(--dur-hover) ease;
+}
+
+.tabs a:hover {
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
+  color: var(--md-sys-color-on-surface);
+}
+
+.tabs a[aria-current="page"] {
+  color: var(--md-sys-color-on-surface);
+}
+
+.tabs a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: var(--sp-2);
+  bottom: 0;
+  left: var(--sp-2);
+  height: var(--md-tab-indicator);
+  border-radius: var(--md-tab-indicator) var(--md-tab-indicator) 0 0;
+  background: var(--md-sys-color-primary);
+}
+
+/* Choices outside the player (Settings, album order): an M3 Expressive connected button group;
+   the chosen one rounds fully and fills. The Stage's own switch is in stage.css. */
+.shell:not([data-view="listen"]) .canvas .view-switch {
+  flex-wrap: wrap;
+  gap: var(--md-button-group-gap);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button {
+  height: var(--md-button-h);
+  padding: 0 var(--md-button-pad);
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
+  transition:
+    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
+    var(--md-sys-motion-spring-fast-spatial),
+    background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button:first-of-type {
+  border-radius: var(--md-sys-shape-corner-full) var(--md-sys-shape-corner-small)
+    var(--md-sys-shape-corner-small) var(--md-sys-shape-corner-full);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button:last-of-type {
+  border-radius: var(--md-sys-shape-corner-small) var(--md-sys-shape-corner-full)
+    var(--md-sys-shape-corner-full) var(--md-sys-shape-corner-small);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button:hover {
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover) * 100%),
+    var(--md-sys-color-surface-container-highest)
+  );
+  color: var(--md-sys-color-on-surface);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-primary);
+  color: var(--md-sys-color-on-primary);
 }
 
 .notice {
@@ -172,11 +275,11 @@ button {
   align-items: center;
   gap: var(--sp-3);
   margin: 0 0 var(--sp-4);
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .empty {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   margin: 0 0 var(--sp-4);
 }
 
@@ -191,13 +294,14 @@ button {
 
 .block-error p {
   margin: 0;
-  color: var(--text);
+  color: var(--md-sys-color-on-surface);
 }
 
 .freshness {
   margin: 0 0 var(--sp-4);
-  color: var(--warning);
-  font-size: var(--fs-small);
+  color: var(--md-sys-color-warning);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 /* See AlbumGrid in ui/media.tsx for the column arithmetic. */
@@ -223,8 +327,8 @@ button {
   align-items: center;
   column-gap: var(--sp-5);
   padding: 0 var(--gutter);
-  background: var(--surface-1);
-  border-top: var(--rule) solid var(--line);
+  background: var(--md-sys-color-surface-container);
+  border-top: var(--rule) solid transparent; /* no divider under M3; the row keeps its 1px */
 }
 
 .dock-meta {
@@ -324,7 +428,6 @@ button {
 
 .shell[data-view="listen"] .dock {
   background: transparent;
-  border-top-color: transparent;
 }
 
 .stage-chrome {
@@ -381,8 +484,7 @@ button {
 
 .detail-meta h1 {
   margin: 0 0 var(--sp-1);
-  font-size: var(--fs-figure);
-  line-height: var(--lh-figure);
+  font: var(--md-sys-typescale-headline-large-emphasized) var(--font-ui);
   overflow-wrap: break-word;
 }
 
@@ -392,13 +494,13 @@ button {
 }
 
 .detail-artist {
-  font-size: var(--fs-section);
-  line-height: var(--lh-section);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-title-medium);
 }
 
 .detail-facts {
   margin-top: var(--sp-1);
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .detail-actions {
@@ -419,13 +521,13 @@ button {
   display: flex;
   justify-content: space-between;
   gap: var(--sp-3);
-  height: var(--row-h);
+  height: var(--md-list-1);
   align-items: center;
-  border-bottom: var(--rule) solid var(--line);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .artist-count {
-  color: var(--faint);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .results + .results {
@@ -440,7 +542,7 @@ button {
 .ui-section > h2 {
   margin: 0 0 var(--sp-5);
   padding-bottom: var(--sp-2);
-  border-bottom: var(--rule) solid var(--line);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .ui-row,
@@ -482,9 +584,9 @@ button {
 }
 
 .ui-cell figcaption {
-  color: var(--faint);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .ui-cell-body > .field {
@@ -496,8 +598,8 @@ button {
   width: calc(var(--signin-w) + 2 * var(--sp-5));
   max-width: 100%;
   padding: var(--sp-5);
-  border: var(--rule) solid var(--line);
-  border-radius: var(--r-panel);
+  border: var(--rule) solid var(--md-sys-color-outline-variant);
+  border-radius: var(--md-sys-shape-corner-large);
 }
 
 .ui-cell-body > .track-list,
@@ -517,7 +619,8 @@ button {
   margin-bottom: var(--sp-6);
 }
 
-/* compact < 720px: the sidebar becomes a bottom bar of 4 destinations. Breakpoint: see the top. */
+/* compact < 720px: the drawer becomes an M3 navigation bar of 4 destinations. Breakpoint: see the
+   top. */
 @media (max-width: 719.98px) {
   /* Two columns of covers on a phone, not one cover per screen (M9 critique). */
   .album-grid {
@@ -535,9 +638,9 @@ button {
 
   .sidebar {
     grid-area: 3 / 1;
-    padding: var(--sp-2);
-    border-right: 0;
-    border-top: var(--rule) solid var(--line);
+    padding: var(--sp-3) var(--sp-2);
+    border-radius: 0;
+    background: var(--md-sys-color-surface-container);
   }
 
   .shell .wordmark,
@@ -556,12 +659,13 @@ button {
 
   .sidebar li {
     flex: 1;
-    min-height: var(--row-h);
+    min-height: var(--md-nav-item-h);
   }
 
   .sidebar a {
     justify-content: center;
-    height: var(--row-h);
+    padding: 0 var(--sp-2);
+    height: var(--md-nav-item-h);
   }
 
   .canvas > .search-field {
@@ -602,7 +706,7 @@ button {
   min-height: 100vh;
   place-items: center;
   padding: var(--gutter);
-  background: var(--ground);
+  background: var(--md-sys-color-surface);
 }
 
 .auth {
@@ -645,7 +749,7 @@ button {
 .prefs {
   display: grid;
   gap: var(--sp-6);
-  max-width: var(--form-w);
+  max-width: var(--prefs-w); /* wide enough for a connected button group on one line */
 }
 
 .pref-group {
@@ -655,7 +759,7 @@ button {
 
 .pref-group h3 {
   margin: 0;
-  font-size: var(--fs-section);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
 }
 
 .pref-choice {
@@ -668,7 +772,7 @@ button {
 
 .pref-label {
   padding: 0;
-  color: var(--text);
+  color: var(--md-sys-color-on-surface);
 }
 
 .pref-slider {
@@ -683,10 +787,6 @@ button {
 /* The offset slider spans the column (the volume variant's width is the dock's). */
 .pref-slider .slider--volume {
   width: 100%;
-}
-
-.pref-choice .view-switch {
-  flex-wrap: wrap;
 }
 
 .keymap {
@@ -708,7 +808,7 @@ button {
 
 .keymap kbd {
   font: inherit;
-  color: var(--text);
+  color: var(--md-sys-color-on-surface);
 }
 
 /* Account and Admin lists: a name with its facts, actions on the right. */
@@ -730,7 +830,7 @@ button {
   align-items: flex-start;
   gap: var(--sp-3);
   padding-bottom: var(--sp-3);
-  border-bottom: var(--rule) solid var(--line);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .sessions .field-hint,
@@ -741,7 +841,7 @@ button {
 /* Admin → Spotify matching: each unmatched track with a field for its link. */
 .match-misses li {
   padding-bottom: var(--sp-3);
-  border-bottom: var(--rule) solid var(--line);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .match-misses form {
@@ -763,13 +863,14 @@ button {
 .invite-link code {
   font: inherit;
   word-break: break-all;
-  color: var(--text);
+  color: var(--md-sys-color-on-surface);
 }
 
 .audit {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--fs-small);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .audit th,
@@ -777,11 +878,11 @@ button {
   padding: var(--sp-2) var(--sp-3) var(--sp-2) 0;
   text-align: left;
   vertical-align: top;
-  border-bottom: var(--rule) solid var(--line);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .audit th {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   font-weight: 500;
 }
 
@@ -794,15 +895,16 @@ button {
 
 /* "Navidrome unreachable — retrying in 4 s" (PRODUCT_SPEC.md J6). */
 .queue-note {
-  color: var(--muted);
-  font-size: var(--fs-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .dock-reach {
   margin: 0;
-  color: var(--warning);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  color: var(--md-sys-color-warning);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
   white-space: nowrap;
 }
 

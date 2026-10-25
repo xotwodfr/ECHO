@@ -221,9 +221,9 @@ for (const vp of VIEWPORTS) {
         expect(m.visibleNavLinks, url).toBe(3); // Search is the field here
         expect(m.dock?.bottom, url).toBe(vp.height);
         const field = await mainNav(page).getByRole('searchbox', { name: 'Search' }).boundingBox();
-        expect(field?.height, url).toBe(32);
-        // inside the sidebar's padding, clear of its 1px rule
-        expect((field?.x ?? 0) + (field?.width ?? 0), url).toBeLessThanOrEqual(224 - 16);
+        expect(field?.height, url).toBe(56); // the M3 search bar
+        // inside the navigation drawer's padding
+        expect((field?.x ?? 0) + (field?.width ?? 0), url).toBeLessThanOrEqual(224 - 12);
       }
     }
   });

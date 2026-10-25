@@ -72,8 +72,9 @@ describe('DS-01: no raw design values outside tokens.css', () => {
   });
 });
 
-// DS-02 (inspection part): the shell has no gradients, glows, blur, monospace or tracked capitals,
-// and the only shadow is --shadow-float, on floating surfaces.
+// DS-02 (inspection part): the shell has no gradients, glows, blur, monospace or transformed
+// capitals. Under Material 3 (DESIGN_SYSTEM.md §1) letter-spacing comes only from the type scale's
+// tracking tokens, and shadows only from the elevation tokens, on floating surfaces.
 describe('DS-02: shell light effects', () => {
   // The Stage is the other zone (DESIGN_SYSTEM.md §1): its light effects are §7's to define, so its
   // stylesheet is the one exemption. DS-01 still applies to it.
@@ -85,14 +86,16 @@ describe('DS-02: shell light effects', () => {
     /\bblur\(/,
     /monospace/,
     /text-transform/,
-    /letter-spacing/,
   ];
   for (const f of css) {
     it(f.name, () => {
       const text = uncomment(f.text);
       for (const re of BANNED) expect(text, String(re)).not.toMatch(re);
       const shadows = [...text.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1]?.trim());
-      for (const s of shadows) expect(s).toBe('var(--shadow-float)');
+      for (const s of shadows)
+        expect(s).toMatch(/^var\(--(md-sys-elevation-level[1-3]|shadow-float)\)$/);
+      const tracking = [...text.matchAll(/letter-spacing:\s*([^;]+);/g)].map((m) => m[1]?.trim());
+      for (const t of tracking) expect(t).toMatch(/^(var\(--md-sys-tracking-[a-z-]+\)|normal)$/);
     });
   }
 

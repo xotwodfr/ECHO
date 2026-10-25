@@ -1,7 +1,12 @@
-/* Components (DESIGN_SYSTEM.md §9). Every value comes from tokens.css. `[data-force]` pins hover,
-   pressed and focus for the /__ui page and its snapshots, with the same rules as the real state. */
+/* Components (DESIGN_SYSTEM.md §9): Material 3 Expressive in the shell. Every value comes from
+   tokens.css. `[data-force]` pins hover, pressed and focus for the /__ui page and its snapshots,
+   with the same rules as the real state.
 
-/* ---- Buttons (§9.1) ---- */
+   State layers (§10) are the content colour mixed over the container at the M3 state opacity:
+   color-mix(in srgb, <content> calc(var(--md-sys-state-hover) * 100%), <container>). Inside the
+   player view (tokens.css) the roles map back to Reverb Chamber, so the transport keeps its look. */
+
+/* ---- Buttons (§9.1): M3 filled, outlined, text; Expressive round shape that squares on press ---- */
 .btn {
   position: relative;
   display: inline-flex;
@@ -9,82 +14,149 @@
   justify-content: center;
   flex: none;
   box-sizing: border-box;
-  height: var(--control-h);
-  padding: 0 var(--sp-4);
-  border: var(--rule) solid transparent;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  font-weight: 500;
+  height: var(--md-button-h);
+  padding: 0 var(--md-button-pad);
+  border: var(--md-outline) solid transparent;
+  border-radius: var(--md-sys-shape-corner-full);
+  --btn-bg: transparent;
+  --btn-ink: var(--md-sys-color-primary);
+  background: var(--btn-bg);
+  color: var(--btn-ink);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--dur-hover) ease,
-    border-color var(--dur-hover) ease,
-    color var(--dur-hover) ease,
-    scale var(--dur-press) var(--ease-out);
+    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
+    var(--md-sys-motion-spring-fast-spatial),
+    background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects),
+    color var(--md-sys-motion-spring-fast-effects-duration) var(--md-sys-motion-spring-fast-effects);
 }
 
 .btn--primary {
-  background: var(--text);
-  color: var(--ground);
+  --btn-bg: var(--md-sys-color-primary);
+  --btn-ink: var(--md-sys-color-on-primary);
 }
 
 .btn--secondary {
-  border-color: var(--control);
+  border-color: var(--md-sys-color-outline-variant);
+  --btn-ink: var(--md-sys-color-on-surface-variant);
 }
 
 .btn--destructive {
-  border-color: var(--negative);
-  color: var(--negative);
+  border-color: var(--md-sys-color-outline-variant);
+  --btn-ink: var(--md-sys-color-error);
 }
 
 .btn--tertiary {
+  padding: 0 var(--sp-3);
+}
+
+.btn:hover:not(:disabled, [aria-disabled="true"]),
+.btn[data-force="hover"] {
+  background: color-mix(
+    in srgb,
+    var(--btn-ink) calc(var(--md-sys-state-hover) * 100%),
+    var(--btn-bg)
+  );
+}
+
+.btn:focus-visible {
+  background: color-mix(
+    in srgb,
+    var(--btn-ink) calc(var(--md-sys-state-focus) * 100%),
+    var(--btn-bg)
+  );
+}
+
+.btn:active:not(:disabled, [aria-disabled="true"]),
+.btn[data-force="pressed"] {
+  border-radius: var(--md-sys-shape-corner-small);
+  background: color-mix(
+    in srgb,
+    var(--btn-ink) calc(var(--md-sys-state-pressed) * 100%),
+    var(--btn-bg)
+  );
+}
+
+/* Disabled (M3): content at 38% and container at 12% of on-surface, never opacity on the whole. */
+.btn:disabled {
+  border-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
+    transparent
+  );
+  background: transparent;
+  color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
+  cursor: not-allowed;
+}
+
+.btn--primary:disabled {
+  border-color: transparent;
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
+    transparent
+  );
+}
+
+.btn--tertiary:disabled {
+  border-color: transparent;
+}
+
+/* The player view keeps Reverb Chamber's buttons (§1, §9.1): 36px pills in Mona Sans, an outlined
+   secondary on --control, compact text links, a small press instead of the shape morph. */
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn {
+  height: var(--control-h);
+  border-radius: var(--r-pill);
+  --btn-ink: var(--text);
+  font: inherit;
+  font-weight: 500;
+  letter-spacing: normal;
+  transition:
+    background-color var(--dur-hover) ease,
+    scale var(--dur-press) var(--ease-out);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--primary {
+  --btn-bg: var(--text);
+  --btn-ink: var(--ground);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--secondary {
+  border-color: var(--control);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn:active:not(:disabled) {
+  border-radius: var(--r-pill);
+  background: var(--btn-bg);
+  scale: 0.97;
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--tertiary {
   height: auto;
   min-height: var(--target-min); /* WCAG 2.5.8 (A11Y-07) */
   padding: 0;
   border: 0;
   border-radius: var(--r-art);
+  background: transparent;
 }
 
-.btn--primary:hover:not(:disabled, [aria-disabled="true"]),
-.btn--primary[data-force="hover"] {
-  background: var(--primary-hover);
-}
-
-.btn--secondary:hover:not(:disabled, [aria-disabled="true"]),
-.btn--secondary[data-force="hover"],
-.btn--destructive:hover:not(:disabled, [aria-disabled="true"]),
-.btn--destructive[data-force="hover"] {
-  background: var(--surface-2);
-}
-
-.btn--tertiary:hover:not(:disabled, [aria-disabled="true"]),
-.btn--tertiary[data-force="hover"] {
+:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--tertiary:hover:not(:disabled) {
+  background: transparent;
   text-decoration: underline;
   text-decoration-thickness: 0.07em;
   text-underline-offset: 0.18em;
-}
-
-.btn:active:not(:disabled, [aria-disabled="true"]),
-.btn[data-force="pressed"] {
-  scale: 0.97;
-}
-
-/* Disabled: faint label, line border, never opacity (§9.1). */
-.btn:disabled {
-  background: transparent;
-  border-color: var(--line);
-  color: var(--faint);
-  cursor: not-allowed;
-}
-
-.btn--tertiary:disabled {
-  border: 0;
 }
 
 .btn[aria-busy="true"] {
@@ -111,9 +183,9 @@
 
 .control-reason {
   align-self: center;
-  color: var(--faint);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 /* ---- Icon buttons and transport (§9.1, §9.2) ---- */
@@ -132,15 +204,19 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: var(--control-h);
-  height: var(--control-h);
+  width: var(--md-icon-button);
+  height: var(--md-icon-button);
   padding: 0;
   border: 0;
-  border-radius: var(--r-pill);
+  border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   cursor: pointer;
   transition:
+    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
+    var(--md-sys-motion-spring-fast-spatial),
+    background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects),
     color var(--dur-hover) ease,
     scale var(--dur-press) var(--ease-out);
 }
@@ -153,18 +229,57 @@
 .icon-btn:hover:not(:disabled),
 .icon-btn[data-force="hover"],
 .icon-btn[aria-expanded="true"] {
-  color: var(--text);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
+  color: var(--md-sys-color-on-surface);
 }
 
 .icon-btn:active:not(:disabled),
 .icon-btn[data-force="pressed"] {
-  color: var(--text);
-  scale: 0.97;
+  border-radius: var(--md-sys-shape-corner-small);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed) * 100%),
+    transparent
+  );
+  color: var(--md-sys-color-on-surface);
 }
 
 .icon-btn:disabled {
-  color: var(--faint);
+  color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
   cursor: not-allowed;
+}
+
+/* The player's transport (§9.2) keeps Reverb Chamber: 36px, no container, a small press. */
+:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
+.icon-btn {
+  width: var(--control-h);
+  height: var(--control-h);
+  background: transparent;
+  border-radius: var(--r-pill);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
+  .icon-btn--lg {
+  width: var(--hit-lg);
+  height: var(--hit-lg);
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
+  .icon-btn:active:not(:disabled) {
+  scale: 0.97;
+}
+
+:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
+  .icon-btn:disabled {
+  color: var(--faint);
 }
 
 /* Shuffle/repeat on: accent glyph plus a dot beneath, never colour alone (§9.2). */
@@ -270,7 +385,7 @@
   height: var(--scrub-track);
   overflow: hidden;
   border-radius: var(--r-pill);
-  background: var(--surface-3);
+  background: var(--md-sys-color-secondary-container);
   transition: scale var(--dur-scrub) var(--ease-out);
 }
 
@@ -289,13 +404,18 @@
 }
 
 .slider-buffered {
-  background: color-mix(in srgb, var(--control) 40%, transparent);
+  background: color-mix(in srgb, var(--md-sys-color-outline) 40%, transparent);
   scale: var(--buffered) 1;
 }
 
 .slider-fill {
-  background: var(--art-accent);
+  background: var(--md-sys-color-primary);
   scale: var(--value) 1;
+}
+
+/* The dock's progress and volume take the album's accent (§1: the dock's colour is the Stage's). */
+:is(.dock-scrub, .dock-right) .slider-fill {
+  background: var(--art-accent);
 }
 
 .slider-thumb {
@@ -306,7 +426,7 @@
   height: var(--scrub-thumb);
   translate: -50% -50%;
   border-radius: 50%;
-  background: var(--text);
+  background: var(--md-sys-color-primary);
   opacity: 0;
   transition: opacity var(--dur-scrub) ease;
 }
@@ -323,7 +443,11 @@
 }
 
 .slider[aria-disabled="true"] .slider-fill {
-  background: var(--faint);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
 }
 
 .slider-bubble {
@@ -336,9 +460,9 @@
   gap: var(--sp-1);
   max-width: var(--form-w);
   padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--r-control);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-float);
+  border-radius: var(--md-sys-shape-corner-small);
+  background: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-level2);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   white-space: nowrap;
@@ -381,119 +505,160 @@
   gap: var(--sp-1);
 }
 
-/* ---- Pills (§3.1) ---- */
+/* ---- Status labels (§3.1): M3 tonal containers, the status colours harmonised to the seed ---- */
 .pill {
   display: inline-flex;
   align-items: center;
-  padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--r-pill);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  font-weight: 500;
+  padding: var(--sp-1) var(--sp-3);
+  border-radius: var(--md-sys-shape-corner-small);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
   white-space: nowrap;
 }
 
 .pill--pos {
-  background: var(--pill-pos-bg);
-  color: var(--pill-pos-ink);
+  background: var(--md-sys-color-success-container);
+  color: var(--md-sys-color-on-success-container);
 }
 
 .pill--warn {
-  background: var(--pill-warn-bg);
-  color: var(--pill-warn-ink);
+  background: var(--md-sys-color-warning-container);
+  color: var(--md-sys-color-on-warning-container);
 }
 
 .pill--neg {
-  background: var(--pill-neg-bg);
-  color: var(--pill-neg-ink);
+  background: var(--md-sys-color-error-container);
+  color: var(--md-sys-color-on-error-container);
 }
 
 .pill--neutral {
-  background: var(--pill-neutral-bg);
-  color: var(--pill-neutral-ink);
+  background: var(--md-sys-color-surface-container-highest);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
-/* ---- Toggle (§9.5): 32×18; off = --control track, on = --text track, --ground knob ---- */
+/* ---- Switch (§9.5): M3, 52×32; the handle grows 16 → 24 when on, 28 while pressed ---- */
 .toggle-row {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--sp-3);
-  min-height: var(--scrub-hit);
+  gap: var(--sp-4);
+  min-height: var(--md-switch-h);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-large);
   cursor: pointer;
 }
 
 .toggle {
+  --knob: var(--md-switch-handle-off);
+  --knob-x: calc(var(--md-switch-h) / 2);
+  --knob-ink: var(--md-sys-color-outline);
   position: relative;
   flex: none;
-  box-sizing: content-box;
-  width: var(--toggle-w);
-  height: var(--toggle-h);
-  /* The track stays 18 px; transparent padding makes the target 24 px tall (A11Y-07). */
-  padding: calc((var(--target-min) - var(--toggle-h)) / 2) 0;
-  border: 0;
-  border-radius: var(--r-pill);
-  background: var(--control);
-  background-clip: content-box;
+  box-sizing: border-box;
+  width: var(--md-switch-w);
+  height: var(--md-switch-h);
+  padding: 0;
+  border: var(--md-switch-outline) solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-full);
+  background: var(--md-sys-color-surface-container-highest);
   cursor: pointer;
-  transition: background-color var(--dur-hover) ease;
+  transition:
+    background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects),
+    border-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects);
 }
 
 .toggle::after {
   content: "";
   position: absolute;
-  top: calc((var(--target-min) - var(--toggle-knob)) / 2);
-  left: calc((var(--toggle-h) - var(--toggle-knob)) / 2);
-  width: var(--toggle-knob);
-  height: var(--toggle-knob);
+  top: 50%;
+  left: calc(var(--knob-x) - var(--md-switch-outline));
+  width: var(--knob);
+  height: var(--knob);
+  translate: -50% -50%;
   border-radius: 50%;
-  background: var(--ground);
-  transition: translate var(--dur-hover) var(--ease-out);
+  background: var(--knob-ink);
+  transition:
+    left var(--md-sys-motion-spring-fast-spatial-duration) var(--md-sys-motion-spring-fast-spatial),
+    width var(--md-sys-motion-spring-fast-spatial-duration) var(--md-sys-motion-spring-fast-spatial),
+    height var(--md-sys-motion-spring-fast-spatial-duration)
+    var(--md-sys-motion-spring-fast-spatial),
+    background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects);
 }
 
 .toggle[aria-checked="true"] {
-  background: var(--text);
+  --knob: var(--md-switch-handle-on);
+  --knob-x: calc(var(--md-switch-w) - var(--md-switch-h) / 2);
+  --knob-ink: var(--md-sys-color-on-primary);
+  border-color: var(--md-sys-color-primary);
+  background: var(--md-sys-color-primary);
 }
 
-.toggle[aria-checked="true"]::after {
-  translate: calc(var(--toggle-w) - var(--toggle-h)) 0;
+.toggle-row:hover .toggle:not(:disabled),
+.toggle[data-force="hover"] {
+  --knob-ink: var(--md-sys-color-on-surface-variant);
 }
 
-.toggle-row:hover .toggle:not(:disabled, [aria-checked="true"]),
-.toggle[data-force="hover"]:not([aria-checked="true"]) {
-  background: var(--muted);
+.toggle-row:hover .toggle[aria-checked="true"]:not(:disabled),
+.toggle[data-force="hover"][aria-checked="true"] {
+  --knob-ink: var(--md-sys-color-primary-container);
 }
 
-.toggle-row:hover .toggle[aria-checked="true"]:not(:disabled) {
-  background: var(--primary-hover);
+.toggle:active:not(:disabled),
+.toggle[data-force="pressed"] {
+  --knob: var(--md-switch-handle-pressed);
 }
 
+/* Its label stays readable (on-surface-variant, not M3's 38%): it says what is unavailable, and the
+   reason beside it is read with it. */
 .toggle-row[data-disabled] {
-  color: var(--faint);
+  color: var(--md-sys-color-on-surface-variant);
   cursor: not-allowed;
 }
 
 .toggle:disabled {
-  background: var(--line);
+  --knob-ink: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
+  border-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
+    transparent
+  );
+  background: transparent;
   cursor: not-allowed;
 }
 
-.toggle:disabled::after {
-  background: var(--faint);
+.toggle[aria-checked="true"]:disabled {
+  --knob-ink: var(--md-sys-color-surface);
+  border-color: transparent;
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
+    transparent
+  );
 }
 
-/* ---- Fields (§9.5) ---- */
+/* ---- Fields (§9.5): M3 outlined text field, 56px, with its label above (see §9.5) ---- */
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+  gap: var(--sp-1);
   min-width: 0;
 }
 
 .field-label {
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
-  font-weight: 500;
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-medium);
+}
+
+.field:focus-within .field-label {
+  color: var(--md-sys-color-primary);
 }
 
 .field-control {
@@ -505,75 +670,108 @@
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  height: var(--input-h);
-  padding: 0 var(--sp-3);
-  border: var(--rule) solid var(--control);
-  border-radius: var(--r-control);
-  background: var(--surface-2);
-  color: var(--text);
-  font: inherit;
+  height: var(--md-field-h);
+  padding: 0 var(--sp-4);
+  border: var(--md-outline) solid var(--md-sys-color-outline);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: transparent;
+  color: var(--md-sys-color-on-surface);
+  caret-color: var(--md-sys-color-primary);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-large);
   transition: border-color var(--dur-hover) ease;
 }
 
 .field-input::placeholder {
-  color: var(--faint);
+  color: var(--md-sys-color-on-surface-variant);
 }
 
 .field-input:hover:not(:disabled) {
-  border-color: var(--muted);
+  border-color: var(--md-sys-color-on-surface);
+}
+
+/* Focus: the outline thickens to 2px in primary; that is the field's focus indicator. */
+.field-input:focus-visible,
+.field-input[data-force="focus"] {
+  border-color: var(--md-sys-color-primary);
+  outline: var(--md-outline) solid var(--md-sys-color-primary);
+  outline-offset: calc(-1 * var(--md-field-focus));
 }
 
 .field[data-invalid] .field-input {
-  border-color: var(--negative);
+  border-color: var(--md-sys-color-error);
+  outline-color: var(--md-sys-color-error);
+}
+
+.field[data-invalid] .field-label {
+  color: var(--md-sys-color-error);
 }
 
 .field-input:disabled {
-  border-color: var(--line);
-  background: var(--surface-1);
-  color: var(--faint);
+  border-color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
+    transparent
+  );
+  color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
   cursor: not-allowed;
 }
 
 .field-control:has(.field-reveal) .field-input {
-  padding-right: var(--sp-8);
+  padding-right: var(--sp-9);
 }
 
 .field-reveal {
   position: absolute;
   top: 50%;
-  right: var(--sp-1);
-  height: var(--search-h);
+  right: var(--sp-2);
+  height: var(--md-button-h);
   translate: 0 -50%;
-  padding: 0 var(--sp-2);
+  padding: 0 var(--sp-3);
   border: 0;
-  border-radius: var(--r-control);
+  border-radius: var(--md-sys-shape-corner-full);
   background: transparent;
-  color: var(--text);
-  font: inherit;
-  font-weight: 500;
+  color: var(--md-sys-color-primary);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
   cursor: pointer;
 }
 
 .field-reveal:hover:not(:disabled) {
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.18em;
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-primary) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
 }
 
 .field-reveal:disabled {
-  color: var(--faint);
+  color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
   cursor: not-allowed;
 }
 
 .field-hint,
 .field-error {
   margin: 0;
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .field-hint {
-  color: var(--faint);
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Supporting text under a text field lines up with its input text (M3). */
+.field > :is(.field-hint, .field-error) {
+  padding: 0 var(--sp-4);
 }
 
 .field-error,
@@ -581,7 +779,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--sp-1);
-  color: var(--negative);
+  color: var(--md-sys-color-error);
 }
 
 .field-error .icon {
@@ -600,14 +798,20 @@
   flex: none;
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: var(--r-art-lg);
-  background: var(--surface-2);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-surface-container-highest);
   container-type: inline-size;
 }
 
 .art--row {
   width: var(--art-row);
-  border-radius: var(--r-art);
+  border-radius: var(--md-sys-shape-corner-small);
+}
+
+/* The player view's artwork keeps Reverb Chamber's radii and well (§8). */
+:is(.shell[data-view="listen"] .canvas, .dock-meta) .art {
+  border-radius: var(--r-art-lg);
+  background: var(--surface-2);
 }
 
 .art--dock {
@@ -621,6 +825,7 @@
 
 .art--detail {
   width: var(--art-detail);
+  border-radius: var(--md-sys-shape-corner-extra-large);
 }
 
 .art img {
@@ -637,7 +842,8 @@
   inset: 8cqi 8cqi auto;
   max-height: 4.4em; /* exactly 4 lines of 1.1: the clamp alone still paints part of a 5th */
   overflow: hidden;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
+  font-family: var(--font-ui);
   font-size: 18cqi;
   line-height: 1.1;
   font-weight: 600;
@@ -664,8 +870,8 @@
 /* ---- Loading bars (§10): flat, at the real size of the value, no shimmer ---- */
 .bar {
   display: block;
-  border-radius: var(--r-art);
-  background: var(--surface-2);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .bar--body {
@@ -680,7 +886,7 @@
   margin-block: calc((var(--lh-small) - var(--fs-small)) / 2);
 }
 
-/* ---- Track rows (§9.3) ---- */
+/* ---- Track rows (§9.3): M3 list items, 56px (72px with art), rounded state layer ---- */
 .track-list ol {
   margin: 0;
   padding: 0;
@@ -691,34 +897,42 @@
 .track-head {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  padding: 0 var(--sp-3);
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
 }
 
 .track-row {
   position: relative;
-  height: var(--row-h);
-  border-radius: var(--r-control);
-  transition: background-color var(--dur-hover) ease;
+  height: var(--md-list-1);
+  border-radius: var(--md-sys-shape-corner-medium);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-large);
+  transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects);
 }
 
 .track-row[data-media] {
-  height: var(--row-h-media);
+  height: var(--md-list-2);
 }
 
 .track-row:hover:not(.track-row--loading),
 .track-row[data-force="hover"] {
-  background: var(--surface-2);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
 }
 
 .track-row[data-selected] {
-  background: var(--surface-3);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .track-row:has(.track-main:focus-visible),
 .track-row[data-force="focus"] {
-  outline: var(--focus-ring) solid var(--focus);
-  outline-offset: var(--focus-ring);
+  outline: var(--md-focus-ring) solid var(--md-sys-color-secondary);
+  outline-offset: calc(-1 * var(--md-focus-ring));
 }
 
 .track-main {
@@ -756,19 +970,21 @@
 }
 
 .track-sub {
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-medium);
 }
 
 .track-row[data-now-playing] .track-title {
-  color: var(--art-accent);
+  color: var(--md-sys-color-primary);
 }
 
 .track-num,
 .track-dur {
   flex: none;
-  color: var(--faint);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-label);
   text-align: right;
 }
 
@@ -781,16 +997,16 @@
 }
 
 .track-list[data-ruled] .track-row + .track-row {
-  border-top: var(--rule) solid var(--line);
+  border-top: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .track-head {
-  padding-right: calc(var(--sp-3) * 2 + var(--control-h));
+  padding-right: calc(var(--sp-4) * 2 + var(--md-icon-button));
   padding-bottom: var(--sp-2);
-  border-bottom: var(--rule) solid var(--line);
-  color: var(--faint);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-label-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-label);
 }
 
 .track-head span:nth-child(2) {
@@ -808,7 +1024,7 @@
   bottom: 0;
   left: var(--sp-3);
   height: var(--trace);
-  background: var(--art-accent);
+  background: var(--md-sys-color-primary);
   pointer-events: none;
   animation: fade-out var(--trace-ms) linear var(--trace-at) forwards;
 }
@@ -843,7 +1059,7 @@
   animation-delay: calc(var(--dur-loop) / -1.5);
 }
 
-/* ---- Album tile (§9.4) ---- */
+/* ---- Album tile (§9.4): cover and text on a state-layer surround (an M3 card without fill) ---- */
 .tile {
   position: relative;
   isolation: isolate;
@@ -852,34 +1068,38 @@
   min-width: 0;
 }
 
-/* The surround brightens one surface step; the tile itself does not lift or zoom. */
 .tile::before {
   content: "";
   position: absolute;
   inset: calc(-1 * var(--sp-2));
   z-index: -1;
-  border-radius: var(--r-panel);
-  transition: background-color var(--dur-hover) ease;
+  border-radius: var(--md-sys-shape-corner-large-increased);
+  transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
+    var(--md-sys-motion-spring-fast-effects);
 }
 
 .tile:not(.tile--loading):hover::before,
 .tile:focus-within::before,
 .tile[data-force]::before {
-  background: var(--surface-1);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
 }
 
 .tile-link {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  border-radius: var(--r-art-lg);
+  border-radius: var(--md-sys-shape-corner-medium);
   color: inherit;
   text-decoration: none;
 }
 
 .tile-title,
 .tile-artist {
-  padding-right: calc(var(--tile-play) + var(--sp-2));
+  padding-right: calc(var(--md-icon-button) + var(--sp-2));
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -887,7 +1107,8 @@
 
 .tile-title {
   margin-top: var(--sp-2);
-  font-weight: 500;
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
 }
 
 /* The title's gap plus the bar's own half-leading: the skeleton is the tile's exact height. */
@@ -896,29 +1117,32 @@
 }
 
 .tile-artist {
-  color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-medium);
 }
 
-/* At the end of the title row, below the cover, never on it (§8). */
+/* At the end of the text, below the cover, never on it (§8): an M3 small FAB, square-ish (Expressive). */
 .tile-play {
   position: absolute;
   right: 0;
-  bottom: calc((var(--lh-body) + var(--lh-small) - var(--tile-play)) / 2);
+  bottom: calc((var(--lh-body) + var(--lh-body) - var(--md-icon-button)) / 2);
   display: grid;
   place-items: center;
-  width: var(--tile-play);
-  height: var(--tile-play);
+  width: var(--md-icon-button);
+  height: var(--md-icon-button);
   padding: 0;
   border: 0;
-  border-radius: 50%;
-  background: var(--text);
-  color: var(--ground);
+  border-radius: var(--md-sys-shape-corner-medium);
+  background: var(--md-sys-color-primary-container);
+  color: var(--md-sys-color-on-primary-container);
+  box-shadow: var(--md-sys-elevation-level1);
   opacity: 0;
   cursor: pointer;
   transition:
     opacity var(--dur-hover) ease,
+    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
+    var(--md-sys-motion-spring-fast-spatial),
     background-color var(--dur-hover) ease;
 }
 
@@ -929,7 +1153,15 @@
 }
 
 .tile-play:hover {
-  background: var(--primary-hover);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-primary-container) calc(var(--md-sys-state-hover) * 100%),
+    var(--md-sys-color-primary-container)
+  );
+}
+
+.tile-play:active {
+  border-radius: var(--md-sys-shape-corner-full);
 }
 
 /* ---- Connection status row (§9.7) ---- */
@@ -940,7 +1172,7 @@
   align-items: center;
   gap: var(--sp-1) var(--sp-4);
   padding: var(--sp-4) 0;
-  border-bottom: var(--rule) solid var(--line);
+  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
 }
 
 .conn-head {
@@ -953,15 +1185,14 @@
 
 .conn-name {
   margin: 0;
-  font-size: var(--fs-section);
-  line-height: var(--lh-section);
-  font-weight: 500;
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-title-medium);
 }
 
 .conn-detail {
   grid-area: detail;
   margin: 0;
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   overflow-wrap: anywhere;
 }
 
@@ -974,7 +1205,7 @@
   gap: var(--sp-2);
 }
 
-/* ---- Sign in (S8): a 360px column on --ground ---- */
+/* ---- Sign in (S8): a 360px column on the surface ---- */
 .signin {
   display: flex;
   flex-direction: column;
@@ -985,15 +1216,13 @@
 
 .signin-mark {
   margin: 0;
-  font-size: var(--fs-section);
-  line-height: var(--lh-section);
-  font-weight: 600;
+  color: var(--md-sys-color-primary);
+  font: var(--md-sys-typescale-title-large-emphasized) var(--font-ui);
 }
 
 .signin-title {
   margin: 0;
-  font-size: var(--fs-title);
-  line-height: var(--lh-title);
+  font: var(--md-sys-typescale-headline-small) var(--font-ui);
 }
 
 .signin-submit {
@@ -1015,11 +1244,12 @@
   z-index: 10;
   min-width: 12em;
   padding: var(--sp-1);
-  border-radius: var(--r-control);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-float);
+  border-radius: var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container);
+  box-shadow: var(--md-sys-elevation-level2);
   transform-origin: top right;
-  animation: menu-in var(--dur-pop) var(--ease-out);
+  animation: menu-in var(--md-sys-motion-spring-default-spatial-duration)
+    var(--md-sys-motion-spring-default-spatial);
 }
 
 /* Not enough room below inside the scroll container (e.g. above the dock): open upward. */
@@ -1033,13 +1263,14 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: var(--menu-item-h);
+  height: var(--md-menu-item-h);
   padding: 0 var(--sp-3);
   border: 0;
-  border-radius: var(--r-art);
+  border-radius: var(--md-sys-shape-corner-medium);
   background: transparent;
-  color: var(--text);
-  font: inherit;
+  color: var(--md-sys-color-on-surface);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
@@ -1047,30 +1278,37 @@
 
 .menu-item:hover:not([aria-disabled="true"]),
 .menu-item:focus {
-  background: var(--surface-3);
+  background: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+    transparent
+  );
 }
 
 .menu-item:focus-visible {
-  outline-offset: calc(-1 * var(--focus-ring));
+  outline-offset: calc(-1 * var(--md-focus-ring));
 }
 
 .menu-item--destructive {
-  color: var(--negative);
+  color: var(--md-sys-color-error);
 }
 
 .menu-item[aria-disabled="true"] {
-  color: var(--faint);
+  color: color-mix(
+    in srgb,
+    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
+    transparent
+  );
   cursor: not-allowed;
 }
 
-/* ---- Sheet and dialog (§9.6): opaque, no backdrop blur ---- */
+/* ---- Sheet and dialog (§9.6): M3 modal side sheet and basic dialog ---- */
 .sheet,
 .dialog {
   box-sizing: border-box;
   padding: 0;
   border: 0;
-  background: var(--surface-1);
-  color: var(--text);
+  color: var(--md-sys-color-on-surface);
 }
 
 .sheet {
@@ -1082,15 +1320,16 @@
   max-height: none;
   margin: 0;
   overflow: auto;
-  border: var(--rule) solid var(--line);
-  border-right: 0;
-  border-radius: var(--r-panel) 0 0 var(--r-panel);
+  border-radius: var(--md-sys-shape-corner-large) 0 0 var(--md-sys-shape-corner-large);
+  background: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-level1);
 }
 
 .sheet[open] {
   display: flex;
   flex-direction: column;
-  animation: sheet-in var(--dur-ui) var(--ease-out);
+  animation: sheet-in var(--md-sys-motion-spring-default-spatial-duration)
+    var(--md-sys-motion-spring-default-spatial);
 }
 
 .sheet::backdrop {
@@ -1102,47 +1341,52 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  padding: var(--sp-4) var(--sp-4) var(--sp-2) var(--sp-5);
+  padding: var(--sp-4) var(--sp-3) var(--sp-2) var(--md-dialog-pad);
 }
 
 .sheet-head h2 {
   margin: 0;
+  font: var(--md-sys-typescale-title-large) var(--font-ui);
 }
 
 .sheet-body {
-  padding: 0 var(--sp-5) var(--sp-5);
+  padding: 0 var(--md-dialog-pad) var(--md-dialog-pad);
 }
 
 .sheet-section {
   margin: var(--sp-4) 0 var(--sp-2);
-  color: var(--faint);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
-  font-weight: 400;
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
 }
 
 .dialog {
   width: min(var(--sheet-w), 100% - 2 * var(--sp-4));
-  padding: var(--sp-5);
-  border-radius: var(--r-panel);
-  box-shadow: var(--shadow-float);
+  padding: var(--md-dialog-pad);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-high);
+  box-shadow: var(--md-sys-elevation-level3);
 }
 
 .dialog[open] {
-  animation: fade-in var(--dur-ui) var(--ease-out);
+  animation: dialog-in var(--md-sys-motion-spring-default-spatial-duration)
+    var(--md-sys-motion-spring-default-spatial);
 }
 
 .dialog::backdrop {
-  background: color-mix(in srgb, var(--ground) 72%, transparent);
+  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
 }
 
 .dialog h2 {
-  margin: 0 0 var(--sp-2);
+  margin: 0 0 var(--sp-4);
+  font: var(--md-sys-typescale-headline-small) var(--font-ui);
 }
 
 .dialog p {
-  margin: 0 0 var(--sp-5);
-  color: var(--muted);
+  margin: 0 0 var(--md-dialog-pad);
+  color: var(--md-sys-color-on-surface-variant);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-medium);
 }
 
 .dialog-actions {
@@ -1152,7 +1396,7 @@
   gap: var(--sp-2);
 }
 
-/* ---- Toast (§9.6): bottom-centre above the dock, max 1 ---- */
+/* ---- Toast (§9.6): an M3 snackbar, bottom-centre above the dock, max 1 ---- */
 .toast-region {
   position: fixed;
   bottom: calc(var(--dock) + var(--sp-4));
@@ -1164,12 +1408,17 @@
 }
 
 .toast {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: var(--md-snackbar-h);
   padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--r-control);
-  background: var(--surface-2);
-  box-shadow: var(--shadow-float);
-  font-size: var(--fs-body);
-  line-height: var(--lh-body);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  box-shadow: var(--md-sys-elevation-level3);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-body-medium);
   transition: opacity var(--dur-toast) var(--ease-out);
 
   @starting-style {
@@ -1183,10 +1432,10 @@
 }
 
 /* ---- Pinned focus (for /__ui) and motion ---- */
-[data-force="focus"]:not(.track-row, .tile),
+[data-force="focus"]:not(.track-row, .tile, .field-input),
 .tile[data-force="focus"] .tile-link {
-  outline: var(--focus-ring) solid var(--focus);
-  outline-offset: var(--focus-ring);
+  outline: var(--md-focus-ring) solid var(--md-sys-color-secondary);
+  outline-offset: var(--md-focus-offset);
 }
 
 @keyframes spin {
@@ -1222,7 +1471,14 @@
 
 @keyframes menu-in {
   from {
-    scale: 0.98;
+    scale: 0.92;
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    scale: 0.9;
     opacity: 0;
   }
 }
@@ -1230,8 +1486,16 @@
 /* Reduced motion (§11.2): no travel, scale or loops; opacity and colour stay. */
 @media (prefers-reduced-motion: reduce) {
   .sheet[open],
-  .menu {
+  .menu,
+  .dialog[open] {
     animation-name: fade-in;
+  }
+
+  .btn,
+  .icon-btn,
+  .toggle::after,
+  .tile-play {
+    transition-property: background-color, color, opacity;
   }
 
   .btn:active,
@@ -1273,13 +1537,12 @@
   .sheet {
     inset: 0;
     width: 100%;
-    border: 0;
     border-radius: 0;
   }
 
   /* Above the dock and the bottom bar (its row plus padding and rule). */
   .toast-region {
-    bottom: calc(var(--dock) + var(--row-h) + 2 * var(--sp-2) + var(--rule) + var(--sp-4));
+    bottom: calc(var(--dock) + var(--md-nav-item-h) + 2 * var(--sp-3) + var(--sp-4));
   }
 
   .conn-row {
@@ -1295,7 +1558,7 @@
 
 /* The lyric line at the pointed time (PLAY-10). */
 .slider-preview {
-  color: var(--muted);
+  color: var(--md-sys-color-on-surface-variant);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

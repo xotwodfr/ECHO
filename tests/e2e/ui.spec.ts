@@ -75,9 +75,9 @@ test.describe('buttons', () => {
     const btn = section(page, 'Buttons').locator('button:disabled', { hasText: 'Shuffle' });
     await expect(btn).toHaveAccessibleDescription('Connect a server first');
     await expect(btn).toBeDisabled();
-    // Disabled is never opacity (§9.1): faint label, line border.
+    // Disabled is never opacity on the whole (§0): M3's on-surface at 38% on the label.
     expect(await btn.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
-    expect(await btn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(148, 151, 156)');
+    expect(await btn.evaluate((el) => getComputedStyle(el).color)).toMatch(/\/ 0\.38\)$/);
   });
 
   test('loading keeps the name and focus, and ignores activation', async ({ page }) => {
@@ -95,21 +95,24 @@ test.describe('buttons', () => {
     await open(page);
     const s = section(page, 'Buttons');
     const hover = s.locator('.btn--primary[data-force="hover"]');
-    expect(await hover.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
-      'rgb(255, 255, 255)',
-    );
+    const pinned = await hover.evaluate((el) => getComputedStyle(el).backgroundColor);
     const real = s.locator('.btn--primary:not([data-force]):not(:disabled):not([aria-busy])');
+    const rest = await real.evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(pinned).not.toBe(rest); // the M3 hover state layer
     await real.hover();
     await expect
       .poll(() => real.evaluate((el) => getComputedStyle(el).backgroundColor))
-      .toBe('rgb(255, 255, 255)');
-    expect(
-      await s
-        .locator('.btn--primary[data-force="pressed"]')
-        .evaluate((el) => getComputedStyle(el).scale),
-    ).toBe('0.97');
+      .toBe(pinned);
+    // Expressive: pressed squares the round button off.
+    await expect
+      .poll(() =>
+        s
+          .locator('.btn--primary[data-force="pressed"]')
+          .evaluate((el) => getComputedStyle(el).borderRadius),
+      )
+      .toBe('8px');
     const focus = s.locator('.btn--primary[data-force="focus"]');
-    expect(await focus.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('2px');
+    expect(await focus.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('3px');
   });
 });
 
@@ -445,9 +448,16 @@ test.describe('track rows and tiles', () => {
     const np = s.locator('li[aria-current="true"]');
     await expect(np).toContainText('Night Turns Over');
     await expect(np).toContainText('Now playing');
-    expect(await np.locator('.track-title').evaluate((el) => getComputedStyle(el).color)).toBe(
-      'rgb(227, 178, 107)',
-    );
+    // Now playing takes the M3 primary (DESIGN_SYSTEM.md §0), which the album's colour seeds.
+    const [title, primary] = await np.locator('.track-title').evaluate((el) => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--md-sys-color-primary)';
+      el.append(probe);
+      const out = [getComputedStyle(el).color, getComputedStyle(probe).color];
+      probe.remove();
+      return out;
+    });
+    expect(title).toBe(primary);
     await expect(np.locator('.np-bars')).toBeVisible();
     // The decay trace is visible mid-song (60 s into 301 s).
     const trace = s.locator('.decay-trace');
@@ -488,8 +498,8 @@ test.describe('track rows and tiles', () => {
     const btn = await play.boundingBox();
     expect((btn?.y ?? 0) >= (art?.y ?? 0) + (art?.height ?? 0)).toBe(true);
     expect(await style(page, '.tile .art img', 'object-fit')).toBe('contain');
-    expect(await style(page, '.tile .art', 'border-radius')).toBe('8px');
-    expect(await style(page, '.track-row .art', 'border-radius')).toBe('4px');
+    expect(await style(page, '.tile .art', 'border-radius')).toBe('12px'); // M3 corner medium
+    expect(await style(page, '.track-row .art', 'border-radius')).toBe('8px'); // corner small
     await play.click();
     await expect(page.getByRole('status')).toHaveText('Playing Tide Lines');
   });
