@@ -64,6 +64,7 @@ export function LoginView({ onDone = home }: { onDone?: () => void } = {}) {
 
   return (
     <form className="auth" onSubmit={submit}>
+      <p className="signin-mark">{strings.app}</p>
       <h1 tabIndex={-1}>{s.signIn}</h1>
       {!step ? (
         <>
@@ -118,6 +119,7 @@ export function SetupView() {
   if (!token)
     return (
       <div className="auth">
+        <p className="signin-mark">{strings.app}</p>
         <h1 tabIndex={-1}>{s.setupTitle}</h1>
         <p>{s.setupNoToken}</p>
       </div>
@@ -126,6 +128,7 @@ export function SetupView() {
   if (codes)
     return (
       <div className="auth">
+        <p className="signin-mark">{strings.app}</p>
         <h1 tabIndex={-1}>{s.recoveryTitle}</h1>
         <p>{s.recoveryIntro}</p>
         <ul className="recovery-codes">
@@ -163,6 +166,7 @@ export function SetupView() {
 
   return (
     <form className="auth" onSubmit={submit}>
+      <p className="signin-mark">{strings.app}</p>
       <h1 tabIndex={-1}>{s.setupTitle}</h1>
       {!enrol ? (
         <>

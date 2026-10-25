@@ -662,10 +662,46 @@ button {
     min-height: var(--md-nav-item-h);
   }
 
+  /* Navigation bar items: the active indicator is a 64×32 pill behind the label, not the cell. */
   .sidebar a {
+    position: relative;
+    isolation: isolate; /* the indicator sits behind the label, in front of the bar */
     justify-content: center;
     padding: 0 var(--sp-2);
     height: var(--md-nav-item-h);
+    border-radius: var(--md-sys-shape-corner-small);
+  }
+
+  .sidebar a::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: -1;
+    width: var(--md-nav-indicator-w);
+    height: var(--md-nav-indicator-h);
+    translate: -50% -50%;
+    border-radius: var(--md-sys-shape-corner-full);
+    transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
+      var(--md-sys-motion-spring-fast-effects);
+  }
+
+  .sidebar a,
+  .sidebar a:hover,
+  .sidebar a[aria-current="page"] {
+    background: transparent;
+  }
+
+  .sidebar a:hover::before {
+    background: color-mix(
+      in srgb,
+      var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
+      transparent
+    );
+  }
+
+  .sidebar a[aria-current="page"]::before {
+    background: var(--md-sys-color-secondary-container);
   }
 
   .canvas > .search-field {
@@ -759,7 +795,9 @@ button {
 
 .pref-group h3 {
   margin: 0;
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  color: var(--md-sys-color-primary);
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
 }
 
 .pref-choice {
@@ -773,6 +811,8 @@ button {
 .pref-label {
   padding: 0;
   color: var(--md-sys-color-on-surface);
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  letter-spacing: var(--md-sys-tracking-small);
 }
 
 .pref-slider {
@@ -909,9 +949,10 @@ button {
 }
 
 /* Album order above the grid (PRODUCT_SPEC.md §6.3). */
-.album-sort {
+/* Outranks stage.css's `.view-switch { margin: 0 }`, which loads later. */
+.canvas .album-sort {
   flex-wrap: wrap;
-  margin-bottom: var(--sp-5);
+  margin-bottom: var(--sp-6); /* clear of the first row's hover surround */
 }
 
 /* "Clear queue" under the upcoming rows (QUE-01). */

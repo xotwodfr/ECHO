@@ -142,7 +142,7 @@
   /* component sizes (M3 specs) */
   --md-button-h: 40px; --md-button-pad: 16px; --md-icon-button: 40px;
   --md-field-h: 56px; --md-search-h: 56px; --md-list-1: 56px; --md-list-2: 72px;
-  --md-nav-item-h: 56px; --md-nav-indicator-h: 32px; --md-menu-item-h: 48px;
+  --md-nav-item-h: 56px; --md-nav-indicator-h: 32px; --md-nav-indicator-w: 64px; --md-menu-item-h: 48px;
   --md-switch-w: 52px; --md-switch-h: 32px; --md-switch-handle-off: 16px;
   --md-switch-handle-on: 24px; --md-switch-handle-pressed: 28px; --md-switch-outline: 2px;
   --md-chip-h: 32px; --md-snackbar-h: 48px; --md-tab-h: 48px; --md-tab-indicator: 3px;
