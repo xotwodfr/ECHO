@@ -622,6 +622,25 @@ button {
 /* compact < 720px: the drawer becomes an M3 navigation bar of 4 destinations. Breakpoint: see the
    top. */
 @media (max-width: 719.98px) {
+  /* A connected group that wrapped read as two broken groups (Streaming quality, album order):
+     on a phone it stays one row and scrolls. The padding keeps focus rings inside the clip. */
+  .shell:not([data-view="listen"]) .canvas .view-switch {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: var(--sp-2) var(--gutter) var(--sp-2) var(--sp-2);
+    margin: calc(-1 * var(--sp-2)) calc(-1 * var(--gutter)) calc(-1 * var(--sp-2))
+      calc(-1 * var(--sp-2)); /* runs to the screen edge, so the cut reads as "more" */
+  }
+
+  .shell:not([data-view="listen"]) .canvas .album-sort {
+    margin-bottom: calc(var(--sp-6) - var(--sp-2));
+  }
+
+  .shell:not([data-view="listen"]) .canvas .view-switch button {
+    flex: none;
+  }
+
   /* Two columns of covers on a phone, not one cover per screen (M9 critique). */
   .album-grid {
     grid-template-columns: repeat(auto-fill, minmax(var(--tile-min-compact), 1fr));
@@ -803,6 +822,7 @@ button {
 .pref-choice {
   display: grid;
   gap: var(--sp-2);
+  min-width: 0; /* a fieldset is min-content wide by default; its choices scroll on phones */
   margin: 0;
   padding: 0;
   border: 0;
