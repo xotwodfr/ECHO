@@ -62,7 +62,8 @@ export async function fetchLyrics(t: Track): Promise<Answer> {
 
 let current: { track: Track | null; reload: () => void } = { track: null, reload: () => {} };
 let notify: (m: string) => void = () => {};
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
+/** Pending offset saves, one per track: a save for one track never cancels another's. */
+const saves = new Map<string, ReturnType<typeof setTimeout>>();
 
 export function startLyricsLoader(
   c: PlaybackController,
@@ -77,16 +78,17 @@ export function startLyricsLoader(
   const start = (track: Track | null) => {
     for (const t of [debounce, giveUp, prefetch]) if (t) clearTimeout(t);
     current = { track, reload: () => start(track) };
+    // The offset and pin are the track's own: none until its answer brings them.
+    const none = { doc: null, tried: [], offsetMs: 0, pinnedSource: null };
     if (!track) {
-      lyricsStore.setState({ trackKey: null, doc: null, state: 'idle', tried: [] });
+      lyricsStore.setState({ trackKey: null, state: 'idle', ...none });
       return;
     }
     lyricsStore.setState({
       trackKey: track.key,
-      doc: null,
       state: 'waiting',
       since: performance.now(),
-      tried: [],
+      ...none,
     });
     debounce = setTimeout(() => {
       void load(track).then((a) => {
@@ -124,7 +126,8 @@ export function startLyricsLoader(
 /** `[` / `]`: the lyrics ±50 ms for this track, saved, with a toast (LYR-25). */
 export function nudgeLyrics(direction: -1 | 1) {
   const s = lyricsStore.getState();
-  if (!s.trackKey) return;
+  // Until the track's answer arrives its saved offset is unknown: a nudge would overwrite it.
+  if (!s.trackKey || s.state === 'waiting') return;
   const offsetMs = Math.max(-10_000, Math.min(10_000, s.offsetMs + direction * OFFSET_STEP_MS));
   lyricsStore.setState({ offsetMs });
   notify(
@@ -133,13 +136,17 @@ export function nudgeLyrics(direction: -1 | 1) {
       : `Lyrics ${offsetMs > 0 ? '+' : '−'}${Math.abs(offsetMs)} ms`,
   );
   const key = s.trackKey;
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    void api(`/me/tracks/${encodeURIComponent(key)}/override`, {
-      method: 'PUT',
-      body: { offsetMs },
-    }).catch(() => undefined);
-  }, SAVE_OFFSET_MS);
+  clearTimeout(saves.get(key));
+  saves.set(
+    key,
+    setTimeout(() => {
+      saves.delete(key);
+      void api(`/me/tracks/${encodeURIComponent(key)}/override`, {
+        method: 'PUT',
+        body: { offsetMs },
+      }).catch(() => undefined);
+    }, SAVE_OFFSET_MS),
+  );
 }
 
 /** The ⓘ menu: always use this source for the track (null: automatic), then reload. */

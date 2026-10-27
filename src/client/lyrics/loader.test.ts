@@ -4,7 +4,7 @@ import { ManualClock } from '../playback/clock.ts';
 import { createPlaybackController } from '../playback/controller.ts';
 import { FakeProvider } from '../playback/fake.ts';
 import { lyricsStore } from '../stage/status.ts';
-import { DEBOUNCE_MS, GIVE_UP_MS, lineAt, startLyricsLoader } from './loader.ts';
+import { DEBOUNCE_MS, GIVE_UP_MS, lineAt, nudgeLyrics, startLyricsLoader } from './loader.ts';
 
 // LYRICS_INTEGRATION.md §6 and LYRICS_EXPERIENCE.md §9.5 on the client: debounce, stale answers
 // dropped, the 6 s give-up and the late answer, the scrubber's line lookup.
@@ -115,6 +115,34 @@ describe('the lyrics loader', () => {
       state: 'missing',
       tried: [{ source: 'lrclib', outcome: 'notFound' }],
     });
+  });
+
+  // ON-LY-6: the previous track's offset stayed in the store until the next answer, so a nudge then
+  // saved it (±50) to the new track; and one shared save timer dropped the first of two saves.
+  it('offsets belong to their track: reset on a change, saved per track', async () => {
+    const saved: string[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') saved.push(`${decodeURIComponent(url)} ${init.body}`);
+      return new Response('{}');
+    });
+    try {
+      const { c } = setup({});
+      c.playList(album, 0, ctx);
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 20); // t1 ready, its offset is +100
+      nudgeLyrics(1); // t1: +150, saved after 500 ms
+      c.next();
+      expect(lyricsStore.getState()).toMatchObject({ trackKey: 'navidrome:t2', offsetMs: 0 });
+      nudgeLyrics(1); // t2's offset is not known yet: ignored
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 20); // t2 ready at +100
+      nudgeLyrics(-1); // t2: +50
+      await vi.advanceTimersByTimeAsync(600);
+      expect(saved).toEqual([
+        '/api/v1/me/tracks/navidrome:t1/override {"offsetMs":150}',
+        '/api/v1/me/tracks/navidrome:t2/override {"offsetMs":50}',
+      ]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('the scrubber’s line: the last line started by then', () => {
