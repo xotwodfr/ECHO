@@ -104,7 +104,7 @@ of truth.
 | Property | Function / table (linear interpolation between points) |
 |---|---|
 | Scale `s(z)` | `1 − 0.30 z` → z=0: 1.00 · 0.2: 0.94 · 0.4: 0.88 · 0.6: 0.82 · 1.0: 0.70 |
-| Opacity `o(z)` (upcoming and background) | z=0: 1.00 · 0.22: 0.74 · 0.44: 0.54 · 0.66: 0.40 · 0.80: 0.24 · 1.0: 0.12 |
+| Opacity `o(z)` (upcoming and background) | z=0: 1.00 · 0.22: 0.74 · 0.44: 0.64 · 0.66: 0.55 · 0.80: 0.24 · 1.0: 0.12 (+2/+3 raised 2026-10-27 so +3 meets 3:1) |
 | Blur `b(z)` (CSS px) | z=0: 0 · 0.22: 1.0 · 0.44: 2.0 · 0.66: 3.2 · 0.80: 4.0 · 0.9: 6.0 · 1.0: 8.0 (cap 4px while rank ≤ +3) |
 | Ink colour | rank 0: `--lyric-ink-active` (unlit), lit per §5 · ranks ≠ 0: `--lyric-ink-active` mixed 18% toward `--art-room` per 0.33 z (`color-mix(in oklab, …)`) |
 

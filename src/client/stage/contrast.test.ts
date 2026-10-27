@@ -48,14 +48,14 @@ describe('contrast floors (§3.4)', () => {
     expect(s.exposure).toBeLessThan(0);
   });
 
-  it('+3 is reported but not enforced (open decision: the depth table cannot reach 3:1)', () => {
-    // On the darkest room the palette allows, +3 is just above 3:1; on a brighter one it fails
-    // while every enforced floor holds, and the solver leaves the room alone.
-    expect(contrastAt(FALLBACK, 0.12).zone[2]).toBeGreaterThan(3);
-    const r = contrastAt(FALLBACK, 0.24);
-    expect(r.zone[2]).toBeLessThan(FLOORS.zone);
-    expect(passes(r)).toBe(true);
-    expect(solveStep({ exposure: 0, scrim: 0 }, r, 250)).toEqual({ exposure: 0, scrim: 0 });
+  it('+3 is enforced: it holds 3:1 where it used to fail, and a failure darkens the room', () => {
+    // The room as rendered (M4: L ≈ 0.24) once left +3 under 3:1 (owner decision 2026-10-27).
+    expect(contrastAt(FALLBACK, 0.24).zone[2]).toBeGreaterThanOrEqual(FLOORS.zone);
+    let L = 0.24;
+    while ((contrastAt(FALLBACK, L).zone[2] as number) >= FLOORS.zone) L += 0.01;
+    const r = contrastAt(FALLBACK, { active: 0.12, zone: L });
+    expect(passes(r)).toBe(false);
+    expect(solveStep({ exposure: 0, scrim: 0 }, r, 250).exposure).toBeLessThan(0);
   });
 
   it('a +2 failure darkens the room but never raises the scrim (it sits behind +0 only)', () => {

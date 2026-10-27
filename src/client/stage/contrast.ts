@@ -69,13 +69,11 @@ export function contrastAt(inks: Inks, peaks: Peaks | number) {
 export type Report = ReturnType<typeof contrastAt>;
 
 /**
- * How many upcoming lines the solver enforces. Open decision (docs/reviews/M4.md): with the §4.1
- * depth table (+3 at opacity 0.40 and ink 36% toward the room) +3 reaches about 3.3:1 on the
- * darkest room the palette allows and 2.7:1 on the rendered room, so enforcing it would pin the
- * zone at −40% on every song. +3 is measured and reported, not enforced, until the owner decides
- * between a more opaque +3 and a lower floor for it.
+ * How many upcoming lines the solver enforces: all three. +3 was raised to opacity 0.55 (and +2 to
+ * 0.64, to keep the fade monotonic) so it reaches 3:1 at the exposures +1/+2 already need
+ * (docs/reviews/M4.md, owner decision 2026-10-27).
  */
-export const ENFORCED_ZONE = 2;
+export const ENFORCED_ZONE = 3;
 
 /** True when every enforced floor holds, with `margin` (1 = exactly). */
 export function passes(r: Report, margin = 1) {

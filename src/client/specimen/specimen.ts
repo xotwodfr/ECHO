@@ -17,8 +17,8 @@ type Palette = (typeof PALETTES)[number];
 const OPACITY: [number, number][] = [
   [0, 1],
   [0.22, 0.74],
-  [0.44, 0.54],
-  [0.66, 0.4],
+  [0.44, 0.64],
+  [0.66, 0.55],
   [0.8, 0.24],
   [1, 0.12],
 ];

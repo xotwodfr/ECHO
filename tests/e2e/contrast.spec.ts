@@ -50,8 +50,7 @@ test.describe('contrast floors on every fixture palette (VIS-05)', () => {
       const d = await diag(page, `fixture:${c.name}`);
       expect(d.report.active).toBeGreaterThanOrEqual(7);
       expect(d.report.lit).toBeGreaterThanOrEqual(4.5);
-      // +1 and +2; +3 is an open decision (contrast.ts ENFORCED_ZONE), measured but not asserted.
-      for (const z of d.report.zone.slice(0, 2)) expect(z).toBeGreaterThanOrEqual(3);
+      for (const z of d.report.zone) expect(z).toBeGreaterThanOrEqual(3); // +1 … +3
       expect(d.solve.scrim).toBe(0); // exposure alone is enough on every fixture palette
     });
 });

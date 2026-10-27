@@ -19,7 +19,6 @@ Playwright 384 in Chromium, Firefox and the isolated project). Evidence per crit
 | **A Spotify app and Premium account** (manual checklist, `reviews/M7.md`) | PLAY-08, PLAY-09, the M parts of SP-01, SRCH-02, REL-04, BRW-02 |
 | **The owner's laptop and gaming PC** | PERF-01, the reference runs of PERF-03 and LYR-26 (measured here: 0.7 ms frame, 0.2 ms lyrics), REL-06 (8 h soak), DEP-04 under real Navidrome transcoding, VIS-03 client timing on real covers |
 | **People** | DS-05 (five-second test), A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes) |
-| **Owner decisions** | VIS-05 (+3 contrast floor, `reviews/M4.md`) |
 | **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
 | **Remote CI** (no repository URL yet) | DS-06 (baselines on CI), VIS-07 Firefox context-loss (runs under Xvfb in CI) |
 
