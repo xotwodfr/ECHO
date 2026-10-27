@@ -1116,6 +1116,11 @@
   margin-top: calc(var(--sp-2) + (var(--lh-body) - var(--fs-body)) / 2);
 }
 
+/* The artist line is body-medium (20px line) since the M3 shell, not the 16px small line. */
+.tile--loading .bar--small {
+  margin-block: calc((var(--lh-body) - var(--fs-small)) / 2);
+}
+
 .tile-artist {
   color: var(--md-sys-color-on-surface-variant);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
