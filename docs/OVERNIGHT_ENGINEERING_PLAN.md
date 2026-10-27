@@ -100,7 +100,7 @@ P3 low.
   deleting them.
 - Verify: unit test. Redeem, delete the user, re-redeem → `invite_invalid`, and the invite is no
   longer listed as pending.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`00460cb`) [X]: the test failed first (the spent link made a new account, 200), then passes.
 
 **ON-SEC-2 · P2 · User ids are reused, so in-memory and signed state reaches the next user.**
 - Where: `db.ts:14` (`id INTEGER PRIMARY KEY`, no `AUTOINCREMENT`: deleting the newest user frees
@@ -117,7 +117,7 @@ P3 low.
   6 h.
 - Verify: unit tests. A token is cached and its row is deleted → `not_connected`. A URL signed for
   `(id, created_at₁)` is refused once the id belongs to a user with a different `created_at`.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`00460cb`) [X]: both tests failed first (the next user got the token; the old URL worked), then pass. Id allocation itself is unchanged (no table rebuild).
 
 **ON-SEC-3 · P3 · The Origin-check exemption and the cookie fallback disagree.**
 - Where: `http.ts:98` exempts any `Authorization: Bearer …` header from the Origin check.
@@ -133,9 +133,9 @@ P3 low.
 **ON-SEC-4 · P3 · The last admin can be deleted through a race.**
 - Where: `account.ts:302-306`. The `isLastAdmin` check runs before an awaited reauth (Argon2 +
   TOTP), and the delete runs after it, with no recheck.
-- Fix: recheck inside `deleteUser`'s transaction and throw.
+- Fix: recheck inside `deleteUser`'s transaction. It returns false and the route answers 409.
 - Verify: unit test that calls the guarded delete when no other admin remains.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`00460cb`) [X].
 
 **ON-SEC-5 · P3 · A prototype key in the settings body gives a 500.**
 - Where: `settings.ts:98-102` uses bare `SCHEMA[s]` lookups. `{"constructor":{"name":1}}` throws a
@@ -191,7 +191,7 @@ P3 low.
 - Fix: ignore `AbortError` as well.
 - Verify: new unit tests with fake media elements. A pending `play()` rejected with `AbortError` →
   no error event.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`1f39b3d`) [X]: 2 new unit tests failed first with `AbortError: interrupted`, then pass.
 
 **ON-PB-2 · P1 · A stream that fails before its metadata skips at once, so the REL-02 retries
 never run.**
@@ -205,7 +205,7 @@ never run.**
   emit own the error.
 - Verify: unit test with fake elements, plus a new mock fault, `failStreams=N`. In an E2E, the first
   2 stream requests fail → the same track plays, with no skip toast.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`1f39b3d`) [X]: in real Chromium before the fix, a 2-request outage skipped tracks 1 and 2 (`Copper Rain 3` played); after it, the same track plays. Unit tests cover the 3-retry limit. Reliability spec 5/5.
 
 **ON-PB-3 · P3 · Shuffle and repeat are not restored with the queue.**
 - Where: `controller.ts:363-368`. `restore()` loads `shuffleOrder`, but `player.shuffle` stays
@@ -236,7 +236,7 @@ never run.**
 - Fix: report each pending source as `timeout`. Timeouts already block negative caching.
 - Verify: a resolver unit test with a source that is still pending at the deadline → its outcome is
   in `tried` and no negative entry is written.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`6110441`) [X].
 
 **ON-LY-2 · P2 · An LRCLIB `/api/search` failure is returned as "not found".**
 - Where: `sources.ts:205`, `if (!res.ok) return undefined`, which leads to `notFound`.
@@ -244,21 +244,21 @@ never run.**
   3 days.
 - Fix: return `httpError(…)` as `/api/get` does.
 - Verify: unit test. `get` 404 then `search` 503 → outcome `error`, not `notFound`.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`6110441`) [X]. A search 404 stays "not found", as `/api/get`'s does.
 
 **ON-LY-3 · P2 · NetEase YRC drops text after a "(".**
 - Where: `parse.ts:128`, `YRC_WORD = /\((\d+),(\d+),\d+\)([^(]*)/g`.
 - Evidence [S·a]: in `(0,500,0)Hello (500,500,0)(oh) (1000,500,0)world`, "(oh)" is lost.
 - Fix: match the timing tuples only, and slice each word's text up to the next tuple.
 - Verify: unit tests for both inputs.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`5ac88fd`) [X].
 
 **ON-LY-4 · P2 · The timing check reads the last line, even a blank end marker.**
 - Where: `parse.ts:448-449`, `lines.at(-1).start < trackDurationMs`, which runs before sorting.
 - Evidence [S·a]: in `…[03:45.00]` (an empty end marker at the track's end), a correctly timed song
   becomes `sync: 'none'`.
 - Fix: test the latest line that has text, after sorting.
-- Verify: unit test. Tonight: yes. Status: **planned**.
+- Verify: unit test. Tonight: yes. Status: **fixed** (`5ac88fd`) [X].
 
 **ON-LY-5 · P2 · Arabic-script held words lose their letter joining.**
 - Where: `client/stage/lyrics/layout.ts:72-76`. `emphasisOf` splits long held words into
@@ -266,7 +266,7 @@ never run.**
 - Expected: `LYRICS_EXPERIENCE.md` RTL/CJK robustness (LYR-27).
 - Fix: no letter emphasis for joining scripts (Arabic, Syriac, N'Ko, Mongolian, Adlam).
 - Verify: unit test. `emphasisOf` on a long Arabic word → null.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`35566ca`) [X] (unit; not checked visually with a real Arabic song). LYRICS_EXPERIENCE §5.5 updated.
 
 **ON-LY-6 · P2 · The previous track's offset can be saved to the next track, and a shared timer
 drops saves.**
@@ -276,18 +276,18 @@ drops saves.**
   saved as +350.
 - Fix: reset the offset and pin on track change, ignore nudges until the doc is ready, and flush a
   pending save before switching tracks.
-- Verify: loader unit test. Tonight: yes. Status: **planned**.
+- Verify: loader unit test. Tonight: yes. Status: **fixed** (`52e8cce`) [X]: track 2 started at track 1's +150 ms before the fix. LYR-25 E2E 12/12 (both browsers).
 
 **ON-LY-7 · P3 · `end < start` corrupts the timing spans.**
 - Where: `parse.ts:425-429` never enforces `end ≥ start`. `timing.ts` assumes `from` is
   non-decreasing.
 - Fix: drop an `end` that falls before its `start`.
-- Verify: unit test. Tonight: yes. Status: **planned**.
+- Verify: unit test. Tonight: yes. Status: **fixed** (`5ac88fd`) [X].
 
 **ON-LY-8 · P3 · A 429 without a numeric `Retry-After` is not cooled.**
 - Where: `sources.ts:63-68`. An HTTP-date header gives `NaN`, there is no default, and there is no
   cap.
-- Fix: parse the date, default to 60 s, cap at 1 h. Tonight: if cheap. Status: **planned**.
+- Fix: parse the date, default to 60 s, cap at 1 h. Tonight: if cheap. Status: **fixed** (`6110441`) [X].
 
 **ON-LY-9 · P3 · Remaining resolver edge cases.**
 - A pinned source that answers late is ignored, and the fallback is cached under the pin key.
@@ -351,7 +351,7 @@ track.**
 - Fix: an internal monotonic clock, accumulated from `dtMs`, for onset bookkeeping. Onsets start at
   −∞.
 - Verify: unit test. Onsets fire on the next track after song time jumps back from 239 s to 0.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`0347e5f`) [X]: the new test saw 0 onsets in the first 5 s of the next track before, ≥ 7 after.
 
 **ON-VZ-2 · PERF-04's analyser clause ("analyser polling stops").**
 - Evidence [S + X]: `AnalyserFeatures` has no timer. It is pulled only by `loop.frame()`, which
@@ -374,7 +374,7 @@ track.**
   - `api()` also reports the server down on 502/503/504 without an ECHO error code.
 - Verify: unit test of the `api()` 502 mapping, plus an E2E against the production build is not
   possible (E2E runs the dev build with fixtures). Unit-test the decision function instead.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`f46463b`) [X]: exercised on a production build behind a fault proxy. Before: "Nothing in your library yet. Connect a server in Settings.", still there 5 s after recovery. After: "ECHO server unreachable — retrying in 1 s" + Retry, reloaded by itself 1.3 s after the proxy recovered.
 
 **ON-UI-2 · P2 · An album that fails to load shows "0 tracks", or "not in your library".**
 - Where: `library-navidrome.ts:132-136`, `library-spotify.ts:133-147` and `LibraryViews.tsx:228-247`.
@@ -420,7 +420,7 @@ backup.**
   failure. Stale tmp files are swept.
 - Verify: unit tests. A failure leaves no final file and no tmp, and the next run retries. A good run
   gives a file that passes `quick_check`.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`25d8ff6`) [X]: the test failed first (the leftover stayed), then passes, along with the DEP-03 restore drill.
 
 **ON-DB-2 · P2 · A failed cache or DB write in a detached promise crashes the server.**
 - Where: `lyrics/routes.ts:140` (`onLate: … void deps.cache.put`), `index.ts:305` and
@@ -432,7 +432,7 @@ backup.**
   write must not turn a found lyric into a 500).
 - Verify: unit test. A cache whose `put` rejects → the route still answers 200 and nothing is
   unhandled.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`c409bdf`) [X]: lyrics answered 500 on a failing cache write before, 200 after; the palette likewise. No global `unhandledRejection` swallow was added on purpose: a crash plus restart is a safe failure mode, and the known detached paths are fixed at their source.
 
 **ON-DB-3 · P3 · Nothing is retained or pruned.**
 - Expired sessions are deleted only when presented, and `GET /me/sessions` lists them for ever.
@@ -485,14 +485,14 @@ resource limits.**
   [X]. It is a test race, not an app defect.
 - Fix: load both faces and assert they loaded before measuring. This makes the test stricter.
 - Verify: 10× per browser.
-- Status: **fixed** [X] (20/20).
+- Status: **fixed** (`62306f5`) [X] (20/20).
 
 **ON-TST-2 · P2 · `NavidromeProvider` has no unit tests.**
 - The REL-02 and PLAY-04 E2Es are its only coverage.
-- Fix: a fake-element harness, added with ON-PB-1/2. Status: **planned**.
+- Fix: a fake-element harness, added with ON-PB-1/2. Status: **fixed** (`1f39b3d`): `navidrome.test.ts`, 4 tests.
 
 **ON-TST-3 · PERF-04's analyser clause had no assertion.**
-- The assertion was added (see ON-VZ-2). Status: **fixed** [X].
+- The assertion was added (see ON-VZ-2). Status: **fixed** (`62306f5`) [X].
 
 **ON-TST-4 · Remote CI has never run.**
 - The owner chose to have no remote. The local CI equivalent (`scripts/e2e-container.sh`, the pinned
