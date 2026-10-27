@@ -119,17 +119,21 @@ describe('Stage loop (TECHNICAL_ARCHITECTURE.md §4.2)', () => {
     expect(frames.at(-1)?.dt).toBe(MAX_DT_MS);
   });
 
-  // PERF-04: a hidden tab gets no frames at all.
+  // PERF-04: a hidden tab gets no frames at all, and the analyser is not polled: features are
+  // pulled only by a frame (AnalyserFeatures has no timer of its own).
   it('stops while hidden and resumes when visible, without a time jump', () => {
-    const { loop, advance, setHidden, frames, pending } = setup();
+    const { loop, advance, setHidden, frames, pending, calls } = setup();
+    const sampled = () => calls.filter((c) => c === 'features').length;
     loop.start();
     advance(16);
     setHidden(true);
     expect(pending()).toBe(0);
     const before = frames.length;
+    const polled = sampled();
     advance(16);
     advance(60_000);
     expect(frames).toHaveLength(before);
+    expect(sampled()).toBe(polled);
     setHidden(false);
     advance(16);
     expect(frames).toHaveLength(before + 1);

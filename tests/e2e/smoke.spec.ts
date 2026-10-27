@@ -59,7 +59,16 @@ test('the Shell uses Roboto Flex, the player Mona Sans, and nothing else', async
 // DS-03: tabular figures give every digit the same advance in both faces; proportional ones don't.
 test('tnum makes digits equal width in Roboto Flex and Mona Sans', async ({ page }) => {
   await page.goto('/library');
-  await page.evaluate(() => document.fonts.ready);
+  // Load both faces first: `fonts.ready` resolves at once when no load has started, and Firefox
+  // then measures a fallback face whose digits are tabular anyway.
+  const loaded = await page.evaluate(() =>
+    Promise.all(
+      ['Roboto Flex', 'Mona Sans'].map(
+        async (family) => (await document.fonts.load(`400 40px "${family}"`, '0123456789')).length,
+      ),
+    ),
+  );
+  expect(loaded).toEqual([1, 1]);
   const widths = await page.evaluate(() =>
     ['Roboto Flex', 'Mona Sans'].map((family) => {
       const span = document.createElement('span');
