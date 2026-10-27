@@ -19,6 +19,7 @@ export interface Faults {
   slowMs: number; // every response waits
   unauthorized: boolean; // HTTP 401 for everything
   breakStreamAt: number | null; // a stream body stops after this many bytes
+  failStreams: number; // the next this many stream requests answer 503 (a restarting Navidrome)
   lyricsDelayMs: number; // the mock LRCLIB answers this late
   lrclibStatus: number; // and with this status (200: normal)
   spotifyProduct: string; // the mock Spotify account's plan ('premium' | 'free')
@@ -121,6 +122,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     slowMs: 0,
     unauthorized: false,
     breakStreamAt: null,
+    failStreams: 0,
     lyricsDelayMs: 0,
     lrclibStatus: 200,
     spotifyProduct: 'premium',
@@ -169,6 +171,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       faults.slowMs = Number(q.get('slowMs') ?? 0);
       faults.unauthorized = q.get('unauthorized') === '1';
       faults.breakStreamAt = q.has('breakStreamAt') ? Number(q.get('breakStreamAt')) : null;
+      faults.failStreams = Number(q.get('failStreams') ?? 0);
       faults.lyricsDelayMs = Number(q.get('lyricsDelayMs') ?? 0);
       faults.lrclibStatus = Number(q.get('lrclibStatus') ?? 200);
       faults.spotifyProduct = q.get('spotifyProduct') ?? 'premium';
@@ -446,6 +449,11 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       case 'stream': {
         const s = SONGS.find((x) => x.id === id);
         if (!s) return json(fail(70, 'not found'));
+        if (faults.failStreams > 0) {
+          faults.failStreams--;
+          res.writeHead(503, { 'content-type': 'text/plain' });
+          return res.end('restarting');
+        }
         let body = audio.get(id);
         if (!body) {
           body = wav(s.duration, 220 + SONGS.indexOf(s) * 20);

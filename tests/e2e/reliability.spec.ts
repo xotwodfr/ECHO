@@ -22,6 +22,23 @@ test('REL-02: a broken stream is reloaded, then skipped with a toast', async ({ 
   await expect(dock).toHaveAttribute('data-status', 'playing', { timeout: 15_000 });
 });
 
+// ON-PB-2: a stream that fails before its metadata (Navidrome restarting) is reloaded too, not
+// skipped at once: the first two requests fail, the third plays the same track.
+test('REL-02: a stream failing before it starts is reloaded and plays, with no skip', async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page);
+  await page.goto('/library/album/al-2');
+  await faults('failStreams=2');
+  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  const dock = page.getByRole('region', { name: 'Player' });
+  await expect(dock).toHaveAttribute('data-status', 'playing', { timeout: 15_000 });
+  await expect(dock).toContainText('Copper Rain 1');
+  await expect(page.getByText('This track could not be played. Skipped to the next.')).toHaveCount(
+    0,
+  );
+});
+
 test('REL-01: Navidrome down shows in the dock, and recovers on its own', async ({ page }) => {
   await signedInWithNavidrome(page);
   await faults('down=1');

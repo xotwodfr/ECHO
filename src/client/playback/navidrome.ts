@@ -269,6 +269,8 @@ export class NavidromeProvider implements PlaybackProvider {
       el.addEventListener('error', done);
     });
     if (load !== this.loads) return; // superseded by a newer load
+    // The source failed before its metadata: the error listener reloads it (REL-02) or reports it.
+    if (el.error) return;
     if (!this.transcode && this.startMs) el.currentTime = this.startMs / 1000;
     this.loading = false;
     if (this.wantPlay) await this.play();
@@ -282,8 +284,10 @@ export class NavidromeProvider implements PlaybackProvider {
     this.graph.start();
     await this.el.play().catch((e: unknown) => {
       this.emitState();
-      // NotAllowedError: no user gesture yet; the next click plays.
-      if (e instanceof DOMException && e.name === 'NotAllowedError') return;
+      // NotAllowedError: no user gesture yet; the next click plays. AbortError: a pause or a new
+      // source interrupted this play, which is not a broken stream.
+      if (e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'AbortError'))
+        return;
       this.emit('error', {
         code: 'navidrome.stream',
         provider: 'navidrome',
