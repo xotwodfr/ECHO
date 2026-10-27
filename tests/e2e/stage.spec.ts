@@ -134,6 +134,15 @@ test.describe('with WebGL 2', () => {
     await countFrames(page);
     await openStage(page);
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
+    // The album's palette transition (1.2 s, its own rAF) must finish first, or its frames count.
+    const rootStyle = () => page.evaluate(() => document.documentElement.style.cssText);
+    await expect
+      .poll(async () => {
+        const a = await rootStyle();
+        await page.waitForTimeout(150);
+        return a === (await rootStyle());
+      })
+      .toBe(true);
     await page.evaluate(() => {
       const gl = (document.querySelector('.stage-canvas') as HTMLCanvasElement).getContext(
         'webgl2',

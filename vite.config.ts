@@ -15,6 +15,9 @@ export default defineConfig({
   build: {
     outDir: 'dist/client',
     emptyOutDir: true,
+    // The lazy `engine` chunk is three.js with the Stage (~580 kB, 150 kB gzip), loaded only on
+    // Listen. The budget that matters is PERF-05's shell JS ≤ 350 KB gzip.
+    chunkSizeWarningLimit: 650,
     rollupOptions: {
       // The type specimen (which also carries the Geologica alternative) is a dev/review page.
       // The production image builds with ECHO_SPECIMEN=0 so neither ships (DS-10).
