@@ -1,6 +1,7 @@
-import { Component, type ReactNode } from 'react';
+import { Component, type ReactNode, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { connectionStore } from '../connection.ts';
+import { useTicker } from '../playback/context.tsx';
 import { strings } from '../strings.ts';
 import { Button } from './controls.tsx';
 import { AlbumGrid, AlbumTileSkeleton, TrackList, TrackRowSkeleton } from './media.tsx';
@@ -55,6 +56,44 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { faile
       </main>
     );
   }
+}
+
+/**
+ * No answer from the server at start (a restart behind Caddy, ON-UI-1): instead of an empty shell,
+ * this says so, asks again with backoff (1, 2, 4 … 30 s) and reloads once `/session` answers (REL-01).
+ * Only a good answer reloads, so a server that answers with errors cannot cause a reload loop.
+ */
+export function ServerUnreachable() {
+  const [retryAt, setRetryAt] = useState(Date.now() + 1000);
+  useTicker(true, 500);
+  useEffect(() => {
+    let wait = 1000;
+    let timer = setTimeout(function attempt() {
+      void fetch('/api/v1/session', { credentials: 'same-origin', cache: 'no-store' })
+        .then(
+          (r) => r.ok,
+          () => false,
+        )
+        .then((ok) => {
+          if (ok) return location.reload();
+          wait = Math.min(30_000, wait * 2);
+          setRetryAt(Date.now() + wait);
+          timer = setTimeout(attempt, wait);
+        });
+    }, wait);
+    return () => clearTimeout(timer);
+  }, []);
+  const s = Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
+  return (
+    <main className="app-error">
+      <div className="block-error" role="alert">
+        <p>{strings.dock.unreachable('ECHO server', s)}</p>
+        <Button variant="secondary" onClick={() => location.reload()}>
+          {t.retry}
+        </Button>
+      </div>
+    </main>
+  );
 }
 
 export function BlockEmpty({ text, action }: { text: string; action?: ReactNode }) {

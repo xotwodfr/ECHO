@@ -20,7 +20,7 @@ import { Shell } from './shell/Shell.tsx';
 import { spotifyStatus } from './shell/SpotifyViews.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
-import { AppErrorBoundary } from './ui/states.tsx';
+import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
 import { createViewStore } from './view.ts';
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
@@ -66,6 +66,9 @@ if (!fixtures && session && !['login', 'setup', 'invite'].includes(route.view)) 
 // "Require TOTP for all" and no TOTP yet: Account is the only thing the server allows.
 if (session?.status === 'signedIn' && session.mustEnrolTotp)
   store.getState().navigate({ view: 'settings', section: 'account' }, { replace: true });
+// Production, and the server did not answer at start (a restart behind Caddy): say so and recover on
+// its own, not an empty shell with no library (ON-UI-1). Development builds play the fixtures.
+const unreachable = !fixtures && session?.status === 'offline';
 const ownLibrary = session?.status === 'signedIn' && session.navidrome;
 // Preferences (Settings → Preferences): the server's for a signed-in user, this device's own.
 if (session?.status === 'signedIn') await loadPrefs();
@@ -141,6 +144,10 @@ const root = document.getElementById('root');
 if (root)
   createRoot(root).render(
     <AppErrorBoundary>
-      <Shell store={store} controller={controller} library={library} />
+      {unreachable ? (
+        <ServerUnreachable />
+      ) : (
+        <Shell store={store} controller={controller} library={library} />
+      )}
     </AppErrorBoundary>,
   );

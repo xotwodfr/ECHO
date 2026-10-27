@@ -45,6 +45,10 @@ export async function api<T>(
   if (!res.ok) {
     const e = new ApiError(res.status, (body ?? {}) as Record<string, string>);
     if (e.code === 'navidrome.unreachable') reportDown('navidrome');
+    // A 502–504 without ECHO's own error body came from the proxy in front of it (Caddy while ECHO
+    // restarts): unreachable, as when the fetch itself fails.
+    else if (res.status >= 502 && res.status <= 504 && e.code === `http_${res.status}`)
+      reportDown('server');
     // A signed-in page whose session ended: sign in again in place (REL-05).
     if (res.status === 401 && e.code === 'unauthenticated' && signedIn())
       sessionExpired.setState({ expired: true });
