@@ -268,6 +268,27 @@ describe('validation and repair (§5)', () => {
     expect(past.sync).toBe('none');
   });
 
+  // ON-LY-4: a blank end marker at the track's end is not a line past the end.
+  it('a blank end marker does not downgrade correct timing', () => {
+    const p = repair(parseLrc('[00:01.00]a\n[00:02.00]b\n[03:45.00]'), 225_000);
+    expect(p.sync).toBe('line');
+    expect(p.lines.map((l) => l.start)).toEqual([1000, 2000, 225_000]);
+  });
+
+  // ON-LY-7: an end before its start broke the order of the timing spans.
+  it('an end before its start is dropped', () => {
+    const p = repair({
+      sync: 'line',
+      offsetMs: 0,
+      lines: [
+        { text: 'a', start: 20_000, end: 0 },
+        { text: 'b', start: 40_000, end: 45_000 },
+      ],
+    });
+    expect(p.lines[0]).toEqual({ text: 'a', start: 20_000 });
+    expect(p.lines[1]).toMatchObject({ end: 45_000 });
+  });
+
   it('untimed empty lines are dropped; a document with no text is rejected', () => {
     expect(repair(parsePlain('a\n\n \nb')).lines.map((l) => l.text)).toEqual(['a', 'b']);
     expect(() => repair({ sync: 'line', offsetMs: 0, lines: [{ text: ' ', start: 0 }] })).toThrow(
@@ -300,5 +321,13 @@ describe('NetEase YRC', () => {
 
   it('nothing timed is invalid', () => {
     expect(() => parseYrc('{"t":0,"c":[]}')).toThrow(LyricsInvalid);
+  });
+
+  // ON-LY-3: the word pattern stopped each word's text at the next "(", dropping the rest.
+  it('text with parentheses is kept, timed or not', () => {
+    const timed = parseYrc('[0,2000](0,500,0)Hello (500,500,0)(oh) (1000,500,0)world');
+    expect(timed.lines[0]?.text).toBe('Hello (oh) world');
+    expect(timed.lines[0]?.words?.map((w) => w.text)).toEqual(['Hello', '(oh)', 'world']);
+    expect(parseYrc('[0,2000](0,500,0)Hello (oh) world').lines[0]?.text).toBe('Hello (oh) world');
   });
 });

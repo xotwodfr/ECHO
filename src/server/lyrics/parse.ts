@@ -125,7 +125,8 @@ function parseWordTags(body: string): LyricWord[] | null {
 // ---- NetEase YRC ------------------------------------------------------------------------------
 
 const YRC_LINE = /^\[(\d+),(\d+)\](.*)$/;
-const YRC_WORD = /\((\d+),(\d+),\d+\)([^(]*)/g;
+/** A word's timing; its text runs to the next timing (it may hold "(" itself: "(oh)"). */
+const YRC_TIME = /\((\d+),(\d+),\d+\)/g;
 /** Credit lines NetEase puts in the lyric itself ("作词 : …", "Producer: …"). */
 export const CREDIT =
   /^\s*(作词|作曲|编曲|制作人|制作|混音|母带|和声|监制|出品|吉他|贝斯|鼓|键盘|弦乐|录音|词|曲)\s*[:：]/;
@@ -136,14 +137,18 @@ export function parseYrc(text: string): Parsed {
   for (const raw of text.split(/\r?\n/)) {
     const m = YRC_LINE.exec(raw.trim());
     if (!m) continue;
-    const marks = [...(m[3] as string).matchAll(YRC_WORD)];
+    const body = m[3] as string;
+    const marks = [...body.matchAll(YRC_TIME)];
     const words: LyricWord[] = marks
-      .map((w, i) => ({
-        text: (w[3] as string).trim(),
-        start: Number(w[1]),
-        end: Number(w[1]) + Math.max(1, Number(w[2])),
-        isPartOfWord: !/\s$/.test(w[3] as string) && i + 1 < marks.length,
-      }))
+      .map((w, i) => {
+        const raw = body.slice(w.index + w[0].length, marks[i + 1]?.index ?? body.length);
+        return {
+          text: raw.trim(),
+          start: Number(w[1]),
+          end: Number(w[1]) + Math.max(1, Number(w[2])),
+          isPartOfWord: !/\s$/.test(raw) && i + 1 < marks.length,
+        };
+      })
       .filter((w) => w.text);
     const last = words.at(-1);
     if (!last) continue;
@@ -422,16 +427,19 @@ export function repair(p: Parsed, trackDurationMs?: number): Parsed {
         })),
       }),
     }));
+    const start = p.sync === 'none' ? 0 : t(l.start);
     const end = words?.length
       ? (words[words.length - 1] as LyricWord).end
       : l.end !== undefined
         ? t(l.end)
         : undefined;
+    const { end: _, ...rest } = l;
     return {
-      ...l,
+      ...rest,
       text: l.text.replace(/\s+/g, ' ').trim(),
-      start: p.sync === 'none' ? 0 : t(l.start),
-      ...(end !== undefined && { end }),
+      start,
+      // An end before its start is no end (the spans that time the field assume order).
+      ...(end !== undefined && end >= start && { end }),
       ...(words && { words }),
       ...(bg && { background: bg }),
     };
@@ -445,8 +453,9 @@ export function repair(p: Parsed, trackDurationMs?: number): Parsed {
     for (let i = 1; i < lines.length; i++)
       if ((lines[i] as LyricLine).start >= (lines[i - 1] as LyricLine).start) ordered++;
     const monotonic = lines.length < 2 || ordered / (lines.length - 1) >= 0.9;
-    const fits =
-      trackDurationMs === undefined || (lines.at(-1) as LyricLine).start < trackDurationMs;
+    // The last line with words: a blank end marker at the track's end is not a line past it.
+    const lastSung = Math.max(...lines.filter((l) => l.text).map((l) => l.start));
+    const fits = trackDurationMs === undefined || lastSung < trackDurationMs;
     if (!monotonic || !fits) {
       sync = 'none';
       lines = lines
