@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { createSealer, loadMasterKey, type Sealer } from './crypto.ts';
 import { type Db, openDb } from './db/db.ts';
@@ -9,6 +9,7 @@ import { type Db, openDb } from './db/db.ts';
 //
 //   backup [file]                        a consistent copy of the database (VACUUM INTO), default
 //                                        /data/backups/echo-<time>.db; the master key is NOT in it
+//                                        (the server also writes echo-auto-<date>.db daily, keeps 7)
 //   verify                               how many sealed values open with the current master key
 //   rotate-master-key --new-key-file F   re-seals every secret with the key in F, in one
 //                                        transaction; then replace the Docker secret with F and
@@ -66,6 +67,21 @@ export function backup(db: Db, file: string) {
   mkdirSync(dirname(file), { recursive: true });
   db.prepare('VACUUM INTO ?').run(file);
   return file;
+}
+
+/**
+ * The server's daily backup: `echo-auto-<date>.db` in `dir`, once per UTC day (a restart the same
+ * day does nothing), keeping the newest `keep`. Manual `backup` files are never pruned.
+ */
+export function nightlyBackup(db: Db, dir: string, now = new Date(), keep = 7) {
+  const file = join(dir, `echo-auto-${now.toISOString().slice(0, 10)}.db`);
+  const made = existsSync(file) ? null : backup(db, file);
+  const old = readdirSync(dir)
+    .filter((f) => /^echo-auto-\d{4}-\d{2}-\d{2}\.db$/.test(f))
+    .sort()
+    .slice(0, -keep);
+  for (const f of old) rmSync(join(dir, f));
+  return { made, pruned: old };
 }
 
 export function verify(db: Db, sealer: Sealer) {

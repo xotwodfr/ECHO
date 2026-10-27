@@ -1,9 +1,9 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { backup, rotate, verify } from './admin-cli.ts';
+import { backup, nightlyBackup, rotate, verify } from './admin-cli.ts';
 import { startSetup } from './auth/routes.ts';
 import { fromBase32, hotp, stepAt } from './auth/totp.ts';
 import { createSealer } from './crypto.ts';
@@ -154,5 +154,22 @@ describe('backup and restore drill (DEP-03)', () => {
     expect(r).toEqual({ resealed: 3, skipped: [] });
     expect(verify(p.db, createSealer(next))).toEqual({ total: 3, unreadable: [] });
     expect(verify(p.db, createSealer(p.key)).unreadable).toHaveLength(3);
+  });
+});
+
+describe('nightly backup', () => {
+  it('writes once per day, keeps the newest 7, and never prunes manual backups', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'echo-nightly-'));
+    const db = openDb(join(dir, 'echo.db'));
+    const out = join(dir, 'backups');
+    backup(db, join(out, 'echo-manual.db'));
+    const day = (d: number) => new Date(Date.UTC(2026, 9, d, 3));
+    expect(nightlyBackup(db, out, day(1)).made).toMatch(/echo-auto-2026-10-01\.db$/);
+    expect(nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 1, 23))).made).toBeNull(); // same day
+    for (let d = 2; d <= 9; d++) nightlyBackup(db, out, day(d));
+    const files = readdirSync(out).sort();
+    expect(files).toHaveLength(8);
+    expect(files[0]).toBe('echo-auto-2026-10-03.db');
+    expect(files).toContain('echo-manual.db');
   });
 });

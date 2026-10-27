@@ -9,6 +9,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
 import { accountRoutes } from './account.ts';
 import { adminRoutes, matchLibrary, spicyKey, spotifySettings } from './admin.ts';
+import { nightlyBackup } from './admin-cli.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
 import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
@@ -246,6 +247,17 @@ if (import.meta.main) {
     );
   sweep();
   setInterval(sweep, 86_400_000).unref();
+  // The daily database backup (admin-cli.ts nightlyBackup): checked hourly, written once a day.
+  const backupDaily = () => {
+    try {
+      const r = nightlyBackup(auth.db, join(config.dataDir, 'backups'));
+      if (r.made) log('info', 'database backed up', { file: r.made, pruned: r.pruned.length });
+    } catch (err) {
+      log('warn', 'database backup failed', { detail: String(err) });
+    }
+  };
+  setTimeout(backupDaily, 300_000).unref();
+  setInterval(backupDaily, 3_600_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
   const spotifyDeps: SpotifyDeps = {
     db: auth.db,

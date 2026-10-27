@@ -95,6 +95,8 @@ docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts verify        
 docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts rotate-master-key --new-key-file <f>
 ```
 
+The server also backs the database up daily to `/data/backups/echo-auto-<date>.db` and keeps
+seven. Those sit on the same volume, so copy `/data/backups` off the box for disk-loss protection.
 Back the master key up **apart from** the data volume. The owner's live setup (Caddy on the host,
 Cloudflare tunnel) is described in [`docs/reviews/M5.md`](docs/reviews/M5.md) ("Task 12").
 
