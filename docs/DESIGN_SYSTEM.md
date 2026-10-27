@@ -22,8 +22,9 @@ view**: the Stage (Listen, its chrome, lyrics, Cover and Visual modes) and the d
 Decisions (owner, 2026-10-25): colour from the album art (dynamic), dark theme only, **Roboto Flex**,
 the **Expressive** flavour (2025 spec).
 
-**Colour.** `palette/m3.ts` builds the dark `SchemeExpressive` scheme (material-color-utilities,
-spec 2025) from the playing album's `--art-accent` as the seed, Sodium `#E3B26B` when nothing plays,
+**Colour.** `palette/m3.ts` builds the dark `SchemeContent` scheme (material-color-utilities,
+spec 2025; owner decision 2026-10-27: `SchemeExpressive` rotated secondary and tertiary away from
+the album, which put a green nav pill on a magenta record, so every role now keeps the album's hue) from the playing album's `--art-accent` as the seed, Sodium `#E3B26B` when nothing plays,
 and publishes every role as `--md-sys-color-*` (primary, secondary, tertiary, error and their
 containers and on-colours; surface, surface-dim/bright, the five surface containers, on-surface,
 on-surface-variant, outline, outline-variant, inverse roles, scrim, shadow). Success and warning are

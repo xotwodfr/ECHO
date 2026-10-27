@@ -12,7 +12,7 @@ const VIEWPORTS = [
   { width: 1024, height: 640 },
   { width: 390, height: 844 },
 ];
-const shot = { animations: 'disabled', caret: 'hide' } as const;
+const shot = { animations: 'disabled', caret: 'hide', threshold: 0.05 } as const;
 
 /** Plays Harbour Lights track 1 and pauses it at 0:42, with fonts and covers loaded. */
 async function pausedAt42(page: Page, url: string) {

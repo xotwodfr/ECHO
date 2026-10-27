@@ -4,7 +4,7 @@ import {
   type DynamicColor,
   Hct,
   hexFromArgb,
-  SchemeExpressive,
+  SchemeContent,
   TonalPalette,
 } from '@material/material-color-utilities';
 import { linearToSrgb, oklabToLinearSrgb, oklchToOklab, parseColor } from '../../shared/oklab.ts';
@@ -78,10 +78,10 @@ function argbOf(css: string): number {
   return (0xff000000 | (r << 16) | (g << 8) | b) >>> 0;
 }
 
-/** The dark M3 Expressive scheme for `seed` (any CSS colour), as hex per role. */
+/** The dark M3 content scheme for `seed` (any CSS colour), as hex per role. */
 export function m3Scheme(seed: string): Record<M3Role, string> {
   const source = argbOf(seed);
-  const scheme = new SchemeExpressive(Hct.fromInt(source), true, 0, '2025');
+  const scheme = new SchemeContent(Hct.fromInt(source), true, 0, '2025');
   const out = {} as Record<M3Role, string>;
   for (const [role, color] of Object.entries(ROLES))
     out[role as M3Role] = hexFromArgb(color.getArgb(scheme));

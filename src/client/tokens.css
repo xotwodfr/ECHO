@@ -65,24 +65,24 @@
   /* ---------- Material 3 Expressive: the shell (DESIGN_SYSTEM.md §3.1, §4, §6, §9, §11) ----------
      The Stage, the lyrics and the dock's player controls keep the tokens above (§1). */
 
-  /* colour: dark M3 Expressive scheme (2025 spec), runtime-overwritten from the album's accent
+  /* colour: dark M3 content scheme (2025 spec; hues stay the album's), runtime-overwritten from the album's accent
      (palette/m3.ts); these are the Sodium-seeded fallback */
-  --md-sys-color-primary: #FFD396; --md-sys-color-on-primary: #6A4500;
-  --md-sys-color-primary-container: #F9C373; --md-sys-color-on-primary-container: #5E3D00;
-  --md-sys-color-secondary: #C2C5DD; --md-sys-color-on-secondary: #3B3F52;
-  --md-sys-color-secondary-container: #212537; --md-sys-color-on-secondary-container: #9FA3B9;
-  --md-sys-color-tertiary: #B2C5FF; --md-sys-color-on-tertiary: #163C88;
-  --md-sys-color-tertiary-container: #9EB7FF; --md-sys-color-on-tertiary-container: #03317E;
-  --md-sys-color-error: #FE7453; --md-sys-color-on-error: #450900;
-  --md-sys-color-error-container: #881F05; --md-sys-color-on-error-container: #FF9B82;
-  --md-sys-color-surface: #170C01; --md-sys-color-surface-dim: #170C01; --md-sys-color-surface-bright: #3E2802;
-  --md-sys-color-surface-container-lowest: #000000; --md-sys-color-surface-container-low: #1D1101;
-  --md-sys-color-surface-container: #261701; --md-sys-color-surface-container-high: #2D1C01;
-  --md-sys-color-surface-container-highest: #362202;
-  --md-sys-color-on-surface: #FFE1BA; --md-sys-color-on-surface-variant: #C7A678;
-  --md-sys-color-outline: #8E7147; --md-sys-color-outline-variant: #5C441F;
-  --md-sys-color-inverse-surface: #FFF8F4; --md-sys-color-inverse-on-surface: #63523B;
-  --md-sys-color-inverse-primary: #7F5710; --md-sys-color-scrim: #000000; --md-sys-color-shadow: #000000;
+  --md-sys-color-primary: #FFCE89; --md-sys-color-on-primary: #442B00;
+  --md-sys-color-primary-container: #E3B26B; --md-sys-color-on-primary-container: #664303;
+  --md-sys-color-secondary: #DDC2A0; --md-sys-color-on-secondary: #3E2D15;
+  --md-sys-color-secondary-container: #564429; --md-sys-color-on-secondary-container: #CBB18F;
+  --md-sys-color-tertiary: #D0DD93; --md-sys-color-on-tertiary: #2B3400;
+  --md-sys-color-tertiary-container: #B4C17A; --md-sys-color-on-tertiary-container: #444F15;
+  --md-sys-color-error: #FFB4AB; --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000A; --md-sys-color-on-error-container: #FFDAD6;
+  --md-sys-color-surface: #17130E; --md-sys-color-surface-dim: #17130E; --md-sys-color-surface-bright: #3D3833;
+  --md-sys-color-surface-container-lowest: #110E09; --md-sys-color-surface-container-low: #1F1B16;
+  --md-sys-color-surface-container: #231F1A; --md-sys-color-surface-container-high: #2E2924;
+  --md-sys-color-surface-container-highest: #39342E;
+  --md-sys-color-on-surface: #EAE1D8; --md-sys-color-on-surface-variant: #D3C4B4;
+  --md-sys-color-outline: #9C8F80; --md-sys-color-outline-variant: #4F4539;
+  --md-sys-color-inverse-surface: #EAE1D8; --md-sys-color-inverse-on-surface: #34302A;
+  --md-sys-color-inverse-primary: #7D5719; --md-sys-color-scrim: #000000; --md-sys-color-shadow: #000000;
   --md-sys-color-success: #98D68C; --md-sys-color-on-success: #003A05;
   --md-sys-color-success-container: #185217; --md-sys-color-on-success-container: #B3F3A6;
   --md-sys-color-warning: #FCBB4D; --md-sys-color-on-warning: #442C00;
