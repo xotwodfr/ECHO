@@ -4,10 +4,9 @@
 !pnpm-workspace.yaml
 !patches/
 !index.html
+!public/
 !vite.config.ts
 !tsconfig.json
 !src/
 !scripts/verify-hardware.ts
 src/**/*.test.ts
-src/client/specimen/
-src/client/fonts/geologica-*

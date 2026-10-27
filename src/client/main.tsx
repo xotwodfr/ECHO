@@ -24,7 +24,7 @@ import { AppErrorBoundary } from './ui/states.tsx';
 import { createViewStore } from './view.ts';
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
-// development builds play the fixture library (M2 task 3); the image (ECHO_SPECIMEN=0) has no
+// development builds play the fixture library (M2 task 3); the image (ECHO_DEV_PAGES=0) has no
 // fixtures and sends visitors to sign in.
 const fixtures = __ECHO_FIXTURES__ ? await import('./fixtures/playback.ts') : null;
 

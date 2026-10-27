@@ -244,10 +244,8 @@ Measured in M1: Mona Sans fits more text per row than the alternative at the sam
 condense, so lyric lines stay within the row rules at the compact breakpoint (390×844), where the
 alternative needed 4–5 rows.
 
-**Alternative kept for comparison: Geologica** (`wght` 100–900, `SHRP`, `CRSV`, `slnt`; SIL OFL 1.1).
-It stays in the repository and the type specimen (`specimen.html`, a development page) only. It is
-never imported by the application, and the production image is built without the specimen, so it
-is not shipped (DS-10).
+**Runner-up: Geologica.** It and the M1 type specimen were removed on 2026-10-27; the comparison is
+recorded in `docs/reviews/M1-type.md`.
 
 **Fallbacks:** `system-ui, sans-serif`. Non-Latin lyrics (not a design target) render in system fonts
 and must not break layout (robustness fixtures, `LYRICS_EXPERIENCE.md` §16). No Noto webfonts are

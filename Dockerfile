@@ -12,8 +12,9 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 COPY index.html vite.config.ts tsconfig.json ./
+COPY public ./public
 COPY src ./src
-RUN ECHO_SPECIMEN=0 pnpm build && CI=true pnpm prune --prod && mkdir -p /tmp/data
+RUN ECHO_DEV_PAGES=0 pnpm build && CI=true pnpm prune --prod && mkdir -p /tmp/data
 
 # Runtime: distroless Node 24 on Debian 13 (M9, SEC-10): no shell, no package manager, no
 # util-linux, ncurses or perl, so none of their CVEs (the 43 HIGH findings of the slim base,

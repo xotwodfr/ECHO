@@ -173,7 +173,7 @@ export function createApp(deps: AppDeps) {
   // The built web client (vite build → dist/client), relative to the working directory.
   app.use('*', serveStatic({ root: './dist/client' }));
   // Deep links (`/library/album/…`) load the client, which reads the view from the URL. Only
-  // extension-less paths fall back, so a missing file (or `/specimen.html` in the image) stays 404.
+  // extension-less paths fall back, so a missing file stays 404.
   app.get('*', async (c, next) => {
     if (c.req.path.split('/').pop()?.includes('.')) return next();
     // The setup page exists only while there is no admin (SETTINGS_AND_SECURITY.md §4.1).

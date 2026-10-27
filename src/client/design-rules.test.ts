@@ -7,11 +7,10 @@ import { CHROME_IN_MS, CHROME_OUT_MS } from './stage/loop.ts';
 import { TOAST_EXIT_MS } from './ui/logic.ts';
 
 // Automated part of DS-01 and DS-02 (ACCEPTANCE_CRITERIA.md §7) over the client's component code.
-// Out of scope by design: tokens.css (the token source), fonts.css, the type specimen (a dev page
-// reviewed in M1), and lyricsConfig.ts (M3, allowed by DS-01).
+// Out of scope by design: tokens.css (the token source), fonts.css and lyricsConfig.ts (M3, allowed by DS-01).
 
 const ROOT = 'src/client';
-const SKIP = [/^tokens\.css$/, /^fonts\.css$/, /^fonts\//, /^specimen\//, /\.test\.ts$/, /\.svg$/];
+const SKIP = [/^tokens\.css$/, /^fonts\.css$/, /^fonts\//, /\.test\.ts$/, /\.svg$/];
 const files = readdirSync(ROOT, { recursive: true, encoding: 'utf8' })
   .filter((f) => /\.(css|tsx?)$/.test(f) && !SKIP.some((re) => re.test(f)))
   .map((f) => ({ name: f, text: readFileSync(join(ROOT, f), 'utf8') }));

@@ -9,7 +9,7 @@ import { GUIDE_ALBUM_ID, guideNames } from './guide.ts';
 import { lyricFixtures } from './lyrics.ts';
 
 // Fixture library (M2 task 3): invented albums, artists and covers drawn for ECHO, so the shell can
-// be used without a server. Development builds only: compiled out of the image (ECHO_SPECIMEN=0).
+// be used without a server. Development builds only: compiled out of the image (ECHO_DEV_PAGES=0).
 
 const ms = (m: number, s: number) => (m * 60 + s) * 1000;
 

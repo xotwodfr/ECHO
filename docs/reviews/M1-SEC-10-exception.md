@@ -5,7 +5,7 @@
 | Status | **Retired at the M9 re-check (2026-10-24): no findings left.** The runtime moved to `gcr.io/distroless/nodejs24-debian13`; Trivy 0.75.0 (DB 2026-10-24) reports 0 HIGH/CRITICAL in OS and Node packages, so SEC-10 passes strictly (`M9.md`). Kept for the record. |
 | Decision | Accepted by the product owner, 2026-10-23, to close M1 and proceed to M2 |
 | Owner | The product owner (decision, reassessment, renewal or rejection) |
-| Scope | Exactly the 43 findings listed below, identified by severity, CVE, package and installed version. Machine-readable copy: [`M1-SEC-10-exception.txt`](M1-SEC-10-exception.txt) |
+| Scope | Exactly the 43 findings listed below, identified by severity, CVE, package and installed version. (the machine-readable list and its CI gate were removed with the exception) |
 | Expires | At the **M9 SEC-10 re-check** (`IMPLEMENTATION_PLAN.md` M9). It is not renewed silently: at M9 SEC-10 either passes strictly or needs a new, explicit owner decision |
 | Policy | Unchanged. The target stays **zero high/critical findings** (`ACCEPTANCE_CRITERIA.md` SEC-10, `SETTINGS_AND_SECURITY.md` §12). Nothing is suppressed in the scanner |
 

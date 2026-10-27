@@ -1,27 +1,28 @@
 # ECHO
 
-An immersive, self-hosted music player for Navidrome and Spotify, with a floating, word-synchronised
+An immersive, self-hosted music player for Navidrome and Spotify: a floating, word-synchronised
 lyric field in an audio-reactive room lit by the album cover.
-
-**Status (2026-10-24):** M1–M9 are built and tested, and ECHO is deployed on the owner's OptiPlex at
-**https://echo.folk3s.com** (behind Caddy and a Cloudflare tunnel). Open items: the TLS grade (B
-until Cloudflare's minimum TLS version is raised to 1.2), the first sign-in checks and on-box backup
-drill, and the owner-side checks on the reference laptop and gaming PC (tier tuning, 8 h soak, Orca,
-five-second test). Each milestone's record is in [`docs/reviews/`](docs/reviews/); the design and
-plan live in [`docs/`](docs/README.md), which is the source of truth. Typefaces: **Mona Sans** (Stage, lyrics, player) and **Roboto Flex** (the Shell, which is Material 3 Expressive with colour from the playing album).
-
-Licence: [AGPL-3.0](LICENSE). Fonts: SIL OFL 1.1 (`src/client/fonts/OFL-*.txt`).
 
 ## What it does
 
-- **Navidrome:** your own library through ECHO's proxy (raw or transcoded streams, ReplayGain,
-  scrobbling), with audio-reactive visuals (Reverb).
-- **Spotify:** each user connects their own account to the server's Spotify app (PKCE); playback
+- **Navidrome:** your own library through ECHO's proxy (raw or transcoded streams, gapless playback,
+  crossfade, ReplayGain, scrobbling), with audio-reactive visuals (Reverb).
+- **Spotify:** each user connects their own account to the server's Spotify app (PKCE). Playback runs
   through the Web Playback SDK, with Spotify's attribution rules and two admin policy switches.
-- **Lyrics:** the best synchronised source wins (your Navidrome files, Spicy Lyrics, LRCLIB), with a
-  shared cache, credits on the Stage, per-track timing offsets and a static sheet when untimed.
+  Navidrome tracks are matched to Spotify where a source needs it.
+- **Lyrics:** the best synchronised source wins (your Navidrome files, Spicy Lyrics, NetEase,
+  LRCLIB), word-timed where available, with a shared cache, credits on the Stage, per-track timing
+  offsets and a static sheet when untimed.
+- **Colour:** the palette is extracted on the server from each cover and drives the Stage and the
+  Material 3 shell; a contrast solver keeps every lyric line readable.
 - **Accounts:** an admin and invited users, Argon2id + TOTP (mandatory for admins), sessions and
-  device tokens, per-user preferences that follow you across devices.
+  device tokens, and per-user preferences that follow you across devices.
+
+Typefaces: **Mona Sans** (Stage, lyrics, player) and **Roboto Flex** (the shell). Licence:
+[AGPL-3.0](LICENSE). Fonts: SIL OFL 1.1 (`src/client/fonts/OFL-*.txt`).
+
+The design, plan and acceptance criteria live in [`docs/`](docs/README.md), the source of truth;
+each milestone's record, including what is still open, is in [`docs/reviews/`](docs/reviews/).
 
 ## Requirements
 
@@ -59,12 +60,10 @@ are set in Settings → Admin.
 
 ## Development pages
 
-- **Type specimen:** `<vite url>/specimen.html` (F: Mona Sans ↔ Geologica, P: palette). Decision
-  record: [`docs/reviews/M1-type.md`](docs/reviews/M1-type.md).
 - **Component gallery:** `/__ui`, every UI component in every state. Visual baselines:
   `pnpm test:e2e --project=chromium ui.visual` (update with `-u` after review).
 
-Both are compiled out of the production image (`ECHO_SPECIMEN=0`).
+It is compiled out of the production image (`ECHO_DEV_PAGES=0`), with the fixture library.
 
 ## Container and deployment
 

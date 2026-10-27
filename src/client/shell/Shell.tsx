@@ -29,8 +29,8 @@ import { StageChrome, StageContent } from './StageViews.tsx';
 
 // The shell frame (DESIGN_SYSTEM.md §5): sidebar + canvas + dock, or the full-bleed Stage on Listen.
 
-// The component gallery (DESIGN_SYSTEM.md §9, DS-06) is a development page like the type specimen:
-// compiled out of the production image (ECHO_SPECIMEN=0), where /__ui is "Page not found".
+// The component gallery (DESIGN_SYSTEM.md §9, DS-06) is a development page:
+// compiled out of the production image (ECHO_DEV_PAGES=0), where /__ui is "Page not found".
 const Gallery = __ECHO_UI_PAGE__ ? lazy(() => import('./Gallery.tsx')) : null;
 
 const isTextField = (el: Element | null) =>
