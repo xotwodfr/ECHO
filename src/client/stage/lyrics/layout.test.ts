@@ -49,6 +49,14 @@ describe('emphasis on held words (§5.5, LYR-09)', () => {
     expect(emphasisOf(word('eightish', 2000), false)).toBeNull();
   });
 
+  // ON-LY-5: emphasis sets each grapheme in its own inline-block, which breaks cursive joining.
+  it('never in joined scripts (Arabic, Syriac, N’Ko, Mongolian, Adlam)', () => {
+    expect(emphasisOf(word('مرحبا', 1500), false)).toBeNull();
+    expect(emphasisOf(word('ܫܠܡܐ', 1500), false)).toBeNull();
+    expect(emphasisOf(word('ߒߞߏ', 1500), false)).toBeNull();
+    expect(emphasisOf(word('שלום', 1500), false)).not.toBeNull(); // Hebrew does not join
+  });
+
   it('counts graphemes, not code units (é composed or not, ß, ligatures)', () => {
     expect(graphemes('café')).toHaveLength(4);
     expect(graphemes('straße')).toHaveLength(6);

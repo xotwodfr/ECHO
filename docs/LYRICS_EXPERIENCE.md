@@ -287,7 +287,9 @@ A word sung for a long time gets a subtle, physical emphasis, so long notes look
 short ones:
 
 - **Trigger:** word duration ≥ 1000 ms **and** 2–7 graphemes (CJK: duration only). Never for words
-  < 150 ms (rap). Sources: all three prior-art renderers use ≥ 1000 ms.
+  < 150 ms (rap). Sources: all three prior-art renderers use ≥ 1000 ms. Never in a joined (cursive)
+  script, Arabic, Syriac, N'Ko, Mongolian or Adlam: one box per grapheme would break the letters'
+  joins (2026-10-28).
 - **Effect:** the word splits into grapheme spans (prepared at layout for qualifying words). Each
   grapheme gets:
   - **Lift:** `translateY` to −0.05em, starting **400 ms before** the word's start (anticipation,

@@ -22,6 +22,9 @@ export function dirOf(text: string): 'ltr' | 'rtl' {
 }
 
 export const isCJK = (text: string) => CJK.test(text);
+/** Cursive scripts: letters join their neighbours, so they cannot be set one box per grapheme. */
+const JOINED =
+  /[\p{Script=Arabic}\p{Script=Syriac}\p{Script=Nko}\p{Script=Mongolian}\p{Script=Adlam}]/u;
 
 const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 export const graphemes = (text: string) => [...segmenter.segment(text)].map((s) => s.segment);
@@ -66,12 +69,13 @@ const SPREAD_MAX_EM = 0.04;
 const NO_EMPHASIS_BELOW_MS = 150; // rap words (§9.9)
 
 /**
- * Held-word emphasis (§5.5): ≥ 1000 ms and 2–7 graphemes (CJK: duration only), never under 150 ms.
- * The last word of a line swells 1.4× more, capped at +8%.
+ * Held-word emphasis (§5.5): ≥ 1000 ms and 2–7 graphemes (CJK: duration only), never under 150 ms
+ * and never in a joined script (its graphemes would lose their joins). The last word of a line
+ * swells 1.4× more, capped at +8%.
  */
 export function emphasisOf(w: LyricWord, last: boolean): Emphasis | null {
   const dur = w.end - w.start;
-  if (dur < NO_EMPHASIS_BELOW_MS || dur < E.minMs) return null;
+  if (dur < NO_EMPHASIS_BELOW_MS || dur < E.minMs || JOINED.test(w.text)) return null;
   const n = graphemes(w.text).length;
   if (!isCJK(w.text) && (n < E.minG || n > E.maxG)) return null;
   const a = Math.min(1.2, (dur - E.minMs) / 1500 + 0.6) * (last ? 1.4 : 1);
