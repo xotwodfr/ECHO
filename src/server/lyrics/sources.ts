@@ -60,12 +60,26 @@ export interface Source {
 }
 
 const notFound: Outcome = { kind: 'notFound' };
-const httpError = (status: number, retryAfter?: string | null): Outcome => ({
-  kind: 'error',
-  retriable: status >= 500,
-  ...(retryAfter && { retryAfterMs: Number(retryAfter) * 1000 }),
-  detail: `HTTP ${status}`,
-});
+/** Retry-After in seconds or as an HTTP date, at most an hour; a 429 without one cools a minute. */
+function cooling(status: number, header?: string | null) {
+  const s = Number(header);
+  const ms = header
+    ? Number.isFinite(s)
+      ? s * 1000
+      : Date.parse(header) - Date.now()
+    : Number.NaN;
+  if (Number.isFinite(ms)) return Math.min(3_600_000, Math.max(0, ms));
+  return status === 429 ? 60_000 : undefined;
+}
+const httpError = (status: number, retryAfter?: string | null): Outcome => {
+  const wait = cooling(status, retryAfter);
+  return {
+    kind: 'error',
+    retriable: status >= 500,
+    ...(wait !== undefined && { retryAfterMs: wait }),
+    detail: `HTTP ${status}`,
+  };
+};
 
 // ---- S1 / S4: the user's own Navidrome --------------------------------------------------------
 
@@ -154,8 +168,11 @@ export function lrclibSource(opts: {
         signal,
       });
       let b: LrclibRecord | undefined;
-      if (res.status === 404) b = await lrclibSearch(f, opts, i, signal);
-      else if (!res.ok) return httpError(res.status, res.headers.get('retry-after'));
+      if (res.status === 404) {
+        const hit = await lrclibSearch(f, opts, i, signal);
+        if (hit && 'kind' in hit) return hit; // the search failed: an error, not "not found"
+        b = hit;
+      } else if (!res.ok) return httpError(res.status, res.headers.get('retry-after'));
       else b = (await res.json()) as LrclibRecord;
       if (!b || b.instrumental) return notFound;
       const parsed = b.syncedLyrics
@@ -196,13 +213,14 @@ async function lrclibSearch(
   opts: { baseUrl: string; userAgent: string },
   i: LookupInput,
   signal: AbortSignal,
-): Promise<LrclibRecord | undefined> {
+): Promise<LrclibRecord | Outcome | undefined> {
   const q = new URLSearchParams({ track_name: i.title, artist_name: i.artist });
   const res = await f(`${opts.baseUrl}/api/search?${q}`, {
     headers: { 'User-Agent': opts.userAgent },
     signal,
   });
-  if (!res.ok) return undefined;
+  if (res.status === 404) return undefined;
+  if (!res.ok) return httpError(res.status, res.headers.get('retry-after'));
   const list = (await res.json()) as LrclibRecord[];
   const off = (r: LrclibRecord) =>
     i.durationMs && r.duration ? Math.abs(r.duration * 1000 - i.durationMs) : 0;

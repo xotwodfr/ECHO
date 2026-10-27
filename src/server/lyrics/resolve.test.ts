@@ -275,6 +275,26 @@ describe('timeouts, retries and the breaker (LI-04)', () => {
     expect(out.tried).toContainEqual({ source: 'navidrome', outcome: 'timeout' });
   });
 
+  // ON-LY-1: a source still retrying at the 4.5 s deadline was left out of `tried`, so the route saw
+  // only "not found" answers and cached a miss for 3 days.
+  it('a source still running at the deadline is reported as a timeout', async () => {
+    const r = createResolver();
+    const out = await settle(
+      r.resolve(INPUT, [
+        fake('navidrome', [{ delay: 10, outcome: { kind: 'notFound' } }]),
+        fake('lrclib', [
+          { delay: 200, outcome: { kind: 'error', retriable: true, detail: '503' } },
+          { delay: 0, outcome: 'hang' }, // the retry runs past the deadline
+        ]),
+      ]),
+    );
+    expect(out.doc).toBeNull();
+    expect(out.tried).toEqual([
+      { source: 'navidrome', outcome: 'notFound' },
+      { source: 'lrclib', outcome: 'timeout' },
+    ]);
+  });
+
   it('one retry after a network error or 5xx; none after a 4xx', async () => {
     const r = createResolver();
     const flaky = fake('lrclib', [

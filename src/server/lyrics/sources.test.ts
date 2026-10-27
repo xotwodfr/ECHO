@@ -142,6 +142,16 @@ describe('S3 LRCLIB search fallback', () => {
       candidate: { sync: 'line', lines: [{ text: 'Near' }] },
     });
   });
+
+  // ON-LY-2: a failing search was read as "not found", which is cached for 3 days.
+  it('a search that fails is an error, not "not found"', async () => {
+    const f = (async (url: string) =>
+      url.includes('/api/get')
+        ? new Response('{}', { status: 404 })
+        : new Response('{}', { status: 503 })) as unknown as typeof fetch;
+    const o = await lrclibSource({ baseUrl: 'x', userAgent: 'u', fetch: f }).fetch(input, signal);
+    expect(o).toMatchObject({ kind: 'error', retriable: true, detail: 'HTTP 503' });
+  });
 });
 
 describe('S5 NetEase Cloud Music', () => {
@@ -288,6 +298,13 @@ describe('S2 Spicy Lyrics', () => {
     });
     expect(await s(401)).toMatchObject({ kind: 'error', retriable: false });
     expect(await s(502)).toMatchObject({ kind: 'error', retriable: true });
+    // ON-LY-8: a 429 cools even without a number: an HTTP date, none at all (a minute), at most 1 h.
+    const date = new Date(Date.now() + 120_000).toUTCString();
+    const byDate = (await s(429, { 'retry-after': date })) as { retryAfterMs: number };
+    expect(byDate.retryAfterMs).toBeGreaterThan(110_000);
+    expect(byDate.retryAfterMs).toBeLessThanOrEqual(120_000);
+    expect(await s(429)).toMatchObject({ retryAfterMs: 60_000 });
+    expect(await s(429, { 'retry-after': '86400' })).toMatchObject({ retryAfterMs: 3_600_000 });
   });
 });
 

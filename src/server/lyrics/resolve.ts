@@ -244,14 +244,19 @@ export function createResolver(opts: { clock?: Clock; random?: () => number } = 
       return new Promise((answer) => {
         let delivered: Candidate | undefined;
         let done = false;
-        const finish = () => {
+        const finish = (atDeadline = false) => {
           if (done) return;
           done = true;
           clock.clearTimeout(deadline);
           delivered = best();
-          answer({ doc: delivered ? toDoc(delivered) : null, tried: [...tried] });
+          // Sources still running at the deadline timed out, as far as this answer goes: listed, so
+          // a miss is never cached while one of them might still have the lyrics.
+          const late = atDeadline
+            ? [...pending].map((source): Tried => ({ source, outcome: 'timeout' }))
+            : [];
+          answer({ doc: delivered ? toDoc(delivered) : null, tried: [...tried, ...late] });
         };
-        const deadline = clock.setTimeout(finish, DEADLINE_MS);
+        const deadline = clock.setTimeout(() => finish(true), DEADLINE_MS);
         if (!live.length) return finish();
         for (const s of live)
           void run(s, input).then((r) => {
