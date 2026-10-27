@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
-import { mkdtempSync, readdirSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import Database from 'better-sqlite3';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { backup, nightlyBackup, rotate, verify } from './admin-cli.ts';
 import { startSetup } from './auth/routes.ts';
@@ -171,5 +172,30 @@ describe('nightly backup', () => {
     expect(files).toHaveLength(8);
     expect(files[0]).toBe('echo-auto-2026-10-03.db');
     expect(files).toContain('echo-manual.db');
+  });
+
+  // ON-DB-1: VACUUM INTO wrote straight to the final name, so an interrupted run (a full disk, a
+  // kill) left a partial file that counted as the day's backup. It now writes a .tmp and renames it.
+  it('an interrupted run leaves no backup under the final name, and the next run makes a good one', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'echo-nightly-'));
+    const db = openDb(join(dir, 'echo.db'));
+    const out = join(dir, 'backups');
+    mkdirSync(out);
+    // What a run killed halfway leaves behind.
+    writeFileSync(join(out, 'echo-auto-2026-10-01.db.tmp'), 'half a database');
+    const made = nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 1, 3))).made as string;
+    expect(readdirSync(out)).toEqual(['echo-auto-2026-10-01.db']);
+    const copy = new Database(made, { readonly: true });
+    expect(copy.pragma('quick_check', { simple: true })).toBe('ok');
+    copy.close();
+    // A run that fails (here: the directory is read-only) leaves nothing that looks like a backup.
+    chmodSync(out, 0o500);
+    try {
+      expect(() => nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 2, 3)))).toThrow();
+    } finally {
+      chmodSync(out, 0o700);
+    }
+    expect(existsSync(join(out, 'echo-auto-2026-10-02.db'))).toBe(false);
+    expect(nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 2, 4))).made).toMatch(/10-02\.db$/);
   });
 });

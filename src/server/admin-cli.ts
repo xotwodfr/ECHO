@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, readdirSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import Database from 'better-sqlite3';
 import { createSealer, loadMasterKey, type Sealer } from './crypto.ts';
 import { type Db, openDb } from './db/db.ts';
 
@@ -62,10 +63,26 @@ function sealedValues(db: Db) {
   return out;
 }
 
+/**
+ * `VACUUM INTO` a `.tmp` beside `file`, checked, then renamed into place: an interrupted or failed
+ * run (a full disk, a kill) never leaves a partial database under a backup's name.
+ */
 export function backup(db: Db, file: string) {
   if (existsSync(file)) throw new Error(`${file} exists: choose another name`);
   mkdirSync(dirname(file), { recursive: true });
-  db.prepare('VACUUM INTO ?').run(file);
+  const tmp = `${file}.tmp`;
+  try {
+    rmSync(tmp, { force: true });
+    db.prepare('VACUUM INTO ?').run(tmp);
+    const copy = new Database(tmp, { readonly: true });
+    const check = copy.pragma('quick_check', { simple: true });
+    copy.close();
+    if (check !== 'ok') throw new Error(`backup failed its check: ${check}`);
+    renameSync(tmp, file);
+  } catch (err) {
+    rmSync(tmp, { force: true });
+    throw err;
+  }
   return file;
 }
 
@@ -75,6 +92,10 @@ export function backup(db: Db, file: string) {
  */
 export function nightlyBackup(db: Db, dir: string, now = new Date(), keep = 7) {
   const file = join(dir, `echo-auto-${now.toISOString().slice(0, 10)}.db`);
+  // Leftovers of runs that were killed halfway.
+  if (existsSync(dir))
+    for (const f of readdirSync(dir))
+      if (/^echo-auto-.*\.db\.tmp$/.test(f)) rmSync(join(dir, f), { force: true });
   const made = existsSync(file) ? null : backup(db, file);
   const old = readdirSync(dir)
     .filter((f) => /^echo-auto-\d{4}-\d{2}-\d{2}\.db$/.test(f))
