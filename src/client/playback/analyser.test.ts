@@ -68,6 +68,24 @@ describe('live features (§3.2)', () => {
     for (const t of onsets.slice(2)) expect(t % 500).toBeLessThan(3 * FRAME);
   });
 
+  // ON-VZ-1: song time goes back at every track change, seek back and repeat; one analyser lives
+  // for the whole session, so onsets must not wait for the old song time to come round again.
+  it('onsets keep coming after song time jumps back (next track, seek back)', () => {
+    const t0 = tap(groove(0));
+    const a = new AnalyserFeatures({ tap: () => t0, latencyMs: () => 20, playing: () => true });
+    let wall = 0;
+    const play = (fromMs: number, seconds: number) => {
+      const hits: number[] = [];
+      for (let t = fromMs; t < fromMs + seconds * 1000; t += FRAME, wall += FRAME) {
+        t0.draw(groove(wall));
+        if (a.sample(t, FRAME).onset > 0) hits.push(t);
+      }
+      return hits;
+    };
+    expect(play(230_000, 10).length).toBeGreaterThanOrEqual(15); // the end of a 4-minute track
+    expect(play(0, 5).length).toBeGreaterThanOrEqual(7); // the next track, from 0:00
+  });
+
   it('bands follow their own range: a bass groove moves bass, not mid', () => {
     const r = run(8, (t) => groove(t)).slice(-120);
     expect(Math.max(...r.map((x) => x.f.bass))).toBeGreaterThan(0.6);

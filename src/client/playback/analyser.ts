@@ -78,7 +78,7 @@ export class AnalyserFeatures implements FeatureSource {
   private readonly sorted = new Float64Array(FLUX_WINDOW);
   private fluxN = 0;
   private fluxAt = 0;
-  private readonly onsets = new Float64Array(64); // times of recent onsets, a ring
+  private readonly onsets = new Float64Array(64).fill(Number.NEGATIVE_INFINITY); // a ring of times
   private onsetHead = 0;
   private lastOnset = Number.NEGATIVE_INFINITY;
   private rms = 0;
@@ -92,6 +92,11 @@ export class AnalyserFeatures implements FeatureSource {
     ...SILENT_FEATURES.sample(0, 0),
   }));
   private head = 0;
+  /**
+   * The analyser's own time (ms), advanced by each frame. Song time jumps back at every track
+   * change, seek back and repeat, and onsets and the read-back must never wait for it to come round.
+   */
+  private now = 0;
 
   private readonly tap: () => Tap | null;
   private readonly latencyMs: () => number;
@@ -103,9 +108,11 @@ export class AnalyserFeatures implements FeatureSource {
     this.playing = opts.playing;
   }
 
-  sample(tMs: number, dtMs: number): Features {
+  sample(_tMs: number, dtMs: number): Features {
     const tap = this.tap();
-    if (!tap || dtMs <= 0) return this.read(tMs);
+    if (!tap || dtMs <= 0) return this.read();
+    this.now += dtMs;
+    const now = this.now;
     const n = tap.frequencyBinCount;
     if (this.spectrum.length !== n) {
       this.spectrum = new Float32Array(n) as Float32Array<ArrayBuffer>;
@@ -175,10 +182,10 @@ export class AnalyserFeatures implements FeatureSource {
     // A floor of 0.5 dB of rise per bin: a perfectly steady signal (MAD 0) is not all onsets.
     const threshold = median + 1.5 * mad + 0.5 * (fluxHi - fluxLo + 1);
     let onset = 0;
-    if (this.fluxN >= 10 && f > threshold && tMs - this.lastOnset >= ONSET_GAP_MS) {
+    if (this.fluxN >= 10 && f > threshold && now - this.lastOnset >= ONSET_GAP_MS) {
       onset = Math.min(1, (f - threshold) / threshold);
-      this.lastOnset = tMs;
-      this.onsets[this.onsetHead] = tMs;
+      this.lastOnset = now;
+      this.onsets[this.onsetHead] = now;
       this.onsetHead = (this.onsetHead + 1) % this.onsets.length;
     }
 
@@ -189,7 +196,7 @@ export class AnalyserFeatures implements FeatureSource {
     this.rmsP95.add(rmsDb);
     this.rms = onePole(this.rms, norm(rmsDb, this.rmsP95.value()), dtMs, 300, 300);
     let recent = 0;
-    for (const t of this.onsets) if (tMs - t < RATE_WINDOW_MS) recent++;
+    for (const t of this.onsets) if (now - t < RATE_WINDOW_MS) recent++;
     const rate = Math.min(1, recent / (RATE_WINDOW_MS / 1000) / 4); // 4 onsets/s counts as busy
     this.intensity = onePole(this.intensity, 0.7 * this.rms + 0.3 * rate, dtMs, 2000, 2000);
 
@@ -197,7 +204,7 @@ export class AnalyserFeatures implements FeatureSource {
     const impulse = Math.min(1, Math.max(0, ((bass - this.prevBass) / Math.max(1, dtMs)) * 40));
     this.prevBass = bass;
 
-    out.t = tMs;
+    out.t = now;
     out.available = !this.dead;
     out.sub = values[0] as number;
     out.bass = bass;
@@ -207,16 +214,16 @@ export class AnalyserFeatures implements FeatureSource {
     out.intensity = this.intensity;
     out.bassImpulse = impulse;
     this.head = (this.head + 1) % RING;
-    return this.read(tMs);
+    return this.read();
   }
 
   /** The newest features at least `latency` old (§3.3), or silence before there are any. */
-  private read(tMs: number): Features {
-    const at = tMs - this.latencyMs();
+  private read(): Features {
+    const at = this.now - this.latencyMs();
     let best: (Features & { t: number }) | null = null;
     for (const e of this.ring) if (e.t <= at && (!best || e.t > best.t)) best = e;
     if (!best || best.t === Number.NEGATIVE_INFINITY || !best.available)
-      return SILENT_FEATURES.sample(tMs, 0);
+      return SILENT_FEATURES.sample(this.now, 0);
     return best;
   }
 
