@@ -421,8 +421,17 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     }
   }
 
-  const sign = (userId: number, id: string, exp: number) =>
-    createHmac('sha256', deps.streamKey).update(`${userId}|${id}|${exp}`).digest('base64url');
+  // Bound to the account (its id and creation time), not the id alone: ids are reused after a delete.
+  const sign = (u: { id: number; created_at: number }, id: string, exp: number) =>
+    createHmac('sha256', deps.streamKey)
+      .update(`${u.id}|${u.created_at}|${id}|${exp}`)
+      .digest('base64url');
+  const account = (uid: number) =>
+    db
+      .prepare('SELECT id, username, role, created_at FROM users WHERE id = ? AND disabled = 0')
+      .get(uid) as
+      | (Pick<SessionUser, 'id' | 'username' | 'role'> & { created_at: number })
+      | undefined;
 
   /** The session user, or the user a valid signed URL is bound to (§6.5). */
   const streamUser: MiddlewareHandler<AuthEnv> = async (c, next) => {
@@ -430,7 +439,9 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     if (!sig) return requireUser(c, next);
     const id = c.req.param('id') ?? '';
     const e = Number(exp);
-    const want = Buffer.from(sign(Number(uid), id, e));
+    const row = account(Number(uid));
+    if (!row) return c.json({ error: 'unauthenticated' }, 401);
+    const want = Buffer.from(sign(row, id, e));
     const got = Buffer.from(sig);
     const t = now();
     if (
@@ -439,11 +450,8 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
       !timingSafeEqual(want, got)
     )
       return c.json({ error: 'unauthenticated' }, 401);
-    const row = db
-      .prepare('SELECT id, username, role FROM users WHERE id = ? AND disabled = 0')
-      .get(Number(uid)) as Pick<SessionUser, 'id' | 'username' | 'role'> | undefined;
-    if (!row) return c.json({ error: 'unauthenticated' }, 401);
-    c.set('user', { ...row, sessionHash: '', kind: 'device', totpEnabled: true });
+    const { created_at: _, ...who } = row;
+    c.set('user', { ...who, sessionHash: '', kind: 'device', totpEnabled: true });
     await next();
   };
 
@@ -460,9 +468,10 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     const exp = now() + SIGNED_TTL_MS;
     const u = user(c).id;
     // Signed only for a user with a Navidrome: the URL plays from their own server.
-    if (!stored(u)) return c.json({ code: 'navidrome.not_connected' }, 409);
+    const acc = account(u);
+    if (!stored(u) || !acc) return c.json({ code: 'navidrome.not_connected' }, 409);
     return c.json({
-      url: `/api/v1/navidrome/stream/${encodeURIComponent(id)}?uid=${u}&exp=${exp}&sig=${sign(u, id, exp)}`,
+      url: `/api/v1/navidrome/stream/${encodeURIComponent(id)}?uid=${u}&exp=${exp}&sig=${sign(acc, id, exp)}`,
       expiresAt: exp,
     });
   });

@@ -258,6 +258,19 @@ describe('Spotify PKCE', () => {
     expect(st.connection).toMatchObject({ status: 'expired', displayName: 'Ada' });
   });
 
+  // ON-SEC-2: user ids are reused (INTEGER PRIMARY KEY), and the access token cache is keyed by id.
+  it('a deleted user’s cached access token never reaches the next user with the same id', async () => {
+    const x = setup();
+    const a = x.user('ada');
+    await connect(x, a);
+    x.db.prepare('DELETE FROM users WHERE id = ?').run(a.id); // cascades to the connection
+    const c = x.user('cy');
+    expect(c.id).toBe(a.id);
+    const r = await call(x.t.app, 'POST', '/api/v1/spotify/token', undefined, c.cookie);
+    expect(r.status).toBe(404);
+    expect(JSON.stringify(await r.json())).not.toContain('at-');
+  });
+
   it('disconnect deletes the row and frees the seat', async () => {
     const x = setup();
     const a = x.user('ada');

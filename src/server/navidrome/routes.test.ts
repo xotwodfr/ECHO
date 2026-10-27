@@ -273,6 +273,10 @@ describe('streams and covers (§5.5, §5.4)', () => {
     expect((await s.get(url.replace('al-1-t1', 'al-1-t2'), '')).status).toBe(401); // bound to the track
     expect((await s.get(url.replace(/sig=[\w-]+/, 'sig=forged'), '')).status).toBe(401);
     expect((await s.get(url.replace(/uid=\d+/, 'uid=99'), '')).status).toBe(401); // bound to the user
+    // ON-SEC-2: ids are reused after a delete; the URL is bound to the account, not just its id.
+    s.db.prepare('UPDATE users SET created_at = created_at + 1').run();
+    expect((await s.get(url, '')).status).toBe(401);
+    s.db.prepare('UPDATE users SET created_at = created_at - 1').run();
     s.clock.t += 6 * 3_600_000;
     expect((await s.get(url, '')).status).toBe(401); // expired
   });

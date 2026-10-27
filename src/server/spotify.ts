@@ -207,6 +207,12 @@ export function createSpotifyTokens(deps: SpotifyDeps) {
     forget: (userId: number) => tokens.delete(userId),
     /** A live access token for the user, refreshing when fewer than 5 minutes remain. */
     async accessToken(userId: number): Promise<TokenResult> {
+      // Only while connected: user ids are reused after a delete, and a disconnect during a refresh
+      // must not leave a token behind.
+      if (!row(userId)?.secret_enc) {
+        tokens.delete(userId);
+        return { error: 'not_connected' };
+      }
       const have = tokens.get(userId);
       if (have && have.expiresAt - deps.now() > REFRESH_MARGIN) return have;
       let p = refreshing.get(userId);

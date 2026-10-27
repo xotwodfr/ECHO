@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { deleteUser } from './account.ts';
 import { startSetup } from './auth/routes.ts';
 import { fromBase32, hotp, STEP_S, stepAt } from './auth/totp.ts';
 import { call, cookieOf, testDeps } from './testing.ts';
@@ -260,6 +261,15 @@ describe('deleting accounts (ACC-03, SEC-06)', () => {
   });
 });
 
+// ON-SEC-4: two admins deleting themselves at once both passed the route's check (it runs before
+// re-authentication awaits); the delete itself now refuses the last admin.
+it('deleteUser never removes the last admin, whatever the caller checked', async () => {
+  const w = await withAdmin();
+  const ada = w.db.prepare("SELECT id FROM users WHERE username = 'ada'").pluck().get() as number;
+  expect(deleteUser(w.db, ada, w.clock.t, ada)).toBe(false);
+  expect(w.db.prepare('SELECT COUNT(*) FROM users').pluck().get()).toBe(1);
+});
+
 describe('Admin → Users, invites and the audit log (ACC-02)', () => {
   it('invites are single use, expire after 72 h, and make a plain user who sees nothing of the admin’s', async () => {
     const w = await withAdmin();
@@ -293,6 +303,23 @@ describe('Admin → Users, invites and the audit log (ACC-02)', () => {
     // Stored hashed.
     const hashes = w.db.prepare('SELECT token_hash FROM invites').pluck().all() as string[];
     expect(hashes).not.toContain(late.token);
+  });
+
+  // ON-SEC-1: deleting the invitee cleared `used_by` (ON DELETE SET NULL), which made the link valid
+  // again for the rest of its 72 h.
+  it('a redeemed invite stays spent after its user is deleted', async () => {
+    const w = await withAdmin();
+    const bo = await invited(w);
+    expect(
+      (await call(w.app, 'DELETE', `/api/v1/admin/users/${bo.id}`, undefined, w.admin)).status,
+    ).toBe(200);
+    const again = await call(w.app, 'POST', '/api/v1/invite', {
+      token: bo.token,
+      username: 'bo',
+      password: PASSWORD,
+    });
+    expect(again.status).toBe(404);
+    expect(await j(call(w.app, 'GET', '/api/v1/admin/invites', undefined, w.admin))).toEqual([]);
   });
 
   it('a preset username is used; invites can be listed and revoked', async () => {

@@ -3,7 +3,7 @@ import { deleteCookie } from 'hono/cookie';
 import { audit } from './audit.ts';
 import { CODE_PARAMS, hashSecret, passwordProblem, verifySecret } from './auth/password.ts';
 import { type AuthDeps, type AuthEnv, body, newRecoveryCodes, str } from './auth/routes.ts';
-import { revokeOthers, revokeSession, SESSION_COOKIE } from './auth/sessions.ts';
+import { revokeOthers, SESSION_COOKIE } from './auth/sessions.ts';
 import { newTotpSecret, otpauthUri, verifyTotp } from './auth/totp.ts';
 import type { Db } from './db/db.ts';
 
@@ -17,13 +17,20 @@ const ENROL_TTL = 10 * 60_000;
 /**
  * Deletes a user and everything that is theirs: sessions, connections (with their ciphertext),
  * settings, queue, overrides, recovery codes and invites they created all cascade; their audit rows
- * go too, and one anonymous line records the deletion (SEC-06, ACC-03).
+ * go too, and one anonymous line records the deletion (SEC-06, ACC-03). False, and nothing deleted,
+ * for the last admin: checked in the same transaction, since a caller may await (re-authentication)
+ * between its own check and this.
  */
 export function deleteUser(db: Db, userId: number, now: number, by: number | null) {
-  db.transaction(() => {
+  return db.transaction(() => {
+    if (isLastAdmin(db, userId)) return false;
     db.prepare('DELETE FROM audit_log WHERE user_id = ?').run(userId);
+    // The invite they redeemed: `used_by` is cleared by the delete (ON DELETE SET NULL), which would
+    // make the link valid again; it expires now instead.
+    db.prepare('UPDATE invites SET expires_at = 0 WHERE used_by = ?').run(userId);
     db.prepare('DELETE FROM users WHERE id = ?').run(userId);
     audit(db, now, by === userId ? null : by, 'account.deleted', { userId });
+    return true;
   })();
 }
 
@@ -302,8 +309,8 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
     if (isLastAdmin(db, user.id)) return c.json({ error: 'last_admin' }, 409);
     const refused = await reauth(c, b, !!userRow(user.id)?.totp_enabled);
     if (refused) return refused;
-    revokeSession(db, user.sessionHash);
-    deleteUser(db, user.id, now(), user.id);
+    // Sessions and device tokens go with the user (ON DELETE CASCADE).
+    if (!deleteUser(db, user.id, now(), user.id)) return c.json({ error: 'last_admin' }, 409);
     deleteCookie(c, SESSION_COOKIE, { secure: true, path: '/' });
     return c.json({ ok: true });
   });

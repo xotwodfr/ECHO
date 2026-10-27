@@ -393,9 +393,10 @@ built (Vite).
 ### 6.5 Streaming URLs for every kind of client
 
 - **Web client:** `<audio src="/api/v1/navidrome/stream/:id">` with the session cookie (same-origin).
-- **Native clients** (players that can't set headers): `GET /api/v1/navidrome/stream/:id?exp=…&sig=…`.
-  The signature is HMAC-SHA256 over `userId|id|exp`, keyed by a server key derived from the master
-  key. TTL 6 h (long enough for a track plus pause). Bound to one user and one track.
+- **Native clients** (players that can't set headers): `GET /api/v1/navidrome/stream/:id?uid=…&exp=…&sig=…`.
+  The signature is HMAC-SHA256 over `userId|createdAt|id|exp`, keyed by a server key derived from the
+  master key. TTL 6 h (long enough for a track plus pause). Bound to one account and one track: the
+  account's creation time is in it because user ids are reused after a delete (2026-10-28).
 - The signature parameters are redacted from logs (`SETTINGS_AND_SECURITY.md` §9).
 - Bandwidth: off-LAN clients request Navidrome transcoding (`format=opus&maxBitRate=…`), chosen by a
   per-client quality setting: Auto (raw when the client reports a LAN/fast connection via a
