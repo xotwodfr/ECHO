@@ -65,6 +65,22 @@ describe('GET /api/v1/lyrics', () => {
     expect(nd.calls.n).toBe(1);
   });
 
+  // ON-DB-2: a cache write that fails (a full disk) must not turn found lyrics into a 500, and the
+  // detached late write must not reject unhandled (Node exits on that).
+  it('a failing cache write still delivers the lyrics, and is logged', async () => {
+    const nd = src('navidrome', () => ({ kind: 'found', candidate: candidate('navidrome') }));
+    const s = setup([nd.s]);
+    const logged: string[] = [];
+    s.deps.lyrics.log = (_level, msg) => void logged.push(msg);
+    s.deps.lyrics.cache.put = async () => {
+      throw new Error('ENOSPC: no space left on device');
+    };
+    const r = await s.get(Q);
+    expect(r.status).toBe(200);
+    expect(await r.json()).toMatchObject({ doc: { source: 'navidrome' } });
+    expect(logged).toEqual(['lyrics cache write failed']);
+  });
+
   it('a source turned off in Settings never answers from the shared cache', async () => {
     const ne = src('netease', () => ({ kind: 'found', candidate: candidate('netease') }));
     const lr = src('lrclib', () => ({ kind: 'found', candidate: candidate('lrclib') }));

@@ -306,6 +306,7 @@ if (import.meta.main) {
   setInterval(() => void matcher.sweep(), 86_400_000).unref();
   const lyrics: LyricsDeps = {
     db: auth.db,
+    log,
     cache: lyricsCache,
     resolver: createResolver(),
     scopeFor: (userId) => navidromeUrlOf(auth.db, userId),

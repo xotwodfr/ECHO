@@ -43,6 +43,19 @@ describe('GET /api/v1/palette/:albumKey (VISUALIZER_SPEC.md §6.3)', () => {
     return { dir, app: createApp({ ...base, palette }), loads: () => loads };
   }
 
+  // ON-DB-2: a cache that cannot be written (a full disk) still answers with the palette.
+  it('a cache write that fails still answers with the computed palette', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'echo-palette-'));
+    await writeFile(join(dir, 'file'), '');
+    const palette = createPaletteService({
+      dir: join(dir, 'file', 'cache'), // under a file: mkdir fails (ENOTDIR)
+      load: async (key) => fixtureCover(key.slice(8)),
+    });
+    const res = await createApp({ ...base, palette }).request('/api/v1/palette/fixture:night-sun');
+    expect(res.status).toBe(200);
+    expect(await res.json()).not.toEqual(fallbackPalette());
+  });
+
   it('computes on a miss, caches to a file, and serves the file afterwards', async () => {
     const t = await withCache();
     const first = await (await t.app.request('/api/v1/palette/fixture:night-sun')).json();

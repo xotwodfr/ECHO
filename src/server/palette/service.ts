@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { decodeCover } from './decode.ts';
 import {
@@ -60,11 +60,16 @@ export function createPaletteService(opts: { dir: string; load: CoverLoader; now
     } catch {
       return fallbackPalette();
     }
-    // Write-then-rename, so a reader never sees half a file.
-    await mkdir(opts.dir, { recursive: true });
+    // Write-then-rename, so a reader never sees half a file. Best-effort: a failed write (a full
+    // disk) still answers with the palette, and the next request computes it again.
     const tmp = `${file(id)}.${process.pid}.tmp`;
-    await writeFile(tmp, JSON.stringify(palette));
-    await rename(tmp, file(id));
+    try {
+      await mkdir(opts.dir, { recursive: true });
+      await writeFile(tmp, JSON.stringify(palette));
+      await rename(tmp, file(id));
+    } catch {
+      await rm(tmp, { force: true }).catch(() => {});
+    }
     return palette;
   }
 

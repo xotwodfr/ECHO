@@ -5,6 +5,7 @@ import { requireAdmin } from '../admin.ts';
 import { audit } from '../audit.ts';
 import type { AuthEnv } from '../auth/routes.ts';
 import type { Db } from '../db/db.ts';
+import type { Log } from '../log.ts';
 import type { LyricsCache } from './cache.ts';
 import { normalise, PRECEDENCE, type Resolver, type Tried } from './resolve.ts';
 import type { LookupInput, Source, SourceId } from './sources.ts';
@@ -28,6 +29,7 @@ export interface LyricsDeps {
   matcher?: SpotifyMatcher;
   /** Gate G2 (PLAYBACK_ARCHITECTURE.md §4.6): timed lyrics for Spotify tracks. Default on. */
   spotifySyncAllowed?: () => boolean;
+  log?: Log;
 }
 
 /** G2 off: the words without their times (LYRICS_INTEGRATION.md §4.4), an untimed sheet. */
@@ -58,6 +60,12 @@ interface Override {
 export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<AuthEnv>) {
   const app = new Hono<AuthEnv>();
   const inflight = new Map<string, Promise<{ doc: LyricsDoc | null; tried: Tried[] }>>();
+  // The cache is best-effort: a failed write (a full disk) never costs the answer, and a detached
+  // one never rejects unhandled, which would end the process.
+  const kept = (write: Promise<void>) =>
+    write.catch((err: unknown) =>
+      deps.log?.('warn', 'lyrics cache write failed', { detail: String(err) }),
+    );
 
   const override = (userId: number, trackKey: string): Override => {
     const row = deps.db
@@ -137,19 +145,19 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       p = deps.resolver
         .resolve(input, sources, {
           ...(ov.pinnedSource && { pin: ov.pinnedSource }),
-          onLate: (doc) => void deps.cache.put(key, doc),
+          onLate: (doc) => void kept(deps.cache.put(key, doc)),
         })
         .finally(() => inflight.delete(key));
       inflight.set(key, p);
     }
     const { doc, tried } = await p;
     if (doc) {
-      await deps.cache.put(key, doc);
+      await kept(deps.cache.put(key, doc));
       return c.json({ doc: deliver(doc), override: ov });
     }
     // A miss is remembered only when every source answered; errors and timeouts may pass.
     if (tried.length && tried.every((t) => ['notFound', 'mismatch', 'invalid'].includes(t.outcome)))
-      await deps.cache.putNegative(key, tried);
+      await kept(deps.cache.putNegative(key, tried));
     return c.json({ error: 'not_found', tried, override: ov }, 404);
   });
 

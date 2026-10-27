@@ -380,11 +380,12 @@ export function createSpotifyMatcher(deps: MatchDeps) {
       error: null,
     });
     stop = false;
-    // "None found" is asked again after 30 days: the catalogues grow.
-    db.prepare(
-      "UPDATE spotify_matches SET tried = '' WHERE spotify_ids IS NULL AND checked_at < ?",
-    ).run(deps.now() - RETRY_NONE_MS);
     try {
+      // "None found" is asked again after 30 days: the catalogues grow. Inside the try: a failure
+      // here must still end the run (`running`), and never reject unhandled.
+      db.prepare(
+        "UPDATE spotify_matches SET tried = '' WHERE spotify_ids IS NULL AND checked_at < ?",
+      ).run(deps.now() - RETRY_NONE_MS);
       for (const { scope, client } of await deps.libraries()) {
         if (stop) break;
         await sweepScope(scope, client);
