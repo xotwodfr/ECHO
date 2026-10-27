@@ -26,6 +26,8 @@ services:
     user: "1000:1000"
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+    logging:                                   # Docker keeps logs forever otherwise
+      options: { max-size: 10m, max-file: "3" }
 
 secrets:
   echo_master_key:

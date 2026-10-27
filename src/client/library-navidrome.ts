@@ -4,7 +4,7 @@ import type { NavidromeTrack } from './playback/navidrome.ts';
 
 // The signed-in user's Navidrome library (PLAYBACK_ARCHITECTURE.md §5.4) through ECHO's proxy: the
 // album list up front (getAlbumList2, paged), an album's tracks when it is opened or played
-// (getAlbum). Search filters what is loaded; server-side search3 is a follow-up.
+// (getAlbum). Search filters what is loaded, and searchRemote asks search3.
 
 interface SubAlbum {
   id: string;

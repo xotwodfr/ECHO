@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Component, type ReactNode } from 'react';
 import { useStore } from 'zustand';
 import { connectionStore } from '../connection.ts';
 import { strings } from '../strings.ts';
@@ -34,6 +34,27 @@ export function BlockError({
       )}
     </div>
   );
+}
+
+/** The last resort: a render error anywhere replaces the app with a reload, not a blank page. */
+export class AppErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <main className="app-error">
+        <div className="block-error" role="alert">
+          <p>{t.appFailed}</p>
+          <Button variant="secondary" onClick={() => location.reload()}>
+            {t.reload}
+          </Button>
+        </div>
+      </main>
+    );
+  }
 }
 
 export function BlockEmpty({ text, action }: { text: string; action?: ReactNode }) {

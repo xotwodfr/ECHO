@@ -234,6 +234,8 @@ export const strings = {
     albumFailed: "Couldn't load this album.",
     searchFailed: "Search didn't answer.",
     blockFailed: "Couldn't load this.",
+    appFailed: 'Something went wrong. Reload to carry on.',
+    reload: 'Reload',
     connectServer: 'Connect a server',
   },
   notFound: { title: 'Page not found', body: 'There is nothing at this address.' },

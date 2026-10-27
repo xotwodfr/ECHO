@@ -126,6 +126,8 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
   if (tab === 'playlists' && library.playlists) return <Playlists />;
   if (tab === 'starred' && library.starred) return <Starred />;
   if (tab === 'artists') {
+    // Derived from the album list, so the counts are only true once every page has loaded.
+    if (status === 'loading') return <RowsLoading label={s.tabs.artists} />;
     const counts = new Map<string, number>();
     for (const a of library.albums) counts.set(a.artist, (counts.get(a.artist) ?? 0) + 1);
     if (!counts.size) return <p className="empty">{s.noArtists}</p>;

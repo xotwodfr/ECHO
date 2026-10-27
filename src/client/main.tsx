@@ -20,6 +20,7 @@ import { Shell } from './shell/Shell.tsx';
 import { spotifyStatus } from './shell/SpotifyViews.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
+import { AppErrorBoundary } from './ui/states.tsx';
 import { createViewStore } from './view.ts';
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
@@ -138,4 +139,8 @@ if (frame && cueId) {
 
 const root = document.getElementById('root');
 if (root)
-  createRoot(root).render(<Shell store={store} controller={controller} library={library} />);
+  createRoot(root).render(
+    <AppErrorBoundary>
+      <Shell store={store} controller={controller} library={library} />
+    </AppErrorBoundary>,
+  );
