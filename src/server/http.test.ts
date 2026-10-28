@@ -77,6 +77,11 @@ describe('Host and Origin (§5.2, §5.3)', () => {
     expect((await post({ origin: 'https://evil.test' })).status).toBe(403);
     expect((await post({ origin: 'https://echo.test' })).status).toBe(200);
     expect((await post({ authorization: 'Bearer echo_dt_x' })).status).toBe(200);
+    // ON-SEC-3: only ECHO's own device token is exempt; any other bearer falls back to the cookie
+    // (auth/routes.ts), so it must not skip the Origin check.
+    expect((await post({ authorization: 'Bearer x', origin: 'https://evil.test' })).status).toBe(
+      403,
+    );
     expect((await app.request('http://x/', proxied('echo.test'))).status).toBe(200); // GET
   });
 

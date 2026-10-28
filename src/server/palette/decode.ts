@@ -5,7 +5,9 @@ import sharp from 'sharp';
 export const DECODE_SIZE = 128;
 
 export async function decodeCover(image: Buffer) {
-  const { data, info } = await sharp(image, { failOn: 'error' })
+  // A cover over 25 Mpx (5000²) is refused before decoding: a small file can declare a huge
+  // image (a decompression bomb) from a user-chosen server. The caller falls back.
+  const { data, info } = await sharp(image, { failOn: 'error', limitInputPixels: 25_000_000 })
     .resize(DECODE_SIZE, DECODE_SIZE, { fit: 'fill' })
     .toColourspace('srgb')
     .ensureAlpha()

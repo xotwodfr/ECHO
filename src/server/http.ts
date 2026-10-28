@@ -95,7 +95,9 @@ export function hardening(
     const cspReport = c.req.path === '/api/v1/csp-report';
     if (
       !SAFE.has(c.req.method) &&
-      !c.req.header('authorization')?.startsWith('Bearer ') &&
+      // A device token (no cookie is used with one); any other bearer is ignored by auth, which
+      // then reads the cookie, so it must not skip this check.
+      !c.req.header('authorization')?.startsWith('Bearer echo_dt_') &&
       !nativeDeviceLogin &&
       !cspReport
     ) {
