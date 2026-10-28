@@ -700,7 +700,8 @@ that failed first, except where noted.
 **Not fixed: deferred work, each larger than a fix**
 - The **SRCH-01 keyboard part** (arrows, Enter, Shift+Enter, →), plus Top result and Show all: not
   built.
-- The Artists tab per §6.3: a server list, windowed, linked; names trimmed.
+- The Artists tab per §6.3: a server list and windowed. *Linked and trimmed since (2026-10-28,
+  owner's request): artist pages from Navidrome's `getArtist`.*
 - Multi-disc headings.
 - Covers lagging after a long scroll: tiles that left still fetch, and there is no cover cache.
 - Long lines at 390 px wrap to 5–6 rows, and a past line sits under the top bar.

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import { ALBUM_SORTS, type Album, albumDurationMs, type Playlist } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
@@ -130,17 +130,29 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
   if (tab === 'artists') {
     // Derived from the album list, so the counts are only true once every page has loaded.
     if (status === 'loading') return <RowsLoading label={s.tabs.artists} />;
-    const counts = new Map<string, number>();
-    for (const a of library.albums) counts.set(a.artist, (counts.get(a.artist) ?? 0) + 1);
-    if (!counts.size) return <p className="empty">{s.noArtists}</p>;
+    // By id where the library has one (each row then links to the artist's page, S6), else by name.
+    const artists = new Map<string, { name: string; id?: string; n: number }>();
+    for (const a of library.albums) {
+      const key = a.artistId ?? `name:${a.artist}`;
+      const known = artists.get(key);
+      if (known) known.n++;
+      else artists.set(key, { name: a.artist.trim(), id: a.artistId, n: 1 });
+    }
+    if (!artists.size) return <p className="empty">{s.noArtists}</p>;
     return (
       <ul className="artist-list">
-        {[...counts]
-          .sort(([a], [b]) => a.localeCompare(b))
-          .map(([name, n]) => (
-            <li key={name}>
-              <span>{name}</span>
-              <span className="artist-count">{s.albumCount(n)}</span>
+        {[...artists]
+          .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+          .map(([key, a]) => (
+            <li key={key}>
+              {a.id ? (
+                <Link className={buttonClass('tertiary')} to={{ view: 'artist', id: a.id }}>
+                  {a.name}
+                </Link>
+              ) : (
+                <span>{a.name}</span>
+              )}
+              <span className="artist-count">{s.albumCount(a.n)}</span>
             </li>
           ))}
       </ul>
@@ -267,7 +279,13 @@ export function AlbumView({ id }: { id: string }) {
         <Artwork size="detail" src={a.cover} title={a.title} />
         <div className="detail-meta">
           <h1 tabIndex={-1}>{a.title}</h1>
-          <p className="detail-artist">{a.artist}</p>
+          <p className="detail-artist">
+            {a.artistId ? (
+              <Link to={{ view: 'artist', id: a.artistId }}>{a.artist}</Link>
+            ) : (
+              a.artist
+            )}
+          </p>
           <p className="detail-facts">
             {[a.year, s.trackCount(a.tracks.length)].filter(Boolean).join(' · ')} ·{' '}
             <span className="num">{formatTime(albumDurationMs(a))}</span>
@@ -311,6 +329,64 @@ function AlbumLoading() {
         </div>
       </header>
       <RowsLoading label={strings.album.title} />
+    </>
+  );
+}
+
+/**
+ * S6 "by this artist" (PRODUCT_SPEC.md §6.3): their albums, from the server. The name shows at once
+ * when the album list already knows it; loading, error (with Retry) and not-found states (DS-07).
+ */
+export function ArtistView({ id }: { id: string }) {
+  const library = useLibrary();
+  const known = library?.albums.find((a) => a.artistId === id)?.artist.trim();
+  const [artist, setArtist] = useState<
+    { name: string; albums: Album[] } | 'loading' | 'error' | null
+  >('loading');
+  const fetchArtist = useCallback(() => {
+    if (!library?.artist) return setArtist(null);
+    setArtist('loading');
+    library.artist(id).then(
+      (a) => setArtist(a ?? null),
+      () => setArtist('error'),
+    );
+  }, [library, id]);
+  useEffect(fetchArtist, [fetchArtist]);
+  const s = strings.artist;
+  // One header in every state, so nothing shifts when the albums arrive (DS-07).
+  const head = (name: string, facts: ReactNode) => (
+    <header className="detail-head" aria-busy={artist === 'loading' || undefined}>
+      <div className="detail-meta">
+        <h1 tabIndex={-1}>{name}</h1>
+        <p className="detail-facts">{facts}</p>
+      </div>
+    </header>
+  );
+  if (artist === 'loading')
+    return (
+      <>
+        {head(known ?? s.title, <span className="bar bar--small" aria-hidden="true" />)}
+        <GridLoading count={6} />
+      </>
+    );
+  if (artist === 'error')
+    return (
+      <>
+        {head(known ?? s.title, null)}
+        <BlockError what={strings.states.artistFailed} onRetry={fetchArtist} />
+      </>
+    );
+  if (!artist)
+    return (
+      <>
+        <h1 tabIndex={-1}>{s.title}</h1>
+        <p className="empty">{s.missing}</p>
+      </>
+    );
+  return (
+    <>
+      {head(artist.name.trim(), strings.library.albumCount(artist.albums.length))}
+      <Albums albums={artist.albums} />
     </>
   );
 }

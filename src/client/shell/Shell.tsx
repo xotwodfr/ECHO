@@ -20,7 +20,7 @@ import { AdminSection } from './AdminViews.tsx';
 import { AccountSection, LoginView, SessionExpiredSheet, SetupView } from './AuthViews.tsx';
 import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
-import { AlbumView, LibraryContent, SearchResults } from './LibraryViews.tsx';
+import { AlbumView, ArtistView, LibraryContent, SearchResults } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
 import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
 import { PreferencesSection } from './SettingsViews.tsx';
@@ -76,7 +76,7 @@ function Sidebar({ route }: { route: Route }) {
         <li>
           <Link
             to={{ view: 'library', tab: 'albums' }}
-            aria-current={current(['library', 'album'])}
+            aria-current={current(['library', 'album', 'artist'])}
           >
             {strings.nav.library}
           </Link>
@@ -185,6 +185,8 @@ function View({ route }: { route: Route }) {
       );
     case 'album':
       return <AlbumView id={route.id} />;
+    case 'artist':
+      return <ArtistView id={route.id} />;
     case 'search':
       return (
         <>
@@ -226,6 +228,7 @@ const TITLES: Record<Route['view'], string> = {
   listen: strings.nav.listen,
   library: strings.nav.library,
   album: strings.album.title,
+  artist: strings.artist.title,
   search: strings.nav.search,
   settings: strings.nav.settings,
   ui: strings.gallery.title,

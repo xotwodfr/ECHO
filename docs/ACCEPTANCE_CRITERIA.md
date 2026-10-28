@@ -29,7 +29,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | **People** | A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes). DS-05 passed by three model reviews on 2026-10-28 (`reviews/M9.md`); a human five-second test is still worth doing |
 | **A 10-bit capture setup** | VIS-09 M (the dither test passes; the criterion asks for a 10-bit capture, which Playwright cannot make) |
 | **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
-| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | SRCH-01's keyboard part (arrows, Enter, Shift+Enter, →); LIB-01's Artists as a server list; crossfade (no criterion requires it, PLAY-04 assumes 0) |
+| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | SRCH-01's keyboard part (arrows, Enter, Shift+Enter, →); LIB-01's Artists as a server list (artist pages are built; the list is derived from the albums); crossfade (no criterion requires it, PLAY-04 assumes 0) |
 | **A hosted CI run** (no remote, by the owner's choice) | None of the criteria themselves: DS-06's baselines and VIS-07's Firefox context loss pass in CI's own image locally (`scripts/e2e-container.sh`, 2026-10-28). Only the GitHub Actions run itself is unproven |
 
 ---

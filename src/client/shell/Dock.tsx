@@ -75,7 +75,14 @@ export function Dock({ stage }: { stage: boolean }) {
             </p>
             {t && (
               <p className="dock-sub">
-                {t.artists.map((a) => a.name).join(', ')} —{' '}
+                {/* Artists with an id lead to their page (S6). */}
+                {t.artists.map((a, i) => (
+                  <span key={a.id ?? a.name}>
+                    {i > 0 && ', '}
+                    {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
+                  </span>
+                ))}{' '}
+                —{' '}
                 {t.album.id ? (
                   <Link to={{ view: 'album', id: t.album.id }}>{t.album.title}</Link>
                 ) : (

@@ -35,6 +35,7 @@ export type Route =
   | { view: 'listen'; frame?: FrameParams }
   | { view: 'library'; tab: LibraryTab }
   | { view: 'album'; id: string }
+  | { view: 'artist'; id: string }
   | { view: 'search'; q: string }
   | { view: 'settings'; section: SettingsSection }
   | { view: 'ui' }
@@ -97,6 +98,7 @@ export function parseRoute(pathname: string, search = ''): Route {
     if (a === undefined) return { view: 'library', tab: 'albums' };
     if (isOneOf(LIBRARY_TABS, a) && b === undefined) return { view: 'library', tab: a };
     if (a === 'album' && b && rest.length === 0) return { view: 'album', id: b };
+    if (a === 'artist' && b && rest.length === 0) return { view: 'artist', id: b };
   }
   if (head === 'search' && a === undefined) {
     return { view: 'search', q: new URLSearchParams(search).get('q') ?? '' };
@@ -126,6 +128,8 @@ export function routePath(route: Route): string {
       return route.tab === 'albums' ? '/library' : `/library/${route.tab}`;
     case 'album':
       return `/library/album/${encodeURIComponent(route.id)}`;
+    case 'artist':
+      return `/library/artist/${encodeURIComponent(route.id)}`;
     case 'search':
       return route.q ? `/search?${new URLSearchParams({ q: route.q })}` : '/search';
     case 'settings':

@@ -24,6 +24,10 @@ export const strings = {
       frequent: 'Most played',
     },
   },
+  artist: {
+    title: 'Artist',
+    missing: 'This artist is not in your library.',
+  },
   album: {
     title: 'Album',
     missing: 'This album is not in your library.',
@@ -234,6 +238,7 @@ export const strings = {
     playlistsFailed: "Couldn't load playlists.",
     starredFailed: "Couldn't load starred tracks.",
     albumFailed: "Couldn't load this album.",
+    artistFailed: "Couldn't load this artist.",
     searchFailed: "Search didn't answer.",
     blockFailed: "Couldn't load this.",
     appFailed: 'Something went wrong. Reload to carry on.',

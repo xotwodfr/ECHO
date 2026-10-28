@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import Database from 'better-sqlite3';
 import { hashSecret } from '../../src/server/auth/password.ts';
-import { signedInWithNavidrome } from './helpers.ts';
+import { playAlbum, signedInWithNavidrome } from './helpers.ts';
 
 // M5: the first real listening path. Sign in, connect your own Navidrome (the mock Subsonic server
 // Playwright starts next to ECHO), browse it and play a track through ECHO's proxy.
@@ -165,4 +165,35 @@ test('album tracks hand over without a gap (PLAY-04, two voices)', async ({ page
   // PLAY-04's 50 ms is checked by hand on a real gapless album; here, under the parallel suite's load
   // on a shared machine, the hand-over is 8-9 ms when quiet and must stay well under 100 ms.
   expect(gaps.at(-1)).toBeLessThan(100);
+});
+
+// Owner's request, 2026-10-28 (PRODUCT_SPEC §6.3, S6 "by this artist"): an artist's name is a link
+// to their page, from the Artists tab, an album's header and the dock.
+test('artists are links to their page: the Artists tab, an album and the dock (S6)', async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page);
+  await page.goto('/library/artists');
+  await page.getByRole('main').getByRole('link', { name: 'Lowfield' }).click();
+  await expect(page).toHaveURL(/\/library\/artist\/ar-1$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Lowfield' })).toBeVisible();
+  await expect(page.locator('.tile')).toHaveCount(2);
+  await expect(page.locator('.tile', { hasText: 'Harbour Lights' })).toBeVisible();
+  await expect(page.locator('.tile', { hasText: 'Copper Rain' })).toBeVisible();
+  await expect(page).toHaveTitle(/^Artist · ECHO$/);
+  await expect(
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }),
+  ).toHaveAttribute('aria-current', 'page');
+  // From an album's header…
+  await page.goto('/library/album/al-2');
+  await page.locator('.detail-artist').getByRole('link', { name: 'Lowfield' }).click();
+  await expect(page).toHaveURL(/\/library\/artist\/ar-1$/);
+  // …and from the dock, while it plays.
+  await playAlbum(page, 'al-1');
+  await page
+    .getByRole('region', { name: 'Player' })
+    .getByRole('link', { name: 'Lowfield' })
+    .click();
+  await expect(page).toHaveURL(/\/library\/artist\/ar-1$/);
+  await expect(page.getByRole('heading', { level: 1, name: 'Lowfield' })).toBeVisible();
 });

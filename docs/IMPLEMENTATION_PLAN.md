@@ -165,7 +165,9 @@ Task 12 **done**: deployed at https://echo.folk3s.com (2026-10-24, `docs/reviews
 gapless A/B (PLAY-04), Media Session next/previous, the server-backed Playlists and Starred tabs,
 album sorts, server search (`search3`) and queue reorder. Open parts (re-checked 2026-10-28):
 **crossfade** (the setting is shown disabled) and **Artists as a server list** (derived from the
-loaded albums today).
+loaded albums today). Artist pages (S6) are built (2026-10-28): every artist name with an id (the
+Artists tab, an album's header, the dock) links to the artist's albums, from Navidrome's
+`getArtist`.
 
 **Tasks:**
 1. **Database:** better-sqlite3 (M1 finding: `node:sqlite` is not yet stable), the migrations runner, the

@@ -7,6 +7,8 @@ export interface Album {
   id: string;
   title: string;
   artist: string;
+  /** The album artist's id, where the library has one (Navidrome): their page (S6). */
+  artistId?: string;
   year?: number;
   cover?: string;
   tracks: Track[];
@@ -22,6 +24,8 @@ export interface Library {
    * not ask (an error to show with Retry); undefined when the server has no such album.
    */
   loadAlbum?(id: string): Promise<Album | undefined>;
+  /** Server libraries: an artist and their albums (S6). Rejects when it could not ask. */
+  artist?(id: string): Promise<{ name: string; albums: Album[] } | undefined>;
   /** Server libraries: called whenever more of the library has arrived. */
   subscribe?(onChange: () => void): () => void;
   /** Bumped on every change (with `subscribe`), so React can re-render. */

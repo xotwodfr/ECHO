@@ -66,6 +66,7 @@ const albumOf = (a: SubAlbum): Album => ({
   id: a.id,
   title: a.name,
   artist: a.artist ?? '',
+  ...(a.artistId && { artistId: a.artistId }),
   year: a.year,
   cover: cover(a.coverArt),
   tracks: (a.song ?? []).map((s) => trackOf(s, a)),
@@ -171,6 +172,27 @@ export function createNavidromeLibrary(): Library {
       if (next === sort) return;
       sort = next;
       void loadAll();
+    },
+    async artist(id) {
+      // Not found (Subsonic 70) is an answer: no such artist. Anything else is an error, with Retry.
+      const r = await rest<{ artist?: { name: string; album?: SubAlbum[] } }>(
+        `/navidrome/rest/getArtist?id=${encodeURIComponent(id)}`,
+      ).catch((err: unknown) => {
+        if (err instanceof ApiError && err.code === 'subsonic.70') return null;
+        throw err;
+      });
+      const a = r?.['subsonic-response'].artist;
+      if (!a) return undefined;
+      // Known to the library from here on (their tiles open the album), without replacing an
+      // album whose tracks are already loaded.
+      const albums = (a.album ?? []).map((x) => {
+        const known = byId.get(x.id);
+        if (known) return known;
+        const album = albumOf(x);
+        byId.set(x.id, album);
+        return album;
+      });
+      return { name: a.name, albums };
     },
     async playlists(): Promise<Playlist[]> {
       const r = await rest<{

@@ -243,6 +243,8 @@ export function combineLibraries(nav: Library | null, sp: Library): Library {
       sp.retry?.();
     },
     loadAlbum: (id) => owner(id).loadAlbum?.(id) ?? Promise.resolve(owner(id).album(id)),
+    // Artist pages are Navidrome's; Spotify's artists link to Spotify (its attribution rules).
+    ...(nav.artist && { artist: nav.artist }),
     ...(nav.sort && { sort: nav.sort, setSort: nav.setSort }),
     async playlists() {
       const [a, b] = await eitherOf(nav.playlists?.() ?? [], sp.playlists?.() ?? [], []);

@@ -30,6 +30,8 @@ test('A11Y-03: axe finds nothing serious on the shell screens', async ({ page, b
   const screens = [
     '/library',
     '/library/album/al-1',
+    '/library/artists',
+    '/library/artist/ar-1',
     '/library/playlists',
     '/search?q=harbour',
     '/settings',
