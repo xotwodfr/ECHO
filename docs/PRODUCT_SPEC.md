@@ -41,7 +41,8 @@ distance from the listener. That mapping is the product.
    `DESIGN_SYSTEM.md` §3.4. Motion is capped by the music's intensity and by the user's motion
    preference.
 6. **Quiet tools.** Library, queue, search and settings follow the taste-skill app-screen rules: true
-   neutral darks, no glass, no glow, colour only on the one thing that matters.
+   neutral darks, no glow, colour only on the one thing that matters. Their floating surfaces
+   (sidebar, dock, sheets, dialogs) are liquid glass (owner, 2026-10-28; `DESIGN_SYSTEM.md` §7.11).
 
 ---
 

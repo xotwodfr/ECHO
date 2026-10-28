@@ -1,6 +1,6 @@
 # ECHO — Design System
 
-Status: **Draft 3** · 2026-10-25: Shell moved to Material 3 Expressive (§0) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
+Status: **Draft 3** · 2026-10-25: Shell moved to Material 3 Expressive (§0) · 2026-10-28: liquid glass approved in both zones (§7.11) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design research](DESIGN_RESEARCH.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
 This is the visual language of the whole application: tokens, component rules and the reason each
@@ -62,7 +62,7 @@ little); effects springs move colour and opacity. Reduced motion keeps colour an
 
 | ECHO component | M3 component | Notes |
 |---|---|---|
-| Sidebar | Navigation drawer (standard), surface-container-low | 56px items; the current one on a secondary-container pill. Below 720px: navigation bar, surface-container (text labels; ECHO's nav has no icons) |
+| Sidebar | Navigation drawer (standard), surface-container-low | 56px items; the current one on a secondary-container pill. Below 720px: navigation bar, surface-container (text labels; ECHO's nav has no icons). Glass (§7.11) |
 | Search field | Search bar | 56px, full corner, surface-container-high |
 | Library / Settings tabs | Secondary tabs | 48px, 3px primary indicator, outline-variant divider |
 | Primary / secondary / tertiary / destructive button | Filled / outlined / text / outlined in error | 40px (small) |
@@ -74,8 +74,8 @@ little); effects springs move colour and opacity. Reduced motion keeps colour an
 | Track rows | List items | 56px, 72px with art; rounded state layer; selected = secondary-container; now playing = primary |
 | Album tile | Card without fill | hover state layer on a 20px-corner surround; cover 12px corner; play = small FAB in primary-container |
 | Menu | Menu (Expressive) | surface-container, 16px corner, 48px items |
-| Queue / help sheet | Modal side sheet | surface-container-low, 16px leading corners |
-| Dialog | Basic dialog | surface-container-high, 28px corner, 24px padding, scrim 32% |
+| Queue / help sheet | Modal side sheet | surface-container-low, 16px leading corners. Glass (§7.11), opaque over the Stage (§6) |
+| Dialog | Basic dialog | surface-container-high, 28px corner, 24px padding, scrim 32%. Glass (§7.11) |
 | Toast | Snackbar | inverse-surface, 4px corner, 48px |
 
 **The player view.** `tokens.css` ends with one block that maps the M3 roles the shared components
@@ -88,28 +88,34 @@ and help sheets are Shell (M3).
 
 **Retired with M3:** the ≤ 3% coloured-pixel budget (§3.2; M3 surfaces take the album's tone by
 design), "primary buttons are inverted", "no shadow at rest except `--shadow-float`" and "tracking 0"
-in the Shell. Still banned in the Shell: gradients, glows, glass and backdrop blur, monospace,
-transformed capitals (DS-02, `design-rules.test.ts`).
+in the Shell. Still banned in the Shell: gradients, glows, monospace, transformed capitals (DS-02,
+`design-rules.test.ts`). **Lifted 2026-10-28 (owner):** the glass and backdrop-blur ban. Liquid
+glass is an approved effect in both zones (§7.11).
 
 ---
 
 ## 1. Two zones, two rule sets
 
-*(Shell column: superseded by §0 where it disagrees; the Stage column is unchanged.)*
+*(Shell column: superseded by §0 where it disagrees; the Stage column is unchanged. 2026-10-28:
+liquid glass, §7.11, is approved in both zones.)*
 
 ECHO has two visual zones with different rules. Most generic music apps fail by blurring the
-boundary: glass and glow leak into the browsing tools, or dashboard chrome leaks onto the stage.
+boundary: glow and atmosphere leak into the browsing tools, or dashboard chrome leaks onto the stage.
+**Liquid glass is the one effect the zones share**, because it does the same job in both: a
+floating control surface that lets what is behind it show through (§7.11). It stays on floating
+surfaces; content (lists, grids, forms, lyrics) never turns to glass.
 
 | | **Stage** (S1 Listen, environment, lyric field, Cover/Visual modes) | **Shell** (Library, Search, Queue, Settings, Detail, First run, menus, dialogs) |
 |---|---|---|
 | Purpose | Feel the song. | Find and control things. |
 | Colour source | The current artwork's palette (§3.3), interpolated per track. | Neutral tokens (§3.1). The artwork palette appears in exactly one place: the playing indicator, and the **now-playing accent** on the active track row. |
-| Light effects | Allowed **only** from the list in §7, each with a stated purpose. | None. No gradients, glows, glass or backdrop blur (taste-skill app house rules §13). |
+| Light effects | Allowed **only** from the list in §7, each with a stated purpose. Liquid glass (§7.11) on the top chrome's buttons and brightness pill, and on the dock. | Liquid glass (§7.11) on the floating surfaces only: sidebar, dock, sheets, dialogs. Otherwise none: no gradients or glows (taste-skill app house rules §13; ECHO lifted that skill's glass ban on 2026-10-28). |
 | Rule source | This document, §6–§8, plus `LYRICS_EXPERIENCE.md` and `VISUALIZER_SPEC.md` | taste-skill **True-black flat** app style (seed 128902345) with ECHO's face applied (§2), plus this document |
 | Motion | Continuous, music-driven, two clocks (§11). | Feedback only: press, hover, focus, sheets opening, rows arriving. Nothing performs an entrance. |
 
 The **transport dock** sits on the boundary. It belongs to the Shell in form (neutral controls,
 taste-skill sizes) and to the Stage in colour: the progress fill and play glyph take `--art-accent`.
+It is glass in both (§7.11): over the Shell's page and over the room.
 
 ---
 
@@ -331,7 +337,8 @@ User setting **Lyric size**: 85% / 100% / 115% / 130%, a multiplier on `--ly-act
 
 ## 6. Surfaces, elevation, blur
 
-*(Shell: superseded by §0's tonal elevation, M3 shadows and corner scale. Blur rules unchanged.)*
+*(Shell: superseded by §0's tonal elevation, M3 shadows and corner scale. Blur: the Shell's
+backdrop-blur ban was lifted for liquid glass on 2026-10-28, §7.11.)*
 
 - **Elevation is lightness, never shadow, at rest** (sheet's move): ground → surface-1 → surface-2 →
   surface-3. A surface that floats (menu, popover, tooltip, dialog, toast) additionally gets
@@ -340,18 +347,20 @@ User setting **Lyric size**: 85% / 100% / 115% / 130%, a multiplier on `--ly-act
   is **not** used (weak-site default). Controls are `--r-pill: 999px` (buttons, chips, search) or
   `--r-control: 8px` (inputs, nav pill). Artwork: `--r-art: 4px` at ≤ 64px, `8px` above (§8).
   Nested radii step down.
-- **Blur.** Backdrop blur is **banned in the shell** (taste-skill, glass ban). The queue sheet over
-  the Stage is an opaque `--surface-1` at 100%. A sheet over an animated field must not show
-  smeared motion through it, because that is distracting and costs GPU. On the Stage, blur is used
-  only as **depth of field** on lyric lines (`LYRICS_EXPERIENCE.md` §4) and inside the environment
-  shader. Blur radius cap: **4px on lines the user might read ahead (+1…+3), 8px on background and
+- **Blur.** Backdrop blur appears only as part of **liquid glass** (§7.11), in both zones: the
+  light frost before the refraction, and the plain blur fallback where SVG backdrop filters are
+  missing. Sheets over the Stage (queue, help) stay an **opaque** surface at 100%: a sheet over an
+  animated field must not show smeared motion through it, because that is distracting and costs
+  GPU. On the Stage, blur is otherwise used only as **depth of field** on lyric lines
+  (`LYRICS_EXPERIENCE.md` §4) and inside the environment shader. Blur radius cap: **4px on lines the user might read ahead (+1…+3), 8px on background and
   past lines** (taste-skill motion rule 10: blur ≤ 8px).
 
 ---
 
-## 7. Light, gradients and atmosphere (Stage only)
+## 7. Light, gradients and atmosphere (Stage; 7.11 in both zones)
 
-Every effect has a purpose. Anything not on this list does not ship.
+Every effect has a purpose. Anything not on this list does not ship. 7.1–7.10 are the Stage's
+only. 7.11, liquid glass, is approved for both zones (owner, 2026-10-28).
 
 | # | Effect | Purpose | Limits |
 |---|---|---|---|
@@ -365,6 +374,39 @@ Every effect has a purpose. Anything not on this list does not ship.
 | 7.8 | **Dither:** blue-noise ±1 LSB as the last shader step, on every gradient | Prevents 8-bit banding in dark gradients (functional, not stylistic) | Always on |
 | 7.9 | **Grain (optional, off by default):** luminance-only, 2–3%, 24 fps | Film texture for users who want it | Settings → Visuals → "Film grain" |
 | 7.10 | **Bloom:** threshold bloom on the lit word and wavefronts only | Lets light bleed like a lamp | Threshold L > 0.85, intensity ≤ 0.6, ½ res. **No anamorphic streaks** (rejected, §14) |
+| 7.11 | **Liquid glass** (both zones, 2026-10-28): a floating surface bends what is behind it through a curved rim and catches a specular edge light. Stage: the top chrome's round buttons and brightness pill, the dock. Shell: sidebar, dock, sheets, dialogs | Controls that float over the content without hiding it: the room (Stage) or the page (Shell) stays visible under them, so the chrome reads as one object lying on the music instead of a panel cut out of it | Floating surfaces only, never content. Refraction only inside the rim (`--glass-bezel`); the interior shows the backdrop unbent. Frost ≤ 8px (§6). Sheets over the Stage stay opaque (§6). Text on glass keeps its §12 contrast against the surface's fill alone |
+
+### 7.11 Liquid glass
+
+**Technique.** In Chromium, each glass element gets its own SVG filter as its `backdrop-filter`
+(`ui/glass.ts`), rebuilt when the element resizes: a light frost (`feGaussianBlur`), then a
+displacement (`feDisplacementMap`) whose map is computed per element from Snell's law across a
+convex squircle rim, then saturation, then a specular rim light (an `feImage` over the result). The
+element's own background is its role colour made translucent, so the surface keeps its M3 (Shell)
+or room (Stage) tone.
+
+**Tokens** (`tokens.css`; DS-01 holds: no glass value lives in component code):
+
+| Token | Controls |
+|---|---|
+| `--glass-fill` | Share of its M3 surface colour a Shell glass surface keeps (the rest is backdrop) |
+| `--glass-fill-stage` | Share of `--art-room` in a Stage glass surface |
+| `--glass-frost` | Blur before the bend (SVG filter) |
+| `--glass-blur` | Blur of the fallback (no SVG backdrop filters); ≤ 8px (§6) |
+| `--glass-saturate` | Saturation of what shows through, both paths |
+| `--glass-thickness`, `--glass-bezel`, `--glass-ior` | The glass the map is computed for: slab thickness, rim width, refractive index |
+| `--glass-refraction` | Scale on the computed bend (0 = flat glass) |
+| `--glass-specular`, `--glass-light` | Rim light opacity and its direction |
+
+**Fallbacks.** Engines without SVG backdrop filters (Firefox, Safari): the same translucent fill
+over `blur(--glass-blur) saturate(--glass-saturate)`, no refraction. `prefers-reduced-transparency:
+reduce`: no backdrop filter, and the fill goes to 100%, so every glass surface is the opaque surface
+it was before 2026-10-28. Reduced motion changes nothing: glass is static and never animates by
+itself. Hidden chrome (PRODUCT_SPEC.md §6.1) fades the glass with its controls.
+
+**Open (Spotify).** A glass sheet over the Library bends the covers under it. Spotify forbids
+distorting or blurring its artwork (`PLAYBACK_ARCHITECTURE.md` §4.6, §8 here). Before Spotify ships
+with glass, either sheets over Spotify artwork go opaque or this is cleared against the guidelines.
 
 ---
 
@@ -459,6 +501,7 @@ never used for disabled.
 
 - **Queue sheet:** 400px, `--surface-1`, `--r-panel` on the leading corners, enter `translateX(24px)`
   + opacity over 240 ms `--ease-out`. Focus moves into the sheet; `Esc` closes and returns focus.
+  Glass (§7.11) over the Shell; opaque over the Stage (§6).
 - **Menu:** `--surface-2`, `--shadow-float`, 8px radius, 32px items, opens from the trigger
   (scale 0.98 → 1, 160 ms).
 - **Dialog:** for destructive confirmation only. Names the object ("Disconnect Navidrome
@@ -629,7 +672,7 @@ mode was checked against the system and either designed out or justified.
 
 | Risk (from the skills) | Status in ECHO | Reasoning |
 |---|---|---|
-| Glassmorphism (tells §1, app house rules) | **Designed out** | No backdrop blur anywhere. Sheets are opaque. |
+| Glassmorphism (tells §1, app house rules) | **Adopted, limited** (owner, 2026-10-28) | Liquid glass (§7.11) on floating surfaces only, with a stated purpose: refraction at the rim instead of a heavy frost, frost ≤ 8px, opaque under reduced transparency, sheets opaque over the moving Stage. Content surfaces never turn to glass. |
 | Neon glow on dark | **Constrained** | Glow exists on exactly one object (the sung word), with an alpha cap, derived from the cover. A glow on a button or border is a defect. |
 | Gradient text | **Justified exception** | The word sweep (7.1) is the brief's core requirement, and it *encodes time*, so it is information, not decoration. It is not used on any other text. |
 | Generic dark dashboard (sidebar + KPI cards) | **Designed out** | No KPI tiles, no cards with icons. The Library is a cover grid, which is the product's real object (app-screens: "cover art shows the cover"). |

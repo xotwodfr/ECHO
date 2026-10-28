@@ -548,7 +548,7 @@ resource limits.**
 | Item | What it means (plan / criteria) | Status tonight | Evidence |
 |---|---|---|---|
 | DS-01 design judgment / token grep | No raw values outside tokens; judged at M2 close and re-checked at M9 | **Pass** (automated grep in Vitest, green) | `design-rules` test in the 1242; M2 close-out, M9 |
-| DS-02 coloured-pixel measurement | ≤ 3 % budget **retired 2026-10-25** with Material 3 (DESIGN_SYSTEM §3.2); the CSS bans remain | **Pass** for the remaining clause (CSS inspection test). The pixel script was removed with the budget | `ACCEPTANCE_CRITERIA.md` DS-02 wording |
+| DS-02 coloured-pixel measurement | ≤ 3 % budget **retired 2026-10-25** with Material 3 (DESIGN_SYSTEM §3.2); the CSS bans remain, except the glass and backdrop-blur ban, lifted 2026-10-28 (DESIGN_SYSTEM §7.11) | **Pass** for the remaining clause (CSS inspection test). The pixel script was removed with the budget | `ACCEPTANCE_CRITERIA.md` DS-02 wording |
 | DS-04 squint test (needed M3) | Three masses on a 16 px blur of Listen | **Pass** (M3 review, then M9) | `reviews/M3.md:369`, `M9.md:19` |
 | DS-06 snapshots + remote CI | Every §9 state on `/__ui`, snapshotted | **Criterion met**: the baselines pass on the host and in CI's own image (`scripts/e2e-container.sh`, tonight). A *hosted* CI run is impossible without a remote: blocked by the owner's decision, not failing | §8 |
 | DS-08 artwork rules (later milestone) | Never cropped, overlaid, scaled or animated; also M7 | Shell + Spotify code parts done; **real-cover V check open** (needs a Spotify account) | `reviews/M7.md:54` |

@@ -71,21 +71,15 @@ describe('DS-01: no raw design values outside tokens.css', () => {
   });
 });
 
-// DS-02 (inspection part): the shell has no gradients, glows, blur, monospace or transformed
-// capitals. Under Material 3 (DESIGN_SYSTEM.md §1) letter-spacing comes only from the type scale's
-// tracking tokens, and shadows only from the elevation tokens, on floating surfaces.
+// DS-02 (inspection part): the shell has no gradients, glows, monospace or transformed capitals.
+// Under Material 3 (DESIGN_SYSTEM.md §1) letter-spacing comes only from the type scale's tracking
+// tokens, and shadows only from the elevation tokens, on floating surfaces. Backdrop filters and
+// blur are allowed since 2026-10-28: liquid glass (§7.11) is approved in both zones.
 describe('DS-02: shell light effects', () => {
   // The Stage is the other zone (DESIGN_SYSTEM.md §1): its light effects are §7's to define, so its
   // stylesheet is the one exemption. DS-01 still applies to it.
   const css = files.filter((f) => f.name.endsWith('.css') && !f.name.startsWith('stage/'));
-  const BANNED = [
-    /gradient\(/,
-    /backdrop-filter/,
-    /text-shadow/,
-    /\bblur\(/,
-    /monospace/,
-    /text-transform/,
-  ];
+  const BANNED = [/gradient\(/, /text-shadow/, /monospace/, /text-transform/];
   for (const f of css) {
     it(f.name, () => {
       const text = uncomment(f.text);
