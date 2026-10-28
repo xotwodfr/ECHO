@@ -7,8 +7,10 @@ info:
     so far. Same-origin JSON unless noted. Authentication is the `__Host-echo_session` cookie (web)
     or a `Bearer echo_dt_…` device token (native clients). Cookie-authenticated unsafe methods need
     `Origin` equal to ECHO's public origin (docs/SETTINGS_AND_SECURITY.md §5.3). Everything not in the
-    unauthenticated list of §5.5 answers 401 without a session. A test (src/server/openapi.test.ts)
-    keeps this file and the server's routes in step.
+    unauthenticated list of §5.5 answers 401 without a session. On every route: 413 `too_large` for a
+    body over 64 KB; 403 `totp_enrolment_required` while "require TOTP for all" is on and the user has
+    no TOTP yet (only the Account routes answer); 400 for a body that is not a JSON object where one is
+    read. A test (src/server/openapi.test.ts) keeps this file and the server's routes in step.
 servers:
   - url: /api/v1
 security:
@@ -206,6 +208,8 @@ paths:
         '200': { description: Deleted; the session cookie is cleared }
         '403': { description: Wrong password or code }
         '409': { description: The last admin }
+        '423': { description: 'locked: too many wrong passwords or codes (the account lockout)' }
+        '429': { description: 'rate_limited: too many attempts from this address' }
 
   /me/connections/navidrome:
     get:
@@ -344,7 +348,7 @@ paths:
               type: object
               required: [queue, baseUpdatedAt]
               properties:
-                queue: { type: object }
+                queue: { type: [object, 'null'], description: null clears the saved queue }
                 positionMs: { type: number }
                 baseUpdatedAt: { type: integer, description: The updatedAt this device last saw }
       responses:
@@ -399,6 +403,8 @@ paths:
         '200': { description: Changed, content: { application/json: { schema: { type: object, required: [ok, revoked], properties: { ok: { const: true }, revoked: { type: integer } } } } } }
         '400': { description: The new password breaks the policy }
         '403': { description: Wrong current password }
+        '423': { description: 'locked: too many wrong passwords or codes (the account lockout)' }
+        '429': { description: 'rate_limited: too many attempts from this address' }
   /me/sessions:
     get:
       summary: Sessions & devices (§4.6), the user's own
@@ -442,6 +448,8 @@ paths:
         '200': { description: The key, content: { application/json: { schema: { type: object, required: [otpauth, secret], properties: { otpauth: { type: string }, secret: { type: string } } } } } }
         '403': { description: Wrong password }
         '409': { description: TOTP is already on }
+        '423': { description: 'locked: too many wrong passwords or codes (the account lockout)' }
+        '429': { description: 'rate_limited: too many attempts from this address' }
   /me/totp/enable:
     post:
       summary: Confirm enrolment with one valid code; recovery codes are shown once
@@ -461,6 +469,8 @@ paths:
       responses:
         '200': { description: Off }
         '403': { description: 'Wrong password or code, or an admin (admins keep TOTP)' }
+        '423': { description: 'locked: too many wrong passwords or codes (the account lockout)' }
+        '429': { description: 'rate_limited: too many attempts from this address' }
   /me/recovery-codes:
     post:
       summary: New recovery codes (password + a current code); the old ones stop working
@@ -470,6 +480,8 @@ paths:
       responses:
         '200': { description: New codes, shown once, content: { application/json: { schema: { $ref: '#/components/schemas/RecoveryCodes' } } } }
         '403': { description: Wrong password or code }
+        '423': { description: 'locked: too many wrong passwords or codes (the account lockout)' }
+        '429': { description: 'rate_limited: too many attempts from this address' }
   /me/settings:
     get:
       summary: The user's preferences that follow them (SETTINGS_AND_SECURITY.md §7.1; M7 has one)
@@ -497,6 +509,7 @@ paths:
       summary: The user's timing offset and source pin for a track
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Override' } } } }
+        '400': { description: 'bad_track_key: not a track key' }
     put:
       summary: Set the timing offset (±10 s) and/or the source pin (null clears it)
       requestBody:
@@ -620,6 +633,7 @@ paths:
       summary: One track's match
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/SpotifyMatch' } } } }
+        '400': { description: 'bad_track_key: not a track id' }
         '403': { description: Not an admin }
     put:
       summary: Correct a track's match for everyone on this Navidrome server
