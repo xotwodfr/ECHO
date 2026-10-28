@@ -24,7 +24,7 @@ export class ApiError extends Error {
 
 export async function api<T>(
   path: string,
-  init: { method?: string; body?: unknown } = {},
+  init: { method?: string; body?: unknown; keepalive?: boolean } = {},
 ): Promise<T> {
   let res: Response;
   try {
@@ -33,6 +33,8 @@ export async function api<T>(
       credentials: 'same-origin',
       headers: init.body === undefined ? undefined : { 'content-type': 'application/json' },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
+      // Outlives the page (a save on `pagehide`); such a body may be at most 64 KB.
+      ...(init.keepalive && { keepalive: true }),
     });
   } catch (err) {
     reportDown('server');

@@ -28,18 +28,24 @@ export function trimQueue(q: QueueState): QueueState {
 
 export async function startQueueSync(c: PlaybackController, notify: (message: string) => void) {
   let base = 0;
-  try {
-    const saved = await api<{ queue: QueueState | null; positionMs: number; updatedAt: number }>(
-      '/me/queue',
-    );
-    base = saved.updatedAt;
-    if (saved.queue?.now && !c.player.getState().track) c.restore(saved.queue, saved.positionMs);
-  } catch {
-    return; // no server, or not signed in: nothing follows
+  // An unreachable server (a restart) is asked again, 1, 2, 4 … 30 s apart; a refusal (not signed
+  // in) means the queue does not follow this session.
+  for (let wait = 1000; ; wait = Math.min(30_000, wait * 2)) {
+    try {
+      const saved = await api<{ queue: QueueState | null; positionMs: number; updatedAt: number }>(
+        '/me/queue',
+      );
+      base = saved.updatedAt;
+      if (saved.queue?.now && !c.player.getState().track) c.restore(saved.queue, saved.positionMs);
+      break;
+    } catch (err) {
+      if (err instanceof ApiError && err.status < 500) return;
+      await new Promise((r) => setTimeout(r, wait));
+    }
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null;
-  async function save() {
+  async function save(keepalive = false) {
     timer = null;
     // Spotify keeps its own queue across devices; the saved queue stays the library's.
     if (c.queue.getState().provider === 'spotify') return;
@@ -50,7 +56,8 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
       baseUpdatedAt: base,
     };
     try {
-      base = (await api<{ updatedAt: number }>('/me/queue', { method: 'PUT', body })).updatedAt;
+      base = (await api<{ updatedAt: number }>('/me/queue', { method: 'PUT', body, keepalive }))
+        .updatedAt;
     } catch (err) {
       if (!(err instanceof ApiError) || err.status !== 409) return;
       notify('Your queue changed on another device.');
@@ -68,5 +75,6 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
   };
   c.queue.subscribe(later);
   setInterval(() => c.player.getState().status === 'playing' && later(), SAVE_EVERY_MS);
-  addEventListener('pagehide', () => timer && void save());
+  // Leaving the page: the pending save goes out even as the page unloads.
+  addEventListener('pagehide', () => timer && void save(true));
 }

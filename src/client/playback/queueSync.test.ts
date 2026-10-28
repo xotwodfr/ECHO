@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { QueueState, Track } from '../../shared/types.ts';
-import { trimQueue } from './queueSync.ts';
+import { ManualClock } from './clock.ts';
+import { createPlaybackController } from './controller.ts';
+import { FakeProvider } from './fake.ts';
+import { startQueueSync, trimQueue } from './queueSync.ts';
 
 const track = (i: number): Track => ({
   key: `navidrome:t${i}`,
@@ -55,5 +58,37 @@ describe('ReplayGain (PLAY-05)', () => {
     expect(replayGainLinear(-6, 0.5)).toBeCloseTo(0.501, 3);
     expect(replayGainLinear(6, 0.9)).toBeCloseTo(1 / 0.9, 9); // +6 dB would clip a 0.9 peak
     expect(replayGainLinear(3, undefined)).toBeCloseTo(1.413, 3);
+  });
+});
+
+// ON-QU-1: one failed first request (the server restarting) turned queue sync off for the whole
+// session: no restore, and no change was ever saved.
+describe('queue sync start', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('asks again while the server is unreachable, then saves changes against its answer', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    let failures = 2;
+    const puts: { baseUpdatedAt: number }[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/health')) return new Response('{}');
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return Response.json({ updatedAt: 6 });
+      }
+      if (failures-- > 0) throw new TypeError('Failed to fetch');
+      return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    void startQueueSync(c, () => {});
+    await vi.advanceTimersByTimeAsync(3500); // tries at 0, 1 and 3 s
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    await vi.advanceTimersByTimeAsync(2500); // the save's debounce
+    expect(puts.map((p) => p.baseUpdatedAt)).toEqual([5]);
   });
 });
