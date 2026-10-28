@@ -440,7 +440,7 @@ button {
 .stage-chrome {
   position: relative;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-3);

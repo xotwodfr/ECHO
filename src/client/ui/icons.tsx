@@ -101,6 +101,31 @@ const PATHS = {
       <path d="M12 7.7v.3" />
     </>
   ),
+  // The Stage's views: a ragged column of lines, a picture, a pulse.
+  lyrics: (
+    <>
+      <path d="M4 6h12" />
+      <path d="M4 10.5h16" />
+      <path d="M4 15h9" />
+      <path d="M4 19.5h13" />
+    </>
+  ),
+  cover: (
+    <>
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <circle cx="9.5" cy="9.5" r="1.5" />
+      <path d="m20 15-4.5-4.5L6 20" />
+    </>
+  ),
+  visual: <path d="M3 12h3l2.5-6 4 12 3-9 2 3H21" />,
+  fullscreen: (
+    <>
+      <path d="M4 9V5a1 1 0 0 1 1-1h4" />
+      <path d="M15 4h4a1 1 0 0 1 1 1v4" />
+      <path d="M20 15v4a1 1 0 0 1-1 1h-4" />
+      <path d="M9 20H5a1 1 0 0 1-1-1v-4" />
+    </>
+  ),
 } as const;
 
 export type IconName = keyof typeof PATHS;

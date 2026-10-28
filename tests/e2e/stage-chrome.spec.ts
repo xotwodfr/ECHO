@@ -164,26 +164,26 @@ test.describe('view modes', () => {
       .locator('[aria-pressed="true"]');
     await page.locator('h1').first().focus();
     await page.keyboard.press('v');
-    await expect(pressed).toHaveText('Cover');
+    await expect(pressed).toHaveAccessibleName('Cover');
     await page.keyboard.press('v');
-    await expect(pressed).toHaveText('Visual');
+    await expect(pressed).toHaveAccessibleName('Visual');
     await page.keyboard.press('v');
-    await expect(pressed).toHaveText('Lyrics');
+    await expect(pressed).toHaveAccessibleName('Lyrics');
     await page.keyboard.press('c');
-    await expect(pressed).toHaveText('Cover');
+    await expect(pressed).toHaveAccessibleName('Cover');
     await page.keyboard.press('c');
-    await expect(pressed).toHaveText('Lyrics');
+    await expect(pressed).toHaveAccessibleName('Lyrics');
     await page.keyboard.press('l');
-    await expect(pressed).toHaveText('Visual');
+    await expect(pressed).toHaveAccessibleName('Visual');
     await page.keyboard.press('l');
-    await expect(pressed).toHaveText('Lyrics');
+    await expect(pressed).toHaveAccessibleName('Lyrics');
     await page.getByRole('link', { name: 'Library', exact: true }).first().click();
     await page.keyboard.press('v');
     await page
       .getByRole('navigation', { name: 'Main' })
       .getByRole('link', { name: 'Listen' })
       .click();
-    await expect(pressed).toHaveText('Lyrics'); // V did nothing in the Library
+    await expect(pressed).toHaveAccessibleName('Lyrics'); // V did nothing in the Library
   });
 
   test('Cover crossfades on a cover change, by opacity only', async ({ page }) => {

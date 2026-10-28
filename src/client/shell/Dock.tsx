@@ -22,6 +22,7 @@ import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
 import { ConfirmDialog, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
 import { Link, useView } from './link.tsx';
+import { toggleFullscreen } from './StageViews.tsx';
 import { keyTarget, type Shortcut, shortcutFor } from './shortcuts.ts';
 import spotifyLogo from './spotify-logo-white.svg';
 
@@ -227,12 +228,7 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
       goLibrary: () => navigate({ view: 'library', tab: 'albums' }),
       goSettings: () => navigate({ view: 'settings', section: 'preferences' }),
       goListen: () => navigate({ view: 'listen' }),
-      fullscreen: () =>
-        void (
-          document.fullscreenElement
-            ? document.exitFullscreen()
-            : document.documentElement.requestFullscreen()
-        ).catch(() => undefined),
+      fullscreen: toggleFullscreen,
       help: openHelp,
     };
     const setView = (v: StageView) => stageView.getState().set(v);

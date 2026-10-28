@@ -87,6 +87,58 @@
   color: var(--text);
 }
 
+/* The Stage's top chrome (PRODUCT_SPEC.md §6.1): one row of round outline buttons over the room,
+   the current view filled. */
+.stage-chrome .view-switch {
+  gap: var(--sp-3);
+}
+
+.stage-chrome .stage-btn {
+  display: grid;
+  place-items: center;
+  width: var(--sp-7);
+  height: var(--sp-7);
+  padding: 0;
+  border: var(--rule) solid color-mix(in oklab, var(--text) 28%, transparent);
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--art-room) 35%, transparent);
+  color: var(--text);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-hover) ease,
+    background var(--dur-hover) ease;
+}
+
+.stage-chrome .stage-btn:hover {
+  border-color: color-mix(in oklab, var(--text) 60%, transparent);
+}
+
+.stage-chrome .stage-btn[aria-pressed="true"] {
+  border-color: color-mix(in oklab, var(--text) 60%, transparent);
+  background: color-mix(in oklab, var(--text) 18%, transparent);
+}
+
+/* Phones: six 48 px circles do not fit in one row; 40 px ones with tighter gaps do. */
+@media (max-width: 719.98px) {
+  .stage-chrome,
+  .stage-chrome .view-switch {
+    gap: var(--sp-2);
+  }
+
+  .stage-chrome .stage-btn {
+    width: var(--hit-lg);
+    height: var(--hit-lg);
+  }
+}
+
+@media (forced-colors: active) {
+  .stage-chrome .stage-btn[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}
+
 /* Lyrics without a document (no lyrics loader until M6, when Cover mode replaces this note,
    §9.4): at 40% of the stage, where M2 placed it. */
 .stage-lyrics {

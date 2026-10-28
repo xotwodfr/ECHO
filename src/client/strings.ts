@@ -412,6 +412,7 @@ export const strings = {
     fixMatch: 'Fix Spotify match…',
     sourceUse: (name: string) => `Use ${name} for this track`,
     viewLabel: 'Stage view',
+    fullscreen: 'Full screen',
     views: { lyrics: 'Lyrics', cover: 'Cover', visual: 'Visual' },
     lyricsPlaceholder: 'Lyrics will appear here.',
     idle: 'Nothing playing. Pick an album to start.',

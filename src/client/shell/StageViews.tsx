@@ -1,13 +1,21 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
 import { isInstrumental, pinLyricsSource } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
 import { prefsStore } from '../prefs.ts';
 import { sessionStore } from '../session.ts';
-import { lyricHost, lyricOffset, lyricsStore, STAGE_VIEWS, stageView } from '../stage/status.ts';
+import {
+  lyricHost,
+  lyricOffset,
+  lyricsStore,
+  STAGE_VIEWS,
+  type StageView,
+  stageView,
+} from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
+import { Icon, type IconName } from '../ui/icons.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
 import { Link, useView } from './link.tsx';
@@ -16,27 +24,76 @@ import { fixTrackStore } from './SpotifyViews.tsx';
 // What sits on the Stage above the room (PRODUCT_SPEC.md §6.1): the top chrome, and the view mode's
 // content. The lyric field itself is drawn by the Stage engine into the host element below.
 
-/** Top chrome: back to the Library, and the view mode switch (V cycles it from the keyboard). */
+const VIEW_ICONS: Record<StageView, IconName> = {
+  lyrics: 'lyrics',
+  cover: 'cover',
+  visual: 'visual',
+};
+
+/** F, and the chrome's full screen button. */
+export const toggleFullscreen = () =>
+  void (
+    document.fullscreenElement
+      ? document.exitFullscreen()
+      : document.documentElement.requestFullscreen()
+  ).catch(() => undefined);
+
+const onFullscreen = (f: () => void) => {
+  document.addEventListener('fullscreenchange', f);
+  return () => document.removeEventListener('fullscreenchange', f);
+};
+
+/**
+ * Top chrome, one row of round buttons: the view modes (V cycles them from the keyboard), full
+ * screen, Settings, and back to the Library.
+ */
 export function StageChrome() {
   const view = useStore(stageView, (s) => s.view);
+  const full = useSyncExternalStore(onFullscreen, () => !!document.fullscreenElement);
   return (
     <div className="stage-chrome">
-      <Link className={buttonClass('tertiary')} to={{ view: 'library', tab: 'albums' }}>
-        {strings.nav.library}
-      </Link>
       <fieldset className="view-switch">
         <legend className="visually-hidden">{strings.stage.viewLabel}</legend>
         {STAGE_VIEWS.map((v) => (
           <button
             key={v}
             type="button"
+            className="stage-btn"
+            aria-label={strings.stage.views[v]}
+            title={strings.stage.views[v]}
             aria-pressed={view === v}
             onClick={() => stageView.getState().set(v)}
           >
-            {strings.stage.views[v]}
+            <Icon name={VIEW_ICONS[v]} />
           </button>
         ))}
       </fieldset>
+      <button
+        type="button"
+        className="stage-btn"
+        aria-label={strings.stage.fullscreen}
+        title={strings.stage.fullscreen}
+        aria-pressed={full}
+        onClick={toggleFullscreen}
+      >
+        <Icon name="fullscreen" />
+      </button>
+      <Link
+        className="stage-btn"
+        to={{ view: 'settings', section: 'preferences' }}
+        aria-label={strings.nav.settings}
+        title={strings.nav.settings}
+      >
+        <Icon name="settings" />
+      </Link>
+      <Link
+        className="stage-btn"
+        to={{ view: 'library', tab: 'albums' }}
+        aria-label={strings.nav.library}
+        title={strings.nav.library}
+      >
+        <Icon name="close" />
+      </Link>
     </div>
   );
 }
