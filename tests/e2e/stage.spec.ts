@@ -23,6 +23,32 @@ async function countFrames(page: Page) {
 }
 const frames = (page: Page) => page.evaluate(() => (window as unknown as { __raf: number }).__raf);
 
+/**
+ * The album palette's transition (1.2 s, its own rAF; colour is not motion, so it runs under
+ * reduced motion too, VISUALIZER_SPEC.md §8) has finished: frames counted after this are the
+ * Stage's own. Firefox on a software GPU (CI) is still in it when a test starts counting.
+ */
+async function paletteSettled(page: Page) {
+  const rootStyle = () => page.evaluate(() => document.documentElement.style.cssText);
+  await expect
+    .poll(async () => {
+      const a = await rootStyle();
+      await page.waitForTimeout(150);
+      return a === (await rootStyle());
+    })
+    .toBe(true);
+}
+
+/**
+ * The backing store a tier's cap gives (VISUALIZER_SPEC.md §8.1). Firefox under Playwright does not
+ * emulate `deviceScaleFactor` (its devicePixelRatio stays 1, checked in CI's image), so the size
+ * follows the ratio the browser reports; Chromium reports 2 and exercises the cap.
+ */
+const capped = async (page: Page, css: [number, number], cap: number) => {
+  const dpr = Math.min(await page.evaluate(() => window.devicePixelRatio), cap);
+  return css.map((v) => Math.round(v * dpr));
+};
+
 /** Brightest channel value in a screenshot (a loop: spreading a large buffer overflows the stack). */
 async function brightest(png: Buffer) {
   const { data } = await sharp(png).raw().toBuffer({ resolveWithObject: true });
@@ -79,7 +105,13 @@ test.describe('with WebGL 2', () => {
     // Most tests here navigate again. A `goto` while the first page's font is still downloading
     // aborts it, and Firefox logs that as a console error, which tests counting errors would see.
     // `fonts.ready` is not enough: it resolves at once if the load has not started yet.
-    await page.evaluate(() => document.fonts.load('16px "Mona Sans"').then(() => undefined));
+    // Since the Material 3 shell, the Library loads Roboto Flex too.
+    await page.evaluate(() =>
+      Promise.all([
+        document.fonts.load('16px "Mona Sans"'),
+        document.fonts.load('16px "Roboto Flex"'),
+      ]).then(() => undefined),
+    );
   });
 
   test('renders the room in Ambient mode, without errors', async ({ page }) => {
@@ -134,15 +166,7 @@ test.describe('with WebGL 2', () => {
     await countFrames(page);
     await openStage(page);
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
-    // The album's palette transition (1.2 s, its own rAF) must finish first, or its frames count.
-    const rootStyle = () => page.evaluate(() => document.documentElement.style.cssText);
-    await expect
-      .poll(async () => {
-        const a = await rootStyle();
-        await page.waitForTimeout(150);
-        return a === (await rootStyle());
-      })
-      .toBe(true);
+    await paletteSettled(page);
     await page.evaluate(() => {
       const gl = (document.querySelector('.stage-canvas') as HTMLCanvasElement).getContext(
         'webgl2',
@@ -179,9 +203,9 @@ test.describe('with WebGL 2', () => {
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
     const size = () =>
       page.locator('.stage-canvas').evaluate((c: HTMLCanvasElement) => [c.width, c.height]);
-    expect(await size()).toEqual([1280, 800]); // 1024×640 × min(2, 1.25)
+    expect(await size()).toEqual(await capped(page, [1024, 640], 1.25)); // Chromium: 1280×800
     await page.setViewportSize({ width: 1440, height: 900 });
-    await expect.poll(size).toEqual([1800, 1125]);
+    await expect.poll(size).toEqual(await capped(page, [1440, 900], 1.25)); // 1800×1125
     await ctx.close();
   });
 
@@ -191,7 +215,7 @@ test.describe('with WebGL 2', () => {
     await openStage(page);
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
     await expect(stage(page)).toHaveAttribute('data-mode', 'still');
-    await page.waitForTimeout(300);
+    await paletteSettled(page);
     const a = await frames(page);
     await page.waitForTimeout(700);
     expect(await frames(page)).toBe(a);
@@ -204,7 +228,7 @@ test.describe('with WebGL 2', () => {
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
     await page.getByRole('link', { name: 'Library', exact: true }).click();
     await expect(stage(page)).toHaveCount(0);
-    await page.waitForTimeout(100);
+    await paletteSettled(page);
     const a = await frames(page);
     await page.waitForTimeout(500);
     expect(await frames(page)).toBe(a);
@@ -277,10 +301,10 @@ test.describe('with WebGL 2', () => {
       'aria-valuenow',
       '72000',
     );
-    // T0 caps the backing store at 1.5× (T1 would give 1280×800).
+    // T0 caps the backing store at 1.5× (T1 would give 1280×800): Chromium 1536×960.
     expect(
       await page.locator('.stage-canvas').evaluate((c: HTMLCanvasElement) => [c.width, c.height]),
-    ).toEqual([1536, 960]);
+    ).toEqual(await capped(page, [1024, 640], 1.5));
     await ctx.close();
   });
 
