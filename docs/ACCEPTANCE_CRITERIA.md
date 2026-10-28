@@ -8,12 +8,14 @@ is not done until all of its criteria pass.
 
 ## Status at 2026-10-28
 
-Every criterion that a test on this machine can decide has a test, and the suites pass on the
-2026-10-28 tree:
-- Vitest 1277.
-- Playwright on the host: 367 passed, 0 failed, 90 skipped.
-- Playwright in CI's own image under Xvfb (`scripts/e2e-container.sh`): 381 passed, 0 failed, 78
-  skipped, Firefox with WebGL included.
+Every criterion that a test on this machine can decide, and whose code is built, has a test, and
+the suites pass on the 2026-10-28 tree (after the morning's agent QA round):
+- Vitest 1288.
+- Playwright on the host: 375 passed, 0 failed, 91 skipped.
+- Playwright in CI's own image under Xvfb (`scripts/e2e-container.sh`), the full suite before the QA
+  round: 381 passed, 0 failed, 78 skipped, Firefox with WebGL included. Its visual baselines were
+  re-checked there after it (23/23).
+- QA measurements on the owner's real library are in `OVERNIGHT_ENGINEERING_PLAN.md` §8b.
 
 Evidence per criterion is in `docs/reviews/M1.md` … `M9.md` and `M8-security.md`. The overnight
 audit's findings and fixes are in `docs/OVERNIGHT_ENGINEERING_PLAN.md`. ECHO is deployed at
@@ -27,6 +29,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | **People** | A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes). DS-05 passed by three model reviews on 2026-10-28 (`reviews/M9.md`); a human five-second test is still worth doing |
 | **A 10-bit capture setup** | VIS-09 M (the dither test passes; the criterion asks for a 10-bit capture, which Playwright cannot make) |
 | **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
+| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | SRCH-01's keyboard part (arrows, Enter, Shift+Enter, →); LIB-01's Artists as a server list; crossfade (no criterion requires it, PLAY-04 assumes 0) |
 | **A hosted CI run** (no remote, by the owner's choice) | None of the criteria themselves: DS-06's baselines and VIS-07's Firefox context loss pass in CI's own image locally (`scripts/e2e-container.sh`, 2026-10-28). Only the GitHub Actions run itself is unproven |
 
 ---

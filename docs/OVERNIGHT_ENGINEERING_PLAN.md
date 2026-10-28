@@ -624,6 +624,94 @@ redeploy (owner's call; the live container still runs `21dc5f1`); the manual and
 `inspect.mjs` design audits (no UI layout changed apart from error blocks that reuse existing
 components).
 
+## 8b. Agent QA round (2026-10-28 morning)
+
+The owner asked for agents to test ECHO. The setup:
+- **On a local test instance** (dev build, mock Navidrome): four exploratory testers, for playback
+  and queue, lyrics and the Stage, accounts and security, and accessibility and responsive.
+- **On a production-build instance with the owner's real Navidrome** (22,689 songs, 3,065 albums):
+  two more testers. Scrobbling was off before anything played; both reported 0 write attempts to
+  Navidrome. The credentials stayed in a scratch file and never reached the repo. The instance and
+  its data were deleted afterwards.
+- **For DS-05:** three blind reviewers (Haiku, Sonnet, Opus) who saw only a screenshot. The answers
+  are in `reviews/M9.md`.
+
+Every finding below was checked against the code before it was fixed, and each fix has a test
+that failed first, except where noted.
+
+**Fixed:**
+- `79d2224`:
+  - the CSRF exemption is the exact device-token pattern (last night's ON-SEC-3 fix was
+    incomplete);
+  - the TOTP-off/promote race;
+  - unknown admin settings are refused;
+  - `no-store` by default;
+  - a warning when `ECHO_PUBLIC_ORIGIN` is missing.
+- `6b66353`:
+  - a **regression from last night's ON-PB-2**: Play was dead after a final stream failure;
+  - the misleading "Skipped" toast;
+  - Previous then Next with queued tracks;
+  - QUE-05 saves the position on pause and seek;
+  - the volume is kept per device;
+  - Clear queue asks for confirmation;
+  - shortcuts behind modals;
+  - **REL-05: a different user signing in on the sheet inherited the previous user's screen and
+    queue**;
+  - **the Year sort emptied a real library** (Navidrome needs a year range), and Subsonic
+    "failed" answers are errors everywhere;
+  - the stale search reply;
+  - the form-level Navidrome error;
+  - instrumentals (§9.4);
+  - the total in the offset toast;
+  - forced colours (WCAG 1.4.11);
+  - search announcements;
+  - the connection-test alert;
+  - the album grid's name;
+  - the ⓘ disclosure;
+  - the ⓘ menu off-screen;
+  - the chrome hiding a focused or open menu.
+
+**Measured on the real library** (indicative only: shared CPU, load 3–23):
+- Library: the first tile at 236–290 ms; all 3,065 albums in 1.1–2.1 s (≤ 40 tiles in the DOM).
+- PLAY-01: 0.49–1.09 s (≤ 3 s).
+- PLAY-03: raw ±0.3 s; transcoded floors to the whole second (±1 s).
+- PLAY-04, consecutive tracks: 5–32 ms (< 50). One forced worst case (a seek 7 ms before the end)
+  measured 54.8 ms under load 10.
+- Steady play: 0 drift over 3.5 min.
+- Lyric sync: 81/81 samples correct across 9 tracks, after seeks too. No wrong-song lyrics on 18
+  real tracks.
+- VIS-03:
+  - cached 2–18 ms;
+  - uncached 9 of 10 ≤ 600 ms, one 1551 ms. Covers came over the internet, so this is not the
+    criterion's "local server".
+- VIS-05 judged visually: readable on every room.
+
+**Not fixed: owner decisions or design calls**
+- The dock's volume slider is hidden at 720–1279 px. Mute and the keys remain; this conflicts with
+  A11Y-09's "nothing is lost".
+- The "changed on another device" notice has no Reload action (§5.8 versus as-built).
+- Ranking: NetEase word sync outranks better line-synced library lyrics (spec order).
+- Signed URLs survive a password change (a 6 h bearer).
+- Refusing to start without `ECHO_PUBLIC_ORIGIN`: a warning was added instead.
+- The ⓘ menu offers Spicy when it is not configured.
+- Palette accents taken from small logos; overlapping lines in the field (the owner's look in
+  motion).
+
+**Not fixed: deferred work, each larger than a fix**
+- The **SRCH-01 keyboard part** (arrows, Enter, Shift+Enter, →), plus Top result and Show all: not
+  built.
+- The Artists tab per §6.3: a server list, windowed, linked; names trimmed.
+- Multi-disc headings.
+- Covers lagging after a long scroll: tiles that left still fetch, and there is no cover cache.
+- Long lines at 390 px wrap to 5–6 rows, and a past line sits under the top bar.
+- No retry after a failed lyric request.
+- Repeat is not restored.
+- The invite page does not show the preset username.
+- A 404 console line for every lyric miss.
+- The LRCLIB breaker is shared across users (ON-LY-9).
+- Navidrome's allow-list cannot be set (§6.1 feature gap).
+- Unknown `/api` paths answer 404, not §5.5's 401.
+
 ## 9. Commits
 
 All on `main`, local only (no remote; nothing pushed). Each commit carried its own tests.
