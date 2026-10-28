@@ -2,10 +2,14 @@ import type { Tier } from './renderer.ts';
 
 // The quality governor (VISUALIZER_SPEC.md §8.2). Pure: the engine feeds it frame intervals (and
 // GPU time when the timer query exists) and applies the tier it returns. The refresh rate is the
-// median of the first 60 intervals; a tier steps down after 1 s over budget and up after 8 s well
-// under it, never in the first 3 s of a track or during a scrub, and never up within 20 s of any
-// change, so it cannot oscillate faster than that (PERF-02). A manual tier only gives way to an
-// emergency: under 20 fps for 3 s.
+// median of the first 60 intervals; a tier steps down after 1 s over budget and up after 8 s at full
+// refresh, never in the first 3 s of a track or during a scrub, and never up within 20 s of any
+// change, so it cannot oscillate faster than that (PERF-02). Frames are locked to the display's
+// refresh, so they never come in faster than the target: "well under budget" cannot be seen in the
+// intervals, and recovery is a probe (a tier that cannot hold steps down again after 1 s). On its own
+// it goes no lower than T2: T3 is Still, a frozen room, and in Still nothing is measured, so it could
+// never come back (owner's report, 2026-10-28). A manual tier only gives way to an emergency: under
+// 20 fps for 3 s.
 
 const ORDER: Tier[] = ['T0', 'T1', 'T2', 'T3'];
 const ALPHA = 0.1;
@@ -15,6 +19,8 @@ const SETTLE_MS = 20_000;
 const TRACK_START_MS = 3000;
 const EMERGENCY_MS = 3000;
 const EMERGENCY_FRAME_MS = 50; // 20 fps
+/** "At full refresh": within 5% of the target (vsync-locked frames sit at it, with jitter). */
+const FULL_RATE = 1.05;
 /** A gap this long is a hidden tab or a stall, not a frame: it is not measured. */
 const GAP_MS = 250;
 export const LAST_TIER_KEY = 'echo.visuals.lastTier';
@@ -41,7 +47,7 @@ export function createGovernor(opts: { tier: Tier; manual: boolean; now: () => n
   const step = (dir: 1 | -1): Tier | null => {
     const i = ORDER.indexOf(tier) + dir;
     const next = ORDER[i];
-    if (!next) return null;
+    if (!next || (next === 'T3' && !opts.manual)) return null;
     tier = next;
     lastChange = opts.now();
     over = under = slow = 0;
@@ -78,7 +84,7 @@ export function createGovernor(opts: { tier: Tier; manual: boolean; now: () => n
         return null;
       }
       const isOver = ema > 1.15 * target || (gpu !== undefined && gpu > 0.6 * target);
-      const isUnder = ema < 0.8 * target && (gpu === undefined || gpu < 0.4 * target);
+      const isUnder = ema <= FULL_RATE * target && (gpu === undefined || gpu < 0.4 * target);
       over = isOver ? over + s.dtMs : 0;
       under = isUnder ? under + s.dtMs : 0;
       if (over >= DOWN_AFTER_MS) return step(1);
@@ -95,11 +101,14 @@ export function firstTier(renderer: string | null): Tier {
   return /nvidia|geforce|quadro|rtx|radeon|amd/i.test(renderer) ? 'T0' : 'T1';
 }
 
-/** The device's last stable tier, if it has one (per device: localStorage). */
+/**
+ * The device's last stable tier, if it has one (per device: localStorage). Never T3: Still is a
+ * manual choice, and a device the old governor left there must not start frozen.
+ */
 export function rememberedTier(): Tier | null {
   try {
     const v = localStorage.getItem(LAST_TIER_KEY);
-    return v && (ORDER as string[]).includes(v) ? (v as Tier) : null;
+    return v && v !== 'T3' && (ORDER as string[]).includes(v) ? (v as Tier) : null;
   } catch {
     return null;
   }

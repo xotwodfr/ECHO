@@ -401,8 +401,14 @@ stays far below this:
   at startup (60/120/144 Hz).
 - **Step down** one tier if the EMA exceeds `1.15 × target` for 1.0 s, or GPU time exceeds
   `0.6 × target` for 1.0 s.
-- **Step up** one tier if the EMA is below `0.8 × target` and GPU time below `0.4 × target` for
-  8 s, and no step-down has happened in the last 20 s (hysteresis).
+- **Step up** one tier if the EMA is at full refresh (`≤ 1.05 × target`) and GPU time below
+  `0.4 × target` for 8 s, and no change has happened in the last 20 s (hysteresis). *Corrected
+  2026-10-28:* this read "EMA below `0.8 × target`", which vsync-locked frames can never show, so a
+  step down was for ever. With full refresh as the test, a step up is a probe: a tier that cannot
+  hold steps down again after 1 s, at most one change per 20 s.
+- **Floor:** on its own the governor goes no lower than **T2**. T3 is Still (a frozen room) and is a
+  manual choice; in Still nothing is measured, so an automatic T3 could never come back. A remembered
+  T3 is ignored at start.
 - **Never** change tier during the first 3 s of a track (shader compile / art decode spikes) or
   during a scrub.
 - **Per-device memory:** ECHO clients run on very different hardware (a laptop iGPU, a gaming PC).

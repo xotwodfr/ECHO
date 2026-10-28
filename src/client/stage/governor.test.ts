@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { createGovernor, firstTier } from './governor.ts';
+import { describe, expect, it, vi } from 'vitest';
+import { createGovernor, firstTier, rememberedTier, rememberTier } from './governor.ts';
 
 // PERF-02 (VISUALIZER_SPEC.md §8.2): steps down within 1.5 s of sustained overload, up only after
 // 8 s well under budget and 20 s after any change, never in a track's first 3 s or a scrub.
@@ -60,6 +60,51 @@ describe('the governor', () => {
     expect(r.changes).toHaveLength(1);
     r.frames(12_000, 10);
     expect(r.changes.map((c) => c.tier)).toEqual(['T1', 'T0']);
+  });
+
+  // Owner's report, 2026-10-28: the Visual view showed a frozen room. Frames are locked to the
+  // display's refresh, so they can never come in faster than the calibrated target: a step down was
+  // for ever (and T3 is Still, remembered per device). Recovery must be reachable with vsync.
+  it('recovers on a vsync-locked display once a heavy spell has passed', () => {
+    let t = 0;
+    const g = createGovernor({ tier: 'T0', manual: false, now: () => t });
+    const frames = (ms: number, dt: number) => {
+      const out: string[] = [];
+      for (let e = 0; e < ms; e += dt) {
+        t += dt;
+        const r = g.sample({ dtMs: dt, trackMs: 10_000, scrubbing: false });
+        if (r) out.push(r);
+      }
+      return out;
+    };
+    frames(1000, 1000 / 240); // a 240 Hz display
+    expect(frames(1500, 1000 / 120)).toEqual(['T1']); // a heavy second: half the frame rate
+    expect(frames(60_000, 1000 / 240)).toEqual(['T0']); // full refresh again: back up
+  });
+
+  it('never freezes the room on its own: T3 (Still) is a manual choice', () => {
+    const r = run(false, 'T2');
+    r.frames(5000, 50); // 20 fps, far over budget
+    expect(r.changes).toEqual([]); // stays at T2, still drawing
+    const manual = run(true, 'T2');
+    manual.frames(5000, 60); // a manual tier's emergency (< 20 fps for 3 s) may go to Still
+    expect(manual.changes.map((c) => c.tier)).toEqual(['T3']);
+  });
+
+  it('a remembered T3 is not a starting point', () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    });
+    try {
+      rememberTier('T3');
+      expect(rememberedTier()).toBeNull();
+      rememberTier('T2');
+      expect(rememberedTier()).toBe('T2');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('never oscillates more than once per 20 s under a load that flips', () => {
