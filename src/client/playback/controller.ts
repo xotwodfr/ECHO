@@ -258,6 +258,7 @@ export function createPlaybackController(opts: {
     if (!provider || !s.track || !s.capabilities.canSeek) return;
     const to = Math.min(Math.max(0, ms), s.track.durationMs);
     player.setState({ positionMs: to, positionAt: clock.now() });
+    schedulePreload(s.track, to); // from the new position, or the hand-over has a gap
     if (seeking) pendingSeek = to;
     else void sendSeek(to);
   }

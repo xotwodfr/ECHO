@@ -247,6 +247,21 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect(other.queue.getState().shuffleOrder).toEqual(saved.shuffleOrder);
   });
 
+  // ON-PB-4: the preload was timed from the load only; a seek past the 20 s mark left it to fire
+  // after the track had ended, so the next track started with a gap.
+  it('a seek towards the end buffers the next track from the new position', async () => {
+    const { clock, provider, c } = setup();
+    const buffered: string[] = [];
+    (provider as unknown as { preload: (t: Track) => Promise<void> }).preload = async (t) => {
+      buffered.push(t.id);
+    };
+    c.playList(album, 0, ctx); // 200 s tracks
+    clock.advance(100);
+    c.seek(190_000);
+    clock.advance(1);
+    expect(buffered).toEqual(['t2']);
+  });
+
   it('buffers the next track 20 s before the end, not under repeat-one (gapless, §5.6)', () => {
     const { clock, provider, c } = setup();
     const buffered: string[] = [];
