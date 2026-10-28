@@ -57,6 +57,25 @@ Releases still need the owner, people or real devices (TLS grade, Spotify Premiu
 reference-client performance, Orca, the five-second test, the 8 h soak). None of that can be closed
 tonight, and this plan does not claim it.
 
+### Results (2026-10-28, morning)
+
+- **Fixed:** 44 of 57 findings (ON-DB-3 only partly), in 28 commits, all with tests that failed first where a test was
+  practical:
+  - all 4 P1s: Reverb onsets, two playback skip bugs, the dead page during a restart;
+  - every P2 in scope;
+  - most P3s.
+- **Suites:**
+  - Vitest **1277/1277**.
+  - Host E2E **367 passed, 0 failed** (from 347 passed, 1 failed, 15 not run).
+  - CI's image, full suite **381 passed, 0 failed**: Firefox with WebGL included, a first since M2.
+- **Container:** verified on the OptiPlex (no AVX2), and Trivy finds 0 HIGH/CRITICAL.
+- **Not done:**
+  - the owner decisions in §7: lockout keying, audit-log retention, Caddy trusted proxies;
+  - deferred P3s, each with a reason;
+  - everything that needs the owner, people or real devices.
+- **Not deployed:** the live container still runs `21dc5f1`. Redeploying is the owner's call
+  (`cd ~/docker/echo && docker compose build && docker compose up -d`).
+
 ## 2. Actual project state (reconciled 2026-10-27 23:25)
 
 | Brief said | Repository says | Evidence |
@@ -128,7 +147,7 @@ P3 low.
   latent.
 - Fix: exempt only `Bearer echo_dt_…`.
 - Verify: `http.test.ts`. A cookie plus a foreign bearer from a foreign Origin → 403.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`274bb31`) [X]: the test failed first (a foreign bearer from a foreign Origin got 200), then 403.
 
 **ON-SEC-4 · P3 · The last admin can be deleted through a race.**
 - Where: `account.ts:302-306`. The `isLastAdmin` check runs before an awaited reauth (Argon2 +
@@ -141,7 +160,7 @@ P3 low.
 - Where: `settings.ts:98-102` uses bare `SCHEMA[s]` lookups. `{"constructor":{"name":1}}` throws a
   TypeError.
 - Evidence [S·a]: no prototype pollution was found, only a 500.
-- Fix: use `Object.hasOwn`. Verify: unit test → 400. Tonight: yes. Status: **planned**.
+- Fix: use `Object.hasOwn`. Verify: unit test → 400. Tonight: yes. Status: **fixed** (`2e65d79`) [X].
 
 **ON-SEC-6 · P3 · Anyone can lock out a known username, and the lock never decays.**
 - Where: `auth/ratelimit.ts:26`. The lock doubles up to 24 h and is keyed by username only.
@@ -160,7 +179,7 @@ P3 low.
 - Fix: a per-user token bucket after `requireUser`. Streams are excluded, as the spec says.
 - Risk: it could throttle legitimate bursts, such as the library loading 50 cover requests. Covers go
   through `/navidrome/cover` and need care.
-- Tonight: only if time allows after the P2s. Status: **planned (stretch)**.
+- Tonight: only if time allows after the P2s. Status: **fixed** (`3e2c49e`) [X]: unit test (50, then 429, 10 more after 1 s; covers unmetered); the full E2E suite runs under it.
 
 **ON-SEC-8 · P3 · Live Caddy trusts `Cf-Connecting-Ip` from any peer that reaches it.**
 - Where: `~/docker/echo/install-routing.sh:32-33`. This is the owner's live routing, outside the
@@ -210,12 +229,12 @@ never run.**
 **ON-PB-3 · P3 · Shuffle and repeat are not restored with the queue.**
 - Where: `controller.ts:363-368`. `restore()` loads `shuffleOrder`, but `player.shuffle` stays
   false, so the dock shows "off" while playing shuffled.
-- Fix: set `shuffle: !!q.shuffleOrder` on restore. Tonight: yes, if cheap. Status: **planned**.
+- Fix: set `shuffle: !!q.shuffleOrder` on restore. Tonight: yes, if cheap. Status: **fixed** (`cd8a828`) [X].
 
 **ON-PB-4 · P3 · The gapless preload timer uses wall-clock time from `load()`.**
 - Where: `controller.ts:181`. After seeking to 3:50 of a 4:00 track, the timer fires after the track
   has ended, so there is a gap.
-- Fix: reschedule on seek, play and pause from the current position. Status: **deferred** (P3,
+- Fix: reschedule on seek, play and pause from the current position. Status: **fixed** (`173985c`) [X]: a seek reschedules from the new position (the test failed first). Pauses only make the timer fire early, which buffers sooner and is harmless. PLAY-04 not re-measured on real audio (P3,
   needs the PLAY-04 gap measurement re-run).
 
 **ON-PB-5 · P3 · Media Session gaps.**
@@ -307,11 +326,11 @@ drops saves.**
 - Fix: for a provider that owns its queue, `jump(i)` skips `i + 1` times with `skipNext`.
   Alternatively, the row is not a play target.
 - Verify: `providers.test.ts`. A jump on an own-queue provider → `skipNext` calls, no `load`.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`e09dcda`) [X] (unit, fake provider; not tried against the real Spotify SDK).
 
 **ON-INT-2 · P3 · A Spotify album with a failed later page is stored as complete.**
 - Where: `library-spotify.ts:140-147`.
-- Fix: don't mark the album loaded when a page failed. Tonight: with ON-UI-2. Status: **planned**.
+- Fix: don't mark the album loaded when a page failed. Tonight: with ON-UI-2. Status: **fixed** (`b9ad506`) [S, plus unit and E2E coverage of the shared error path]: a failed later page now fails the load.
 
 **ON-INT-3 · P3 · Subsonic `status: "failed"` comes back as HTTP 200 and is read as an empty
 list.**
@@ -324,11 +343,11 @@ list.**
 - Where: `client/playback/queueSync.ts:37-39`, `catch { return; }`, before any listener is
   installed.
 - Fix: retry with backoff, then install the listeners. Verify: unit test with a failing first `GET`.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`cd00759`) [X].
 
 **ON-QU-2 · P3 · The `pagehide` save has no `keepalive`.**
 - The browser may cancel the save, and the last ≤ 15 s of position is lost.
-- Fix: `keepalive: true` for that save. Tonight: if cheap. Status: **planned**.
+- Fix: `keepalive: true` for that save. Tonight: if cheap. Status: **fixed** (`cd00759`) [S]: `keepalive` on that one save; not observed in a browser unload.
 
 **ON-QU-3 · P3 · Overlapping PUTs and the 409-restore echo can raise false "changed on another
 device" notices.**
@@ -336,7 +355,7 @@ device" notices.**
 
 **ON-QU-4 · P3 · A foreign drop onto a queue row moves the first track.**
 - Where: `Dock.tsx:272`. `Number('')` is 0.
-- Fix: ignore an empty payload. Tonight: yes. Status: **planned**.
+- Fix: ignore an empty payload. Tonight: yes. Status: **fixed** (`cd8a828`) [S]: one-line guard, no automated test (a cross-application drag).
 
 ### 3.6 Visualizer correctness, performance, reduced motion
 
@@ -384,31 +403,30 @@ track.**
   the album could not be loaded.
 - Verify: an E2E in `states.spec.ts` aborts `getAlbum` → "Couldn't load this album." + Retry, which
   recovers.
-- Tonight: yes. Status: **planned**.
+- Tonight: yes. Status: **fixed** (`b9ad506`) [X]: the new `states.spec.ts` test failed first, then passes; states 6/6, library/dock/Spotify 109 passed.
 
 **ON-UI-3 · P2 · With Spotify connected, failed playlists and search show "none".**
 - Where: `library-spotify.ts:243-254` uses `.catch(() => [])` for each provider, so
   `PlaylistsTab`'s error block can never show.
 - Fix: rethrow when every provider failed. Show a partial result when one succeeded.
-- Verify: unit test of `combineLibraries`. Tonight: yes. Status: **planned**.
+- Verify: unit test of `combineLibraries`. Tonight: yes. Status: **fixed** (`b9ad506`) [X].
 
 **ON-UI-4 · P3 · Two admin sections swallow load errors.**
 - The Audit section shows "No audit entries" when the load failed (`AdminViews.tsx:223`).
 - The Spotify-matching section shows a skeleton forever (`SpotifyViews.tsx:303`).
-- Fix: an error block with Retry. Tonight: yes. Status: **planned**.
+- Fix: an error block with Retry. Tonight: yes. Status: **fixed** (`3b4171e`) [X]: the new `settings.spec.ts` test failed first; 12/12 in both browsers.
 
 ### 3.8 API contracts, validation, errors
 
 **ON-API-1 · P3 · A JSON `null` (or non-object) body gives a 500 instead of a 400.**
 - Where: `admin.ts:118,244,293` and `lyrics/routes.ts:167,224` read fields from `await
   c.req.json()` without checking it is an object.
-- Fix: reuse `body(c)` (`auth/routes.ts:79`). Verify: unit test → 400. Tonight: yes. Status:
-  **planned**.
+- Fix: reuse `body(c)` (`auth/routes.ts:79`). Verify: unit test → 400. Tonight: yes. Status: **fixed** (`2e65d79`) [X]: the test sends null, 7 and an array to five routes (400) and checks optional bodies stay optional.
 
 **ON-API-2 · P3 · OpenAPI omits statuses the server really returns.**
 - Missing: 423/429 on the reauth routes, 413, 403 `totp_enrolment_required`, 400 on two GETs, and a
   `queue: null` body.
-- Fix: document them. Tonight: yes, once the code changes are in. Status: **planned**.
+- Fix: document them. Tonight: yes, once the code changes are in. Status: **fixed** (`9733bc7`) [X]: OpenAPI and contract tests pass.
 
 ### 3.9 Database consistency, migrations, recovery
 
@@ -438,7 +456,7 @@ backup.**
 - Expired sessions are deleted only when presented, and `GET /me/sessions` lists them for ever.
 - Invites and the audit log grow without limit. The in-memory limiter maps are never swept.
 - Fix: a daily prune next to the backup, and filter the sessions list by `expires_at`. Tonight: if
-  time allows. Status: **planned (stretch)**.
+  time allows. Status: **fixed, partly** (`3e2c49e`) [X]: expired or idle sessions pruned hourly and never listed; the limiter forgets addresses after a quiet day. Not done: **audit-log retention**, since the spec sets none and how long security logs are kept is the owner's decision.
 
 **ON-DB-4 · P3 · Migration and upgrade safety.**
 - The version is read outside the transaction (a race between the server and the CLI at upgrade).
@@ -449,7 +467,7 @@ backup.**
 **ON-DB-5 · P3 · No decode-size limit, and the palette cache is never swept.**
 - Where: `palette/decode.ts:8` uses sharp's default `limitInputPixels` (≈ 268 Mpx). A user-chosen
   Navidrome can serve a PNG bomb inside its 8–16 MiB cap.
-- Fix: `limitInputPixels: 25e6`, enough for a 5000² cover. Tonight: yes. Palette sweep: **deferred**.
+- Fix: `limitInputPixels: 25e6`, enough for a 5000² cover. Status: **fixed** (`274bb31`) [X]: a 30 Mpx PNG is refused and a 16 Mpx one decodes. Palette-cache sweep: **deferred**.
 
 ### 3.10 Deployment, Docker, observability, resources
 
@@ -460,13 +478,12 @@ resource limits.**
   (`docker inspect`: `Memory 0`, `PidsLimit <none>`).
 - Fix: a commented `ECHO_TRUSTED_PROXY` line, plus example `mem_limit`/`pids_limit`/`cpus` sized for
   the OptiPlex. The measured peak RSS is 213 MB with 3 listeners (M9).
-- The live compose file is **not** changed tonight. Status: **planned (example only)**.
+- The live compose file is **not** changed tonight. Status: **fixed** (`b46fe3e`) [X]: the static test and `docker compose config` pass. The live compose file is unchanged.
 
 **ON-DEP-2 · P3 · Shutdown waits for streams, and the DB is never closed.**
 - Where: `index.ts:346`, `server.close(() => process.exit(0))`. An open audio stream keeps `close()`
   pending, so `docker stop` ends in a SIGKILL after 10 s.
-- Fix: close idle connections, force-close after 5 s, then `db.close()`. Tonight: yes. Status:
-  **planned**.
+- Fix: close idle connections, force-close after 5 s, then `db.close()`. Tonight: yes. Status: **fixed** (`10b2a3c`) [X]: real server with one request held open. Before: still running after 70 s. After: a clean exit in 5.1 s.
 
 **ON-DEP-3 · P3 · CI builds the image but never starts it.**
 - Fix: a container smoke step (start it with a temp key, then `/api/v1/health`). There is no remote,
@@ -494,6 +511,20 @@ resource limits.**
 **ON-TST-3 · PERF-04's analyser clause had no assertion.**
 - The assertion was added (see ON-VZ-2). Status: **fixed** (`62306f5`) [X].
 
+**ON-TST-5 · P2 · In CI's image, Firefox failed 4 of 12 Stage tests (pre-existing).**
+- Evidence [X]: `scripts/e2e-container.sh stage.spec.ts --project=firefox` on the starting tree
+  `a2a1cb7` gave 8 passed, 4 failed. The same 4 failed on tonight's tree, plus an intermittent
+  font-abort error. VIS-07 context loss passed in both runs.
+- Causes, all in the harness:
+  - Two frame counts included the album palette's own 1.2 s transition. It runs under reduced
+    motion by design (VISUALIZER_SPEC §8: colour is not motion) and is slow on a software GPU.
+  - Firefox under Playwright does not emulate `deviceScaleFactor`. A probe showed
+    `devicePixelRatio` 1 and no `2dppx` match, so the app's 1024×640 was correct for that ratio.
+  - `beforeEach` waited for Mona Sans only, while the M3 Library also loads Roboto Flex.
+- Fix: wait for the palette to settle, derive the backing-store sizes from the reported ratio
+  (Chromium still asserts 1280×800, 1800×1125 and 1536×960), and load both faces.
+- Status: **fixed** (`8f66960`) [X]: 72/72 in the image across both browsers and 3 repeats.
+
 **ON-TST-4 · Remote CI has never run.**
 - The owner chose to have no remote. The local CI equivalent (`scripts/e2e-container.sh`, the pinned
   Playwright image under Xvfb) is the evidence used tonight for Firefox WebGL (VIS-07).
@@ -501,15 +532,16 @@ resource limits.**
 ### 3.12 Documentation inconsistencies and deferred work
 
 - **ON-DOC-1** · `docs/reviews/M5.md:58` says "since built: … crossfade". Crossfade is not built:
-  `crossfadeSec` has no consumer, and the Settings toggle is disabled ("later"). [S] **planned**.
+  `crossfadeSec` has no consumer, and the Settings toggle is disabled ("later"). [S] **fixed** (`2e80565`).
 - **ON-DOC-2** · The `ACCEPTANCE_CRITERIA.md` status says "Vitest 1204, Playwright 384" (stale).
   VIS-09 (needs a manual 10-bit capture) is missing from the open table. VIS-07 is "Pass" in
-  M2's close-out but "waiting for remote CI" in the table. [D] **planned**.
+  M2's close-out but "waiting for remote CI" in the table. DEP-03 M is listed open, though the
+  on-box drill passed on 2026-10-24 (`M8-security.md` check 8). [D] **fixed** (final docs commit).
 - **ON-DOC-3** · `IMPLEMENTATION_PLAN.md`'s M5 "Open parts" lists Media Session next/previous,
   Playlists/Starred, sorts and search, which are built (`main.tsx:121-124`, `LibraryViews.tsx`).
-  Crossfade and the server-side Artists list remain. [S] **planned**.
+  Crossfade and the server-side Artists list remain. [S] **fixed** (`2e80565`).
 - **ON-DOC-4** · The `docs/README.md` status is dated 2026-10-24 and predates the M3 shell, NetEase,
-  matching and backups. [D] **planned**.
+  matching and backups. [D] **fixed** (final docs commit).
 
 ## 4. M2 open items, reconciled against the current repo
 
@@ -518,11 +550,11 @@ resource limits.**
 | DS-01 design judgment / token grep | No raw values outside tokens; judged at M2 close and re-checked at M9 | **Pass** (automated grep in Vitest, green) | `design-rules` test in the 1242; M2 close-out, M9 |
 | DS-02 coloured-pixel measurement | ≤ 3 % budget **retired 2026-10-25** with Material 3 (DESIGN_SYSTEM §3.2); the CSS bans remain | **Pass** for the remaining clause (CSS inspection test). The pixel script was removed with the budget | `ACCEPTANCE_CRITERIA.md` DS-02 wording |
 | DS-04 squint test (needed M3) | Three masses on a 16 px blur of Listen | **Pass** (M3 review, then M9) | `reviews/M3.md:369`, `M9.md:19` |
-| DS-06 snapshots + remote CI | Every §9 state on `/__ui`, snapshotted | Snapshots pass on the host and in the CI image; **a real CI run is impossible without a remote (owner's choice)**: blocked by decision, not failing | `ui.visual` in the E2E run |
+| DS-06 snapshots + remote CI | Every §9 state on `/__ui`, snapshotted | **Criterion met**: the baselines pass on the host and in CI's own image (`scripts/e2e-container.sh`, tonight). A *hosted* CI run is impossible without a remote: blocked by the owner's decision, not failing | §8 |
 | DS-08 artwork rules (later milestone) | Never cropped, overlaid, scaled or animated; also M7 | Shell + Spotify code parts done; **real-cover V check open** (needs a Spotify account) | `reviews/M7.md:54` |
-| VIS-07 Firefox context loss | CSS room on loss, full recovery | Chromium pass on the host; Firefox **run tonight in the CI image** (see §8) | §8 |
+| VIS-07 Firefox context loss | CSS room on loss, full recovery | **Pass in both browsers**: Chromium on the host; Firefox with WebGL in CI's image under Xvfb (context loss → CSS room → recovery), 3 of 3 repeats. A *hosted* CI run needs a remote | §8, ON-TST-5 |
 | VIS-09 10-bit capture | Dither present, no banding in a 10-bit capture | Automated dither test passes; **10-bit capture needs the owner's hardware**: not passed | M2 close-out |
-| PERF-04 analyser clause (needed M5) | Hidden tab: 0 rAF and no analyser polling | **Verified**: pull-only analyser plus a new unit assertion; E2E hidden-tab test passes | ON-VZ-2 |
+| PERF-04 analyser clause (needed M5) | Hidden tab: 0 rAF and no analyser polling | **Pass**: the analyser has no timer and is pulled only by Stage frames; a unit assertion (`62306f5`) and the hidden-tab E2E both pass | ON-VZ-2 |
 | `fixture=` deterministic mode | Recorded features via `?fixture=` | **Done** (2026-10-23 follow-up); exercised by `stage.spec.ts` and `lyrics.spec.ts` | `reviews/M2.md:534` |
 | Settings `blank-gap` (deferred to M8) | `inspect.mjs` FAIL on the placeholder | **Closed in M8** (0 FAIL); M9 re-run 0 FAIL | `reviews/M8.md`, `M9.md` |
 | Task 6/7 leftovers | — | None open in M2's close-out beyond the rows above | `reviews/M2.md` close-out |
@@ -569,8 +601,60 @@ them.
 
 ## 8. Verification log
 
-(Filled in as work lands.)
+Each fix's own before/after evidence is in its finding (§3). These are runs on the **final tree**
+(`173985c` plus the documentation commit), on this machine (the OptiPlex, i7-3770, no AVX2), unless
+noted.
+
+| Check | Result |
+|---|---|
+| `pnpm check`: typecheck (TS 7.0.2), Biome, Vitest, build | **pass**. Biome 226 files clean. **Vitest 1277 passed, 0 failed** in 61 files (baseline 1242 in 56). Build OK |
+| `pnpm test:e2e` (host: Chromium, Firefox without WebGL, then the isolated project) | **367 passed, 0 failed, 90 skipped**, exit 0 (baseline 347 passed, 1 failed, 90 skipped, 15 did not run). The skips are the same set as before: Firefox WebGL tests (no display on this host) and the Chromium-only pixel specs |
+| `scripts/e2e-container.sh` (CI's Playwright image under Xvfb: Firefox with WebGL), full suite | **381 passed, 0 failed, 78 skipped**, exit 0 (459 tests). Includes the 23 Chromium visual baselines (DS-06), Firefox with WebGL (all 12 Stage tests, VIS-07) and the isolated project. The skips are the Chromium-only pixel specs on Firefox and the review-screenshot generators |
+| The same, `stage.spec.ts` only, Chromium + Firefox, 3 repeats (`8f66960`) | **72 passed, 0 failed, 0 skipped**. The starting tree `a2a1cb7`: Firefox 8 passed, 4 failed (harness causes, ON-TST-5) |
+| `pnpm audit --prod` | no known vulnerabilities |
+| gitleaks 8.30.1 over the history | 131 commits, no leaks (the pre-commit hook also ran on each commit) |
+| `git diff --check` | clean |
+| Image build + `scripts/verify-hardware.ts` in the image, production flags (read-only, `cap_drop ALL`, no-new-privileges, uid 1000) | **PASS** on the i7-3770 (`avx2:n fma:n bmi2:n`): better-sqlite3 loads, sharp decodes a 1000² JPEG to 128² in 12.4 ms (median), Argon2id m=64 MiB t=3 runs 185 ms (median; band 150–250), no runtime warnings. Built under a scratch tag and removed afterwards; the live `echo:0.1.0` was not touched |
+| Trivy 0.75.0 (CI's pinned digest) on that image, HIGH/CRITICAL | **0** (Debian 13.7 OS packages and the Node packages). Scanned from a `docker save` tarball, without mounting the Docker socket |
+| `docker compose config` on `compose.example.yaml` | valid |
+| Taste-skill local patch (`~/.claude/skills/design-taste-frontend`, `local-patches/edge-text/check.sh`) | 3/3 as documented; the patch was not modified |
+
+**Not run tonight, and why:** a hosted GitHub Actions run (no remote, by the owner's choice); a live
+redeploy (owner's call; the live container still runs `21dc5f1`); the manual and owner items of §7;
+`inspect.mjs` design audits (no UI layout changed apart from error blocks that reuse existing
+components).
 
 ## 9. Commits
 
-(Filled in as work lands.)
+All on `main`, local only (no remote; nothing pushed). Each commit carried its own tests.
+
+| Commit | Scope |
+|---|---|
+| `62306f5` | Tests: tnum smoke test loads both faces first (ON-TST-1); PERF-04 analyser assertion (ON-TST-3) |
+| `75abdd6` | This plan |
+| `1f39b3d` | ON-PB-1, ON-PB-2: aborted `play()` is not an error; pre-metadata failures are retried. First `NavidromeProvider` unit tests; mock `failStreams` fault and E2E |
+| `0347e5f` | ON-VZ-1: analyser's own clock; Reverb onsets after a track change |
+| `f46463b` | ON-UI-1: a page opened during a restart says so and recovers; proxy 502s mark the server down |
+| `00460cb` | ON-SEC-1, -2, -4: spent invites stay spent; reused ids reach nothing of the old user's (Spotify token, signed URLs); last-admin race |
+| `25d8ff6` | ON-DB-1: backups via `.tmp` + `quick_check` + rename; leftovers swept |
+| `c409bdf` | ON-DB-2: best-effort cache writes (lyrics, palette); matcher sweep's UPDATE inside its try |
+| `6110441` | ON-LY-1, -2, -8: no 3-day "no lyrics" after an outage; LRCLIB search errors; Retry-After parsing |
+| `5ac88fd` | ON-LY-3, -4, -7: YRC parentheses; blank end marker; `end < start` |
+| `35566ca` | ON-LY-5: no letter emphasis in joined scripts |
+| `52e8cce` | ON-LY-6: lyric offsets stay with their track; saves per track |
+| `cdcbc23` | Plan statuses (first batch) |
+| `b9ad506` | ON-UI-2, ON-UI-3, ON-INT-2: library errors are errors with Retry |
+| `e09dcda` | ON-INT-1: Spotify queue rows skip instead of replacing the context |
+| `cd00759` | ON-QU-1, ON-QU-2: queue sync retries its first fetch; keepalive on `pagehide` |
+| `2e65d79` | ON-API-1, ON-SEC-5: non-object JSON bodies are 400; own-key settings lookup |
+| `274bb31` | ON-SEC-3, ON-DB-5: Origin exemption only for device tokens; 25 Mpx decode limit |
+| `10b2a3c` | ON-DEP-2: shutdown cuts requests after 5 s and closes the DB |
+| `cd8a828` | ON-PB-3, ON-QU-4: shuffle restored; foreign drops ignored |
+| `3b4171e` | ON-UI-4: admin audit log and Spotify matching error states |
+| `b46fe3e` | ON-DEP-1: compose example's trusted-proxy line and resource limits |
+| `9733bc7` | ON-API-2: OpenAPI statuses |
+| `2e80565` | ON-DOC-1, ON-DOC-3: crossfade claim; M5 open parts |
+| `8f66960` | ON-TST-5: Stage E2E green in Firefox with WebGL (CI image) |
+| `3e2c49e` | ON-SEC-7, ON-DB-3: per-user API budget (§5.6); session and limiter pruning |
+| `173985c` | ON-PB-4: preload rescheduled on seek |
+| (last) | Docs: acceptance status, README status, this plan's final state (ON-DOC-2, ON-DOC-4) |

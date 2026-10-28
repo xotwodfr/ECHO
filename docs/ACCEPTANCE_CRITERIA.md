@@ -1,26 +1,33 @@
 # ECHO — Acceptance Criteria
 
-Status: **Draft 2** (criteria unchanged; status below) · Last reviewed 2026-10-24
+Status: **Draft 2** (criteria unchanged; status below) · Last reviewed 2026-10-28
 Every criterion is testable. **Method:** U = Vitest unit, E = Playwright E2E, V = Playwright visual
 snapshot (deterministic mode), M = manual checklist, I = inspection (code/config review or a script),
 P = performance trace. **MS** = the milestone that must pass it (`IMPLEMENTATION_PLAN.md`). A milestone
 is not done until all of its criteria pass.
 
-## Status at 2026-10-24
+## Status at 2026-10-28
 
-Every criterion that a test on this machine can decide has a test, and the suites pass (Vitest 1204,
-Playwright 384 in Chromium, Firefox and the isolated project). Evidence per criterion is in
-`docs/reviews/M1.md` … `M9.md` and `M8-security.md`. ECHO is deployed at https://echo.folk3s.com.
-**Still open**, grouped by what they wait for:
+Every criterion that a test on this machine can decide has a test, and the suites pass on the
+2026-10-28 tree:
+- Vitest 1277.
+- Playwright on the host: 367 passed, 0 failed, 90 skipped.
+- Playwright in CI's own image under Xvfb (`scripts/e2e-container.sh`): 381 passed, 0 failed, 78
+  skipped, Firefox with WebGL included.
+
+Evidence per criterion is in `docs/reviews/M1.md` … `M9.md` and `M8-security.md`. The overnight
+audit's findings and fixes are in `docs/OVERNIGHT_ENGINEERING_PLAN.md`. ECHO is deployed at
+https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 
 | Waiting for | Criteria |
 |---|---|
-| **The owner's Cloudflare setting and first sign-in** | SEC-19 (TLS grade B → A with minimum TLS 1.2; cookie flags), DEP-03 M (on-box backup drill) |
+| **The owner's Cloudflare setting and a DevTools look** | SEC-19 (TLS grade B → A with minimum TLS 1.2; the cookie flags, check 4 of `reviews/M8-security.md`). DEP-03's on-box drill passed on 2026-10-24 (check 8) |
 | **A Spotify app and Premium account** (manual checklist, `reviews/M7.md`) | PLAY-08, PLAY-09, the M parts of SP-01, SRCH-02, REL-04, BRW-02 |
 | **The owner's laptop and gaming PC** | PERF-01, the reference runs of PERF-03 and LYR-26 (measured here: 0.7 ms frame, 0.2 ms lyrics), REL-06 (8 h soak), DEP-04 under real Navidrome transcoding, VIS-03 client timing on real covers |
 | **People** | DS-05 (five-second test), A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes) |
+| **A 10-bit capture setup** | VIS-09 M (the dither test passes; the criterion asks for a 10-bit capture, which Playwright cannot make) |
 | **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
-| **Remote CI** (no repository URL yet) | DS-06 (baselines on CI), VIS-07 Firefox context-loss (runs under Xvfb in CI) |
+| **A hosted CI run** (no remote, by the owner's choice) | None of the criteria themselves: DS-06's baselines and VIS-07's Firefox context loss pass in CI's own image locally (`scripts/e2e-container.sh`, 2026-10-28). Only the GitHub Actions run itself is unproven |
 
 ---
 

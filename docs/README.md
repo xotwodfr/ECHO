@@ -5,12 +5,15 @@ is a floating, word-synchronised lyric field in an audio-reactive environment li
 cover. Design direction: **Reverb Chamber**, a dark acoustic room where sound arrives as light,
 peaks and decays.
 
-**Project status (2026-10-24):** milestones **M1–M9 are built and tested**, and ECHO is
-**deployed** at https://echo.folk3s.com (M5 task 12). SEC-10 now passes strictly (distroless runtime;
-the M1 exception is retired). Still open, all needing the owner, people or real devices: the TLS
-grade A (Cloudflare minimum TLS 1.2), cookie flags after the first sign-in and the on-box backup
-drill (SEC-19, DEP-03), the reference-client tuning and PERF-01, the 8 h soak (REL-06), the Orca pass
-and the five-second test (DS-05). Per-milestone records: [reviews/](reviews/) (M1–M9, plus
+**Project status (2026-10-28):** milestones **M1–M9 are built and tested**, and ECHO is
+**deployed** at https://echo.folk3s.com (M5 task 12). Since then: the Material 3 shell (2026-10-25),
+NetEase lyrics and Spotify matching, daily backups, and an overnight audit and fix pass
+([OVERNIGHT_ENGINEERING_PLAN.md](OVERNIGHT_ENGINEERING_PLAN.md): findings, fixes, evidence, what is
+deferred). SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
+real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
+(SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
+(REL-06), the Orca pass, the five-second test (DS-05), the 10-bit capture (VIS-09) and the Spotify
+Premium checklist. Per-milestone records: [reviews/](reviews/) (M1–M9, plus
 [M8-security.md](reviews/M8-security.md) for the pre-share security review).
 
 These documents are the **source of truth**. When implementation and docs disagree, fix one of them
