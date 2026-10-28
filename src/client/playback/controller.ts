@@ -358,15 +358,17 @@ export function createPlaybackController(opts: {
      */
     playList,
 
-    /** Load `tracks[index]` paused at `startMs` (deterministic mode, VISUALIZER_SPEC.md §10). */
     /** A saved queue (another session, another device), loaded paused at `positionMs`. */
     restore(q: QueueState, positionMs: number) {
       // Spotify keeps its own queue across devices; a saved queue is the library's.
       if (!provider || provider !== primary || (q.provider && q.provider !== primary?.id)) return;
+      // A shuffled queue comes back shuffled, and the dock says so.
+      player.setState({ shuffle: !!q.shuffleOrder });
       if (!q.now) return queue.setState({ ...q, provider: provider.id }, true);
       load({ ...q, provider: provider.id }, false, positionMs);
     },
 
+    /** Load `tracks[index]` paused at `startMs` (deterministic mode, VISUALIZER_SPEC.md §10). */
     cue(tracks: Track[], index: number, context: PlayContext, startMs: number) {
       if (!provider || !tracks[index]) return;
       source = { tracks, context };

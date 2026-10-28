@@ -234,6 +234,19 @@ describe('PlaybackController (§3 transport rules)', () => {
     return { clock, provider, c, notes, at, flush, s: () => c.player.getState() };
   };
 
+  // ON-PB-3: a shuffled queue came back shuffled while the dock said "shuffle off"; one press then
+  // reshuffled it.
+  it('a restored shuffled queue shows shuffle on', () => {
+    const { c } = setup();
+    c.playList(album, 0, ctx);
+    c.toggleShuffle();
+    const saved = c.queue.getState();
+    const { c: other } = setup();
+    other.restore(saved, 0);
+    expect(other.player.getState().shuffle).toBe(true);
+    expect(other.queue.getState().shuffleOrder).toEqual(saved.shuffleOrder);
+  });
+
   it('buffers the next track 20 s before the end, not under repeat-one (gapless, §5.6)', () => {
     const { clock, provider, c } = setup();
     const buffered: string[] = [];

@@ -269,8 +269,10 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
               e.dataTransfer.setData('text/x-echo-queue', String(i)),
             onDragOver: (e: React.DragEvent) => e.preventDefault(),
             onDrop: (e: React.DragEvent) => {
-              const from = Number(e.dataTransfer.getData('text/x-echo-queue'));
-              if (Number.isInteger(from)) c.move(from, i);
+              // Only our own rows: anything else dropped here ('' → 0) would move the first track.
+              const raw = e.dataTransfer.getData('text/x-echo-queue');
+              const from = Number(raw);
+              if (raw !== '' && Number.isInteger(from)) c.move(from, i);
             },
             onKeyDown: (e: React.KeyboardEvent) => {
               if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
