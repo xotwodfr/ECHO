@@ -6,7 +6,7 @@ import { sessionStore } from '../session.ts';
 import { type DrmResult, drmGuidance, probeWidevine } from '../spotify/drm.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Toggle } from '../ui/controls.tsx';
-import { SectionLoading } from '../ui/states.tsx';
+import { BlockError, SectionLoading } from '../ui/states.tsx';
 
 // Settings → Account → Spotify (SETTINGS_AND_SECURITY.md §6.2, §8) and, for admins, Admin → Server
 // → Spotify app and Lyrics (§6.3, §7.2). Connecting is a top-level navigation to ECHO's server,
@@ -292,6 +292,7 @@ export function SpotifyMatchingSection() {
   const [st, setSt] = useState<Matching | null>(null);
   const [misses, setMisses] = useState<Miss[]>([]);
   const [more, setMore] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const load = useCallback(async () => {
     setSt(await api<Matching>('/admin/spotify-matching'));
@@ -299,9 +300,14 @@ export function SpotifyMatchingSection() {
     setMore(page.length > 50);
     setMisses(page.slice(0, 50));
   }, []);
+  // A failed first load is an error with Retry, not a skeleton for ever.
+  const first = useCallback(() => {
+    setFailed(false);
+    void load().catch(() => setFailed(true));
+  }, [load]);
   useEffect(() => {
-    if (isAdmin) void load().catch(() => undefined);
-  }, [isAdmin, load]);
+    if (isAdmin) first();
+  }, [isAdmin, first]);
   // While a run goes on, its progress refreshes every few seconds.
   useEffect(() => {
     if (!st?.status.running) return;
@@ -309,7 +315,12 @@ export function SpotifyMatchingSection() {
     return () => clearInterval(h);
   }, [st?.status.running, load]);
   if (!isAdmin) return null;
-  if (!st) return <SectionLoading title={m.title} rows={3} />;
+  if (!st)
+    return failed ? (
+      <BlockError what={strings.states.blockFailed} onRetry={first} />
+    ) : (
+      <SectionLoading title={m.title} rows={3} />
+    );
 
   const showMore = async () => {
     const page = await api<Miss[]>(

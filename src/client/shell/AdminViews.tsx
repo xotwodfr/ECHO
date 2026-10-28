@@ -218,14 +218,22 @@ function UsersSection() {
 function AuditSection() {
   const [rows, setRows] = useState<AuditEntry[] | null>(null);
   const [more, setMore] = useState(true);
+  // A failed load is an error with Retry: an empty log would say nothing happened. `failed`: null
+  // while nothing failed, else the page that did (undefined: the first).
+  const [failed, setFailed] = useState<number | undefined | null>(null);
   const page = useCallback(async (before?: number) => {
+    setFailed(null);
     const q = new URLSearchParams({ limit: '50', ...(before && { before: String(before) }) });
-    const next = await api<AuditEntry[]>(`/admin/audit?${q}`).catch(() => []);
+    const next = await api<AuditEntry[]>(`/admin/audit?${q}`).catch(() => null);
+    if (!next) return setFailed(before);
     setMore(next.length === 50);
     setRows((r) => [...(before ? (r ?? []) : []), ...next]);
   }, []);
   useEffect(() => void page(), [page]);
-  if (!rows) return <SectionLoading title={t.audit} rows={4} />;
+  const error = failed !== null && (
+    <BlockError what={strings.states.blockFailed} onRetry={() => void page(failed)} />
+  );
+  if (!rows) return error || <SectionLoading title={t.audit} rows={4} />;
   return (
     <section className="connection" aria-labelledby="admin-audit">
       <h3 id="admin-audit">{t.audit}</h3>
@@ -254,7 +262,8 @@ function AuditSection() {
           </tbody>
         </table>
       )}
-      {more && rows.length > 0 && (
+      {error}
+      {more && rows.length > 0 && !error && (
         <Button variant="tertiary" onClick={() => void page(rows.at(-1)?.id)}>
           {t.older}
         </Button>

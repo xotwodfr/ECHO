@@ -159,3 +159,17 @@ test('ACC-03: deleting the account needs the password, and signs out for good', 
   });
   expect(login.status()).toBe(401);
 });
+
+// ON-UI-4: a failed audit-log load showed "No entries yet", saying nothing had happened.
+test('the audit log says when it could not load, and Retry recovers', async ({ page }) => {
+  await signedIn(page, 'adm', 'admin');
+  let fail = true;
+  await page.route('**/api/v1/admin/audit?*', (r) => (fail ? r.abort() : r.continue()));
+  await page.goto('/settings/admin');
+  const err = page.getByRole('alert').filter({ hasText: "Couldn't load this." });
+  await expect(err).toBeVisible();
+  fail = false;
+  await err.getByRole('button', { name: 'Retry' }).click();
+  await expect(page.getByRole('heading', { name: 'Audit log' })).toBeVisible();
+  await expect(err).toHaveCount(0);
+});
