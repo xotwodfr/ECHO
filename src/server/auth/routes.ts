@@ -116,6 +116,8 @@ const totpForAll = (db: Db) => {
 };
 
 /** The signed-in user (cookie or bearer device token), or 401. */
+const UNMETERED = /^\/api\/v1\/navidrome\/(stream|cover)\//;
+
 export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
   return async (c, next) => {
     const bearer = c.req.header('authorization')?.match(/^Bearer (echo_dt_[\w-]+)$/)?.[1];
@@ -124,6 +126,11 @@ export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
     if (!user) return c.json({ error: 'unauthenticated' }, 401);
     if (!user.totpEnabled && !ENROLMENT_PATHS.includes(c.req.path) && totpForAll(deps.db))
       return c.json({ error: 'totp_enrolment_required' }, 403);
+    // The per-user API budget (§5.6); audio streams and covers are outside it.
+    if (!UNMETERED.test(c.req.path) && !deps.limiter.apiAllows(user.id, deps.now())) {
+      c.header('retry-after', '1');
+      return c.json({ error: 'rate_limited' }, 429);
+    }
     c.set('user', user);
     await next();
   };

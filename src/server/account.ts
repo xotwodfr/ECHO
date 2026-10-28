@@ -3,7 +3,7 @@ import { deleteCookie } from 'hono/cookie';
 import { audit } from './audit.ts';
 import { CODE_PARAMS, hashSecret, passwordProblem, verifySecret } from './auth/password.ts';
 import { type AuthDeps, type AuthEnv, body, newRecoveryCodes, str } from './auth/routes.ts';
-import { revokeOthers, SESSION_COOKIE } from './auth/sessions.ts';
+import { pruneSessions, revokeOthers, SESSION_COOKIE } from './auth/sessions.ts';
 import { newTotpSecret, otpauthUri, verifyTotp } from './auth/totp.ts';
 import type { Db } from './db/db.ts';
 
@@ -195,6 +195,7 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
 
   // ---- sessions and devices (§4.6) ----
   app.get('/me/sessions', requireUser, (c) => {
+    pruneSessions(db, now()); // dead ones are never listed
     const rows = db
       .prepare(
         `SELECT id_hash, kind, name, created_at, last_seen_at, ip_hint FROM sessions

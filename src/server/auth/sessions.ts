@@ -95,6 +95,15 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
   };
 }
 
+/** Sessions that can no longer sign anyone in (expired, or idle too long), deleted; the count. */
+export const pruneSessions = (db: Db, now: number) =>
+  db
+    .prepare(
+      `DELETE FROM sessions WHERE expires_at <= ?
+         OR (kind = 'web' AND last_seen_at <= ?) OR (kind = 'device' AND last_seen_at <= ?)`,
+    )
+    .run(now, now - LIFETIME.web.idle, now - LIFETIME.device.idle).changes;
+
 export const revokeSession = (db: Db, sessionHash: string) =>
   db.prepare('DELETE FROM sessions WHERE id_hash = ?').run(sessionHash);
 

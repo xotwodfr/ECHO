@@ -475,6 +475,25 @@ it('a body that is not a JSON object is a 400 on every route that reads one, nev
     expect((await call(w.app, 'PUT', '/api/v1/me/settings', b, w.admin)).status).toBe(400);
 });
 
+// ON-SEC-7 (SETTINGS_AND_SECURITY.md §5.6): a per-user API budget, bursts of 50 then 600 a minute,
+// with streams and covers outside it.
+it('a user gets bursts of 50 API requests, then 10 a second; covers are not counted', async () => {
+  const w = await withAdmin();
+  w.clock.t += 60_000; // a full budget
+  const me = async () => (await call(w.app, 'GET', '/api/v1/me', undefined, w.admin)).status;
+  const burst: number[] = [];
+  for (let i = 0; i < 55; i++) burst.push(await me());
+  expect(burst.filter((s) => s === 200)).toHaveLength(50);
+  expect(burst.slice(50)).toEqual([429, 429, 429, 429, 429]);
+  const cover = await call(w.app, 'GET', '/api/v1/navidrome/cover/x', undefined, w.admin);
+  expect(cover.status).not.toBe(429);
+  w.clock.t += 1000; // ten more
+  const next: number[] = [];
+  for (let i = 0; i < 11; i++) next.push(await me());
+  expect(next.filter((s) => s === 200)).toHaveLength(10);
+  expect(next.at(-1)).toBe(429);
+});
+
 describe('device tokens (API-02)', () => {
   it('credentials + TOTP give a bearer token that works, is listed, and can be revoked', async () => {
     const w = await withAdmin();

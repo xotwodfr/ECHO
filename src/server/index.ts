@@ -12,7 +12,7 @@ import { adminRoutes, matchLibrary, spicyKey, spotifySettings } from './admin.ts
 import { nightlyBackup } from './admin-cli.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
-import { resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
+import { pruneSessions, resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
 import { loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
@@ -258,6 +258,12 @@ if (import.meta.main) {
   };
   setTimeout(backupDaily, 300_000).unref();
   setInterval(backupDaily, 3_600_000).unref();
+  // Hourly: sessions that can no longer sign in, and login-limiter addresses quiet for a day.
+  setInterval(() => {
+    const sessions = pruneSessions(auth.db, Date.now());
+    const addresses = auth.limiter.sweep(Date.now());
+    if (sessions || addresses) log('info', 'pruned', { sessions, addresses });
+  }, 3_600_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
   const spotifyDeps: SpotifyDeps = {
     db: auth.db,

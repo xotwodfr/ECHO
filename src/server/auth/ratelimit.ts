@@ -1,10 +1,13 @@
 // Login rate limits (SETTINGS_AND_SECURITY.md §4.4), in memory: per client IP 10 attempts a minute
 // and 100 a day (password and TOTP steps alike); per account, 5 consecutive wrong passwords, or 5
 // wrong second factors, lock it for 15 min, doubling up to 24 h. A restart clears them, which an
-// attacker cannot trigger.
+// attacker cannot trigger. Also the per-user API budget of §5.6.
 
 const MIN = 60_000;
 const DAY = 24 * 60 * MIN;
+/** §5.6: bursts of 50 requests, refilled at 10 a second (600 a minute). */
+const API_BURST = 50;
+const API_PER_S = 10;
 
 export function createLoginLimiter() {
   const ips = new Map<string, number[]>();
@@ -12,6 +15,8 @@ export function createLoginLimiter() {
     string,
     { fails: number; secondFails: number; lockedUntil: number; lockMs: number }
   >();
+  // One token bucket per signed-in user: bounded by the number of accounts.
+  const api = new Map<number, { tokens: number; at: number }>();
   const account = (username: string) => {
     const key = username.toLowerCase();
     let a = accounts.get(key);
@@ -77,6 +82,26 @@ export function createLoginLimiter() {
     /** The admin's unlock. */
     unlock(username: string) {
       accounts.delete(username.toLowerCase());
+    },
+    /** Forgets addresses with no attempt in the last day (a client rotating addresses); the count. */
+    sweep(now: number) {
+      let n = 0;
+      for (const [ip, times] of ips)
+        if (!times.some((t) => now - t < DAY)) {
+          ips.delete(ip);
+          n++;
+        }
+      return n;
+    },
+    /** True if this user may make an API request now (§5.6); spends one from their budget. */
+    apiAllows(userId: number, now: number) {
+      const b = api.get(userId) ?? { tokens: API_BURST, at: now };
+      b.tokens = Math.min(API_BURST, b.tokens + ((now - b.at) / 1000) * API_PER_S);
+      b.at = now;
+      api.set(userId, b);
+      if (b.tokens < 1) return false;
+      b.tokens -= 1;
+      return true;
     },
   };
 }
