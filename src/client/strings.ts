@@ -413,6 +413,7 @@ export const strings = {
     sourceUse: (name: string) => `Use ${name} for this track`,
     viewLabel: 'Stage view',
     fullscreen: 'Full screen',
+    brightness: 'Background brightness',
     views: { lyrics: 'Lyrics', cover: 'Cover', visual: 'Visual' },
     lyricsPlaceholder: 'Lyrics will appear here.',
     idle: 'Nothing playing. Pick an album to start.',

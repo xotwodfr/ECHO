@@ -41,6 +41,7 @@ export function Stage({ children, frame }: { children: ReactNode; frame?: FrameP
       data-renderer={status.renderer}
       data-reason={status.reason ?? undefined}
       data-mode={status.mode}
+      data-cover={status.cover}
     >
       <div className="stage-room-css" aria-hidden="true" />
       <canvas ref={canvas} className="stage-canvas" />

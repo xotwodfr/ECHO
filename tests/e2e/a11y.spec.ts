@@ -86,8 +86,8 @@ test('A11Y-01: every §7 function by keyboard alone; nothing fires while typing'
   await expect(d.getByRole('button', { name: 'Repeat all' })).toBeVisible();
   // Stage views.
   const view = page.getByRole('group', { name: 'Stage view' });
-  await page.keyboard.press('c');
-  await expect(view.getByRole('button', { name: 'Cover' })).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('c'); // Cover has no button (owner, 2026-10-28)
+  await expect(page.locator('.stage-cover')).toBeVisible();
   await page.keyboard.press('v');
   await expect(view.getByRole('button', { name: 'Visual' })).toHaveAttribute(
     'aria-pressed',

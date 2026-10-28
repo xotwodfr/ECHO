@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla';
 import { api } from './api.ts';
 
 // The user's preferences (SETTINGS_AND_SECURITY.md §7.1). Most follow the user across devices and
-// live on the server (`/me/settings`); `visuals.quality`, `playback.quality` and the volume differ per device
+// live on the server (`/me/settings`); `visuals.quality` and `backdrop`, `playback.quality` and the volume differ per device
 // (a gaming PC and a laptop) and live in this browser's localStorage. Defaults apply until the
 // server answers, and without a server at all (the fixture shell).
 
@@ -29,6 +29,7 @@ export interface Prefs {
     motion: 'system' | 'full' | 'reduced' | 'off';
     grain: boolean;
     pointerParallax: boolean;
+    backdrop: number; // 0..1, per device: the Stage's blurred-cover brightness (its own screen)
   };
 }
 
@@ -55,6 +56,7 @@ export const DEFAULT_PREFS: Prefs = {
     motion: 'system',
     grain: false,
     pointerParallax: true,
+    backdrop: 0.5,
   },
 };
 
@@ -62,7 +64,7 @@ type Section = keyof Prefs;
 /** Keys kept per device, in localStorage, never sent to the server. */
 const DEVICE: { [S in Section]?: (keyof Prefs[S])[] } = {
   playback: ['quality', 'volume'],
-  visuals: ['quality'],
+  visuals: ['quality', 'backdrop'],
 };
 const isDevice = (s: Section, k: string) => (DEVICE[s] as string[] | undefined)?.includes(k);
 const storageKey = (s: Section, k: string) => `echo.${s}.${k}`;

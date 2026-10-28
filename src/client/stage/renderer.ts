@@ -1,6 +1,7 @@
 import {
   BufferAttribute,
   BufferGeometry,
+  CanvasTexture,
   GLSL3,
   HalfFloatType,
   LinearFilter,
@@ -13,6 +14,7 @@ import {
   RawShaderMaterial,
   RepeatWrapping,
   Scene,
+  SRGBColorSpace,
   type Texture,
   TextureLoader,
   UnsignedByteType,
@@ -44,9 +46,38 @@ export const TIERS: Record<Tier, { dprCap: number; roomScale: number }> = {
 /** Render targets are rebuilt only when the size changes by more than this (§5.5). */
 const RESIZE_TOLERANCE = 0.02;
 
+/**
+ * The room's base cover (owner, 2026-10-28), blurred once on a 96 px canvas instead of every frame:
+ * stretched over the stage by linear filtering it stays smooth, and costs one texture fetch.
+ */
+const COVER_PX = 96;
+const COVER_BLUR = 5; // canvas px: ≈ 75 CSS px across a 1440 px stage
+
+function coverTexture(img: HTMLImageElement) {
+  const c = document.createElement('canvas');
+  c.width = c.height = COVER_PX;
+  const ctx = c.getContext('2d');
+  if (ctx) {
+    // Scaled to cover the square plus an overscan, so the blur never pulls in a transparent edge.
+    // No source rect: Chrome crops one wrongly from an SVG that has only a viewBox.
+    const w = img.naturalWidth || COVER_PX;
+    const h = img.naturalHeight || COVER_PX;
+    const k = (COVER_PX + 4 * COVER_BLUR) / Math.min(w, h);
+    ctx.filter = `blur(${COVER_BLUR}px) saturate(1.4)`;
+    ctx.drawImage(img, (COVER_PX - w * k) / 2, (COVER_PX - h * k) / 2, w * k, h * k);
+  }
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace; // sampled as linear light, like the room
+  t.minFilter = t.magFilter = LinearFilter;
+  t.generateMipmaps = false;
+  return t;
+}
+
 export interface FrameInput {
   flow: number;
   drift: number;
+  /** The base cover's crossfade from the previous one, 0…1. */
+  cover: number;
   /** Key light centre in stage uv (y down). The lyric layer publishes it from M3. */
   key: [number, number];
   chrome: number;
@@ -63,6 +94,11 @@ export class StageRenderer {
     uFlow: { value: 0 },
     uDrift: { value: 0 },
     uSeed: { value: 0 },
+    uCover: { value: null as Texture | null },
+    uCoverPrev: { value: null as Texture | null },
+    uCoverOn: { value: new Vector2() },
+    uCoverFade: { value: 1 },
+    uBrightness: { value: 1 },
     uRoom: { value: new Vector3() },
     uAccent: { value: new Vector3() },
     uHighlight: { value: new Vector3() },
@@ -114,6 +150,7 @@ export class StageRenderer {
   private readonly geometry = new BufferGeometry();
   private roomRT: WebGLRenderTarget | null = null;
   private noise: Texture | null = null;
+  private covers: [Texture | null, Texture | null] = [null, null]; // previous, current
   private tier: Tier;
   private backing = { w: 0, h: 0, dpr: 1 };
 
@@ -198,6 +235,22 @@ export class StageRenderer {
     u.uHighlight.value.set(...p.highlight);
     u.uGlow.value.set(...p.glow);
     this.composite.uShadow.value.set(...p.shadow);
+  }
+
+  /** The track's cover as the room's base, or null for --art-room; it crossfades from the last. */
+  setCover(img: HTMLImageElement | null) {
+    this.covers[0]?.dispose();
+    this.covers = [this.covers[1], img ? coverTexture(img) : null];
+    const [prev, cur] = this.covers;
+    const u = this.room;
+    u.uCoverPrev.value = prev;
+    u.uCover.value = cur;
+    u.uCoverOn.value.set(prev ? 1 : 0, cur ? 1 : 0);
+  }
+
+  /** The cover's brightness, 0…1 as the slider shows it; perceptual, so squared-ish into light. */
+  setBrightness(b: number) {
+    this.room.uBrightness.value = Math.max(0, b) ** 2.2;
   }
 
   /**
@@ -303,6 +356,7 @@ export class StageRenderer {
     r.uFlow.value = f.flow;
     r.uDrift.value = f.drift;
     r.uSeed.value = f.seed;
+    r.uCoverFade.value = f.cover;
     r.uKey.value.set(f.key[0], f.key[1]);
     this.composite.uChrome.value = f.chrome;
     const rv = this.reverb;
@@ -349,11 +403,13 @@ export class StageRenderer {
     this.probeMat.needsUpdate = true;
     this.energyMat.needsUpdate = true;
     if (this.noise) this.noise.needsUpdate = true;
+    for (const t of this.covers) if (t) t.needsUpdate = true;
   }
 
   dispose() {
     this.roomRT?.dispose();
     this.noise?.dispose();
+    for (const t of this.covers) t?.dispose();
     this.roomMat.dispose();
     this.compositeMat.dispose();
     this.probeMat.dispose();

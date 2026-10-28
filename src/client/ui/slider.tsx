@@ -20,7 +20,7 @@ type SliderProps = {
   onChange: (v: number) => void;
   /** A drag ended without a value (pointer cancelled). */
   onCancel?: () => void;
-  variant: 'scrubber' | 'volume';
+  variant: 'scrubber' | 'volume' | 'brightness'; // brightness: the Stage's, styled in stage.css
   /** Buffered end (scrubber), same unit as the value. */
   buffered?: number;
   /** Shown above the pointer while dragging or hovering (scrubber time bubble). */

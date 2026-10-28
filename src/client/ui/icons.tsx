@@ -101,7 +101,7 @@ const PATHS = {
       <path d="M12 7.7v.3" />
     </>
   ),
-  // The Stage's views: a ragged column of lines, a picture, a pulse.
+  // The Stage's views: a ragged column of lines, a pulse.
   lyrics: (
     <>
       <path d="M4 6h12" />
@@ -110,14 +110,15 @@ const PATHS = {
       <path d="M4 19.5h13" />
     </>
   ),
-  cover: (
+  visual: <path d="M3 12h3l2.5-6 4 12 3-9 2 3H21" />,
+  // A half-lit disc in a ring of rays: the backdrop's brightness.
+  brightness: (
     <>
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <circle cx="9.5" cy="9.5" r="1.5" />
-      <path d="m20 15-4.5-4.5L6 20" />
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 8v8a4 4 0 0 0 0-8z" fill="currentColor" />
+      <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
     </>
   ),
-  visual: <path d="M3 12h3l2.5-6 4 12 3-9 2 3H21" />,
   fullscreen: (
     <>
       <path d="M4 9V5a1 1 0 0 1 1-1h4" />

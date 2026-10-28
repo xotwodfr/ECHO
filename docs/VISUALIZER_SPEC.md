@@ -144,7 +144,13 @@ without features would be fake.
 
 The room is a dark space lit by three soft light pools taken from the palette, seen through haze:
 
-- **Base:** `--art-room` fill.
+- **Base (2026-10-28, owner):** the track's album cover, blurred, under all the room's light.
+  It is blurred once (96 px canvas, `blur(5px) saturate(1.4)`, ≈ 75 CSS px across a 1440 px
+  stage), sampled as linear light, cropped to the stage like `object-fit: cover`, and drifts with
+  the haze's warp (≤ 6% of the cover). Its brightness is the Stage's brightness control (0–100%,
+  per device, default 50%, perceptual: `b^2.2` in light). Tracks of one album share it; a new cover
+  crossfades over `--dur-palette`. Without a cover, or one WebGL may not read (no CORS), the base is
+  the `--art-room` fill. The contrast probe sees the cover, so a bright one darkens the lyric zone.
 - **Pools:** two to three large, very soft light pools (radius 0.5–0.9 of stage height) in
   `--art-accent` and `--art-highlight`, at low intensity (0.10–0.22). Their centres move on slow
   Lissajous paths (periods 40–90 s). Their shapes are distorted by **domain-warped fBm noise**

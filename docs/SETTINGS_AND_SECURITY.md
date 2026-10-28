@@ -314,9 +314,11 @@ redistribution) is shown next to the field.
 | | `visuals.motion` | `system` \| `full` \| `reduced` \| `off` | `system` |
 | | `visuals.grain` | bool | false |
 | | `visuals.pointerParallax` | bool | true |
+| | `visuals.backdrop` | 0–1, the blurred cover's brightness (the Stage's brightness control, 2026-10-28) | 0.5 (**per device**) |
 
-`visuals.quality` and `playback.quality` are stored in `localStorage` per device. A gaming PC and a
-laptop need different values. Everything else follows the user across devices.
+`visuals.quality`, `visuals.backdrop`, `playback.quality` and the volume are stored in
+`localStorage` per device. A gaming PC and a laptop need different values, and screens differ in
+brightness. Everything else follows the user across devices.
 
 ### 7.2 Server settings (admin)
 

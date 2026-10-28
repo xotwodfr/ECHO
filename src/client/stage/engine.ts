@@ -1,3 +1,4 @@
+import { DUR_PALETTE_MS } from '../palette/animator.ts';
 import { paletteStore } from '../palette/live.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { prefsStore } from '../prefs.ts';
@@ -118,7 +119,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   const modeNow = (): StageMode => (frame || stillWanted() || tier === 'T3' ? 'still' : 'ambient');
   const set = (patch: Partial<ReturnType<typeof stageStatus.getState>>) =>
     stageStatus.setState(patch);
-  set({ renderer: 'pending', reason: null, mode: modeNow() });
+  set({ renderer: 'pending', reason: null, mode: modeNow(), cover: 'none' });
 
   let renderer: StageRenderer | null = null;
   try {
@@ -233,6 +234,8 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
           const input = {
             flow: rv ? rv.flow : flow,
             drift,
+            // The cover crossfades with the palette; a single frame shows the new one.
+            cover: loop.mode === 'still' ? 1 : Math.min(1, (env.now() - coverAt) / DUR_PALETTE_MS),
             key: key ? [key.x, key.y] : DEFAULT_KEY,
             chrome,
             seed: frame?.seed ?? 0,
@@ -317,13 +320,46 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     loop.setMode(loopMode());
     set({ mode: modeNow() });
   };
+
+  // The room's base is the track's album cover, blurred (owner, 2026-10-28). Tracks of one album
+  // share it; a cover that cannot be loaded (or used by WebGL: no CORS) leaves --art-room.
+  let coverUrl: string | null = null;
+  let coverAt = Number.NEGATIVE_INFINITY;
+  const showCover = (url: string | null) => {
+    if (url === coverUrl) return;
+    coverUrl = url;
+    const done = (img: HTMLImageElement | null) => {
+      if (disposed || coverUrl !== url || !renderer) return;
+      renderer.setCover(img);
+      coverAt = env.now();
+      loop.renderOnce();
+      set({ cover: img ? 'shown' : 'none' });
+    };
+    if (!url) return done(null);
+    set({ cover: 'loading' });
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // i.scdn.co answers with CORS headers; WebGL needs them
+    img.src = url;
+    img.decode().then(
+      () => done(img),
+      () => done(null),
+    );
+  };
+  const artOf = (s: ReturnType<typeof c.player.getState>) => s.track?.artwork[0]?.url ?? null;
+
   // The governor holds still for the first 3 s of each track (§8.2).
   const offTrack = c.player.subscribe((s, prev) => {
     if (s.track?.key !== prev.track?.key) trackStartedAt = env.now();
+    showCover(artOf(s));
   });
   const offVisuals = prefsStore.subscribe((s, prev) => {
-    if (s.visuals === prev.visuals) return;
-    if (s.visuals.intensity !== prev.visuals.intensity) reverb = createReverb(s.visuals.intensity);
+    const [v, p] = [s.visuals, prev.visuals];
+    if (v.backdrop !== p.backdrop) {
+      renderer?.setBrightness(v.backdrop);
+      if (loop.mode === 'still') loop.renderOnce();
+    }
+    if (v.mode === p.mode && v.motion === p.motion && v.intensity === p.intensity) return;
+    if (v.intensity !== p.intensity) reverb = createReverb(v.intensity);
     onReducedChange();
   });
   const onLost = () => {
@@ -351,6 +387,8 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     .then(() => {
       if (disposed || !renderer) return;
       renderer.setPalette(paletteUniforms(readPalette()));
+      renderer.setBrightness(visuals().backdrop);
+      showCover(artOf(c.player.getState()));
       resize();
       canvas.addEventListener('webglcontextlost', onLost);
       canvas.addEventListener('webglcontextrestored', onRestored);
@@ -391,7 +429,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       canvas.removeEventListener('webglcontextlost', onLost);
       canvas.removeEventListener('webglcontextrestored', onRestored);
       renderer?.dispose();
-      set({ renderer: 'pending', reason: null });
+      set({ renderer: 'pending', reason: null, cover: 'none' });
     },
   };
 }

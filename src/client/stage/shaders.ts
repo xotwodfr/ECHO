@@ -11,9 +11,10 @@ void main() {
 }`;
 
 /**
- * Pass 1, the room (§4.1): the --art-room base, three soft light pools on slow Lissajous paths,
- * shaped by domain-warped fBm (2 warp octaves over 4-octave value noise), and the key light behind
- * the active line. Linear light, written to the half-resolution room target.
+ * Pass 1, the room (§4.1): the album cover, blurred, as the base (owner, 2026-10-28; --art-room
+ * where there is none), three soft light pools on slow Lissajous paths, shaped by domain-warped fBm
+ * (2 warp octaves over 4-octave value noise), and the key light behind the active line. Linear
+ * light, written to the half-resolution room target.
  */
 export const ROOM_FRAG = /* glsl */ `
 precision highp float;
@@ -21,6 +22,11 @@ uniform float uAspect;   // stage width / height
 uniform float uFlow;     // warp time, "units" (§4.2)
 uniform float uDrift;    // pool time, seconds (slowed with playback paused)
 uniform float uSeed;
+uniform sampler2D uCover;     // the album cover, blurred (renderer.ts coverTexture), sRGB-decoded
+uniform sampler2D uCoverPrev; // the one before it, while they crossfade
+uniform vec2 uCoverOn;        // (previous, current): 1 where a cover is loaded, else --art-room
+uniform float uCoverFade;     // previous → current, 0 → 1
+uniform float uBrightness;    // the cover's, linear (the Stage's brightness control)
 uniform vec3 uRoom;
 uniform vec3 uAccent;
 uniform vec3 uHighlight;
@@ -72,9 +78,15 @@ void main() {
   vec2 c1 = vec2(uAspect * (0.5 + 0.32 * sin(TAU * t / 53.0)), 0.55 + 0.25 * sin(TAU * t / 71.0 + 1.0));
   vec2 c2 = vec2(uAspect * (0.5 + 0.35 * sin(TAU * t / 83.0 + 2.0)), 0.45 + 0.22 * sin(TAU * t / 47.0 + 0.5));
   vec2 c3 = vec2(uAspect * (0.5 + 0.28 * sin(TAU * t / 61.0 + 4.0)), 0.50 + 0.30 * sin(TAU * t / 89.0 + 3.0));
+  // The base: the cover cropped to the stage like object-fit: cover, flowing a little with the
+  // haze's warp (≤ 6% of the cover), so the backdrop lives without competing with the pools.
+  vec2 cuv = 0.5 + (vUv - 0.5) * (uAspect > 1.0 ? vec2(1.0, 1.0 / uAspect) : vec2(uAspect, 1.0));
+  cuv += (w - p) * 0.5 / max(uAspect, 1.0);
+  vec3 prev = mix(uRoom, texture(uCoverPrev, cuv).rgb * uBrightness, uCoverOn.x);
+  vec3 cur = mix(uRoom, texture(uCover, cuv).rgb * uBrightness, uCoverOn.y);
   // Intensities (§4.1: pools 0.10–0.22, key light 0.12–0.20) are perceptual amplitudes, so they
   // are squared into linear light: a low glow on a dark room, not a lit wall.
-  vec3 col = uRoom;
+  vec3 col = mix(prev, cur, uCoverFade);
   col += uAccent * (0.16 * 0.16) * pool(w, c1, 0.80 * uPoolScale);
   col += uHighlight * (0.12 * 0.12) * pool(w, c2, 0.60 * uPoolScale);
   col += uAccent * (0.10 * 0.10) * pool(w, c3, 0.90 * uPoolScale);

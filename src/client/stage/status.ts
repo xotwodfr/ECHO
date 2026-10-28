@@ -12,12 +12,15 @@ export interface StageStatus {
   reason: 'no-webgl2' | 'context-lost' | 'error' | null;
   /** The loop's pace, or Reverb when it runs with live features (VISUALIZER_SPEC.md §4). */
   mode: StageMode | 'reverb';
+  /** The room's base: the track's blurred cover once drawn, or --art-room (none, or loading). */
+  cover: 'loading' | 'shown' | 'none';
 }
 
 export const stageStatus = createStore<StageStatus>()(() => ({
   renderer: 'pending',
   reason: null,
   mode: 'ambient',
+  cover: 'none',
 }));
 
 let supported: boolean | null = null;

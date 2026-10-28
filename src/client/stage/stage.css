@@ -118,7 +118,91 @@
   background: color-mix(in oklab, var(--text) 18%, transparent);
 }
 
-/* Phones: six 48 px circles do not fit in one row; 40 px ones with tighter gaps do. */
+/* The backdrop's brightness, like Control Center's slider lying on its side: the round button
+   widens into a thick pill that is the slider, white filling it from the left with the level and
+   no thumb. The glyph sits on the fill's white cap, so it reads dark there. */
+.stage-brightness {
+  --bright-w: calc(var(--volume-w) * 1.6); /* the slider beyond the cap */
+  display: flex;
+  align-items: center;
+  overflow: hidden; /* clips the fill's straight edges to the pill */
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--art-room) 35%, transparent);
+  box-shadow: inset 0 0 0 var(--rule) color-mix(in oklab, var(--text) 28%, transparent);
+  transition:
+    box-shadow var(--dur-hover) ease,
+    background var(--dur-ui) ease;
+}
+
+.stage-brightness:hover {
+  box-shadow: inset 0 0 0 var(--rule) color-mix(in oklab, var(--text) 60%, transparent);
+}
+
+.stage-brightness[data-open] {
+  background: color-mix(in oklab, var(--text) 18%, transparent);
+  box-shadow: none;
+}
+
+.stage-chrome .stage-brightness .stage-btn {
+  flex: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  transition:
+    background var(--dur-ui) ease,
+    color var(--dur-ui) ease;
+}
+
+.stage-chrome .stage-brightness[data-open] .stage-btn {
+  background: var(--text);
+  color: var(--art-room);
+}
+
+.stage-brightness-track {
+  align-self: stretch;
+  width: 0;
+  overflow: hidden;
+  transition: width var(--dur-ui) var(--ease-out);
+}
+
+.stage-brightness[data-open] .stage-brightness-track {
+  width: var(--bright-w);
+}
+
+.stage-brightness-track > div {
+  width: var(--bright-w);
+  height: 100%;
+}
+
+/* The slider is the whole track: the rail fills it, never grows on hover, and has no thumb. */
+.stage-brightness .slider {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.stage-brightness .slider .slider-rail,
+.stage-brightness .slider[data-dragging] .slider-rail,
+.stage-brightness .slider:hover:not([aria-disabled="true"]) .slider-rail {
+  height: 100%;
+  border-radius: 0;
+  background: transparent;
+  scale: none;
+}
+
+.stage-brightness .slider-fill {
+  background: var(--text);
+}
+
+.stage-brightness .slider-thumb {
+  display: none;
+}
+
+.stage-brightness .slider:focus-visible {
+  outline-offset: calc(-1 * var(--focus-ring));
+}
+
+/* Phones: five 48 px circles do not fit in one row with the gutters; 40 px ones do. */
 @media (max-width: 719.98px) {
   .stage-chrome,
   .stage-chrome .view-switch {
@@ -128,6 +212,11 @@
   .stage-chrome .stage-btn {
     width: var(--hit-lg);
     height: var(--hit-lg);
+  }
+
+  /* Five 40 px circles and the open slider still fit 390 px between the gutters. */
+  .stage-brightness {
+    --bright-w: calc(var(--volume-w) * 0.85);
   }
 }
 

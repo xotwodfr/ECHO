@@ -77,6 +77,7 @@ for (const vp of VIEWPORTS) {
     await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
       timeout: 15_000,
     });
+    await expect(page.locator('.stage')).toHaveAttribute('data-cover', 'shown'); // drawn under the room
     await expect(page.getByRole('button', { name: 'Play', exact: true })).toBeVisible();
     await page.evaluate(() => document.fonts.ready);
     await expect(page).toHaveScreenshot(`listen-frame-${vp.width}.png`, shot);
@@ -115,6 +116,7 @@ async function playOnStage(page: Page, vp: { width: number; height: number }) {
   await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
     timeout: 15_000,
   });
+  await expect(page.locator('.stage')).toHaveAttribute('data-cover', 'shown');
   await page.evaluate(() => document.fonts.ready);
 }
 const timeMask = (page: Page) => [
@@ -128,10 +130,7 @@ for (const vp of [
 ]) {
   test(`Cover mode at ${vp.width}`, async ({ page }) => {
     await playOnStage(page, vp);
-    await page
-      .getByRole('group', { name: 'Stage view' })
-      .getByRole('button', { name: 'Cover' })
-      .click();
+    await page.keyboard.press('c'); // Cover has no button (owner, 2026-10-28)
     await page
       .getByRole('region', { name: 'Player' })
       .getByRole('button', { name: 'Pause' })

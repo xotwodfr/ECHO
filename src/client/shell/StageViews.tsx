@@ -1,34 +1,29 @@
-import { type ReactNode, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
 import { isInstrumental, pinLyricsSource } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
-import { prefsStore } from '../prefs.ts';
+import { prefsStore, setPref } from '../prefs.ts';
 import { sessionStore } from '../session.ts';
-import {
-  lyricHost,
-  lyricOffset,
-  lyricsStore,
-  STAGE_VIEWS,
-  type StageView,
-  stageView,
-} from '../stage/status.ts';
+import { lyricHost, lyricOffset, lyricsStore, type StageView, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon, type IconName } from '../ui/icons.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
+import { Slider } from '../ui/slider.tsx';
 import { Link, useView } from './link.tsx';
 import { fixTrackStore } from './SpotifyViews.tsx';
 
 // What sits on the Stage above the room (PRODUCT_SPEC.md §6.1): the top chrome, and the view mode's
 // content. The lyric field itself is drawn by the Stage engine into the host element below.
 
-const VIEW_ICONS: Record<StageView, IconName> = {
-  lyrics: 'lyrics',
-  cover: 'cover',
-  visual: 'visual',
-};
+// Cover mode has no button (owner, 2026-10-28): C and V still reach it, and it stands in for
+// missing lyrics.
+const VIEW_BUTTONS: [StageView, IconName][] = [
+  ['lyrics', 'lyrics'],
+  ['visual', 'visual'],
+];
 
 /** F, and the chrome's full screen button. */
 export const toggleFullscreen = () =>
@@ -45,7 +40,7 @@ const onFullscreen = (f: () => void) => {
 
 /**
  * Top chrome, one row of round buttons: the view modes (V cycles them from the keyboard), full
- * screen, Settings, and back to the Library.
+ * screen, the backdrop's brightness, and back to the Library.
  */
 export function StageChrome() {
   const view = useStore(stageView, (s) => s.view);
@@ -54,7 +49,7 @@ export function StageChrome() {
     <div className="stage-chrome">
       <fieldset className="view-switch">
         <legend className="visually-hidden">{strings.stage.viewLabel}</legend>
-        {STAGE_VIEWS.map((v) => (
+        {VIEW_BUTTONS.map(([v, icon]) => (
           <button
             key={v}
             type="button"
@@ -64,7 +59,7 @@ export function StageChrome() {
             aria-pressed={view === v}
             onClick={() => stageView.getState().set(v)}
           >
-            <Icon name={VIEW_ICONS[v]} />
+            <Icon name={icon} />
           </button>
         ))}
       </fieldset>
@@ -78,14 +73,7 @@ export function StageChrome() {
       >
         <Icon name="fullscreen" />
       </button>
-      <Link
-        className="stage-btn"
-        to={{ view: 'settings', section: 'preferences' }}
-        aria-label={strings.nav.settings}
-        title={strings.nav.settings}
-      >
-        <Icon name="settings" />
-      </Link>
+      <Brightness />
       <Link
         className="stage-btn"
         to={{ view: 'library', tab: 'albums' }}
@@ -94,6 +82,70 @@ export function StageChrome() {
       >
         <Icon name="close" />
       </Link>
+    </div>
+  );
+}
+
+/**
+ * The blurred cover's brightness (per device): the round button widens into a Control Center style
+ * slider, the pill itself filling white with the level, and shrinks back on Escape or a click
+ * elsewhere.
+ */
+function Brightness() {
+  const value = useStore(prefsStore, (p) => p.visuals.backdrop);
+  const [open, setOpen] = useState(false);
+  const wrap = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const id = useId();
+  useEffect(() => {
+    if (!open) return;
+    const outside = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('pointerdown', outside);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [open]);
+  const set = (v: number) => void setPref('visuals', 'backdrop', v);
+  return (
+    <div className="stage-brightness" ref={wrap} data-open={open || undefined}>
+      <button
+        ref={trigger}
+        type="button"
+        className="stage-btn"
+        aria-label={strings.stage.brightness}
+        title={strings.stage.brightness}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setOpen(!open)}
+      >
+        <Icon name="brightness" />
+      </button>
+      {/* Always mounted, so it can widen and narrow; out of reach while narrow. */}
+      <div className="stage-brightness-track" id={id} inert={!open}>
+        <div>
+          <Slider
+            variant="brightness"
+            label={strings.stage.brightness}
+            value={value}
+            max={1}
+            step={0.05}
+            bigStep={0.2}
+            wheel
+            valueText={(v) => `${Math.round(v * 100)}%`}
+            onInput={set}
+            onChange={set}
+          />
+        </div>
+      </div>
     </div>
   );
 }

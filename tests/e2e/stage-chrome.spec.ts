@@ -125,8 +125,40 @@ test.describe('chrome auto-hide', () => {
   });
 });
 
+test.describe('background', () => {
+  test('the room is drawn on the blurred cover; its brightness button widens into a slider', async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(browserName !== 'chromium', 'WebGL here is Chromium’s (playwright.config.ts)');
+    await playOnStage(page);
+    await expect(page.locator('.stage')).toHaveAttribute('data-cover', 'shown', {
+      timeout: 10_000,
+    });
+    const button = page.getByRole('button', { name: 'Background brightness' });
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    const slider = page.getByRole('slider', { name: 'Background brightness' });
+    await expect(slider).toHaveAttribute('aria-valuenow', '0.5');
+    await slider.focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(slider).toHaveAttribute('aria-valuenow', '0.55');
+    // Per device, like the volume: kept in this browser, never sent to the server.
+    expect(await page.evaluate(() => localStorage.getItem('echo.visuals.backdrop'))).toBe('0.55');
+    // Escape, or a click elsewhere, narrows it back to the round button; the slider is out of reach.
+    await page.keyboard.press('Escape');
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+    await expect(button).toBeFocused();
+    await expect(page.locator('.stage-brightness-track')).toHaveJSProperty('inert', true);
+    await button.click();
+    await expect(button).toHaveAttribute('aria-expanded', 'true');
+    await page.mouse.click(600, 500);
+    await expect(button).toHaveAttribute('aria-expanded', 'false');
+  });
+});
+
 test.describe('view modes', () => {
-  test('Lyrics (placeholder), Cover and Visual from the switch', async ({ page }) => {
+  test('Lyrics (placeholder) and Visual from the switch, Cover from C', async ({ page }) => {
     await playOnStage(page);
     const sw = page.getByRole('group', { name: 'Stage view' });
     await expect(sw.getByRole('button', { name: 'Lyrics' })).toHaveAttribute(
@@ -138,8 +170,11 @@ test.describe('view modes', () => {
     const vp = page.viewportSize() as { width: number; height: number };
     expect(Math.abs((box?.y ?? 0) + (box?.height ?? 0) / 2 - 0.4 * vp.height)).toBeLessThan(2); // 40% H
 
-    await sw.getByRole('button', { name: 'Cover' }).click();
-    await expect(sw.getByRole('button', { name: 'Cover' })).toHaveAttribute('aria-pressed', 'true');
+    // Cover has no button (owner, 2026-10-28): C reaches it, and no view button shows pressed.
+    await expect(sw.getByRole('button', { name: 'Cover' })).toHaveCount(0);
+    await page.locator('h1').first().focus();
+    await page.keyboard.press('c');
+    await expect(sw.locator('[aria-pressed="true"]')).toHaveCount(0);
     const art = page.locator('.stage-cover .art');
     // Small SVG covers are inlined as data: URIs; their <title> names them.
     await expect(art.locator('img')).toHaveAttribute('src', /Harbour%20Lights/);
@@ -163,14 +198,16 @@ test.describe('view modes', () => {
       .getByRole('group', { name: 'Stage view' })
       .locator('[aria-pressed="true"]');
     await page.locator('h1').first().focus();
+    const cover = page.locator('.stage-cover');
     await page.keyboard.press('v');
-    await expect(pressed).toHaveAccessibleName('Cover');
+    await expect(cover).toBeVisible(); // Cover, which has no button
+    await expect(pressed).toHaveCount(0);
     await page.keyboard.press('v');
     await expect(pressed).toHaveAccessibleName('Visual');
     await page.keyboard.press('v');
     await expect(pressed).toHaveAccessibleName('Lyrics');
     await page.keyboard.press('c');
-    await expect(pressed).toHaveAccessibleName('Cover');
+    await expect(cover).toBeVisible();
     await page.keyboard.press('c');
     await expect(pressed).toHaveAccessibleName('Lyrics');
     await page.keyboard.press('l');
@@ -197,10 +234,7 @@ test.describe('view modes', () => {
       .getByRole('navigation', { name: 'Main' })
       .getByRole('link', { name: 'Listen' })
       .click();
-    await page
-      .getByRole('group', { name: 'Stage view' })
-      .getByRole('button', { name: 'Cover' })
-      .click();
+    await page.keyboard.press('c');
     const items = page.locator('.stage-cover-item');
     await expect(items).toHaveCount(1);
     // The first cover shown appears without an entrance.
