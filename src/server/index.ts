@@ -341,11 +341,18 @@ if (import.meta.main) {
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>
     log('info', 'listening', { port: info.port, publicOrigin: config.publicOrigin }),
   );
-  // Node as PID 1 ignores SIGTERM by default; close cleanly so `docker stop` is fast.
+  // Node as PID 1 ignores SIGTERM by default; close cleanly so `docker stop` is fast. An audio
+  // stream would hold `close()` open past Docker's 10 s grace (then SIGKILL): requests still open
+  // after 5 s are cut, and the database is closed before exiting.
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
     process.on(signal, () => {
       log('info', 'shutting down', { signal });
-      server.close(() => process.exit(0));
+      server.close(() => {
+        auth.db.close();
+        process.exit(0);
+      });
+      if ('closeAllConnections' in server)
+        setTimeout(() => server.closeAllConnections(), 5000).unref();
     });
   }
 }
