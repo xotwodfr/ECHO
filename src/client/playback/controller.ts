@@ -457,6 +457,15 @@ export function createPlaybackController(opts: {
 
     /** Play an upcoming track now (`index` into `upcoming()`), skipping the ones before it. */
     jump(index: number) {
+      // A provider that owns its queue (Spotify) skips through it: loading the one track would
+      // replace its context (QUE-04).
+      const own = provider;
+      if (own?.skipNext) {
+        void (async () => {
+          for (let i = 0; i <= index; i++) await own.skipNext?.();
+        })();
+        return;
+      }
       const next = Q.jump(queue.getState(), index);
       if (next) load(next, true);
     },

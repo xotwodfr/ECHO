@@ -180,6 +180,18 @@ describe('a provider that owns its queue (Spotify)', () => {
     expect(c.hasNext()).toBe(true);
   });
 
+  // ON-INT-1: a click on an upcoming row loaded that one track, replacing Spotify's context: the
+  // rest of the album was gone and playback stopped after it.
+  it('playing an upcoming row skips to it, keeping Spotify’s context', async () => {
+    const { c, spotify } = setup();
+    c.playList(sp, 0, albumCtx);
+    spotify.emit({ track: sp[0] as Track, upcoming: [sp[1] as Track, sp[2] as Track] });
+    const before = spotify.calls.length;
+    c.jump(1); // the second upcoming track
+    await tick();
+    expect(spotify.calls.slice(before)).toEqual(['next', 'next']);
+  });
+
   it('QUE-04: add-only; "Play next" becomes "Add to queue" with a note; no reorder/remove/clear', () => {
     const { c, spotify, notes } = setup();
     c.playList(sp, 0, albumCtx);
