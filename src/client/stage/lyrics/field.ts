@@ -1,7 +1,6 @@
 import type { Features, LyricsDoc } from '../../../shared/types.ts';
 import { strings } from '../../strings.ts';
 import { Announcer } from './announce.ts';
-import { hash } from './background.ts';
 import {
   BG_SIZE,
   buildLine,
@@ -21,13 +20,8 @@ import { buildTimeline } from './timing.ts';
 
 export type Tier = 'T0' | 'T1' | 'T2' | 'T3';
 
-/** Background budget and bucket blurs per tier (§8.1, §13). */
-const TIERS: Record<Tier, { budget: number; blur: number[] | null }> = {
-  T0: { budget: LYRICS.background.budget[0], blur: [4, 6, 8] },
-  T1: { budget: LYRICS.background.budget[1], blur: [3, 4, 5] },
-  T2: { budget: LYRICS.background.budget[2], blur: null },
-  T3: { budget: LYRICS.background.budget[3], blur: null },
-};
+/** Lines are blurred by distance only where the tier can afford a dozen filtered layers (§13). */
+const BLURS: Record<Tier, boolean> = { T0: true, T1: true, T2: false, T3: false };
 const POOL = 40;
 const RESIZE_DEBOUNCE_MS = 120; // §9.10
 const RESIZE_DIP_MS = 200;
@@ -36,7 +30,6 @@ const WILL_CHANGE_MS = 500; // §13: layers dropped 500 ms after a line settles
 export interface FieldFrame {
   t: number;
   dt: number;
-  driftS: number;
   playing: boolean;
   mode: Mode;
   features?: Features;
@@ -47,13 +40,10 @@ interface Written {
   x: number;
   y: number;
   s: number;
-  rx: number;
-  ry: number;
   o: number;
   b: number;
   m: number;
   f: number;
-  bucket: number;
   still: number; // ms since the transform last changed
 }
 
@@ -92,17 +82,12 @@ export function createLyricField(
   host: HTMLElement,
   opts: { tier: Tier; announce?: boolean; onReady?: () => void },
 ) {
-  const tier = TIERS[opts.tier];
+  const blurs = BLURS[opts.tier];
   host.classList.add('ly-field');
   // The animated field is hidden from assistive technology; the transcript and the live region
   // beside it are not (§11).
   const measure = div('ly-measure');
   measure.setAttribute('aria-hidden', 'true');
-  const buckets = [0, 1, 2].map((b) => {
-    const d = div('ly-bucket');
-    d.style.filter = tier.blur ? `blur(${tier.blur[b]}px)` : '';
-    return d;
-  });
   const main = div('ly-main');
   const dotsEl = div('ly-dots');
   const dots = [0, 1, 2].map(() => {
@@ -113,7 +98,7 @@ export function createLyricField(
   });
   const scene = div('ly-scene');
   scene.setAttribute('aria-hidden', 'true');
-  scene.append(...buckets, main, dotsEl);
+  scene.append(main, dotsEl);
   const transcript = document.createElement('ol');
   transcript.className = 'visually-hidden';
   transcript.setAttribute('aria-label', strings.stage.transcriptLabel);
@@ -178,13 +163,10 @@ export function createLyricField(
         x: Number.NaN,
         y: 0,
         s: 0,
-        rx: 0,
-        ry: 0,
         o: 0,
         b: -1,
         m: -1,
         f: -1,
-        bucket: -2,
         still: 0,
       },
     };
@@ -260,31 +242,17 @@ export function createLyricField(
 
   function writeLine(inst: Inst, e: LineEl, dt: number) {
     const w = e.w;
-    const parent = inst.bucket >= 0 ? (buckets[inst.bucket] as HTMLElement) : main;
-    if (w.bucket !== inst.bucket || e.root.parentElement !== parent) {
-      parent.append(e.root);
-      w.bucket = inst.bucket;
-    }
+    if (e.root.parentElement !== main) main.append(e.root);
     const x = inst.x.x - e.layout.w / 2;
     const y = inst.y.x - e.layout.h / 2;
     const s = inst.scale;
-    const rx = Math.abs(inst.rx.x) < 0.005 ? 0 : inst.rx.x;
-    const ry = Math.abs(inst.ry.x) < 0.005 ? 0 : inst.ry.x;
     if (
       Math.abs(x - w.x) >= 0.1 ||
       Math.abs(y - w.y) >= 0.1 ||
       Math.abs(s - w.s) >= 0.0005 ||
-      Math.abs(rx - w.rx) >= 0.005 ||
-      Math.abs(ry - w.ry) >= 0.005 ||
       Number.isNaN(w.x)
     ) {
-      const tilt =
-        rx || ry
-          ? ` perspective(${LYRICS.tilt.perspectivePx}px) rotateX(${rx.toFixed(3)}deg) rotateY(${ry.toFixed(3)}deg)`
-          : '';
-      e.root.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0)${tilt} scale(${s.toFixed(4)})`;
-      w.rx = rx;
-      w.ry = ry;
+      e.root.style.transform = `translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, 0) scale(${s.toFixed(4)})`;
       if (w.still >= WILL_CHANGE_MS || Number.isNaN(w.x))
         e.root.style.willChange = 'transform, opacity';
       w.x = x;
@@ -299,9 +267,10 @@ export function createLyricField(
       e.root.style.opacity = inst.opacity.toFixed(3);
       w.o = inst.opacity;
     }
-    if (Math.abs(inst.blur - w.b) >= 0.05) {
-      e.root.style.filter = inst.blur > 0.05 ? `blur(${inst.blur.toFixed(2)}px)` : '';
-      w.b = inst.blur;
+    const b = blurs ? inst.blur : 0;
+    if (Math.abs(b - w.b) >= 0.05) {
+      e.root.style.filter = b > 0.05 ? `blur(${b.toFixed(2)}px)` : '';
+      w.b = b;
     }
     if (Math.abs(inst.mix - w.m) >= 0.01) {
       e.root.style.setProperty('--m', inst.mix.toFixed(3));
@@ -311,7 +280,6 @@ export function createLyricField(
       e.root.style.setProperty('--f', inst.fade.toFixed(3));
       w.f = inst.fade;
     }
-    if (inst.role === 'bg') return; // not word-lit (§8.2)
     e.words.forEach((we, k) => {
       writeWord(we, inst.edge[k] as number);
       const my = inst.wy[k] ?? 0;
@@ -404,7 +372,7 @@ export function createLyricField(
     const gen = ++build;
     if (!next || next.sync === 'none') return;
     const text = next.lines.map((l) => l.text).join(' ');
-    await document.fonts?.load(`600 1rem "Mona Sans"`, text).catch(() => undefined);
+    await document.fonts?.load(`700 1rem "Mona Sans"`, text).catch(() => undefined);
     if (gen !== build) return;
     lay();
     opts.onReady?.();
@@ -419,17 +387,18 @@ export function createLyricField(
     laidH = H;
     const tl = buildTimeline(doc);
     layout = measureDoc(measure, doc, tl.lines, W);
-    const boxes = layout.lines.map((l) => ({ w: l.w, h: l.h, side: l.side, words: l.words }));
+    // A right-to-left line outside a duet starts at the column's right edge (§4.4, §5.4).
+    const boxes = layout.lines.map((l) => ({
+      w: l.w,
+      h: l.h,
+      side: l.side === 'centre' && l.dir === 'rtl' ? ('right' as const) : l.side,
+      words: l.words,
+    }));
     if (model && model.tl.lines.length === tl.lines.length) {
       model.relayout(boxes);
       for (const e of els.values()) release(e);
       els = new Map(); // rebuilt at the new size on the next frame
-    } else
-      model = new FieldModel(tl, boxes, {
-        seed: hash(doc.trackKey),
-        budget: tier.budget,
-        dotsH: layout.fontPx * LINE_HEIGHT,
-      });
+    } else model = new FieldModel(tl, boxes, { dotsH: layout.fontPx * LINE_HEIGHT });
     if (!transcript.childElementCount)
       transcript.append(
         ...tl.lines.map((l) => {

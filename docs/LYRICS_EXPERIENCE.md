@@ -68,11 +68,9 @@ with `transform: translate3d(x, y, 0) scale(s)` and centred on its anchor point.
 
 | Element | Anchor | Value | At 1440×900 |
 |---|---|---|---|
-| Active line centre | `y = 0.40 H` | horizontal centre `x = 0.5 W` | y = 325 |
-| Transition zone (+1…+3) | below the active line, stacked by size and time (§4.3) | must end above `0.86 H` | ≤ 698 |
-| Past lines | above the active line, rising | up to `0.10 H` | ≥ 81 |
-| Background field | whole stage, excluding the **reading corridor** | — | — |
-| Reading corridor | `x ∈ [0.12 W, 0.88 W]`, `y ∈ [active.top − 0.04 H, zone.bottom + 0.02 H]` | Background lines may pass through it only at `z ≥ 0.85` and opacity ≤ 0.10 | — |
+| Active line centre | `y = 0.40 H` | left edge `x = 0.18 W` (§4.3) | y = 325 |
+| Lines to come | below the active line, one gap apart (§4.2) | to `1.25 H`, faded above the dock | — |
+| Sung lines | above the active line, one gap apart | to `−0.25 H`, faded under the top chrome | — |
 | Safe zone for contrast | central 76% W × 70% H above the dock | contrast sampling region (`DESIGN_SYSTEM.md` §3.4) | — |
 
 Why 40%: the upcoming lines need room *below* the active line, and 40% sits on the optical centre of
@@ -82,102 +80,61 @@ because past lines fade before reaching `0.10 H`.
 ### 3.3 Layout of a single line
 
 - Every line is laid out **once** per document and per resize at `--ly-active` size, with
-  `text-wrap: balance`, a max width of `0.64 W` (≈ 22 characters per row at 56px), centred text, and
+  `text-wrap: pretty`, a max width of `0.64 W` (≈ 22 characters per row at 56px), start-aligned text, and
   at most 2 rows. A line needing 3 rows shrinks by up to 12% (`DESIGN_SYSTEM.md` §4.3); if it still
   needs 3 rows, 3 rows are allowed.
-- Measured box: `h_L` (height) and `w_L` (width) at scale 1. Depth scaling is applied by transform,
-  so the box never reflows when a line changes state.
+- Measured box: `h_L` (height) and `w_L` (width) at scale 1. The beat pulse is applied by
+  transform, so the box never reflows when a line changes state.
 - Words are `<span>`s inside the line. A syllable with `isPartOfWord` joins the next span with no
   space. Graphemes are segmented with `Intl.Segmenter` only when a word needs per-letter emphasis
   (§5.5).
 
 ---
 
-## 4. Time → space: the depth model
+## 4. Time → space: the column (2026-10-28)
 
-### 4.1 Depth functions
+The owner replaced the depth field (scaled lines receding into a cloud of background lyrics) with a
+single scrolling column, Apple Music style (owner's reference screenshot, 2026-10-28). What follows
+is the column; the old depth model is in git history before this date.
 
-Every visual property of a line is a function of its **rendered** depth `z` (the spring output,
-§6). Opacity, blur and scale therefore follow the motion automatically, and there is a single source
-of truth.
+### 4.1 Distance functions
 
-| Property | Function / table (linear interpolation between points) |
+Every line has a distance `z` from the anchor, `min(1, 0.25·|rank|)`, carried by a spring (§6) so
+it changes smoothly at hand-overs. Opacity and blur are functions of the **rendered** `z`; lines are
+not scaled (only the active line's beat pulse, §12).
+
+| Property | Table (linear interpolation between points) |
 |---|---|
-| Scale `s(z)` | `1 − 0.30 z` → z=0: 1.00 · 0.2: 0.94 · 0.4: 0.88 · 0.6: 0.82 · 1.0: 0.70 |
-| Opacity `o(z)` (upcoming and background) | z=0: 1.00 · 0.22: 0.74 · 0.44: 0.64 · 0.66: 0.55 · 0.80: 0.24 · 1.0: 0.12 (+2/+3 raised 2026-10-27 so +3 meets 3:1) |
-| Blur `b(z)` (CSS px) | z=0: 0 · 0.22: 1.0 · 0.44: 2.0 · 0.66: 3.2 · 0.80: 4.0 · 0.9: 6.0 · 1.0: 8.0 (cap 4px while rank ≤ +3) |
-| Ink colour | rank 0: `--lyric-ink-active` (unlit), lit per §5 · ranks ≠ 0: `--lyric-ink-active` mixed 18% toward `--art-room` per 0.33 z (`color-mix(in oklab, …)`) |
+| Opacity `o(z)` | z=0: 1.00 · 0.25: 0.50 · 0.5: 0.42 · 1.0: 0.32 |
+| Blur `b(z)` (CSS px) | z=0: 0 · 0.25: 1.2 · 0.5: 2.2 · 0.75: 3.2 · 1.0: 4.0 (off at tiers T2/T3, §13) |
+| Ink colour | `--lyric-ink-active`; the active line's unsung words 22% toward `--art-room` (§5.1), fading in over z 0.25 → 0 |
 
-Contrast floors from `DESIGN_SYSTEM.md` §3.4 apply after these functions. If the floor for +1…+3
-fails, the room is darkened. The line's opacity is never raised, because that would collapse the
-depth hierarchy.
+Contrast floors from `DESIGN_SYSTEM.md` §3.4 apply at `z` = 0.25, 0.5, 0.75 (+1…+3). The ink is no
+longer mixed toward the room with distance, so +2 and +3 have more contrast than under the depth
+model at every room brightness, and +1 the same.
 
-### 4.2 Depth targets per rank
+### 4.2 The column
 
-| Rank | Target `z` | Notes |
-|---|---|---|
-| 0 (active) | 0 | Never drifts while active (§1, principle 2) |
-| +1 | `0.22 · g₁` | `gᵢ` = time-gap factor (§4.3) |
-| +2 | `z₊₁ + 0.22 · g₂` | |
-| +3 | `z₊₂ + 0.22 · g₃` | capped at 0.72 |
-| ≥ +4 (background) | assigned per line, 0.78–1.0 by time distance (§8.2) | |
-| −1 (decaying) | 0 → 0.35 over the decay (§7) | |
-| −2 | continues decaying | removed when opacity < 0.02 |
+- The active line's centre is at `y₀ = 0.40 H`; with no active line (intro, interlude, outro) the
+  interlude dots' box (one row) holds that slot.
+- Lines to come stack below it and sung lines above it, in song order, **one gap apart**: `0.45 ×`
+  one row (≈ 0.5 em). Gaps are constant; time between lines no longer becomes space.
+- A line is in the column while its slot is within `0.25 H` of the stage's top or bottom. The
+  column runs under the top chrome and the dock, faded out by a mask (`stage.css`).
+- On a hand-over every line's target moves up by the leaving line's height plus one gap. Lines
+  above the new active line move at once and those below follow by rank (§6.3), so the column
+  scrolls in a wave. A line entering at the bottom joins its neighbour's offset, delay and spring,
+  so it scrolls in with it and never sits under a line still on its way (overlap test, model.test.ts).
+- Between hand-overs nothing moves: no approach drift, no hover, no tilt.
 
-### 4.3 Vertical stacking: time becomes space
+### 4.3 Horizontal placement
 
-The transition zone stacks lines below the active line. The **gap between two consecutive lines
-grows with the time between them**, so a line that comes much later sits visibly further away.
-
-```
-gᵢ   = clamp( (startᵢ − startᵢ₋₁) / 3200 ms , 0.8 , 1.5 )        // time-gap factor
-gapᵢ = 0.040 H · gᵢ                                                // px between boxes
-yᵢ   = yᵢ₋₁ + (h_{i−1}·s(z_{i−1}) + hᵢ·s(zᵢ)) / 2 + gapᵢ            // centre of rank i
-```
-
-- `y₀ = 0.40 H` (active). Line boxes use their *target* scale, so stacking is stable while springs
-  move.
-- **Overflow:** if the bottom of +3 would pass `0.86 H`, all three gaps are scaled down uniformly to a
-  minimum of 0.5× each. If it still overflows (very long wrapped lines), +3 takes its background
-  depth instead (it stays at `z = 0.78`, opacity 0.24, behind +2) until room appears.
-- **Approach drift (the "slow float upward"):** while the active line is being sung, each upcoming
-  line already moves part of the way toward its next slot:
-
-```
-φ = clamp( (t − active.start) / (handoverAt − active.start) , 0 , 1 )   // progress through the active line
-drift = 0.30 · easeInOutSine(φ)
-target_y(rank k) = lerp( slotY(k), slotY(k−1), drift )      for k = 2, 3
-target_y(rank 1) = lerp( slotY(1), slotY(1) − 0.35·(slotY(1) − y₀ − h₀/2 − h₁·s/2 − 0.02H), drift )
-target_z(rank k) = lerp( z(k), z(k−1), drift )               (rank 1: toward 0 but stops at 0.65·z₊₁)
-```
-
-  Upcoming lines therefore glide continuously at a speed set by the song's actual pacing. A slow
-  ballad line drifts slowly over 6 s; a rap line drifts fast over 1.2 s. Rank +1 never gets closer
-  than 0.02 H to the active line's box, so they never overlap.
-
-### 4.4 Horizontal placement
-
-- Default: all lines centred at `x = 0.5 W`.
-- **Duets** (`oppositeAligned` or ≥ 2 distinct `agent`s): lines of the primary agent anchor at
-  `x = 0.42 W` with `text-align: left` relative to a left edge at `0.18 W`. Opposite-aligned lines
-  anchor right, ending at `0.82 W`. The field keeps this two-sided arrangement for the whole song
-  (decided once at document load), so lines never jump sides mid-song. Without any
-  `oppositeAligned` flag, the first agent goes left and the others right. Lines of a `group` agent
-  (everyone singing) stay centred (M3).
-- A small horizontal **parallax** (§8.4) applies to background lines only.
-
-### 4.5 Hover and tilt (2026-10-25)
-
-- **Hover:** +1…+3 drift around their slots, so they read as hovering rather than as a list. Per axis
-  two sines (0.7 at 0.05–0.12 Hz, 0.3 at 1.7× that), speed and phase from the track seed and the line
-  index, on the Stage drift clock (it slows while paused; a seek does not move it). Amplitude 0.6% W
-  and 0.5% H at +1, ×1.2 at +2, ×1.4 at +3. Over the last 1600 ms before its hand-over a line's hover
-  eases out (`k³` of the time left), reaching exactly zero as it takes the anchor. The offset is added
-  to the spring target, so rank changes and seeks carry it smoothly (`hoverAt`, model.ts).
-- **Tilt:** the active line leans back by up to 1.2° (`rotateX`, sin πφ) and swivels by up to
-  ±1.6° (`rotateY`, sin 2πφ) over its progress φ, under `perspective(1200px)`. Both are zero at
-  either end of a line, so a hand-over never steps; it runs on the slow spring, which carries seeks.
-- Neither applies under reduced motion (§10) or in still frames.
+- One column from `0.18 W` to `0.82 W` (`maxWidth` 0.64 W). Lines start at its left edge, text
+  aligned to start (`text-wrap: pretty`), and scale from that edge.
+- **Duets** (`oppositeAligned` or ≥ 2 distinct `agent`s): the second voice's lines end at the
+  column's right edge, right-aligned, and keep their colour (§5.6). Decided once per document, so
+  lines never jump sides. A right-to-left line outside a duet also ends at the right edge.
+- The interlude dots sit at the column's left edge.
 
 ---
 
@@ -369,6 +326,10 @@ Lyric motion runs on the **song clock**. UI feedback (chrome fade, toasts) runs 
 
 ## 7. Sung lines: the reverb tail
 
+> **2026-10-28, the column (§4):** sung lines no longer fade out, rise or blur away. They stay in
+> the column above the active line at their distance's opacity and blur; only their lit colour
+> still dies into ink by `e^{−Δt/520 ms}`. The rest of this section describes the depth model.
+
 A line that leaves the active position **decays**:
 
 | Property | Behaviour |
@@ -386,6 +347,10 @@ a static block.
 ---
 
 ## 8. The background field: the rest of the song
+
+> **2026-10-28: removed.** The column (§4) shows the rest of the song in order instead of a cloud
+> of drifting lines; `background.ts`, its blur buckets and the beat terms that only moved it
+> (lean, kick, speed, breathing, approach drift, the intensity setting's multiplier) are gone.
 
 All unsung lines beyond +3 float in the background, suggesting the rest of the song around the
 listener without competing with the active line.

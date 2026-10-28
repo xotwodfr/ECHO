@@ -13,8 +13,8 @@ export const SCRIM_MAX = 0.45;
 const SLEW_PER_S = 0.5;
 /** Release only with this much margin, so the controller does not hunt around a floor. */
 const RELEASE = 1.08;
-/** The upcoming slots' nominal depths (LYRICS_EXPERIENCE.md §4.2: 0.22 per rank). */
-const ZONE_Z = [0.22, 0.44, 0.66];
+/** The upcoming lines' distances (LYRICS_EXPERIENCE.md §4: 0.25 per line). */
+const ZONE_Z = [0.25, 0.5, 0.75];
 
 /** The CSS colours the lyric inks derive from (stage.css). */
 export interface Inks {
@@ -54,7 +54,7 @@ export function contrastAt(inks: Inks, peaks: Peaks | number) {
   const room = parseColor(inks.room).rgb;
   const lit = mixLab(parseColor(inks.text).rgb, parseColor(inks.highlight).rgb, 0.18);
   const zone = ZONE_Z.map((z) => {
-    // Depth mixes the ink toward the room, and the line is drawn at the depth's opacity over bg.
+    // The line is drawn at its distance's opacity over bg.
     const c = mixLab(ink, room, unlitMixAt(z));
     const o = opacityAt(z);
     return ratio(Y(c.map((v, i) => v * o + (bg[i] as number) * (1 - o)) as Vec3), bgL);
@@ -69,9 +69,8 @@ export function contrastAt(inks: Inks, peaks: Peaks | number) {
 export type Report = ReturnType<typeof contrastAt>;
 
 /**
- * How many upcoming lines the solver enforces: all three. +3 was raised to opacity 0.55 (and +2 to
- * 0.64, to keep the fade monotonic) so it reaches 3:1 at the exposures +1/+2 already need
- * (docs/reviews/M4.md, owner decision 2026-10-27).
+ * How many upcoming lines the solver enforces: all three (docs/reviews/M4.md, owner decision
+ * 2026-10-27). In the column their ink is no longer mixed toward the room, only dimmed.
  */
 export const ENFORCED_ZONE = 3;
 

@@ -193,7 +193,6 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
             // (LYRICS_EXPERIENCE.md §9.13): +150 ms shows the words 150 ms later.
             t: f.t - lyricOffset(),
             dt: f.dt,
-            driftS: drift,
             playing: playing(),
             mode: frame ? 'still' : scrub ? 'scrub' : 'run',
             features: f.features,

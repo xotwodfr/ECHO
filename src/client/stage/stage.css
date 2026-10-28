@@ -141,14 +141,20 @@
 }
 
 .ly-scene,
-.ly-bucket,
 .ly-main {
   position: absolute;
   inset: 0;
 }
 
+/* The column fades out under the top chrome and just above the dock (§3.2). */
 .ly-scene {
   transform-origin: 50% 40%;
+  mask-image: linear-gradient(
+    transparent 4%,
+    black 18%,
+    black calc(100% - var(--dock) - 12%),
+    transparent calc(100% - var(--dock))
+  );
 }
 
 /* Lines are measured here once per document and resize (§3.3), unscaled and invisible. */
@@ -160,21 +166,21 @@
   contain: layout;
 }
 
-/* One layout per line at active size; depth is transform, opacity, blur and colour only (§4.1). */
+/* One layout per line at active size; distance is transform, opacity, blur and colour only
+   (§4.1). Lines start at the column's edge and scale from it. */
 .ly-line {
   position: absolute;
   top: 0;
   left: 0;
   width: max-content;
-  transform-origin: 50% 50%;
-  font-weight: 600;
+  transform-origin: 0 50%;
+  font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.022em;
-  text-align: center;
-  text-wrap: balance;
-  /* Ink mixes toward the room with depth, and at the anchor the unsung words sit 22% toward it so
-     the sweep reads (--m, model.ts unlitMixAt). The lit colour dies into ink as a line decays
-     (--f, §7). */
+  text-align: start;
+  text-wrap: pretty;
+  /* At the anchor the unsung words sit 22% toward the room so the sweep reads (--m, model.ts
+     unlitMixAt). The lit colour dies into ink once a line is sung (--f, §7). */
   --unlit: color-mix(in oklab, var(--lyric-ink-active), var(--art-room) calc(var(--m, 0) * 100%));
   --lit: color-mix(in oklab, var(--lit-base), var(--lyric-ink-active) calc(var(--f, 0) * 100%));
   color: var(--unlit);
@@ -187,6 +193,11 @@
 
 .ly-line[data-side="left"] {
   text-align: left;
+}
+
+.ly-line[dir="rtl"]:not([data-side="left"]),
+.ly-line[data-side="right"] {
+  transform-origin: 100% 50%;
 }
 
 /* The second voice of a duet is also told apart by colour (§5.6). */
@@ -265,14 +276,14 @@
   );
 }
 
-/* Interlude dots at the active anchor (§9.8). */
+/* Interlude dots at the active anchor, where the column starts (§9.8; lyricsConfig maxWidth). */
 .ly-dots {
   position: absolute;
   top: calc((100% - var(--dock)) * 0.4);
-  left: 50%;
+  left: 18%;
   display: flex;
   gap: var(--ly-dot);
-  translate: -50% -50%;
+  translate: 0 -50%;
 }
 
 .ly-dot {
@@ -340,11 +351,11 @@
   margin: 0 auto;
   padding: calc((100vh - var(--dock)) * 0.4 - 1em) var(--gutter) 40vh;
   font-size: calc(var(--ly-active) * var(--ly-scale, 1) * 0.62);
-  font-weight: 600;
+  font-weight: 700;
   line-height: 1.12;
   letter-spacing: -0.022em;
-  text-align: center;
-  text-wrap: balance;
+  text-align: start;
+  text-wrap: pretty;
 }
 
 .ly-sheet-line {

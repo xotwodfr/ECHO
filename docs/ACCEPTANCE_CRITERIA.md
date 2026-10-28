@@ -90,16 +90,16 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 |---|---|---|---|
 | LYR-01 | For every fixture and 50 sample times each, `activeIndexAt(t)`, `handoverAt` and rank assignment match the expected tables | U | M3 |
 | LYR-02 | The active line's centre is at `0.40 H ± 2 px` once settled. Its centre does not move more than 2 px (beats included) while active, and the beat scale pulse stays ≤ 1.5% | U (layout) + V | M3 |
-| LYR-03 | Upcoming +1…+3 are below the active line, increase in opacity and clarity toward it (opacity +1 > +2 > +3, blur +1 < +2 < +3), and never overlap the active line's box | V + U | M3 |
-| LYR-04 | Gap between upcoming lines grows with their time gap (`LYRICS_EXPERIENCE.md` §4.3), checked on a fixture with known gaps | U | M3 |
-| LYR-05 | Approach drift: on the ballad fixture, +1's `y` decreases monotonically during the active line (sampled every 100 ms) and stays clear of the active box by ≥ 0.02 H | U | M3 |
+| LYR-03 | One column (2026-10-28): lines to come below the active line and sung lines above it, each one gap below the line before and on the column's edge; opacity falls and blur grows with distance both ways; no two lines ever overlap, while scrolling included | V + U | M3 |
+| LYR-04 | ~~Gap grows with time gap~~ Retired 2026-10-28: the column's gaps are constant (`LYRICS_EXPERIENCE.md` §4.2) | — | M3 |
+| LYR-05 | ~~Approach drift~~ Retired 2026-10-28: between hand-overs the column is still; at a hand-over lines below follow those above (stagger), never overlapping | U | M3 |
 | LYR-06 | Hand-over has no hard cut: across a hand-over, no line's rendered position changes by more than 0.08 H between consecutive 60 Hz frames (except after a seek) | U (frame simulation) | M3 |
 | LYR-07 | Word sweep: at time `t` inside word `w`, `--p` equals `(t − w.start)/(w.end − w.start)` ± 1%. Words before are fully lit and words after unlit | U + V | M3 |
 | LYR-08 | Glow appears only on the sweeping word (and the previous one fading out), within the alpha and radius caps | U + V | M3 |
 | LYR-09 | Emphasis triggers only for words ≥ 1000 ms with 2–7 graphemes (CJK: duration only), never for words < 150 ms, and swell ≤ 8% | U | M3 |
-| LYR-10 | Past lines decay (opacity follows `e^{−Δt/520 ms}` ± 5%), at most 2 are visible, and they are removed below 0.02 opacity | U | M3 |
-| LYR-11 | Background field: ≤ 24 lines (T0), seeded placement identical across runs for the same track, nothing inside the reading corridor above z 0.85 / opacity 0.10. Each line's drift stays within its amplitude | U + V | M3 |
-| LYR-12 | A background line entering +3 travels from its home position (no pop-in). Its opacity is continuous across the transition | U | M3 |
+| LYR-10 | Sung lines stay in the column above the active line (2026-10-28); their lit colour dies into ink by `e^{−Δt/520 ms}` | U | M3 |
+| LYR-11 | ~~Background field~~ Retired 2026-10-28 with the field itself (`LYRICS_EXPERIENCE.md` §8) | — | M3 |
+| LYR-12 | A line entering the column scrolls in with its neighbour (no pop-in, no overlap); new lines fade in over 400 ms | U | M3 |
 | LYR-13 | Line-timed fixture: no per-word sweep. The whole-line wash runs 420 ms at line start | U + V | M3 |
 | LYR-14 | Untimed fixture: static sheet, scrollable by keyboard and wheel, with the "not time-synced" note and attribution | E | M3 |
 | LYR-15 | Missing lyrics → Cover mode with "No lyrics found" and the sources tried | E | M6 |
@@ -109,12 +109,12 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | LYR-19 | Rapid skipping (5 track changes in 3 s) never shows another track's lyrics, and the final track's lyrics appear within 1 s of its cache hit | E (mock) | M6 |
 | LYR-20 | Coalescing: on the rap fixture, no line is shown active for less than 350 ms of visual dwell, and each line's words still sweep at their times | U | M3 |
 | LYR-21 | Interlude dots appear for gaps ≥ 7 s (including the intro) and leave 500 ms before the next hand-over | U + V | M3 |
-| LYR-22 | Resize (1440 → 1024 → 2560) re-lays out within 120 ms of the last resize event without springs, and no line overflows the stage | E + V | M3 |
+| LYR-22 | Resize (1440 → 1024 → 2560) re-lays out within 120 ms of the last resize event without springs, and no line overflows the stage's sides (the column runs past its top and bottom under the fade) | E + V | M3 |
 | LYR-23 | Duet fixture: agents stay on their sides for the whole song. Background vocals render under their lead line at 0.62× | V | M3 |
 | LYR-24 | RTL fixture sweeps right-to-left. CJK fixture sweeps per character with no tracking | V | M3 |
 | LYR-25 | Timing offset `[`/`]` shifts the lyric clock by ±50 ms per press, shows a toast, persists per track, and does not shift visual features | E + U | M6 |
 | LYR-26 | Lyric layer `update()` ≤ 2.5 ms per frame at T0 on the reference machine with the ballad fixture | P | M9 |
-| LYR-27 | Long-line fixture: no line exceeds 3 rows at 1024×640, and the transition zone overflow rule keeps +3 above 0.86 H | V + U | M3 |
+| LYR-27 | Long-line fixture: no line exceeds 3 rows at 1024×640, and the active line stays whole on the stage | V + U | M3 |
 
 ## 5. Lyrics integration (F12)
 

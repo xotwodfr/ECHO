@@ -7,46 +7,28 @@ export const LYRICS = {
   maxWidth: 0.64, // §3.3
   maxRows: 2,
   shrinkMax: 0.12,
+  // §4: one column. The active line (or the dots) sits at the anchor, every other line one gap
+  // (× the dots' row, ≈ 0.5 em) above or below its neighbour; lines are kept while their slot is
+  // within `margin` H of the stage. Distance z grows by dz per line, 1 from the fourth on.
+  column: { gap: 0.45, dz: 0.25, margin: 0.25 },
   depth: {
-    scaleK: 0.3, // §4.1
+    // §4.1, of the distance z
     opacity: [
       [0, 1],
-      [0.22, 0.74],
-      [0.44, 0.64],
-      [0.66, 0.55],
-      [0.8, 0.24],
-      [1, 0.12],
+      [0.25, 0.5],
+      [0.5, 0.42],
+      [1, 0.32],
     ],
     blur: [
       [0, 0],
-      [0.22, 1],
-      [0.44, 2],
-      [0.66, 3.2],
-      [0.8, 4],
-      [0.9, 6],
-      [1, 8],
+      [0.25, 1.2],
+      [0.5, 2.2],
+      [0.75, 3.2],
+      [1, 4],
     ],
-    zoneBlurCap: 4,
   },
-  zone: {
-    dz: 0.22, // §4.2, §4.3
-    zMax: 0.72,
-    zBackground: 0.78,
-    gapH: 0.04,
-    gapRefMs: 3200,
-    gapClamp: [0.8, 1.5],
-    gapShrinkMin: 0.5,
-    bottom: 0.86,
-    drift: 0.3,
-    approachK: 0.35, // rank +1 closes 35% of its clearance
-    clearH: 0.02, // and keeps at least this much
-    approachZFloor: 0.65,
-  },
-  // §4.5: +1…+3 hover, fractions of W and H at +1 (×1.2 at +2, ×1.4 at +3), gone by the hand-over
-  hover: { ampX: 0.006, ampY: 0.005, landMs: 1600, minHz: 0.05, maxHz: 0.12 },
   // §5.1: a sung word rises 0.05em; the word being sung swells to `peak`, and back to 1 after it
   word: { liftEm: 0.05, peak: 1.07, popMs: 140, releaseMs: 300 },
-  tilt: { x: 1.2, y: 1.6, perspectivePx: 1200 }, // §4.5: the active line leans with its progress, deg
   sweep: { edgeAhead: 0.35, edgeBehind: 0.6, holdGapMs: 300, minWordMs: 60 }, // §5.1
   glow: {
     radius: 0.18, // §5.2
@@ -72,8 +54,7 @@ export const LYRICS = {
     impulse: [2.0, 0.5],
   },
   stagger: { baseMs: 50, decay: 1.05 }, // §6.3
-  decay: { tauMs: 520, rise: 0.05, zEnd: 0.35, blurMax: 6, maxPast: 2, gapH: 0.035, dropMs: 120 }, // §7
-  background: { budget: [24, 12, 6, 0], minDist: 0.16, ampX: 0.022, ampY: 0.018, rise: 0.004 }, // §8
+  decay: { tauMs: 520, dropMs: 120 }, // §7: a past line's lit colour dies into ink
   interlude: {
     minGapMs: 7000,
     cycleMs: 4000,
@@ -84,25 +65,17 @@ export const LYRICS = {
     dotStepMs: 80,
   }, // §9.8
   build: { fadeInMs: 400, seekOutMs: 160, recedeMs: 420 }, // §9.5, §9.6, §9.7
-  reduced: { crossfadeMs: 180, decayMs: 300, dotsAlpha: 0.6 }, // §10
+  reduced: { crossfadeMs: 180, dotsAlpha: 0.6 }, // §10
   lineTimed: { endGapMs: 100, lastLineMs: 6000 }, // §9.2
   beat: {
     scaleMax: 0.012, // §12.3: 1 + 0.012·g·bassImpulse
     scaleCap: 0.015, // §12.4, after summing
-    zLean: 0.025,
-    kickPx: 2,
     quietMs: 300, // §12.4: none after a hand-over
     bassForce: 0.022, // per ms: a bass hit (≈ 45 ms of bassImpulse) peaks the spring at its level
     sustainAttackMs: 120,
     sustainReleaseMs: 400,
-    quietBelow: 0.2, // intensity, for quietForMs
-    quietForMs: 4000,
     intenseAbove: 0.75,
-    passageMs: 2000, // quiet and intense passages blend in and out
-    quietSpeed: 0.6, // background drift speed
-    intenseSpeed: 1.4,
-    intenseDrift: 0.38, // approach drift fraction (§4.3: 0.30)
+    passageMs: 2000, // intense passages blend in and out
     intenseGlow: 0.05,
-    setting: { subtle: 0.5, balanced: 1, expressive: 1.5 }, // §12.2, background terms only
   },
 } as const;

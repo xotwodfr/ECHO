@@ -1,7 +1,6 @@
 import type { Features, LyricLine, LyricWord } from '../../../shared/types.ts';
 import { SILENT_FEATURES } from '../../playback/features.ts';
-import * as BG from './background.ts';
-import { Beat, type BeatTerms, glowFor, type IntensitySetting, vocalAt } from './beat.ts';
+import { Beat, type BeatTerms, glowFor, vocalAt } from './beat.ts';
 import type { Emphasis, Rect, Side } from './layout.ts';
 import { LYRICS } from './lyricsConfig.ts';
 import {
@@ -13,33 +12,23 @@ import {
   spring,
   step,
 } from './springs.ts';
-import {
-  type Box,
-  type FieldState,
-  fieldAt,
-  scaleAt,
-  type Timeline,
-  zoneTargets,
-} from './timing.ts';
+import { type FieldState, fieldAt, type Timeline } from './timing.ts';
 
-// The lyric field's motion, per frame (LYRICS_EXPERIENCE.md §4–§9): spring targets from time,
-// hand-over stagger, decay, the background field, entering the zone, word sweep, glow and emphasis.
-// No DOM: `field.ts` writes what this computes, so all of it is unit-tested on frame simulations.
+// The lyric field's motion, per frame (LYRICS_EXPERIENCE.md §4–§9): one column scrolled by springs
+// from time, hand-over stagger, decay, word sweep, glow and emphasis. No DOM: `field.ts` writes
+// what this computes, so all of it is unit-tested on frame simulations.
 
 const {
-  zone: Z,
+  column: C,
   decay: D,
   glow: G,
   interlude: IL,
   build: BUILD,
   stagger: ST,
   reduced: R,
-  hover: HV,
   word: WM,
-  tilt: TILT,
 } = LYRICS;
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x));
-const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 
 function table(points: readonly (readonly [number, number])[], z: number) {
   const first = points[0] as readonly [number, number];
@@ -52,18 +41,15 @@ function table(points: readonly (readonly [number, number])[], z: number) {
   return (points.at(-1) as readonly [number, number])[1];
 }
 
-/** Depth functions (§4.1), of the rendered depth. */
+/** Distance functions (§4.1), of the rendered distance from the anchor. */
 export const opacityAt = (z: number) => table(LYRICS.depth.opacity, z);
 export const blurAt = (z: number) => table(LYRICS.depth.blur, z);
-/** Ink mixes 18% toward the room per 0.33 z (§4.1). */
-export const inkMixAt = (z: number) => clamp((0.18 * z) / 0.33, 0, 1);
 /**
- * The zone's unsung ink: the depth mix, plus 22% toward the room at the anchor so the sweep reads
- * against it (M3 design review). The extra part fades in as a line arrives (z 0.22 → 0), so it
- * never steps, and leaves the upcoming lines' contrast alone (DESIGN_SYSTEM.md §3.4 rule 4).
+ * The unsung ink: 22% toward the room at the anchor so the sweep reads against it (M3 design
+ * review). It fades in as a line arrives (z dz → 0), so it never steps, and leaves the other
+ * lines' contrast alone (DESIGN_SYSTEM.md §3.4 rule 4): they are dimmed by opacity.
  */
-export const unlitMixAt = (z: number) =>
-  clamp(inkMixAt(z) + LYRICS.unlitMix * Math.max(0, 1 - z / Z.dz), 0, 1);
+export const unlitMixAt = (z: number) => LYRICS.unlitMix * clamp(1 - z / C.dz, 0, 1);
 
 /** Word sweep (§5.1): linear in time, at least 60 ms long. */
 export const sweepAt = (w: LyricWord, t: number) =>
@@ -116,34 +102,6 @@ export function lineEdges(words: LyricWord[], widths: number[], t: number): numb
 }
 
 /**
- * Upcoming lines hover around their slots (§4.5): two slow sines per axis, speed and phase per line
- * from the track's seed, on the Stage drift clock `s` (seconds), so a seek never moves them. The
- * hover eases out to exactly nothing at the line's hand-over, `untilMs` away.
- */
-export function hoverAt(
-  seed: number,
-  i: number,
-  s: number,
-  untilMs: number,
-  rank: number,
-  W: number,
-  H: number,
-) {
-  const r = BG.rng(seed ^ Math.imul(i + 1, 0x9e3779b1));
-  const wave = () => {
-    const hz = HV.minHz + (HV.maxHz - HV.minHz) * r();
-    const ph = 2 * Math.PI * r();
-    const ph2 = 2 * Math.PI * r();
-    return (
-      0.7 * Math.sin(2 * Math.PI * hz * s + ph) + 0.3 * Math.sin(2 * Math.PI * hz * 1.7 * s + ph2)
-    );
-  };
-  const a = clamp(untilMs / HV.landMs, 0, 1) ** 3 * (0.8 + 0.2 * rank);
-  const x = wave() * HV.ampX * W * a;
-  return { x, y: wave() * HV.ampY * H * a };
-}
-
-/**
  * A lead word's own motion (§5.1), from time alone so a seek lands on it: it rises over max(1 s,
  * its length); while it is sung it swells to `peak` (in its first 140 ms, at most half of it), so
  * the word being sung is the largest on the line, and eases back to 1 over 300 ms after its end.
@@ -168,15 +126,10 @@ export const washAt = (line: LyricLine, t: number) => {
   return 1 - (1 - x) ** 4; // ponytail: quartic stand-in for --ease-out's cubic-bezier(.16,1,.3,1)
 };
 
-const DECAY_MS = D.tauMs * Math.log(50); // until the envelope reaches 0.02 (≈ 2 s)
-const BEHIND_MS = 300; // +3 dims to the corridor cap while it waits behind +2
-const ENTER_MS = 760; // the line.enter move (§6.1, §8.5): opacity blends over it
 const SEEK_JUMP_MS = 150; // §9.6, the AMLL rule
-const STAGGER = [0, 0, 1, 2, 3].map((k) =>
-  k === 0
-    ? 0
-    : Array.from({ length: k }, (_, j) => ST.baseMs / ST.decay ** j).reduce((a, b) => a + b, 0),
-); // by new rank + 1 → rank 0 at 0 ms, +1 at 50, +2 at ≈ 98, +3 (entering) at ≈ 143
+/** By new rank: past lines and rank 0 at 0 ms, +1 at 50, +2 at ≈ 98, +3 at ≈ 143, … (§6.3). */
+const staggerMs = (rank: number) =>
+  rank <= 0 ? 0 : (ST.baseMs * (1 - ST.decay ** -rank)) / (1 - 1 / ST.decay);
 
 /** What the field knows about a line's layout (from `layout.ts`, or synthetic in tests). */
 export interface LineBox {
@@ -186,30 +139,27 @@ export interface LineBox {
   words?: { rect: Rect; emphasis: Emphasis | null; graphemes: Rect[] }[];
 }
 
-export type Role = 'zone' | 'past' | 'bg';
+export type Role = 'zone' | 'past';
 
 export interface Inst {
   i: number;
-  role: Role;
+  role: Role; // zone: the active line and those to come; past: sung lines above them
   rank: number;
   x: Spring;
   y: Spring;
-  z: Spring;
+  z: Spring; // distance from the anchor, 0…1 (§4.1)
   params: SpringParams;
   delay: number; // ms until this line's new targets apply (stagger)
   tx: number;
   ty: number;
   tz: number;
   age: number; // ms since created, for the fade-in
-  enter: { from: number; age: number } | null; // bg → zone: opacity blends from its last value
-  behind: number; // 0…1: capped while it waits behind +2 (§4.3)
   leaving: { ms: number; age: number; from: number } | null;
   // Outputs, read by field.ts:
   scale: number;
   opacity: number;
-  blur: number; // own filter, px (bucketed background lines: 0)
-  bucket: number; // −1: main container
-  mix: number; // ink toward the room (§4.1)
+  blur: number; // own filter, px
+  mix: number; // unsung ink toward the room (§5.1)
   fade: number; // past lines: lit colour toward ink (§7)
   p: number[]; // sweep per lead word: time through it, 0…1
   edge: number[]; // where the line's soft edge is per lead word, for drawing (lineEdges)
@@ -220,8 +170,6 @@ export interface Inst {
   emph: Spring[][]; // per lead word, per grapheme: 0 rest … 1 full emphasis
   wy: number[]; // per lead word: drop below its rest, em (wordMotion)
   ws: number[]; // per lead word: scale
-  rx: Spring; // tilt, deg (§4.5): the active line only
-  ry: Spring;
 }
 
 export interface DotsView {
@@ -235,22 +183,16 @@ export type Mode = 'run' | 'scrub' | 'still';
 export interface FrameInput {
   t: number; // song time, ms
   dt: number; // ms
-  driftS: number; // Stage pool time, s (slows while paused)
   playing: boolean;
   mode: Mode; // still: deterministic frame (everything settled); scrub: springs bypassed
   W: number;
   H: number;
   features?: Features; // §12.1; none: unavailable
-  reduced?: boolean; // §10: crossfade in place, no travel, drift, background, beats or emphasis
+  reduced?: boolean; // §10: crossfade in place, no travel, beats or emphasis
 }
 
 export interface FieldOptions {
-  seed: number;
-  budget: number; // background lines (§8.1, by tier)
   dotsH: number; // the dots' box at rank 0 (one row at active size)
-  drift?: number; // approach drift fraction (§4.3), fixed; by default §12.3 raises it when intense
-  hover?: number; // hover amplitude (§4.5), default 1; tests measure the drift alone with 0
-  intensity?: IntensitySetting; // visuals.intensity (§12.2), default expressive
 }
 
 export class FieldModel {
@@ -263,16 +205,11 @@ export class FieldModel {
   key: { x: number; y: number } | null = null;
   beat: BeatTerms | null = null;
   private beats: Beat;
-  private bgS = Number.NaN; // background clock, s: the Stage drift clock at the passage's speed
-  private lastDriftS = 0;
   private lastT = Number.NaN;
   private lastMode: Mode = 'run';
   private lastField: FieldState | null = null;
   private pause = 1;
   private reduced = false;
-  private behind = false; // +3 waits at background depth behind +2 (§4.3)
-  private homes: BG.Point[] = [];
-  private homesFor = '';
   private dotsLeave = 0;
 
   readonly tl: Timeline;
@@ -284,7 +221,7 @@ export class FieldModel {
     this.boxes = boxes;
     this.opts = opts;
     this.lines = tl.lines;
-    this.beats = new Beat(opts.intensity);
+    this.beats = new Beat();
     this.coalesced = new Set(tl.coalesced);
     // When each line leaves the anchor: the first span in which it is behind the field.
     this.leftAt = tl.lines.map(() => Number.POSITIVE_INFINITY);
@@ -334,10 +271,6 @@ export class FieldModel {
       reduced,
     });
     this.beat = beat;
-    // The background's paths run on their own clock, so a passage can slow or speed them (§12.3).
-    if (f.mode === 'still' || Number.isNaN(this.bgS)) this.bgS = f.driftS;
-    else this.bgS += Math.max(0, f.driftS - this.lastDriftS) * beat.speed;
-    this.lastDriftS = f.driftS;
 
     const pauseTarget = f.playing ? 1 : G.paused;
     const pauseRate = (1 - G.paused) / (f.playing ? G.resumeMs : G.pauseMs);
@@ -348,81 +281,38 @@ export class FieldModel {
           ? Math.min(pauseTarget, this.pause + pauseRate * dt)
           : Math.max(pauseTarget, this.pause - pauseRate * dt);
 
-    // ---- who is where ----
-    const want = new Map<number, { role: Role; rank: number }>();
-    if (fs.active >= 0) want.set(fs.active, { role: 'zone', rank: 0 });
-    for (let k = 0; k < 3 && fs.next + k < n; k++)
-      want.set(fs.next + k, { role: 'zone', rank: k + 1 });
-    let past = 0;
-    for (let j = Math.min(fs.next, n) - 1; j >= 0 && past < D.maxPast; j--) {
-      if (j === fs.active) continue;
-      if (this.envelope(j, t) < 0.02) break;
-      want.set(j, { role: 'past', rank: -1 - past++ });
+    // ---- the column (§4) ----
+    // The active line (or the dots' box) at the anchor; lines to come stacked below it and sung
+    // lines above it, one gap apart, while their slots are within the margin of the stage.
+    const box = (i: number) => this.boxes[i] as LineBox;
+    const anchorY = LYRICS.anchorY * H;
+    const gap = C.gap * this.opts.dotsH;
+    const h0 = fs.active >= 0 ? box(fs.active).h : this.opts.dotsH;
+    const want = new Map<number, { role: Role; rank: number; y: number }>();
+    if (fs.active >= 0) want.set(fs.active, { role: 'zone', rank: 0, y: anchorY });
+    let edge = anchorY + h0 / 2;
+    for (let j = fs.next; j < n && edge < (1 + C.margin) * H; j++) {
+      const h = box(j).h;
+      want.set(j, { role: 'zone', rank: j - fs.next + 1, y: edge + gap + h / 2 });
+      edge += gap + h;
     }
-    for (let k = 0; k < (reduced ? 0 : this.opts.budget) && fs.next + 3 + k < n; k++)
-      want.set(fs.next + 3 + k, { role: 'bg', rank: 4 + k });
+    edge = anchorY - h0 / 2;
+    for (let j = Math.min(fs.next, n) - 1, rank = -1; j >= 0 && edge > -C.margin * H; j--) {
+      if (j === fs.active) continue;
+      const h = box(j).h;
+      want.set(j, { role: 'past', rank: rank--, y: edge - gap - h / 2 });
+      edge -= gap + h;
+    }
 
-    // Background places are a function of time, so a seek would teleport them: they fade out where
-    // they are and fade in at their new places instead (§4.5).
     for (const [i, inst] of this.insts)
-      if (
-        !want.has(i) ||
-        (want.get(i)?.role === 'bg' && (inst.role !== 'bg' || (seek && f.mode !== 'scrub')))
-      ) {
+      if (!want.has(i)) {
         this.insts.delete(i);
-        const decayed = !seek && inst.role === 'past' && this.envelope(i, t) < 0.02;
-        if (f.mode === 'still' || decayed) continue; // gone at once
-        // A third hand-over drops the oldest past line in 120 ms (§7); a seek fades out what does
-        // not belong to the new position in 160 ms (§9.6).
-        inst.leaving = {
-          ms: inst.role === 'past' && !seek ? D.dropMs : BUILD.seekOutMs,
-          age: 0,
-          from: inst.opacity,
-        };
+        if (f.mode === 'still') continue; // gone at once
+        // A line scrolled out of the column fades in 120 ms (§7); a seek fades out what does not
+        // belong to the new position in 160 ms (§9.6).
+        inst.leaving = { ms: seek ? BUILD.seekOutMs : D.dropMs, age: 0, from: inst.opacity };
         this.leaving.push(inst);
       }
-
-    // ---- targets ----
-    const anchorY = LYRICS.anchorY * H;
-    const box = (i: number) => this.boxes[i] as LineBox;
-    const zoneBoxes: Box[] = [];
-    const h0 = fs.active >= 0 ? box(fs.active).h : this.opts.dotsH;
-    const nextStart = this.lines[fs.next]?.start ?? t;
-    zoneBoxes.push({
-      start: fs.active >= 0 ? (this.lines[fs.active] as LyricLine).start : nextStart - Z.gapRefMs,
-      h: h0,
-    });
-    for (let k = 0; k < 3 && fs.next + k < n; k++)
-      zoneBoxes.push({
-        start: (this.lines[fs.next + k] as LyricLine).start,
-        h: box(fs.next + k).h,
-      });
-    const zt = zoneTargets(H, zoneBoxes, fs.phase, reduced ? 0 : (this.opts.drift ?? beat.drift));
-    this.behind = zt.background3;
-    // Vertical hover keeps the 0.02 H clearance: each line may use half the spare room on either
-    // side of it, so two neighbours swinging toward each other still never come nearer (§4.5).
-    const half = (k: number) => ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2;
-    const spare = (k: number) =>
-      k >= zoneBoxes.length
-        ? Number.POSITIVE_INFINITY
-        : (zt.y[k] as number) - half(k) - (zt.y[k - 1] as number) - half(k - 1) - Z.clearH * H;
-    const hoverRoomY = (rank: number) => Math.max(0, Math.min(spare(rank), spare(rank + 1)) / 2);
-
-    const corridorBottom = Math.max(
-      ...zt.y.map((y, k) => y + ((zoneBoxes[k] as Box).h * scaleAt(zt.z[k] as number)) / 2),
-    );
-    const corridor: BG.Corridor = {
-      x0: 0.12 * W,
-      x1: 0.88 * W,
-      y0: anchorY - h0 / 2 - 0.04 * H,
-      y1: corridorBottom + 0.02 * H,
-    };
-    const seed = this.opts.seed;
-    const homesKey = `${W}x${H}`;
-    if (homesKey !== this.homesFor) {
-      this.homes = BG.homes(seed, W, H);
-      this.homesFor = homesKey;
-    }
 
     const params = (i: number): SpringParams => {
       if (seek || slowHandover) return SPRINGS.slow;
@@ -432,76 +322,26 @@ export class FieldModel {
       return lineNormal(gap);
     };
 
-    let pastY = anchorY - h0 / 2; // top edge of the box below the next past line
-    const pastOrder = [...want]
-      .filter(([, w]) => w.role === 'past')
-      .sort((a, b) => b[1].rank - a[1].rank);
-    const pastTarget = new Map<number, { y: number; z: number }>();
-    for (const [i] of pastOrder) {
-      const dtLeft = t - (this.leftAt[i] as number);
-      const z = reduced ? 0 : D.zEnd * (1 - Math.exp(-dtLeft / D.tauMs));
-      const hs = box(i).h * scaleAt(z);
-      const y = pastY - D.gapH * H - hs / 2;
-      pastY = y - hs / 2;
-      pastTarget.set(i, { y: reduced ? y : y - D.rise * H * clamp(dtLeft / DECAY_MS, 0, 1), z });
-    }
-
     for (const [i, w] of want) {
       let inst = this.insts.get(i);
-      const b = box(i);
-      let tx: number;
-      let ty: number;
-      let tz: number;
-      let bgPlace: BG.Placement | null = null;
-      if (w.role === 'zone') {
-        ty = zt.y[w.rank] as number;
-        tz = zt.z[w.rank] as number;
-        tx = this.anchorX(b, tz, W);
-      } else if (w.role === 'past') {
-        const p = pastTarget.get(i) as { y: number; z: number };
-        ty = p.y;
-        tz = p.z;
-        tx = this.anchorX(b, tz, W);
-      } else {
-        bgPlace = BG.place(
-          seed,
-          this.homes,
-          i,
-          (this.lines[i] as LyricLine).start,
-          t,
-          this.bgS,
-          W,
-          H,
-          b,
-          corridor,
-          opacityAt,
-          scaleAt,
-          beat,
-        );
-        tx = bgPlace.x;
-        ty = bgPlace.y;
-        tz = bgPlace.z;
-      }
-      // The hover rides on the target, so the springs carry it through every change of rank.
-      const hover = this.opts.hover ?? 1;
-      if (w.role === 'zone' && w.rank > 0 && hover && !reduced && f.mode !== 'still') {
-        const until = (this.tl.handovers[i] as number) - t;
-        const h = hoverAt(seed, i, f.driftS, until, w.rank, W, H);
-        const room = hoverRoomY(w.rank);
-        tx += h.x * hover;
-        ty += clamp(h.y * hover, -room, room);
-      }
-
+      const tx = this.anchorX(box(i), W);
+      const ty = w.y;
+      const tz = Math.min(1, Math.abs(w.rank) * C.dz);
       if (!inst) {
-        inst = this.create(i, w.role, w.rank, tx, ty, tz, f.mode === 'still');
+        // A line entering the column joins its neighbour where it is, delay and spring included,
+        // so it scrolls in with it instead of waiting at its slot under a line still on its way.
+        const nb = direct ? undefined : this.insts.get(w.role === 'past' ? i + 1 : i - 1);
+        const off = nb ? nb.y.x - (want.get(nb.i)?.y ?? nb.y.x) : 0;
+        inst = this.create(i, w.role, w.rank, tx, ty + off, tz, f.mode === 'still');
+        if (nb) {
+          inst.y.v = nb.y.v;
+          inst.delay = nb.delay;
+          inst.params = nb.params;
+        }
         this.insts.set(i, inst);
       } else if (inst.rank !== w.rank || inst.role !== w.role) {
-        if (inst.role === 'bg' && w.role !== 'bg') {
-          inst.enter = { from: inst.opacity, age: 0 };
-          inst.bucket = -1;
-          inst.params = seek ? SPRINGS.slow : SPRINGS.enter;
-        } else inst.params = params(i);
-        inst.delay = seek || direct ? 0 : (STAGGER[clamp(w.rank, -1, 3) + 1] as number);
+        inst.params = params(i);
+        inst.delay = seek || direct ? 0 : staggerMs(w.rank);
         inst.role = w.role;
         inst.rank = w.rank;
       } else if (seek) {
@@ -515,7 +355,7 @@ export class FieldModel {
         inst.ty = ty;
         inst.tz = tz;
       }
-      if (w.role === 'bg' || direct) {
+      if (direct) {
         snap(inst.x, inst.tx);
         snap(inst.y, inst.ty);
         snap(inst.z, inst.tz);
@@ -524,21 +364,9 @@ export class FieldModel {
         step(inst.y, inst.ty, inst.params, dt);
         step(inst.z, inst.tz, inst.params, dt);
       }
-      // Tilt (§4.5): the active line leans back and swivels with its progress, flat at both ends
-      // of the line, so hand-overs never step; a seek turns it on the slow spring.
-      const lean = w.role === 'zone' && w.rank === 0 && !reduced ? fs.phase : -1;
-      const rx = lean < 0 ? 0 : -TILT.x * Math.sin(Math.PI * lean);
-      const ry = lean < 0 ? 0 : TILT.y * Math.sin(2 * Math.PI * lean);
-      if (direct) {
-        snap(inst.rx, rx);
-        snap(inst.ry, ry);
-      } else {
-        step(inst.rx, rx, SPRINGS.slow, dt);
-        step(inst.ry, ry, SPRINGS.slow, dt);
-      }
       inst.age += f.mode === 'still' ? BUILD.fadeInMs : dt;
       const shown = inst.opacity;
-      this.style(inst, w.role, t, f.dt, bgPlace, beat);
+      this.style(inst, w.role, t, beat);
       // §10: a hand-over is a crossfade in place, so opacity eases at a fixed rate.
       if (reduced && f.mode === 'run')
         inst.opacity = shown + clamp(inst.opacity - shown, -dt / R.crossfadeMs, dt / R.crossfadeMs);
@@ -561,20 +389,10 @@ export class FieldModel {
     return this.lastField?.active ?? -1;
   }
 
-  /** The decay envelope of past line `i` at `t`, from 1 (or +1's opacity if it never led). */
-  envelope(i: number, t: number) {
-    const left = this.leftAt[i] as number;
-    if (t < left) return 1;
-    const o = this.coalesced.has(i) ? opacityAt(Z.dz) : 1;
-    if (this.reduced) return o * Math.max(0, 1 - (t - left) / R.decayMs); // fade only (§10)
-    return o * Math.exp(-(t - left) / D.tauMs);
-  }
-
-  private anchorX(b: LineBox, z: number, W: number) {
-    const hw = (b.w * scaleAt(z)) / 2;
-    if (b.side === 'left') return 0.18 * W + hw;
-    if (b.side === 'right') return 0.82 * W - hw;
-    return W / 2;
+  /** The column's start edge, or its end for the second voice of a duet (§4.4). */
+  private anchorX(b: LineBox, W: number) {
+    const inset = ((1 - LYRICS.maxWidth) / 2) * W;
+    return b.side === 'right' ? W - inset - b.w / 2 : inset + b.w / 2;
   }
 
   private create(
@@ -601,13 +419,10 @@ export class FieldModel {
       ty: y,
       tz: z,
       age: still ? BUILD.fadeInMs : 0,
-      enter: null,
-      behind: 0,
       leaving: null,
       scale: 1,
       opacity: 0,
       blur: 0,
-      bucket: -1,
       mix: 0,
       fade: 0,
       p: words.map(() => 0),
@@ -621,67 +436,26 @@ export class FieldModel {
       ),
       wy: words.map(() => (this.reduced ? 0 : WM.liftEm)),
       ws: words.map(() => 1),
-      rx: spring(0),
-      ry: spring(0),
     };
   }
 
-  private style(
-    inst: Inst,
-    role: Role,
-    t: number,
-    dt: number,
-    bg: BG.Placement | null,
-    beat: BeatTerms,
-  ) {
+  private style(inst: Inst, role: Role, t: number, beat: BeatTerms) {
     const z = inst.z.x;
-    inst.scale = scaleAt(z);
     const born = this.reduced ? 1 : clamp(inst.age / BUILD.fadeInMs, 0, 1);
-    if (role === 'bg' && bg) {
-      inst.opacity = bg.opacity * born;
-      inst.bucket = bg.bucket;
-      inst.blur = 0;
-      inst.mix = inkMixAt(z);
-      inst.fade = 0;
-      return;
-    }
-    inst.bucket = -1;
-    if (role === 'past') {
-      const left = this.leftAt[inst.i] as number;
-      const k = 1 - Math.exp(-Math.max(0, t - left) / D.tauMs);
-      inst.opacity = this.envelope(inst.i, t) * born;
-      inst.blur = this.reduced ? 0 : D.blurMax * k;
-      inst.mix = 0;
-      inst.fade = k;
-      return;
-    }
-    let o = opacityAt(z);
-    // +3 waiting behind +2 overlaps it: it keeps the reading corridor's cap, so it reads as depth,
-    // not as a second line printed through the first (M3 design review). Eased per line, so
-    // neither the wait nor the hand-over that ends it pops.
-    const wait = inst.rank === 3 && this.behind ? 1 : 0;
-    const step = this.lastMode === 'still' ? 1 : dt / BEHIND_MS;
-    inst.behind = clamp(inst.behind + (wait ? step : -step), 0, 1);
-    o = lerp(o, Math.min(o, BG.CORRIDOR_OPACITY), inst.behind);
-    if (inst.enter) {
-      inst.enter.age += dt;
-      const k = clamp(inst.enter.age / ENTER_MS, 0, 1);
-      o = lerp(inst.enter.from, o, k * k * (3 - 2 * k));
-      if (k >= 1) inst.enter = null;
-    }
-    inst.opacity = o * born;
+    inst.opacity = opacityAt(z) * born;
+    inst.blur = blurAt(z);
     // Beats change size only, never opacity or luminance (§12.4): the active line pulses with the
-    // bass and +1…+3 lean toward the viewer; opacity and blur keep the unleaned depth.
-    inst.scale = inst.rank === 0 ? inst.scale * (1 + beat.pulse) : scaleAt(z - beat.lean);
-    inst.blur = inst.rank <= 3 ? Math.min(blurAt(z), LYRICS.depth.zoneBlurCap) : blurAt(z);
+    // bass.
+    inst.scale = inst.rank === 0 ? 1 + beat.pulse : 1;
     inst.mix = unlitMixAt(z);
-    inst.fade = 0;
+    // A sung line's lit colour dies into ink once it has left the anchor (§7).
+    const left = this.leftAt[inst.i] as number;
+    inst.fade = role === 'past' ? 1 - Math.exp(-Math.max(0, t - left) / D.tauMs) : 0;
   }
 
   private words(inst: Inst, t: number, f: FrameInput, settle: boolean) {
     const line = this.lines[inst.i] as LyricLine;
     const rank = inst.rank;
-    if (inst.role === 'bg') return; // background lines are not word-lit (§8.2)
     const words = line.words ?? [];
     for (let k = 0; k < words.length; k++) inst.p[k] = sweepAt(words[k] as LyricWord, t);
     const widths = (this.boxes[inst.i]?.words ?? []).map((b) => b.rect.w);
