@@ -161,9 +161,11 @@ deployment on the OptiPlex behind Caddy. **This is the first real listening expe
 **Dependencies:** M2, M4 (M3 for the full stage).
 
 **Progress:** tasks 1–11, 13 and 14 built and tested (2026-10-24; record in `docs/reviews/M5.md`).
-Task 12 **done**: deployed at https://echo.folk3s.com (2026-10-24, `docs/reviews/M5.md`). Open parts: gapless A/B and crossfade,
-Media Session next/previous, the server-backed Artists/Playlists/Starred tabs, sorts and search,
-queue reorder.
+Task 12 **done**: deployed at https://echo.folk3s.com (2026-10-24, `docs/reviews/M5.md`). Since built:
+gapless A/B (PLAY-04), Media Session next/previous, the server-backed Playlists and Starred tabs,
+album sorts, server search (`search3`) and queue reorder. Open parts (re-checked 2026-10-28):
+**crossfade** (the setting is shown disabled) and **Artists as a server list** (derived from the
+loaded albums today).
 
 **Tasks:**
 1. **Database:** better-sqlite3 (M1 finding: `node:sqlite` is not yet stable), the migrations runner, the
