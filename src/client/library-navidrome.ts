@@ -131,8 +131,8 @@ export function createNavidromeLibrary(): Library {
       if (loaded.has(id)) return byId.get(id);
       const r = await api<Rest<{ album?: SubAlbum }>>(
         `/navidrome/rest/getAlbum?id=${encodeURIComponent(id)}`,
-      ).catch(() => null);
-      const a = r?.['subsonic-response'].album;
+      );
+      const a = r['subsonic-response'].album;
       if (!a) return byId.get(id);
       const album = albumOf(a);
       loaded.add(id);

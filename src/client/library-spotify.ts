@@ -130,16 +130,15 @@ export function createSpotifyLibrary(): Library {
     },
     async loadAlbum(id) {
       if (loaded.has(id) || !id.startsWith(PREFIX)) return byId.get(id);
-      const a = await spotifyApi<SpAlbum>(`/v1/albums/${encodeURIComponent(raw(id))}`).catch(
-        () => null,
-      );
+      const a = await spotifyApi<SpAlbum>(`/v1/albums/${encodeURIComponent(raw(id))}`);
       if (!a) return byId.get(id);
-      // Albums over 50 tracks: the rest, page by page.
+      // Albums over 50 tracks: the rest, page by page. A failed page fails the load: a partial
+      // album is never stored as complete.
       let next = a.tracks?.next;
       while (next && a.tracks) {
         const page = await spotifyApi<{ items: SpTrack[]; next: string | null }>(
           new URL(next).pathname + new URL(next).search,
-        ).catch(() => null);
+        );
         a.tracks.items.push(...(page?.items ?? []));
         next = page?.next;
       }
@@ -211,6 +210,13 @@ export function createSpotifyLibrary(): Library {
   };
 }
 
+/** Both answers; one that failed counts as `none`. Both failing is an error, shown with Retry. */
+async function eitherOf<T>(a: Promise<T> | T, b: Promise<T> | T, none: T): Promise<[T, T]> {
+  const [x, y] = await Promise.allSettled([a, b]);
+  if (x.status === 'rejected' && y.status === 'rejected') throw x.reason;
+  return [x.status === 'fulfilled' ? x.value : none, y.status === 'fulfilled' ? y.value : none];
+}
+
 /**
  * Both libraries as one (SRCH-02): Navidrome's albums and results first, then Spotify's. Ids never
  * collide (Spotify's are prefixed), so each call goes to the library that owns the id.
@@ -239,20 +245,18 @@ export function combineLibraries(nav: Library | null, sp: Library): Library {
     loadAlbum: (id) => owner(id).loadAlbum?.(id) ?? Promise.resolve(owner(id).album(id)),
     ...(nav.sort && { sort: nav.sort, setSort: nav.setSort }),
     async playlists() {
-      const [a, b] = await Promise.all([
-        nav.playlists?.().catch(() => []) ?? [],
-        sp.playlists?.().catch(() => []) ?? [],
-      ]);
+      const [a, b] = await eitherOf(nav.playlists?.() ?? [], sp.playlists?.() ?? [], []);
       return [...a, ...b];
     },
     playlistTracks: (id) => owner(id).playlistTracks?.(id) ?? Promise.resolve([]),
     ...(nav.starred && { starred: nav.starred }),
     async searchRemote(q) {
       const none = { tracks: [], albums: [] };
-      const [a, b] = await Promise.all([
-        (nav.searchRemote?.(q) ?? Promise.resolve(nav.search(q))).catch(() => none),
-        sp.searchRemote?.(q).catch(() => none) ?? none,
-      ]);
+      const [a, b] = await eitherOf(
+        nav.searchRemote?.(q) ?? nav.search(q),
+        sp.searchRemote?.(q) ?? none,
+        none,
+      );
       return { tracks: [...a.tracks, ...b.tracks], albums: [...a.albums, ...b.albums] };
     },
     subscribe(onChange) {

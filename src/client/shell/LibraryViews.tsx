@@ -5,7 +5,7 @@ import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/contex
 import { positionNow } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
 import { Button, buttonClass, ProviderMark } from '../ui/controls.tsx';
-import { formatTime } from '../ui/logic.ts';
+import { formatTime, toastStore } from '../ui/logic.ts';
 import {
   AlbumGrid,
   AlbumTile,
@@ -74,8 +74,10 @@ function Albums({ albums }: { albums: Album[] }) {
   const library = useLibrary();
   // A server library lists albums before their tracks: fetch them on the first play.
   const play = async (a: Album) => {
-    const full = a.tracks.length ? a : ((await library?.loadAlbum?.(a.id)) ?? a);
-    c.playList(full.tracks, 0, albumContext(full));
+    const full = a.tracks.length ? a : await library?.loadAlbum?.(a.id).catch(() => null);
+    if (full === null) return toastStore.getState().show(strings.states.albumFailed);
+    const album = full ?? a;
+    c.playList(album.tracks, 0, albumContext(album));
   };
   const tile = (a: Album) => (
     <AlbumTile
@@ -225,19 +227,33 @@ export function AlbumView({ id }: { id: string }) {
   const a = library?.album(id);
   // A server library fetches the album (and its tracks) when it is opened: until then, its
   // skeleton, not "missing".
-  const [loading, setLoading] = useState(!!library?.loadAlbum);
-  useEffect(() => {
-    if (!library?.loadAlbum) return setLoading(false);
-    setLoading(true);
-    void library.loadAlbum(id).finally(() => setLoading(false));
+  const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(
+    library?.loadAlbum ? 'loading' : 'ready',
+  );
+  const fetchAlbum = useCallback(() => {
+    if (!library?.loadAlbum) return setLoad('ready');
+    setLoad('loading');
+    library.loadAlbum(id).then(
+      () => setLoad('ready'),
+      () => setLoad('error'),
+    );
   }, [library, id]);
+  useEffect(fetchAlbum, [fetchAlbum]);
   const s = strings.album;
   // While this album is what plays, its Play button controls it instead of restarting it.
   const status = usePlayer((p) => p.status);
   const isCurrent = useQueue((q) => q.contextSource?.kind === 'album' && q.contextSource.id === id);
   const live = isCurrent && status !== 'idle' && status !== 'ended';
   const playing = live && ['playing', 'loading', 'buffering'].includes(status);
-  if (!a && loading) return <AlbumLoading />;
+  if (!a && load === 'loading') return <AlbumLoading />;
+  // Its tracks could not be fetched: an error with Retry, never "0 tracks" or "not in your library".
+  if (load === 'error' && !a?.tracks.length)
+    return (
+      <>
+        <h1 tabIndex={-1}>{a?.title ?? s.title}</h1>
+        <BlockError what={strings.states.albumFailed} onRetry={fetchAlbum} />
+      </>
+    );
   if (!a)
     return (
       <>
@@ -272,7 +288,7 @@ export function AlbumView({ id }: { id: string }) {
           </div>
         </div>
       </header>
-      {loading && !a.tracks.length ? (
+      {load === 'loading' && !a.tracks.length ? (
         <RowsLoading label={a.title} />
       ) : (
         <TrackList label={a.title} ruled>

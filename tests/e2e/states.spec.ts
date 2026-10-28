@@ -64,6 +64,23 @@ test('Playlists and an album: rows load in bars; a failed list says so with Retr
   await expect(page.getByRole('heading', { name: 'Copper Rain' })).toBeVisible({ timeout: 10_000 });
 });
 
+// ON-UI-2: an album whose tracks failed to load said "0 tracks" (from the list) or "not in your
+// library" (opened directly), with no error and no way to retry.
+test('An album that fails to load says so with Retry, which recovers', async ({ page }) => {
+  await signedInWithNavidrome(page, 'st');
+  let fail = true;
+  await page.route('**/api/v1/navidrome/rest/getAlbum?*', (r) => (fail ? r.abort() : r.continue()));
+  await page.goto('/library/album/al-2');
+  const err = page.getByRole('alert').filter({ hasText: "Couldn't load this album." });
+  await expect(err).toBeVisible();
+  await expect(page.getByText('This album is not in your library.')).toHaveCount(0);
+  fail = false;
+  await err.getByRole('button', { name: 'Retry' }).click();
+  await expect(err).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Copper Rain' })).toBeVisible();
+  await expect(page.locator('.track-row:not(.track-row--loading)').first()).toBeVisible();
+});
+
 test('Offline: the library stays, with a freshness note while Navidrome is unreachable', async ({
   page,
 }) => {

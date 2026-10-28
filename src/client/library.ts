@@ -17,7 +17,10 @@ export interface Library {
   album(id: string): Album | undefined;
   /** Case-insensitive substring match on titles and artists (a stand-in for server search). */
   search(q: string): { tracks: Track[]; albums: Album[] };
-  /** Server libraries: fetches an album's tracks if they are not loaded yet. */
+  /**
+   * Server libraries: fetches an album's tracks if they are not loaded yet. Rejects when it could
+   * not ask (an error to show with Retry); undefined when the server has no such album.
+   */
   loadAlbum?(id: string): Promise<Album | undefined>;
   /** Server libraries: called whenever more of the library has arrived. */
   subscribe?(onChange: () => void): () => void;
