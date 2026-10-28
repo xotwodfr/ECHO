@@ -1264,6 +1264,17 @@
   transform-origin: bottom right;
 }
 
+/* A trigger near the left edge: the menu opens rightward from it instead of off the window. */
+.menu[data-align="start"] {
+  right: auto;
+  left: 0;
+  transform-origin: top left;
+}
+
+.menu[data-align="start"][data-placement="top"] {
+  transform-origin: bottom left;
+}
+
 .menu-item {
   display: flex;
   align-items: center;
@@ -1570,4 +1581,40 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 100%;
+}
+
+/* Forced colours (Windows High Contrast): the browser repaints backgrounds in system colours, which
+   erased every state drawn as a fill: a switch's handle and its "on", a slider's track and value,
+   shuffle and repeat's "on" dot. They keep their meaning in system colours. */
+@media (forced-colors: active) {
+  .toggle::after {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+
+  .toggle[aria-checked="true"] {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background: Highlight;
+  }
+
+  .toggle[aria-checked="true"]::after {
+    background: HighlightText;
+  }
+
+  .slider-rail {
+    outline: var(--rule) solid CanvasText;
+  }
+
+  .slider-fill,
+  :is(.dock-scrub, .dock-right) .slider-fill,
+  .slider-thumb {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .icon-btn[aria-pressed="true"]:not(.icon-btn--plain)::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
 }

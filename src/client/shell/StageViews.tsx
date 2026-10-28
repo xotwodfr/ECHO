@@ -1,7 +1,7 @@
-import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
-import { pinLyricsSource } from '../lyrics/loader.ts';
+import { isInstrumental, pinLyricsSource } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
 import { prefsStore } from '../prefs.ts';
 import { sessionStore } from '../session.ts';
@@ -185,7 +185,8 @@ function SourceMenu() {
 
 /** §9.4: Cover mode, "No lyrics found" beneath, and the sources tried behind ⓘ. */
 function MissingLyrics({ tried }: { tried: { source: string; outcome: string }[] }) {
-  const id = useId();
+  const title = usePlayer((p) => p.track?.title);
+  if (isInstrumental(title, tried)) return <CoverView />;
   const list = tried.length
     ? tried
         .map(
@@ -194,18 +195,22 @@ function MissingLyrics({ tried }: { tried: { source: string; outcome: string }[]
         )
         .join(' · ')
     : strings.stage.noAnswer;
+  // ⓘ is a disclosure (a native <details>): keyboard and touch reach it, and a screen reader hears
+  // "Sources tried, collapsed" rather than the glyph's name.
   return (
     <>
       <CoverView />
-      <p className="stage-missing">
+      <div className="stage-missing">
         {strings.stage.noLyrics}
-        <span className="stage-missing-info" title={list} aria-describedby={id}>
-          ⓘ
-        </span>
-        <span className="visually-hidden" id={id}>
-          {strings.stage.tried} {list}
-        </span>
-      </p>
+        <details className="stage-missing-info">
+          <summary aria-label={strings.stage.tried} title={list}>
+            ⓘ
+          </summary>
+          <p>
+            {strings.stage.tried} {list}
+          </p>
+        </details>
+      </div>
     </>
   );
 }

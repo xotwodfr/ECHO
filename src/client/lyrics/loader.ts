@@ -2,7 +2,7 @@ import type { LyricsDoc, Track } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { upcoming } from '../playback/queue.ts';
-import { lyricsStore } from '../stage/status.ts';
+import { lyricOffset, lyricsStore } from '../stage/status.ts';
 
 // The lyrics loader (LYRICS_INTEGRATION.md §6; LYRICS_EXPERIENCE.md §9.5, §9.13): follows the
 // current track, asks the server 250 ms after a change (rapid skips cost nothing), drops answers for
@@ -130,11 +130,9 @@ export function nudgeLyrics(direction: -1 | 1) {
   if (!s.trackKey || s.state === 'waiting') return;
   const offsetMs = Math.max(-10_000, Math.min(10_000, s.offsetMs + direction * OFFSET_STEP_MS));
   lyricsStore.setState({ offsetMs });
-  notify(
-    offsetMs === 0
-      ? 'Lyrics on time'
-      : `Lyrics ${offsetMs > 0 ? '+' : '−'}${Math.abs(offsetMs)} ms`,
-  );
+  // The toast shows the total, the global offset included (LYRICS_EXPERIENCE.md §9.13).
+  const total = lyricOffset();
+  notify(total === 0 ? 'Lyrics on time' : `Lyrics ${total > 0 ? '+' : '−'}${Math.abs(total)} ms`);
   const key = s.trackKey;
   clearTimeout(saves.get(key));
   saves.set(
@@ -159,6 +157,13 @@ export async function pinLyricsSource(source: string | null) {
   }).catch(() => undefined);
   current.reload();
 }
+
+/**
+ * No lyrics because there are no words: a source flagged it, or the title says "instrumental"
+ * (LYRICS_EXPERIENCE.md §9.4: the cover, with no message).
+ */
+export const isInstrumental = (title: string | undefined, tried: { outcome: string }[]) =>
+  tried.some((t) => t.outcome === 'instrumental') || /\binstrumental\b/i.test(title ?? '');
 
 /** The line being sung at `ms` (the scrubber's preview, PLAY-10). */
 export function lineAt(doc: LyricsDoc | null, ms: number) {

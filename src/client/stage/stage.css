@@ -454,6 +454,20 @@
 }
 
 .stage-missing-info {
+  display: inline;
   margin-left: var(--sp-2);
+}
+
+.stage-missing-info summary {
+  display: inline;
+  list-style: none;
   cursor: help;
+}
+
+.stage-missing-info summary::-webkit-details-marker {
+  display: none;
+}
+
+.stage-missing-info[open] p {
+  margin: var(--sp-2) 0 0;
 }

@@ -270,7 +270,10 @@ export class NavidromeProvider implements PlaybackProvider {
     });
     if (load !== this.loads) return; // superseded by a newer load
     // The source failed before its metadata: the error listener reloads it (REL-02) or reports it.
-    if (el.error) return;
+    if (el.error) {
+      this.loading = false;
+      return;
+    }
     if (!this.transcode && this.startMs) el.currentTime = this.startMs / 1000;
     this.loading = false;
     if (this.wantPlay) await this.play();
@@ -281,6 +284,18 @@ export class NavidromeProvider implements PlaybackProvider {
     if (!this.track) return;
     this.wantPlay = true;
     if (this.loading) return; // plays when the load completes
+    // The source failed for good (REL-02's reloads spent): Play asks for it again, from where it was.
+    if (this.el.error) {
+      this.retries = 0;
+      return this.load(this.track, {
+        // Where it was playing; or, if it never started, where it was asked to start.
+        startMs:
+          this.el.currentTime > 0 ? (this.offsetS + this.el.currentTime) * 1000 : this.startMs,
+        autoplay: true,
+        retry: true,
+        replayGain: this.gainMode,
+      });
+    }
     this.graph.start();
     await this.el.play().catch((e: unknown) => {
       this.emitState();

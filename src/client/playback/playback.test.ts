@@ -42,6 +42,19 @@ describe('queue', () => {
     expect(seen).toEqual(['t1', 't9', 't8', 't2', 't3', 't4', 't5']);
   });
 
+  // QA 2026-10-28: Previous then Next must return to the track you were on. With queued tracks
+  // left, back() put it at the front of the album list, which plays after all of them.
+  it('Previous then Next returns to the same track, with queued tracks or without', () => {
+    let q = Q.playNext(Q.playNext(start(), track(8)), track(9)); // queued: t9, t8
+    q = Q.advance(q) as QueueState; // t9 (from the queue); t8 still queued
+    q = Q.back(q) as QueueState; // t1
+    expect(q.now?.id).toBe('t1');
+    expect(Q.advance(q)?.now?.id).toBe('t9');
+    let r = Q.advance(start()) as QueueState; // t2, from the album, nothing queued
+    r = Q.back(r) as QueueState;
+    expect(Q.advance(r)?.now?.id).toBe('t2');
+  });
+
   it('"Play next" goes before earlier "Play next"s; "Add to queue" appends', () => {
     const q = Q.playNext(Q.playNext(Q.addToQueue(start(), track(7)), track(8)), track(9));
     expect(titles(q.nextUp)).toEqual(['t9', 't8', 't7']);
@@ -308,6 +321,24 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect(notes).toContain('This track could not be played. Skipped to the next.');
     fail('navidrome.auth'); // other errors are shown, not skipped
     expect(s()).toMatchObject({ status: 'error', track: { id: 't2' } });
+  });
+
+  // QA 2026-10-28: the last track failing said "Skipped to the next" with nothing to skip to.
+  it('the last track failing says what failed, not that it skipped', () => {
+    const { clock, provider, c, s, notes } = setup();
+    c.playList(album, album.length - 1, ctx);
+    clock.advance(100);
+    (
+      provider as unknown as { listeners: { error: Set<(e: object) => void> } }
+    ).listeners.error.forEach((cb) => {
+      cb({
+        code: 'navidrome.stream',
+        retriable: true,
+        userMessage: 'This track could not be played.',
+      });
+    });
+    expect(notes).toEqual(['This track could not be played.']);
+    expect(s()).toMatchObject({ status: 'error', track: { id: album.at(-1)?.id } });
   });
 
   it('plays a list: loading, then playing with the position advancing', () => {

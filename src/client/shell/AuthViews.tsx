@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { ApiError, api } from '../api.ts';
 import {
+  loadSession,
   login,
   logout,
   sessionExpired,
@@ -315,7 +316,11 @@ function NavidromeConnection() {
       {conn.connected ? (
         <>
           <p role="status">{status ?? n.connected(conn.serverVersion ?? '', 0)}</p>
-          {error && <p className="field-error">{error}</p>}
+          {error && (
+            <p className="field-error" role="alert">
+              {error}
+            </p>
+          )}
           <div className="actions">
             <Button variant="secondary" onClick={test}>
               {n.test}
@@ -353,8 +358,13 @@ function NavidromeConnection() {
             autoComplete="off"
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
-            error={error ?? undefined}
           />
+          {/* The form's own error (a wrong password, an address refused), not the API key field's. */}
+          {error && (
+            <p className="field-error" role="alert">
+              {error}
+            </p>
+          )}
           {status && <p role="status">{status}</p>}
           <Button variant="primary" type="submit" disabled={busy}>
             {n.save}
@@ -366,6 +376,18 @@ function NavidromeConnection() {
 }
 
 /** REL-05: the session ended; sign in again over the current screen, then carry on there. */
+/**
+ * Signed in again on the sheet: the same user carries on where they were (REL-05). Anyone else
+ * starts afresh, so nothing of the previous user's (screen, queue, preferences) reaches their account.
+ */
+async function resumeOrRestart() {
+  const before = sessionStore.getState();
+  const now = await loadSession();
+  if (before.status === 'signedIn' && now.status === 'signedIn' && before.username === now.username)
+    sessionExpired.setState({ expired: false });
+  else location.reload();
+}
+
 export function SessionExpiredSheet() {
   const { expired } = useStore(sessionExpired);
   return (
@@ -377,7 +399,7 @@ export function SessionExpiredSheet() {
       {expired && (
         <>
           <p>{s.expiredIntro}</p>
-          <LoginView onDone={() => sessionExpired.setState({ expired: false })} />
+          <LoginView onDone={() => void resumeOrRestart()} />
         </>
       )}
     </Sheet>

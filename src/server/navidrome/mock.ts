@@ -294,6 +294,9 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       case 'getScanStatus':
         return json(ok({ scanStatus: { scanning: false, count: SONGS.length } }));
       case 'getAlbumList2': {
+        // As Navidrome: the year sort needs its range (code 10, in an HTTP 200).
+        if (q.get('type') === 'byYear' && (!q.has('fromYear') || !q.has('toYear')))
+          return json(fail(10, "missing parameter: 'fromYear'"));
         const size = Math.min(500, Number(q.get('size') ?? 10));
         const offset = Number(q.get('offset') ?? 0);
         const sorted = [...ALBUMS].sort((a, b) =>

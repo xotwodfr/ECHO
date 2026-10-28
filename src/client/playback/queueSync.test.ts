@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { QueueState, Track } from '../../shared/types.ts';
+import { sessionExpired } from '../session.ts';
 import { ManualClock } from './clock.ts';
 import { createPlaybackController } from './controller.ts';
 import { FakeProvider } from './fake.ts';
@@ -90,5 +91,51 @@ describe('queue sync start', () => {
     c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
     await vi.advanceTimersByTimeAsync(2500); // the save's debounce
     expect(puts.map((p) => p.baseUpdatedAt)).toEqual([5]);
+  });
+
+  // QA 2026-10-28 (QUE-05): pause and seek change the position, not the queue, so nothing was saved
+  // and a reload came back wherever the last queue change had left it.
+  it('a pause or a seek saves the position', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    const puts: { positionMs: number }[] = [];
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') puts.push(JSON.parse(String(init.body)));
+      return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    await startQueueSync(c, () => {});
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    await vi.advanceTimersByTimeAsync(2500); // the queue change
+    clock.advance(30_000);
+    c.toggle(); // pause at 0:30
+    await vi.advanceTimersByTimeAsync(2500);
+    c.seek(100_000);
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(puts.slice(1).map((p) => Math.round(p.positionMs / 1000))).toEqual([30, 100]);
+  });
+
+  // QA 2026-10-28: with the session ended, a save would go out under whoever signs in next on the
+  // sheet: another user received this queue.
+  it('saves nothing while the session has ended', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    const puts: unknown[] = [];
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') puts.push(init.body);
+      return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    await startQueueSync(c, () => {});
+    sessionExpired.setState({ expired: true });
+    try {
+      c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(puts).toEqual([]);
+    } finally {
+      sessionExpired.setState({ expired: false });
+    }
   });
 });

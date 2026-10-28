@@ -38,6 +38,8 @@ export const strings = {
     placeholder: 'Search',
     prompt: 'Type to search your library.',
     none: (q: string) => `No results for “${q}”.`,
+    // Spoken by the results' live region; the visible text says "No results for …".
+    found: (n: number) => (n === 0 ? 'No results' : n === 1 ? '1 result' : `${n} results`),
     tracks: 'Tracks',
     albums: 'Albums',
   },
@@ -349,6 +351,9 @@ export const strings = {
     moveDown: 'Move down',
     remove: (title: string) => `Remove ${title}`,
     clear: 'Clear queue',
+    clearTitle: 'Clear the queue?',
+    clearConsequence: (n: number) =>
+      `${n === 1 ? 'The track' : `All ${n} tracks`} after the one playing will be removed. What is playing keeps playing.`,
   },
   ui: {
     play: 'Play',
@@ -389,6 +394,7 @@ export const strings = {
     noAnswer: 'No source answered in time.',
     outcomes: {
       notFound: 'not found',
+      instrumental: 'instrumental',
       mismatch: 'a different song',
       invalid: 'unusable',
       error: 'failed',

@@ -13,7 +13,7 @@ import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
 import { SpotifyProvider } from './playback/spotify.ts';
-import { loadPrefs, prefsStore } from './prefs.ts';
+import { loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { confirmReplace } from './shell/ReplaceQueue.tsx';
 import { Shell } from './shell/Shell.tsx';
@@ -102,6 +102,12 @@ const controller = createPlaybackController({
   notify: (message) => toastStore.getState().show(message),
   features,
 });
+
+// The volume is this device's, kept between visits (PLAYBACK_ARCHITECTURE.md §3).
+controller.setVolume(prefs().playback.volume);
+controller.player.subscribe(
+  (s, prev) => s.volume !== prev.volume && void setPref('playback', 'volume', s.volume),
+);
 
 // Lyrics: the guide tracks sing their fixture documents (LYRICS_EXPERIENCE.md §16) until the
 // lyrics loader arrives (M6).

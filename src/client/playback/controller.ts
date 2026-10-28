@@ -135,10 +135,11 @@ export function createPlaybackController(opts: {
   }
 
   function onError(e: import('../../shared/types.ts').AppError) {
-    // REL-02: a stream that fails after its reloads is skipped, with a toast.
+    // REL-02: a stream that fails after its reloads is skipped, with a toast; with nothing after
+    // it, the toast says what failed (Play asks for it again), never that it skipped.
     if (e.code === 'navidrome.stream') {
-      notify(strings.dock.skipped);
       const next = Q.advance(queue.getState());
+      notify(next ? strings.dock.skipped : e.userMessage);
       if (next) return load(next, true);
     }
     player.setState({ status: 'error', error: e });

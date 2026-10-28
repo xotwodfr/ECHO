@@ -156,7 +156,10 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       return c.json({ doc: deliver(doc), override: ov });
     }
     // A miss is remembered only when every source answered; errors and timeouts may pass.
-    if (tried.length && tried.every((t) => ['notFound', 'mismatch', 'invalid'].includes(t.outcome)))
+    if (
+      tried.length &&
+      tried.every((t) => ['notFound', 'instrumental', 'mismatch', 'invalid'].includes(t.outcome))
+    )
       await kept(deps.cache.putNegative(key, tried));
     return c.json({ error: 'not_found', tried, override: ov }, 404);
   });

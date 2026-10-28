@@ -9,13 +9,14 @@ export const CHROME_IDLE_MS = 3000;
 const INPUTS = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
 
 /**
- * Hides only when nothing needs the chrome: playback is running, no dialog (queue sheet) is open,
- * and keyboard focus is not on a control in it (focus is never hidden, WCAG 2.4.11).
+ * Hides only when nothing needs the chrome: playback is running, no dialog (queue sheet) or menu
+ * is open, and keyboard focus is not on a control in it, the attribution line's ⓘ included (focus
+ * is never hidden, WCAG 2.4.11).
  */
 function mayHide() {
-  if (document.querySelector('dialog[open]')) return false;
+  if (document.querySelector('dialog[open], .menu')) return false;
   const el = document.activeElement;
-  return !(el?.closest('.dock, .stage-chrome') && el.matches(':focus-visible'));
+  return !(el?.closest('.dock, .stage-chrome, .stage-attribution') && el.matches(':focus-visible'));
 }
 
 export function useChromeIdle(enabled: boolean) {

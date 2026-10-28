@@ -404,6 +404,16 @@ export const parsePlain = (text: string): Parsed => ({
  * track's end, fewer than 90% of starts in order) is downgraded to static text. Throws when nothing
  * is left.
  */
+/** A marker line that says the track has no words: "[au: instrumental]", "(Instrumental)", "纯音乐". */
+const INSTRUMENTAL =
+  /^[[(]?\s*(au:\s*)?(instrumental|纯音乐[，,]?\s*请欣赏|纯音乐)\s*[\])]?[.。]?$/i;
+
+/** Lyrics whose only words are such a marker: an instrumental, not lyrics (LYRICS_EXPERIENCE.md §9.4). */
+export const instrumentalOnly = (p: Pick<Parsed, 'lines'>) => {
+  const words = p.lines.map((l) => l.text.trim()).filter(Boolean);
+  return words.length === 1 && INSTRUMENTAL.test(words[0] as string);
+};
+
 export function repair(p: Parsed, trackDurationMs?: number): Parsed {
   const t = (x: number) => Math.max(0, Math.round(x));
   let lines = p.lines.map((l): LyricLine => {

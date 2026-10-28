@@ -34,6 +34,31 @@ test('no lyrics anywhere: Cover mode, "No lyrics found", the sources tried (LYR-
   await expect(page.getByText('No lyrics found')).toBeVisible({ timeout: 8000 });
   await expect(page.locator('.stage-cover')).toBeVisible();
   await expect(page.locator('.stage-missing')).toContainText(/Sources tried: .*LRCLIB: not found/);
+  // QA 2026-10-28: the list sat in a mouse-only tooltip; it is a disclosure keyboard and touch reach.
+  const info = page.locator('.stage-missing summary');
+  await info.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.stage-missing details')).toHaveAttribute('open', '');
+});
+
+// QA 2026-10-28: the source menu opened off the left edge (its trigger is near it), and the idle
+// chrome hid it, and the focused ⓘ, while it was open.
+test('the ⓘ source menu opens on screen and keeps the chrome while open', async ({ page }) => {
+  await signedInWithNavidrome(page);
+  await playAlbum(page, 'al-1');
+  await expect(page.locator('.stage-attribution')).toHaveText(/Lyrics from your library/);
+  const trigger = page.locator('.stage-attribution').getByRole('button');
+  await trigger.focus();
+  await page.keyboard.press('Enter');
+  const menu = page.getByRole('menu');
+  await expect(menu).toBeVisible();
+  const box = await menu.boundingBox();
+  const width = page.viewportSize()?.width ?? 0;
+  expect(box?.x).toBeGreaterThanOrEqual(0);
+  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(width);
+  await page.waitForTimeout(3800); // past the 3 s idle
+  await expect(menu).toBeVisible();
+  await expect(page.locator('.stage-attribution')).not.toHaveCSS('opacity', '0');
 });
 
 test('[ and ] shift the lyrics per track, with a toast, and it is kept (LYR-25)', async ({

@@ -318,7 +318,23 @@ function AlbumLoading() {
 const RESULTS = 6; // per group (PRODUCT_SPEC.md §6.4)
 const PROVIDER_NAMES = { navidrome: 'Navidrome', spotify: 'Spotify' } as const;
 
+/**
+ * Search results, with one live region that is always there (a status inserted together with its
+ * text is often not announced): the count, or "no results", while focus stays in the field.
+ */
 export function SearchResults({ q }: { q: string }) {
+  const [said, setSaid] = useState('');
+  return (
+    <>
+      <p className="visually-hidden" role="status">
+        {said}
+      </p>
+      <SearchBody q={q} onResult={setSaid} />
+    </>
+  );
+}
+
+function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => void }) {
   const library = useLibrary();
   const s = strings.search;
   // A server library searches on the server, 200 ms after typing stops (PRODUCT_SPEC.md §6.4).
@@ -332,17 +348,45 @@ export function SearchResults({ q }: { q: string }) {
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the search (Retry)
   useEffect(() => {
     if (!library?.searchRemote || !q) return;
+    // An answer that arrives after the query changed is dropped: a slow reply to "lana" must not
+    // replace the results for "lana del rey" (QA on a real library, 2026-10-28).
+    let current = true;
     const id = setTimeout(() => {
       void library.searchRemote?.(q).then(
-        (r) => setRemote({ q, ...r }),
-        () => setRemote({ q, tracks: [], albums: [], failed: true }),
+        (r) => current && setRemote({ q, ...r }),
+        () => current && setRemote({ q, tracks: [], albums: [], failed: true }),
       );
     }, 200);
-    return () => clearTimeout(id);
+    return () => {
+      current = false;
+      clearTimeout(id);
+    };
   }, [library, q, attempt]);
+  // The answer for `q`, once there is one (a server search answers 200 ms after typing stops).
+  const found = !q
+    ? null
+    : library?.searchRemote
+      ? remote?.q === q
+        ? remote
+        : null
+      : (library?.search(q) ?? { tracks: [], albums: [] });
+  // Grouped by provider, Navidrome first, each group marked when both appear (SRCH-02).
+  const groups = (['navidrome', 'spotify'] as const)
+    .map((provider) => ({
+      provider,
+      tracks: (found?.tracks ?? []).filter((t) => t.provider === provider).slice(0, RESULTS),
+      albums: (found?.albums ?? [])
+        .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
+        .slice(0, RESULTS),
+    }))
+    .filter((g) => g.tracks.length || g.albums.length);
+  const shown = groups.reduce((n, g) => n + g.tracks.length + g.albums.length, 0);
+  // A failure says so itself (role="alert"); nothing is said while there is no answer yet.
+  const said = !found || remote?.failed ? '' : s.found(shown);
+  useEffect(() => onResult(said), [onResult, said]);
   if (!q) return <p className="empty">{s.prompt}</p>;
-  if (library?.searchRemote && remote?.q !== q) return <RowsLoading label={s.tracks} media />;
-  if (remote?.failed)
+  if (!found) return <RowsLoading label={s.tracks} media />;
+  if (remote?.failed && remote.q === q)
     return (
       <BlockError
         what={strings.states.searchFailed}
@@ -352,18 +396,7 @@ export function SearchResults({ q }: { q: string }) {
         }}
       />
     );
-  const found = (library?.searchRemote ? remote : library?.search(q)) ?? { tracks: [], albums: [] };
-  if (!found.tracks.length && !found.albums.length) return <p className="empty">{s.none(q)}</p>;
-  // Grouped by provider, Navidrome first, each group marked when both appear (SRCH-02).
-  const groups = (['navidrome', 'spotify'] as const)
-    .map((provider) => ({
-      provider,
-      tracks: found.tracks.filter((t) => t.provider === provider).slice(0, RESULTS),
-      albums: found.albums
-        .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
-        .slice(0, RESULTS),
-    }))
-    .filter((g) => g.tracks.length || g.albums.length);
+  if (!shown) return <p className="empty">{s.none(q)}</p>;
   const marked = groups.length > 1;
   return groups.map((g) => {
     const mark = marked ? <ProviderMark>{PROVIDER_NAMES[g.provider]}</ProviderMark> : null;

@@ -120,6 +120,11 @@ test('the server library: sorts, playlists, starred and search (LIB-01, SRCH-01)
   await page.getByRole('button', { name: 'A–Z' }).click();
   await expect.poll(async () => (await titles())[0]).toContain('Copper Rain');
   await expect(page.getByRole('button', { name: 'A–Z' })).toHaveAttribute('aria-pressed', 'true');
+  // Year: Navidrome refuses the sort without its range (QA on a real library, 2026-10-28: the
+  // library emptied and said "Connect a server").
+  await page.getByRole('button', { name: 'Year' }).click();
+  await expect.poll(async () => (await titles())[0]).toContain('Glass Weather');
+  await expect(page.getByText('Nothing in your library yet')).toHaveCount(0);
 
   await page.goto('/library/playlists');
   await page.getByRole('button', { name: 'Evening' }).click();
@@ -132,6 +137,11 @@ test('the server library: sorts, playlists, starred and search (LIB-01, SRCH-01)
   await expect(page.getByRole('heading', { name: 'Albums' })).toBeVisible();
   await expect(page.locator('.tile', { hasText: 'Glass Weather' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Glass Weather 3')).toBeVisible(); // tracks from search3
+  // QA 2026-10-28: results were never announced; one live region says how many, or none.
+  const said = page.getByRole('main').getByRole('status');
+  await expect(said).toHaveText(/^\d+ results?$/);
+  await page.goto('/search?q=zzqqxx');
+  await expect(said).toHaveText('No results');
 });
 
 test('album tracks hand over without a gap (PLAY-04, two voices)', async ({ page }) => {

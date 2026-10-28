@@ -150,12 +150,19 @@ export function Menu({
   const disabled = items.map((i) => !!i.disabled);
 
   // Open upward when the menu would run past the bottom of its scroll container (the canvas
-  // ends above the dock) or the window. Measured before paint, so it never flashes.
+  // ends above the dock) or the window; align to the trigger's left edge when, right-aligned, it
+  // would leave the window on the left (a trigger near the left edge). Measured before paint, so
+  // it never flashes.
   const menu = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
+  const [align, setAlign] = useState<'end' | 'start'>('end');
   useLayoutEffect(() => {
     const el = menu.current;
-    if (!open || !el) return setPlacement('bottom');
+    if (!open || !el) {
+      setAlign('end');
+      return setPlacement('bottom');
+    }
+    if (el.getBoundingClientRect().left < 0) setAlign('start');
     let limit = window.innerHeight;
     for (let p = el.parentElement; p; p = p.parentElement) {
       if (/(auto|scroll|hidden)/.test(getComputedStyle(p).overflowY)) {
@@ -227,6 +234,7 @@ export function Menu({
           id={menuId}
           aria-label={label}
           data-placement={placement}
+          data-align={align}
           onKeyDown={onMenuKey}
         >
           {items.map((item, i) => (

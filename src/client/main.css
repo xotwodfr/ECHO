@@ -986,3 +986,18 @@ button {
 .queue-upcoming + .btn {
   margin-top: var(--sp-4);
 }
+
+/* Forced colours: the current tab's indicator and the chosen option of a button group were fills,
+   which the browser repaints away; they take the system highlight instead (WCAG 1.4.11). */
+@media (forced-colors: active) {
+  .tabs a[aria-current="page"]::after {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+
+  .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

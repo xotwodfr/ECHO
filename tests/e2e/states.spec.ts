@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_PASSWORD, faults, signedInWithNavidrome } from './helpers.ts';
+import { E2E_PASSWORD, faults, playAlbum, signedIn, signedInWithNavidrome } from './helpers.ts';
 
 // DS-07 (DESIGN_SYSTEM.md §10): loading in flat bars at the final size with no layout shift, errors
 // inside their block with Retry, a freshness note while Navidrome is unreachable. REL-05: an ended
@@ -113,4 +113,31 @@ test('REL-05: an ended session opens the sign-in sheet over the same screen and 
   await expect(sheet).toBeHidden();
   await expect(page).toHaveURL(/\/library\/album\/al-1$/);
   await expect(page.getByRole('heading', { name: 'Harbour Lights' })).toBeVisible();
+});
+
+// QA 2026-10-28: a different person signing in on that sheet kept the previous user's screen and
+// role, and their queue was saved into the new account. Now anyone else starts afresh.
+test('REL-05: someone else signing in on the sheet starts afresh, with nothing of the last user', async ({
+  page,
+  browser,
+}) => {
+  await signedInWithNavidrome(page, 'st');
+  await playAlbum(page, 'al-1');
+  // Another person, with an account of their own (made in a separate context).
+  const other = await (await browser.newContext()).newPage();
+  const name = await signedIn(other, 'st2');
+  await other.context().close();
+  await page.goto('/library/album/al-1');
+  await expect(page.getByRole('heading', { name: 'Harbour Lights' })).toBeVisible();
+  await page.context().clearCookies(); // the first session ends
+  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  const sheet = page.getByRole('dialog', { name: 'Sign in again' });
+  await expect(sheet).toBeVisible();
+  await sheet.getByLabel('Username').fill(name);
+  await sheet.getByLabel('Password', { exact: true }).fill(E2E_PASSWORD);
+  await sheet.getByRole('button', { name: 'Sign in' }).click();
+  // A fresh start as the other user: nothing playing, and their own (empty) queue on the server.
+  await expect(page.getByRole('region', { name: 'Player' })).toHaveAttribute('data-status', 'idle');
+  const saved = await (await page.request.get('/api/v1/me/queue')).json();
+  expect(saved.queue).toBeNull();
 });

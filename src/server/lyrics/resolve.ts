@@ -1,5 +1,5 @@
 import type { LyricsDoc, SyncLevel } from '../../shared/types.ts';
-import { LyricsInvalid, repair } from './parse.ts';
+import { instrumentalOnly, LyricsInvalid, repair } from './parse.ts';
 import type { Candidate, LookupInput, Outcome, Source, SourceId } from './sources.ts';
 
 // The lyric resolver (LYRICS_INTEGRATION.md §4, §6): all eligible sources in parallel, each with
@@ -30,7 +30,15 @@ const BREAKER_MS = 10 * 60_000;
 
 export type Tried = {
   source: SourceId;
-  outcome: 'found' | 'notFound' | 'error' | 'timeout' | 'invalid' | 'mismatch' | 'skipped';
+  outcome:
+    | 'found'
+    | 'notFound'
+    | 'instrumental'
+    | 'error'
+    | 'timeout'
+    | 'invalid'
+    | 'mismatch'
+    | 'skipped';
 };
 
 export interface Clock {
@@ -169,9 +177,12 @@ export function createResolver(opts: { clock?: Clock; random?: () => number } = 
     }
     failures.set(s.id, 0);
     if (o.kind === 'error') return { tried: { source: s.id, outcome: 'error' } };
-    if (o.kind === 'notFound') return { tried: { source: s.id, outcome: 'notFound' } };
+    if (o.kind === 'notFound')
+      return { tried: { source: s.id, outcome: o.instrumental ? 'instrumental' : 'notFound' } };
     if (!matches(o.candidate, input, s.metadataKeyed))
       return { tried: { source: s.id, outcome: 'mismatch' } };
+    // Words that only say there are none ("[au: instrumental]", "(Instrumental)") are a flag.
+    if (instrumentalOnly(o.candidate)) return { tried: { source: s.id, outcome: 'instrumental' } };
     try {
       return {
         tried: { source: s.id, outcome: 'found' },

@@ -94,6 +94,10 @@ export function advance(q: QueueState): QueueState | null {
 export function back(q: QueueState): QueueState | null {
   const prev = q.history.at(-1);
   if (!prev) return null;
+  // Queued tracks play before the context, so with any left the current one goes before them:
+  // Previous then Next always returns to it.
+  if (q.now && q.nextUp.length)
+    return { ...q, now: prev, nextUp: [q.now, ...q.nextUp], history: q.history.slice(0, -1) };
   const context = q.now ? [q.now, ...q.context] : q.context;
   const shuffleOrder = q.shuffleOrder && [
     ...(q.now ? [0] : []),

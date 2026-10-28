@@ -477,7 +477,50 @@ test('the queue reorders with Alt+arrows and its menu, removes and clears (QUE-0
     .poll(order)
     .toEqual(['Low Tide Radio', 'Lighthouse Keeper', 'The Long Way Home', 'Moorings']);
 
+  // Destructive, with confirmation (DESIGN_SYSTEM.md §9): Cancel keeps everything.
   await sheet.getByRole('button', { name: 'Clear queue' }).click();
+  const confirm = page.getByRole('alertdialog', { name: 'Clear the queue?' });
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
+  await expect
+    .poll(order)
+    .toEqual(['Low Tide Radio', 'Lighthouse Keeper', 'The Long Way Home', 'Moorings']);
+  await sheet.getByRole('button', { name: 'Clear queue' }).click();
+  await confirm.getByRole('button', { name: 'Clear queue' }).click();
   await expect(rest).toHaveCount(0);
   await expect(title(page)).toHaveText('Ferry at Six'); // what plays keeps playing
+});
+
+// QA 2026-10-28: an open sheet makes the page behind it inert, but S and R still changed shuffle and
+// repeat behind the queue sheet. Shortcuts wait until it closes.
+test('shortcuts do nothing behind an open sheet, and work again once it closes', async ({
+  page,
+}) => {
+  await start(page);
+  await playAlbum(page, 'Harbour Lights');
+  const shuffle = dock(page).getByRole('button', { name: 'Shuffle' });
+  await dock(page).getByRole('button', { name: 'Queue' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Queue' });
+  await expect(sheet).toBeVisible();
+  await page.keyboard.press('s');
+  await expect(shuffle).toHaveAttribute('aria-pressed', 'false');
+  await page.keyboard.press('Escape');
+  await expect(sheet).toBeHidden();
+  await page.keyboard.press('s');
+  await expect(shuffle).toHaveAttribute('aria-pressed', 'true');
+});
+
+// QA on a real library, 2026-10-28: the volume came back at 100 % after every reload.
+test('the volume is kept on this device', async ({ page }) => {
+  await start(page);
+  await playAlbum(page, 'Harbour Lights');
+  const volume = dock(page).getByRole('slider', { name: 'Volume' });
+  await volume.focus();
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowDown');
+  const set = await volume.getAttribute('aria-valuenow');
+  expect(Number(set)).toBeLessThan(100);
+  await page.reload();
+  await expect(dock(page).getByRole('slider', { name: 'Volume' })).toHaveAttribute(
+    'aria-valuenow',
+    String(set),
+  );
 });

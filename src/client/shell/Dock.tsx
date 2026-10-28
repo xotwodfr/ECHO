@@ -19,7 +19,7 @@ import {
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
-import { Sheet } from '../ui/overlays.tsx';
+import { ConfirmDialog, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
 import { Link, useView } from './link.tsx';
 import { keyTarget, type Shortcut, shortcutFor } from './shortcuts.ts';
@@ -234,6 +234,9 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
       if (e.defaultPrevented) return;
       const afterG = performance.now() - gAt < 1500;
       const action = shortcutFor(e, keyTarget(e.target), stage, afterG);
+      // A modal sheet or dialog makes the page behind it inert, but its keys bubble here all the
+      // same: only the keys that close a sheet (Q, ?) still act.
+      if (document.querySelector('dialog:modal') && action !== 'queue' && action !== 'help') return;
       if (afterG && action !== 'goPrefix') gAt = Number.NEGATIVE_INFINITY;
       if (!action) return;
       e.preventDefault();
@@ -253,6 +256,7 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const then = orderedContext(q);
   const total = q.nextUp.length + then.length;
   const playing = status !== 'ended' && status !== 'idle';
+  const [clearing, setClearing] = useState(false);
   const s = strings.queue;
   // Upcoming rows can be moved (Alt+↑/↓, drag, the ⋯ menu) and removed (QUE-01).
   const edit = (i: number, title: string) =>
@@ -303,40 +307,55 @@ function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
     />
   );
   return (
-    <Sheet open={open} onClose={onClose} title={s.title}>
-      {/* Rows only while open: nothing to render (or re-render) behind a closed sheet. */}
-      {open && !q.now && <p className="empty">{s.empty}</p>}
-      {open && q.now && (
-        <>
-          <h3 className="sheet-section">{s.now}</h3>
-          <TrackList label={s.now}>{row(q.now, null)}</TrackList>
-        </>
-      )}
-      <div className="queue-upcoming">
-        {open && q.nextUp.length > 0 && (
+    <>
+      <Sheet open={open} onClose={onClose} title={s.title}>
+        {/* Rows only while open: nothing to render (or re-render) behind a closed sheet. */}
+        {open && !q.now && <p className="empty">{s.empty}</p>}
+        {open && q.now && (
           <>
-            <h3 className="sheet-section">{s.nextUp}</h3>
-            <TrackList label={s.nextUp}>{q.nextUp.map((t, i) => row(t, i))}</TrackList>
+            <h3 className="sheet-section">{s.now}</h3>
+            <TrackList label={s.now}>{row(q.now, null)}</TrackList>
           </>
         )}
-        {open && then.length > 0 && (
-          <>
-            <h3 className="sheet-section">{s.rest(q.contextSource?.title)}</h3>
-            <TrackList label={s.rest(q.contextSource?.title)}>
-              {then.map((t, i) => row(t, q.nextUp.length + i))}
-            </TrackList>
-          </>
+        <div className="queue-upcoming">
+          {open && q.nextUp.length > 0 && (
+            <>
+              <h3 className="sheet-section">{s.nextUp}</h3>
+              <TrackList label={s.nextUp}>{q.nextUp.map((t, i) => row(t, i))}</TrackList>
+            </>
+          )}
+          {open && then.length > 0 && (
+            <>
+              <h3 className="sheet-section">{s.rest(q.contextSource?.title)}</h3>
+              <TrackList label={s.rest(q.contextSource?.title)}>
+                {then.map((t, i) => row(t, q.nextUp.length + i))}
+              </TrackList>
+            </>
+          )}
+        </div>
+        {open && q.provider === 'spotify' && (
+          <p className="queue-note">{strings.spotify.queueNote}</p>
         )}
-      </div>
-      {open && q.provider === 'spotify' && (
-        <p className="queue-note">{strings.spotify.queueNote}</p>
-      )}
-      {open && canEdit && total > 0 && (
-        <Button variant="tertiary" onClick={c.clear}>
-          {s.clear}
-        </Button>
-      )}
-    </Sheet>
+        {/* Destructive, with confirmation (DESIGN_SYSTEM.md §9). */}
+        {open && canEdit && total > 0 && (
+          <Button variant="destructive" onClick={() => setClearing(true)}>
+            {s.clear}
+          </Button>
+        )}
+      </Sheet>
+      {/* Beside the sheet, not inside it: the sheet's own <dialog> must not see this one close. */}
+      <ConfirmDialog
+        open={clearing}
+        title={s.clearTitle}
+        consequence={s.clearConsequence(total)}
+        confirmLabel={s.clear}
+        onConfirm={() => {
+          setClearing(false);
+          c.clear();
+        }}
+        onCancel={() => setClearing(false)}
+      />
+    </>
   );
 }
 

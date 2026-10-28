@@ -208,7 +208,11 @@ export function AlbumTileSkeleton() {
  * floor(1168 / 184) = 6 columns of (1152 − 5·16) / 6 = 178.67px.
  */
 export function AlbumGrid({ children }: { children?: ReactNode }) {
-  return <ul className="album-grid">{children}</ul>;
+  return (
+    <ul className="album-grid" aria-label={strings.search.albums}>
+      {children}
+    </ul>
+  );
 }
 
 /** Lists longer than this are windowed (LIB-02: ≤ 150 tiles in the DOM at 5,000 albums). */
@@ -267,6 +271,7 @@ export function WindowedAlbumGrid<T>({
     <ul
       ref={ref}
       className="album-grid"
+      aria-label={strings.search.albums}
       style={{ paddingTop: before, paddingBottom: after } as CSSProperties}
     >
       {items.slice(range.from, range.to).map(render)}

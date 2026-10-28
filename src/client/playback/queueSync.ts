@@ -1,5 +1,6 @@
 import type { QueueState } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
+import { sessionExpired } from '../session.ts';
 import type { PlaybackController } from './controller.ts';
 import { positionNow } from './controller.ts';
 
@@ -47,6 +48,8 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
   let timer: ReturnType<typeof setTimeout> | null = null;
   async function save(keepalive = false) {
     timer = null;
+    // The session ended: whoever signs in next must not receive this queue (REL-05).
+    if (sessionExpired.getState().expired) return;
     // Spotify keeps its own queue across devices; the saved queue stays the library's.
     if (c.queue.getState().provider === 'spotify') return;
     const p = c.player.getState();
@@ -74,6 +77,13 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
     timer = setTimeout(() => void save(), SAVE_DEBOUNCE_MS);
   };
   c.queue.subscribe(later);
+  // Play, pause and seek move the saved position without changing the queue (QUE-05). A seek is a
+  // jump in position; the regular position updates are not.
+  c.player.subscribe((s, prev) => {
+    const now = performance.now();
+    if (s.status !== prev.status || Math.abs(positionNow(s, now) - positionNow(prev, now)) > 2000)
+      later();
+  });
   setInterval(() => c.player.getState().status === 'playing' && later(), SAVE_EVERY_MS);
   // Leaving the page: the pending save goes out even as the page unloads.
   addEventListener('pagehide', () => timer && void save(true));

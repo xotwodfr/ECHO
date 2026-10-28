@@ -259,6 +259,47 @@ describe('match validation (LI-03)', () => {
   });
 });
 
+// QA on a real library, 2026-10-28: embedded lyrics reading only "[au: instrumental]" were shown as a
+// lyric sheet. A marker like that is an instrumental flag, never lyrics.
+describe('instrumentals (LYRICS_EXPERIENCE.md §9.4)', () => {
+  it('words that only say "instrumental" are a flag, not lyrics', async () => {
+    const r = createResolver();
+    for (const marker of [
+      '[au: instrumental]',
+      '(Instrumental)',
+      'Instrumental',
+      '纯音乐，请欣赏',
+    ]) {
+      const out = await settle(
+        r.resolve(INPUT, [
+          fake('navidrome', [
+            {
+              delay: 0,
+              outcome: found(cand('navidrome', 'none', { lines: [{ text: marker, start: 0 }] })),
+            },
+          ]),
+        ]),
+      );
+      expect([marker, out.doc]).toEqual([marker, null]);
+      expect(out.tried).toEqual([{ source: 'navidrome', outcome: 'instrumental' }]);
+    }
+  });
+
+  it('a song that merely mentions it is still a song', async () => {
+    const r = createResolver();
+    const lines = [
+      { text: 'An instrumental break', start: 0 },
+      { text: 'and then we sing', start: 0 },
+    ];
+    const out = await settle(
+      r.resolve(INPUT, [
+        fake('navidrome', [{ delay: 0, outcome: found(cand('navidrome', 'none', { lines })) }]),
+      ]),
+    );
+    expect(out.doc?.source).toBe('navidrome');
+  });
+});
+
 describe('timeouts, retries and the breaker (LI-04)', () => {
   it('a hanging source times out at its own limit; the answer never takes more than 4.5 s', async () => {
     const r = createResolver();

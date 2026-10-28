@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla';
 import { api } from './api.ts';
 
 // The user's preferences (SETTINGS_AND_SECURITY.md §7.1). Most follow the user across devices and
-// live on the server (`/me/settings`); `visuals.quality` and `playback.quality` differ per device
+// live on the server (`/me/settings`); `visuals.quality`, `playback.quality` and the volume differ per device
 // (a gaming PC and a laptop) and live in this browser's localStorage. Defaults apply until the
 // server answers, and without a server at all (the fixture shell).
 
@@ -13,6 +13,7 @@ export interface Prefs {
     replayGain: 'off' | 'track' | 'album' | 'auto';
     scrobble: boolean;
     quality: 'auto' | 'raw' | '320' | '192' | '128'; // per device
+    volume: number; // 0..1, per device (its own speakers)
   };
   lyrics: {
     sizeScale: 0.85 | 1 | 1.15 | 1.3;
@@ -38,6 +39,7 @@ export const DEFAULT_PREFS: Prefs = {
     replayGain: 'auto',
     scrobble: true,
     quality: 'auto',
+    volume: 1,
   },
   lyrics: {
     sizeScale: 1,
@@ -59,7 +61,7 @@ export const DEFAULT_PREFS: Prefs = {
 type Section = keyof Prefs;
 /** Keys kept per device, in localStorage, never sent to the server. */
 const DEVICE: { [S in Section]?: (keyof Prefs[S])[] } = {
-  playback: ['quality'],
+  playback: ['quality', 'volume'],
   visuals: ['quality'],
 };
 const isDevice = (s: Section, k: string) => (DEVICE[s] as string[] | undefined)?.includes(k);

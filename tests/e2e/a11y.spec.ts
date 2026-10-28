@@ -233,3 +233,40 @@ test('A11Y-09: at 200% zoom (1440×900) nothing is lost', async ({ browser }) =>
   await expect(dock(page).getByRole('button', { name: 'Queue' })).toBeVisible();
   await ctx.close();
 });
+
+// QA 2026-10-28 (WCAG 1.4.11): in forced colours (Windows High Contrast) every state drawn as a fill
+// was repainted away: the chosen option, a switch's state, the current tab, the seek track.
+test('forced colours: chosen options, switches, the current tab and the seek track stay visible', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'forced-colours emulation is Chromium’s');
+  await page.emulateMedia({ forcedColors: 'active' });
+  await signedInWithNavidrome(page, 'fc');
+  await playAlbum(page, 'al-1');
+  await page.goto('/settings/preferences');
+  const bg = (sel: string) =>
+    page
+      .locator(sel)
+      .first()
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+  const fill = (sel: string, pseudo: string) =>
+    page
+      .locator(sel)
+      .first()
+      .evaluate((el, p) => getComputedStyle(el, p).backgroundColor, pseudo);
+  // A button group: the chosen option differs from the others.
+  expect(await bg('.view-switch button[aria-pressed="true"]')).not.toBe(
+    await bg('.view-switch button[aria-pressed="false"]'),
+  );
+  // Switches: on differs from off, and the handle is drawn in both.
+  expect(await bg('.toggle[aria-checked="true"]')).not.toBe(
+    await bg('.toggle[aria-checked="false"]'),
+  );
+  expect(await fill('.toggle[aria-checked="false"]', '::after')).not.toBe(
+    await bg('.toggle[aria-checked="false"]'),
+  );
+  // The current tab's indicator, and the dock's seek fill.
+  expect(await fill('.tabs a[aria-current="page"]', '::after')).not.toBe('rgba(0, 0, 0, 0)');
+  expect(await bg('.dock .slider-fill')).not.toBe(await bg('.dock'));
+});

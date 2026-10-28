@@ -3,8 +3,16 @@ import type { LyricsDoc, Track } from '../../shared/types.ts';
 import { ManualClock } from '../playback/clock.ts';
 import { createPlaybackController } from '../playback/controller.ts';
 import { FakeProvider } from '../playback/fake.ts';
+import { prefsStore } from '../prefs.ts';
 import { lyricsStore } from '../stage/status.ts';
-import { DEBOUNCE_MS, GIVE_UP_MS, lineAt, nudgeLyrics, startLyricsLoader } from './loader.ts';
+import {
+  DEBOUNCE_MS,
+  GIVE_UP_MS,
+  isInstrumental,
+  lineAt,
+  nudgeLyrics,
+  startLyricsLoader,
+} from './loader.ts';
 
 // LYRICS_INTEGRATION.md §6 and LYRICS_EXPERIENCE.md §9.5 on the client: debounce, stale answers
 // dropped, the 6 s give-up and the late answer, the scrubber's line lookup.
@@ -143,6 +151,52 @@ describe('the lyrics loader', () => {
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  // QA 2026-10-28: with a global offset set, the toast showed the track's part only.
+  it('the toast shows the total offset, the global one included', async () => {
+    vi.stubGlobal('fetch', async () => new Response('{}'));
+    const toasts: string[] = [];
+    prefsStore.setState({
+      ...prefsStore.getState(),
+      lyrics: { ...prefsStore.getState().lyrics, globalOffsetMs: 200 },
+    });
+    try {
+      const clock = new ManualClock();
+      const c = createPlaybackController({
+        provider: new FakeProvider({ clock, loadMs: 1 }),
+        clock,
+      });
+      startLyricsLoader(
+        c,
+        (m) => toasts.push(m),
+        async (t) => ({
+          doc: doc(t.key),
+          tried: [],
+          offsetMs: 0,
+          pinnedSource: null,
+        }),
+      );
+      c.playList(album, 0, ctx);
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS + 20);
+      nudgeLyrics(1);
+      expect(toasts.at(-1)).toBe('Lyrics +250 ms');
+    } finally {
+      prefsStore.setState({
+        ...prefsStore.getState(),
+        lyrics: { ...prefsStore.getState().lyrics, globalOffsetMs: 0 },
+      });
+      vi.unstubAllGlobals();
+    }
+  });
+
+  // §9.4: an instrumental shows the cover with no "No lyrics found" (QA on a real library).
+  it('instrumentals: flagged by a source, or "instrumental" in the title', () => {
+    const none = [{ outcome: 'notFound' }];
+    expect(isInstrumental('House Of Balloons (Instrumental)', none)).toBe(true);
+    expect(isInstrumental('Aerodynamic', [{ outcome: 'instrumental' }])).toBe(true);
+    expect(isInstrumental('Instrumentalist', none)).toBe(false);
+    expect(isInstrumental('Dreams', none)).toBe(false);
   });
 
   it('the scrubber’s line: the last line started by then', () => {

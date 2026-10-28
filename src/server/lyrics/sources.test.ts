@@ -86,7 +86,8 @@ describe('S3 LRCLIB', () => {
       userAgent: 'u',
       fetch: fakeFetch(200, { instrumental: true }).f,
     }).fetch(input, signal);
-    expect(inst).toEqual({ kind: 'notFound' });
+    // Flagged as an instrumental: the cover with no message (LYRICS_EXPERIENCE.md §9.4).
+    expect(inst).toEqual({ kind: 'notFound', instrumental: true });
     expect(
       await lrclibSource({ baseUrl: 'x', userAgent: 'u', fetch: fakeFetch(404, {}).f }).fetch(
         input,
@@ -212,6 +213,7 @@ describe('S5 NetEase Cloud Music', () => {
     const inst = route({ lrc: { lyric: '[00:00.00]纯音乐，请欣赏' } });
     expect(await neteaseSource({ baseUrl: 'x', fetch: inst.f }).fetch(input, signal)).toEqual({
       kind: 'notFound',
+      instrumental: true,
     });
     const none = route({}, [{ id: 9, name: 'Something Else', duration: 200_000 }]);
     expect(await neteaseSource({ baseUrl: 'x', fetch: none.f }).fetch(input, signal)).toEqual({

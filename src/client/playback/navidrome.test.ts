@@ -143,6 +143,27 @@ describe('NavidromeProvider', () => {
     expect(errors.map((e) => e.code)).toEqual(['navidrome.stream']);
   });
 
+  // QA 2026-10-28 (a regression from ON-PB-2): after the retries were spent, `loading` stayed set,
+  // so Play did nothing for ever, even once the network was back.
+  it('after a stream failed for good, Play asks for it again', async () => {
+    vi.useFakeTimers();
+    void p.load(track(1), { autoplay: true });
+    a.fail();
+    for (const wait of [500, 1000, 2000]) {
+      await vi.advanceTimersByTimeAsync(wait);
+      a.fail();
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(errors).toHaveLength(1);
+    const before = a.srcSets;
+    void p.play(); // the network is back
+    await vi.advanceTimersByTimeAsync(0);
+    expect(a.srcSets).toBe(before + 1);
+    a.fire('loadedmetadata');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(a.paused).toBe(false);
+  });
+
   it('a stream that fails once before metadata plays on the reload', async () => {
     vi.useFakeTimers();
     void p.load(track(1), { autoplay: true });

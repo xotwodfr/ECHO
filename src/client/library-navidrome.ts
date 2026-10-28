@@ -1,4 +1,4 @@
-import { api } from './api.ts';
+import { ApiError, api } from './api.ts';
 import type { Album, AlbumSort, Library, Playlist } from './library.ts';
 import type { NavidromeTrack } from './playback/navidrome.ts';
 
@@ -30,6 +30,17 @@ interface SubSong {
 }
 
 type Rest<T> = { 'subsonic-response': T };
+
+/**
+ * A Subsonic call through ECHO's proxy. Navidrome refuses a request with HTTP 200 and
+ * `status: "failed"`: that is an error here (`subsonic.<code>`), never an empty answer.
+ */
+async function rest<T>(path: string): Promise<Rest<T>> {
+  const r = await api<Rest<T & { status?: string; error?: { code?: number } }>>(path);
+  const sr = r['subsonic-response'];
+  if (sr.status === 'failed') throw new ApiError(200, { code: `subsonic.${sr.error?.code ?? 0}` });
+  return r;
+}
 const PAGE = 500;
 const cover = (id: string | undefined, size = 300) =>
   id ? `/api/v1/navidrome/cover/${encodeURIComponent(id)}?size=${size}` : undefined;
@@ -80,8 +91,9 @@ export function createNavidromeLibrary(): Library {
     const gen = ++generation;
     const next: Album[] = [];
     for (let offset = 0; ; offset += PAGE) {
-      const r = await api<Rest<{ albumList2?: { album?: SubAlbum[] } }>>(
-        `/navidrome/rest/getAlbumList2?type=${sort}&size=${PAGE}&offset=${offset}`,
+      const r = await rest<{ albumList2?: { album?: SubAlbum[] } }>(
+        // The year sort needs its range: newest first, albums without a year last.
+        `/navidrome/rest/getAlbumList2?type=${sort}&size=${PAGE}&offset=${offset}${sort === 'byYear' ? '&fromYear=9999&toYear=0' : ''}`,
       ).catch(() => null);
       if (gen !== generation) return;
       if (!r) {
@@ -129,10 +141,14 @@ export function createNavidromeLibrary(): Library {
     },
     async loadAlbum(id) {
       if (loaded.has(id)) return byId.get(id);
-      const r = await api<Rest<{ album?: SubAlbum }>>(
+      // Not found (Subsonic 70) is an answer: no such album. Anything else is an error, with Retry.
+      const r = await rest<{ album?: SubAlbum }>(
         `/navidrome/rest/getAlbum?id=${encodeURIComponent(id)}`,
-      );
-      const a = r['subsonic-response'].album;
+      ).catch((err: unknown) => {
+        if (err instanceof ApiError && err.code === 'subsonic.70') return null;
+        throw err;
+      });
+      const a = r?.['subsonic-response'].album;
       if (!a) return byId.get(id);
       const album = albumOf(a);
       loaded.add(id);
@@ -157,9 +173,9 @@ export function createNavidromeLibrary(): Library {
       void loadAll();
     },
     async playlists(): Promise<Playlist[]> {
-      const r = await api<
-        Rest<{ playlists?: { playlist?: { id: string; name: string; songCount?: number }[] } }>
-      >('/navidrome/rest/getPlaylists');
+      const r = await rest<{
+        playlists?: { playlist?: { id: string; name: string; songCount?: number }[] };
+      }>('/navidrome/rest/getPlaylists');
       return (r['subsonic-response'].playlists?.playlist ?? []).map((p) => ({
         id: p.id,
         name: p.name,
@@ -167,17 +183,17 @@ export function createNavidromeLibrary(): Library {
       }));
     },
     async playlistTracks(id) {
-      const r = await api<Rest<{ playlist?: { entry?: SubSong[] } }>>(
+      const r = await rest<{ playlist?: { entry?: SubSong[] } }>(
         `/navidrome/rest/getPlaylist?id=${encodeURIComponent(id)}`,
       );
       return songs(r['subsonic-response'].playlist?.entry);
     },
     async starred() {
-      const r = await api<Rest<{ starred2?: { song?: SubSong[] } }>>('/navidrome/rest/getStarred2');
+      const r = await rest<{ starred2?: { song?: SubSong[] } }>('/navidrome/rest/getStarred2');
       return songs(r['subsonic-response'].starred2?.song);
     },
     async searchRemote(q) {
-      const r = await api<Rest<{ searchResult3?: { album?: SubAlbum[]; song?: SubSong[] } }>>(
+      const r = await rest<{ searchResult3?: { album?: SubAlbum[]; song?: SubSong[] } }>(
         `/navidrome/rest/search3?query=${encodeURIComponent(q)}&artistCount=6&albumCount=6&songCount=6`,
       );
       const found = r['subsonic-response'].searchResult3;

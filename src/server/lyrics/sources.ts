@@ -45,7 +45,7 @@ export interface Candidate extends Parsed {
 
 export type Outcome =
   | { kind: 'found'; candidate: Candidate }
-  | { kind: 'notFound' }
+  | { kind: 'notFound'; instrumental?: true }
   | { kind: 'error'; retriable: boolean; retryAfterMs?: number; detail: string };
 
 export interface Source {
@@ -60,6 +60,8 @@ export interface Source {
 }
 
 const notFound: Outcome = { kind: 'notFound' };
+/** The source says the track has no words (LYRICS_EXPERIENCE.md §9.4: the cover, no message). */
+const instrumental: Outcome = { kind: 'notFound', instrumental: true };
 /** Retry-After in seconds or as an HTTP date, at most an hour; a 429 without one cools a minute. */
 function cooling(status: number, header?: string | null) {
   const s = Number(header);
@@ -174,7 +176,8 @@ export function lrclibSource(opts: {
         b = hit;
       } else if (!res.ok) return httpError(res.status, res.headers.get('retry-after'));
       else b = (await res.json()) as LrclibRecord;
-      if (!b || b.instrumental) return notFound;
+      if (b?.instrumental) return instrumental;
+      if (!b) return notFound;
       const parsed = b.syncedLyrics
         ? parseLrc(b.syncedLyrics)
         : b.plainLyrics
@@ -284,8 +287,9 @@ export function neteaseSource(opts: { baseUrl: string; fetch?: typeof fetch }): 
         if (lrc.sync !== 'none') parsed = lrc;
       }
       // NetEase marks instrumentals with a single line ("纯音乐，请欣赏").
-      if (!parsed || (parsed.lines.length <= 1 && /纯音乐/.test(parsed.lines[0]?.text ?? '')))
-        return notFound;
+      if (parsed && parsed.lines.length <= 1 && /纯音乐/.test(parsed.lines[0]?.text ?? ''))
+        return instrumental;
+      if (!parsed) return notFound;
       return {
         kind: 'found',
         candidate: {
