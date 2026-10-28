@@ -76,14 +76,18 @@ export function newRecoveryCodes() {
   );
 }
 
-export async function body(c: Context): Promise<Record<string, unknown>> {
+/** The JSON body when it is an object; null for anything else (not JSON, `null`, an array, a number). */
+export async function jsonObject(c: Context): Promise<Record<string, unknown> | null> {
   try {
     const b = await c.req.json();
-    return b && typeof b === 'object' ? (b as Record<string, unknown>) : {};
+    return b && typeof b === 'object' && !Array.isArray(b) ? (b as Record<string, unknown>) : null;
   } catch {
-    return {};
+    return null;
   }
 }
+
+/** The JSON body as an object; `{}` when there is no usable one. */
+export const body = async (c: Context) => (await jsonObject(c)) ?? {};
 export const str = (v: unknown, max = 512) => (typeof v === 'string' && v.length <= max ? v : null);
 
 export function setSessionCookie(c: Context, token: string) {

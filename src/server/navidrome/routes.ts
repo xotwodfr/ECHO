@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Readable } from 'node:stream';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
 import { audit } from '../audit.ts';
-import type { AuthEnv } from '../auth/routes.ts';
+import { type AuthEnv, body } from '../auth/routes.ts';
 import type { SessionUser } from '../auth/sessions.ts';
 import type { Sealer } from '../crypto.ts';
 import type { Db } from '../db/db.ts';
@@ -244,10 +244,7 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
   }
 
   async function input(c: Context) {
-    let b: Record<string, unknown> = {};
-    try {
-      b = (await c.req.json()) as Record<string, unknown>;
-    } catch {}
+    const b = await body(c);
     const s = (k: string, max = 512) =>
       typeof b[k] === 'string' && (b[k] as string).length <= max ? (b[k] as string) : '';
     return {

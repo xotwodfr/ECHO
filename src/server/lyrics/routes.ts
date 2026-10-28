@@ -3,7 +3,7 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import type { LyricsDoc } from '../../shared/types.ts';
 import { requireAdmin } from '../admin.ts';
 import { audit } from '../audit.ts';
-import type { AuthEnv } from '../auth/routes.ts';
+import { type AuthEnv, jsonObject } from '../auth/routes.ts';
 import type { Db } from '../db/db.ts';
 import type { Log } from '../log.ts';
 import type { LyricsCache } from './cache.ts';
@@ -170,12 +170,8 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
   app.put('/me/tracks/:trackKey/override', requireUser, async (c) => {
     const trackKey = c.req.param('trackKey');
     if (!KEY.test(trackKey)) return c.json({ error: 'bad_track_key' }, 400);
-    let b: { offsetMs?: unknown; pinnedSource?: unknown };
-    try {
-      b = await c.req.json();
-    } catch {
-      return c.json({ error: 'bad_override' }, 400);
-    }
+    const b: { offsetMs?: unknown; pinnedSource?: unknown } | null = await jsonObject(c);
+    if (!b) return c.json({ error: 'bad_override' }, 400);
     const now = override(c.var.user.id, trackKey);
     if (b.offsetMs !== undefined) {
       if (
@@ -227,12 +223,8 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
     app.put('/admin/spotify-matching/tracks/:id', ...admin, async (c) => {
       const id = c.req.param('id');
       if (!KEY.test(id)) return c.json({ error: 'bad_track_key' }, 400);
-      let b: { spotify?: unknown };
-      try {
-        b = await c.req.json();
-      } catch {
-        return c.json({ error: 'bad_spotify_id' }, 400);
-      }
+      const b: { spotify?: unknown } | null = await jsonObject(c);
+      if (!b) return c.json({ error: 'bad_spotify_id' }, 400);
       const sid = typeof b.spotify === 'string' ? parseSpotifyId(b.spotify) : null;
       if (b.spotify !== null && !sid)
         return c.json({ error: 'bad_spotify_id', detail: 'A Spotify track link, URI or id' }, 400);

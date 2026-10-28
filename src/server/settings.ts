@@ -1,5 +1,5 @@
 import { Hono, type MiddlewareHandler } from 'hono';
-import type { AuthEnv } from './auth/routes.ts';
+import { type AuthEnv, jsonObject } from './auth/routes.ts';
 import type { Db } from './db/db.ts';
 
 // Per-user preferences that follow the user (SETTINGS_AND_SECURITY.md §7.1, `user_settings`,
@@ -95,10 +95,13 @@ export function userSettings(db: Db, userId: number): UserSettings {
 function problem(b: unknown): string | null {
   if (!b || typeof b !== 'object') return 'not an object';
   for (const [s, keys] of Object.entries(b as Record<string, unknown>)) {
-    const schema = SCHEMA[s as Section] as Record<string, { check: Check }> | undefined;
+    // Own keys only: `constructor` or `toString` must not find Object's members.
+    const schema = Object.hasOwn(SCHEMA, s)
+      ? (SCHEMA[s as Section] as Record<string, { check: Check }>)
+      : undefined;
     if (!schema || !keys || typeof keys !== 'object') return `unknown section ${s}`;
     for (const [k, v] of Object.entries(keys)) {
-      if (!schema[k]) return `unknown key ${s}.${k}`;
+      if (!Object.hasOwn(schema, k) || !schema[k]) return `unknown key ${s}.${k}`;
       if (!schema[k].check(v)) return `bad value for ${s}.${k}`;
     }
   }
@@ -111,14 +114,9 @@ export function settingsRoutes(db: Db, requireUser: MiddlewareHandler<AuthEnv>) 
   app.get('/me/settings', requireUser, (c) => c.json(userSettings(db, c.var.user.id)));
 
   app.put('/me/settings', requireUser, async (c) => {
-    let b: Record<string, Record<string, unknown>>;
-    try {
-      b = await c.req.json();
-    } catch {
-      return c.json({ error: 'bad_settings' }, 400);
-    }
-    const why = problem(b);
-    if (why) return c.json({ error: 'bad_settings', detail: why }, 400);
+    const b = (await jsonObject(c)) as Record<string, Record<string, unknown>> | null;
+    const why = b ? problem(b) : 'not an object';
+    if (!b || why) return c.json({ error: 'bad_settings', detail: why }, 400);
     const next = userSettings(db, c.var.user.id) as unknown as Record<
       string,
       Record<string, unknown>

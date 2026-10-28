@@ -444,6 +444,37 @@ describe('Admin → Users, invites and the audit log (ACC-02)', () => {
   });
 });
 
+// ON-API-1 and ON-SEC-5: JSON that is not an object (null, a number, an array), or an object with a
+// prototype key, was read field by field and answered 500.
+it('a body that is not a JSON object is a 400 on every route that reads one, never a 500', async () => {
+  const w = await withAdmin();
+  const bo = await invited(w);
+  const routes: [string, string][] = [
+    ['PUT', '/api/v1/admin/settings'],
+    ['PATCH', `/api/v1/admin/users/${bo.id}`],
+    ['PUT', '/api/v1/me/tracks/navidrome:t1/override'],
+    ['PUT', '/api/v1/me/settings'],
+    ['PUT', '/api/v1/me/queue'],
+  ];
+  for (const [method, path] of routes)
+    for (const b of [null, 7, ['x']]) {
+      const r = await call(w.app, method, path, b, w.admin);
+      expect([method, path, JSON.stringify(b), r.status]).toEqual([
+        method,
+        path,
+        JSON.stringify(b),
+        400,
+      ]);
+    }
+  // Optional bodies are optional: no usable body is the same as none.
+  for (const b of [null, 7]) {
+    const r = await call(w.app, 'POST', '/api/v1/admin/invites', b, w.admin);
+    expect(r.status).toBe(201);
+  }
+  for (const b of [{ constructor: { name: 1 } }, { lyrics: { toString: 1 } }])
+    expect((await call(w.app, 'PUT', '/api/v1/me/settings', b, w.admin)).status).toBe(400);
+});
+
 describe('device tokens (API-02)', () => {
   it('credentials + TOTP give a bearer token that works, is listed, and can be revoked', async () => {
     const w = await withAdmin();

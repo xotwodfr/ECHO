@@ -1,5 +1,5 @@
 import { Hono, type MiddlewareHandler } from 'hono';
-import type { AuthEnv } from './auth/routes.ts';
+import { type AuthEnv, jsonObject } from './auth/routes.ts';
 import type { Db } from './db/db.ts';
 
 // The queue follows the user (IMPLEMENTATION_PLAN.md M5 task 9; TECHNICAL_ARCHITECTURE.md §5.5):
@@ -23,12 +23,8 @@ export function queueRoutes(
   });
 
   app.put('/me/queue', requireUser, async (c) => {
-    let b: { queue?: unknown; positionMs?: unknown; baseUpdatedAt?: unknown };
-    try {
-      b = await c.req.json();
-    } catch {
-      return c.json({ error: 'bad_queue' }, 400);
-    }
+    const b: { queue?: unknown; positionMs?: unknown; baseUpdatedAt?: unknown } | null =
+      await jsonObject(c);
     if (
       !b ||
       typeof b.queue !== 'object' ||

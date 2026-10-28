@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
 import { deleteUser, isLastAdmin } from './account.ts';
 import { audit } from './audit.ts';
-import type { AuthDeps, AuthEnv } from './auth/routes.ts';
+import { type AuthDeps, type AuthEnv, body, jsonObject } from './auth/routes.ts';
 import { revokeOthers } from './auth/sessions.ts';
 import type { Sealer } from './crypto.ts';
 import type { Db } from './db/db.ts';
@@ -104,7 +104,7 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
   app.get('/admin/settings', requireUser, requireAdmin, (c) => c.json(view()));
 
   app.put('/admin/settings', requireUser, requireAdmin, async (c: Context<AuthEnv>) => {
-    let b: {
+    const b: {
       lyrics?: { spicyKey?: unknown };
       spotify?: {
         clientId?: unknown;
@@ -113,12 +113,8 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
         gates?: { artPalette?: unknown; syncedLyrics?: unknown };
       };
       auth?: { requireTotpForAll?: unknown };
-    };
-    try {
-      b = await c.req.json();
-    } catch {
-      return c.json({ error: 'bad_settings' }, 400);
-    }
+    } | null = await jsonObject(c);
+    if (!b) return c.json({ error: 'bad_settings' }, 400);
     // Everything is validated before anything is written.
     const sp = b.spotify;
     const id = sp?.clientId;
@@ -239,12 +235,8 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
   app.patch('/admin/users/:id', ...admin, async (c: Context<AuthEnv>) => {
     const u = target(c.req.param('id') as string);
     if (!u) return c.json({ error: 'not_found' }, 404);
-    let b: { role?: unknown; disabled?: unknown };
-    try {
-      b = await c.req.json();
-    } catch {
-      return c.json({ error: 'bad_user' }, 400);
-    }
+    const b: { role?: unknown; disabled?: unknown } | null = await jsonObject(c);
+    if (!b) return c.json({ error: 'bad_user' }, 400);
     if (b.role !== undefined && b.role !== 'admin' && b.role !== 'user')
       return c.json({ error: 'bad_role' }, 400);
     if (b.disabled !== undefined && typeof b.disabled !== 'boolean')
@@ -289,10 +281,7 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
 
   // ---- invites (§4.2): single use, 72 h, stored hashed ----
   app.post('/admin/invites', ...admin, async (c: Context<AuthEnv>) => {
-    let b: { username?: unknown } = {};
-    try {
-      b = await c.req.json();
-    } catch {}
+    const b: { username?: unknown } = await body(c);
     const username = typeof b.username === 'string' ? b.username.trim() : null;
     if (username !== null && username !== '' && !/^[\w.-]{1,64}$/.test(username))
       return c.json({ error: 'bad_username' }, 400);
