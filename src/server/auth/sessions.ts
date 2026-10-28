@@ -8,6 +8,8 @@ import type { Db } from '../db/db.ts';
 const DAY = 86_400_000;
 export const SESSION_COOKIE = '__Host-echo_session';
 export const DEVICE_PREFIX = 'echo_dt_';
+/** A device token as a bearer header: the one shape auth accepts, and the one the Origin check exempts. */
+export const DEVICE_BEARER = /^Bearer (echo_dt_[\w-]+)$/;
 const LIFETIME = {
   web: { slide: 30 * DAY, idle: 14 * DAY },
   device: { slide: 180 * DAY, idle: 60 * DAY },

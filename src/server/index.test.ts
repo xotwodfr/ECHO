@@ -22,6 +22,14 @@ describe('GET /api/v1/health', () => {
     expect(await res.json()).toEqual({ status: 'ok' });
   });
 
+  // QA 2026-10-28: personal answers (a TOTP secret, recovery codes, sessions) carried no
+  // Cache-Control; every API answer is no-store unless its route says otherwise.
+  it('API answers are not stored, unless the route says so', async () => {
+    const me = await app.request('/api/v1/me');
+    expect(me.status).toBe(401);
+    expect(me.headers.get('cache-control')).toBe('no-store');
+  });
+
   it('exposes nothing else under /api', async () => {
     const res = await app.request('/api/v1/anything');
     expect(res.status).toBe(404);

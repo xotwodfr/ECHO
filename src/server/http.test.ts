@@ -82,6 +82,9 @@ describe('Host and Origin (§5.2, §5.3)', () => {
     expect((await post({ authorization: 'Bearer x', origin: 'https://evil.test' })).status).toBe(
       403,
     );
+    // …nor a near miss of the device-token shape, which auth ignores too (QA, 2026-10-28).
+    for (const authorization of ['Bearer echo_dt_', 'Bearer echo_dt_x.y', 'Bearer echo_dt_ x'])
+      expect((await post({ authorization, origin: 'https://evil.test' })).status).toBe(403);
     expect((await app.request('http://x/', proxied('echo.test'))).status).toBe(200); // GET
   });
 

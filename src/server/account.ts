@@ -283,12 +283,19 @@ export function accountRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<Aut
     if (user.role === 'admin') return c.json({ error: 'admin_needs_totp' }, 403);
     const refused = await reauth(c, b, true);
     if (refused) return refused;
-    db.transaction(() => {
-      db.prepare(
-        'UPDATE users SET totp_secret_enc = NULL, totp_enabled = 0, totp_last_step = NULL WHERE id = ?',
-      ).run(user.id);
-      db.prepare('DELETE FROM recovery_codes WHERE user_id = ?').run(user.id);
+    // The role again, in the write: a promotion during re-authentication must not leave an admin
+    // without TOTP (§4.5).
+    const off = db.transaction(() => {
+      const changed = db
+        .prepare(
+          `UPDATE users SET totp_secret_enc = NULL, totp_enabled = 0, totp_last_step = NULL
+           WHERE id = ? AND role != 'admin'`,
+        )
+        .run(user.id).changes;
+      if (changed) db.prepare('DELETE FROM recovery_codes WHERE user_id = ?').run(user.id);
+      return changed > 0;
     })();
+    if (!off) return c.json({ error: 'admin_needs_totp' }, 403);
     audit(db, now(), user.id, 'totp.disabled');
     return c.json({ ok: true });
   });

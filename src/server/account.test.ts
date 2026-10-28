@@ -165,6 +165,44 @@ describe('two-factor (§4.5)', () => {
     ).toBeNull();
   });
 
+  // QA 2026-10-28: TOTP-off checked the role, then awaited re-authentication; a promotion landing
+  // in between made an admin without TOTP, who then signed in with a password alone.
+  it('a promotion during TOTP-off never leaves an admin without TOTP', async () => {
+    const w = await withAdmin();
+    const bo = await invited(w);
+    const { secret } = await j(
+      call(w.app, 'POST', '/api/v1/me/totp/start', { password: PASSWORD }, bo.cookie),
+    );
+    await call(
+      w.app,
+      'POST',
+      '/api/v1/me/totp/enable',
+      { code: codeAt(secret, w.clock.t) },
+      bo.cookie,
+    );
+    w.clock.t += 30_000; // the next code
+    const off = call(
+      w.app,
+      'POST',
+      '/api/v1/me/totp/disable',
+      { password: PASSWORD, code: codeAt(secret, w.clock.t) },
+      bo.cookie,
+    ); // waits on Argon2…
+    const promote = await call(
+      w.app,
+      'PATCH',
+      `/api/v1/admin/users/${bo.id}`,
+      { role: 'admin' },
+      w.admin,
+    );
+    expect(promote.status).toBe(200); // …while this lands
+    expect((await off).status).toBe(403);
+    expect(w.db.prepare('SELECT role, totp_enabled FROM users WHERE id = ?').get(bo.id)).toEqual({
+      role: 'admin',
+      totp_enabled: 1,
+    });
+  });
+
   it('the admin cannot turn their own TOTP off', async () => {
     const w = await withAdmin();
     w.nextStep();

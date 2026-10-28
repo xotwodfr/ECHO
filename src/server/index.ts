@@ -80,6 +80,12 @@ export function createApp(deps: AppDeps) {
   );
   const log: Log = deps.log ?? (() => {});
   app.use('/api/*', accessLog(log));
+  // API answers are personal (a TOTP secret, recovery codes, sessions): never stored by a browser
+  // or proxy, unless the route says otherwise (covers, palettes, streams set their own).
+  app.use('/api/*', async (c, next) => {
+    await next();
+    if (!c.res.headers.has('cache-control')) c.res.headers.set('cache-control', 'no-store');
+  });
   // Errors go through the redactor too (Hono's default prints them raw).
   app.onError((err, c) => {
     log('error', 'unhandled', { route: c.req.routePath, error: err });
@@ -347,6 +353,12 @@ if (import.meta.main) {
   const server = serve({ fetch: app.fetch, port: config.port }, (info) =>
     log('info', 'listening', { port: info.port, publicOrigin: config.publicOrigin }),
   );
+  // Without it the Host, https and HSTS checks are off, as they must be in development only.
+  if (!config.publicOrigin)
+    log(
+      'warn',
+      'ECHO_PUBLIC_ORIGIN is not set: Host, https and HSTS checks are off (development only)',
+    );
   // Node as PID 1 ignores SIGTERM by default; close cleanly so `docker stop` is fast. An audio
   // stream would hold `close()` open past Docker's 10 s grace (then SIGKILL): requests still open
   // after 5 s are cut, and the database is closed before exiting.

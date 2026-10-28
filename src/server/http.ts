@@ -1,4 +1,5 @@
 import type { Context, MiddlewareHandler } from 'hono';
+import { DEVICE_BEARER } from './auth/sessions.ts';
 
 // HTTP hardening (SETTINGS_AND_SECURITY.md §5): forwarded headers only from the trusted proxy, the
 // Host check, the Origin check on cookie-authenticated unsafe methods, and the response headers
@@ -95,9 +96,9 @@ export function hardening(
     const cspReport = c.req.path === '/api/v1/csp-report';
     if (
       !SAFE.has(c.req.method) &&
-      // A device token (no cookie is used with one); any other bearer is ignored by auth, which
-      // then reads the cookie, so it must not skip this check.
-      !c.req.header('authorization')?.startsWith('Bearer echo_dt_') &&
+      // A device token (no cookie is used with one). Anything else, even `Bearer echo_dt_` with
+      // nothing or a dot after it, is ignored by auth, which then reads the cookie: no exemption.
+      !DEVICE_BEARER.test(c.req.header('authorization') ?? '') &&
       !nativeDeviceLogin &&
       !cspReport
     ) {

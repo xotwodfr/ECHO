@@ -45,6 +45,14 @@ describe('Spotify server settings', () => {
       400,
     );
     expect((await put({ spotify: { gates: { other: true } } })).status).toBe(400);
+    // QA 2026-10-28: unknown settings were accepted (200) and silently ignored.
+    for (const body of [
+      { foo: { bar: 1 } },
+      { navidrome: { extraAllowedUrls: ['http://x'] } },
+      { spotify: { clientId: ID, clientid: ID } },
+      { auth: true },
+    ])
+      expect((await put(body)).status).toBe(400);
     expect(
       db.prepare("SELECT COUNT(*) FROM server_settings WHERE key LIKE 'spotify.%'").pluck().get(),
     ).toBe(0);

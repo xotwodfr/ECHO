@@ -16,6 +16,7 @@ import {
 import type { LoginLimiter } from './ratelimit.ts';
 import {
   createSession,
+  DEVICE_BEARER,
   resolveSession,
   revokeSession,
   SESSION_COOKIE,
@@ -120,7 +121,7 @@ const UNMETERED = /^\/api\/v1\/navidrome\/(stream|cover)\//;
 
 export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
   return async (c, next) => {
-    const bearer = c.req.header('authorization')?.match(/^Bearer (echo_dt_[\w-]+)$/)?.[1];
+    const bearer = c.req.header('authorization')?.match(DEVICE_BEARER)?.[1];
     const token = bearer ?? getCookie(c, SESSION_COOKIE);
     const user = token ? resolveSession(deps.db, token, deps.now()) : null;
     if (!user) return c.json({ error: 'unauthenticated' }, 401);

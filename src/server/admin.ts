@@ -43,6 +43,12 @@ export const matchLibrary = (db: Db) => setting(db, 'spotify.matchLibrary', true
 /** Development Mode allows 5 Spotify users per app (PLAYBACK_ARCHITECTURE.md §4.1). */
 export const SPOTIFY_SEATS = 5;
 const CLIENT_ID = /^[0-9a-f]{32}$/;
+/** The settings PUT /admin/settings takes, by section; anything else is refused. */
+const ADMIN_KEYS = {
+  lyrics: ['spicyKey'],
+  spotify: ['clientId', 'clientSecret', 'matchLibrary', 'gates'],
+  auth: ['requireTotpForAll'],
+};
 
 export interface SpotifySettings {
   clientId: string | null;
@@ -115,6 +121,16 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
       auth?: { requireTotpForAll?: unknown };
     } | null = await jsonObject(c);
     if (!b) return c.json({ error: 'bad_settings' }, 400);
+    // Only known settings: an unknown one (a typo, a setting this version lacks) is refused, never
+    // silently ignored.
+    for (const [section, keys] of Object.entries(b))
+      if (
+        !Object.hasOwn(ADMIN_KEYS, section) ||
+        !keys ||
+        typeof keys !== 'object' ||
+        Object.keys(keys).some((k) => !ADMIN_KEYS[section as keyof typeof ADMIN_KEYS].includes(k))
+      )
+        return c.json({ error: 'bad_settings', detail: `unknown setting in ${section}` }, 400);
     // Everything is validated before anything is written.
     const sp = b.spotify;
     const id = sp?.clientId;
