@@ -25,6 +25,14 @@ describe('SEC-09: container hardening as shipped', () => {
     expect(JSON.stringify(echo.environment ?? {})).not.toMatch(/KEY|SECRET|PASSWORD|TOKEN/i);
   });
 
+  // ON-DEP-1: bounded on a shared box; the proxy setting it cannot work without is in the file.
+  it('compose: memory, processes and CPU are limited; ECHO_TRUSTED_PROXY is there to set', () => {
+    expect(echo.mem_limit).toBeTruthy();
+    expect(echo.pids_limit).toBeGreaterThan(0);
+    expect(echo.cpus).toBeGreaterThan(0);
+    expect(echo.environment).toHaveProperty('ECHO_TRUSTED_PROXY');
+  });
+
   it('Dockerfile: runs as uid 1000, digest-pinned bases, no secrets baked in', () => {
     const df = readFileSync('Dockerfile', 'utf8');
     const from = df.split('\n').filter((l) => l.startsWith('FROM '));

@@ -4,7 +4,7 @@
 # Before the first start:
 #   mkdir -p secrets && openssl rand -base64 32 > secrets/echo_master_key && chmod 600 secrets/echo_master_key
 #   (owned by uid 1000, the container user). Back the key up separately from /data
-#   (docs/SETTINGS_AND_SECURITY.md §11). The server reads it from M5 on.
+#   (docs/SETTINGS_AND_SECURITY.md §11). The server refuses to start without it.
 
 services:
   echo:
@@ -15,6 +15,10 @@ services:
       ECHO_PUBLIC_ORIGIN: https://echo.example.com
       ECHO_PORT: "8080"
       ECHO_LOG: info
+      # Required behind Caddy: the address Caddy's requests come from, as ECHO sees it (its IP on
+      # the "web" network, or that network's gateway when Caddy runs on the host; IPv4 CIDRs work).
+      # Left empty, ECHO trusts no X-Forwarded-Proto, sees plain http and answers 403 to everything.
+      ECHO_TRUSTED_PROXY: ""
     secrets: [echo_master_key]
     volumes: [echo-data:/data]
     networks: [web, music]                     # no "ports:", reachable only via Caddy
@@ -26,6 +30,11 @@ services:
     user: "1000:1000"
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+    # A shared box (the OptiPlex runs Navidrome's transcoding too): peak RSS measured 213 MB with
+    # three listeners (M9); Argon2id takes 64 MiB per sign-in; covers decode at up to 25 Mpx.
+    mem_limit: 768m
+    pids_limit: 256
+    cpus: 2
     logging:                                   # Docker keeps logs forever otherwise
       options: { max-size: 10m, max-file: "3" }
 
