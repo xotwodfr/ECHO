@@ -26,6 +26,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.long
@@ -67,6 +68,9 @@ private const val SCROBBLE_MS = 4 * 60_000L
 private const val SAVE_DEBOUNCE_MS = 2000L
 private const val SAVE_EVERY_MS = 15_000L
 private const val HISTORY = 50
+
+/** The saved queue's position: any JSON number, as the web writes a fraction of a ms (QueueTest). */
+internal fun savedPositionMs(saved: JsonObject): Long = saved["positionMs"]?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0
 
 /**
  * The player as the app sees it (src/client/playback/controller.ts on Android): a MediaController
@@ -365,7 +369,7 @@ class Playback(private val app: EchoApp) {
     queueBase = saved["updatedAt"]?.jsonPrimitive?.long ?: 0
     val q = saved["queue"]?.let { runCatching { EchoJson.decodeFromJsonElement<QueueState>(it) }.getOrNull() } ?: return
     if (q.now == null || q.provider == "spotify" || (c?.mediaItemCount ?: 0) > 0) return
-    restore(q, saved["positionMs"]?.jsonPrimitive?.long ?: 0)
+    restore(q, savedPositionMs(saved))
   }
 
   private fun restore(q: QueueState, positionMs: Long) = run { mc ->
@@ -409,7 +413,7 @@ class Playback(private val app: EchoApp) {
       val newer = runCatching { app.api.get("/me/queue").jsonObject }.getOrNull() ?: return
       queueBase = newer["updatedAt"]?.jsonPrimitive?.long ?: queueBase
       val nq = newer["queue"]?.let { runCatching { EchoJson.decodeFromJsonElement<QueueState>(it) }.getOrNull() }
-      if (!s.playing && nq?.now != null) restore(nq, newer["positionMs"]?.jsonPrimitive?.long ?: 0)
+      if (!s.playing && nq?.now != null) restore(nq, savedPositionMs(newer))
     } catch (_: java.io.IOException) {}
   }
 }
