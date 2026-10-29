@@ -24,10 +24,21 @@ import {
   WebGLRenderer,
   WebGLRenderTarget,
 } from 'three';
+import { glassQuads } from '../ui/glass.ts';
 import blueNoiseUrl from './blue-noise-64.png';
+import { GLASS_BY_TIER } from './governor.ts';
 import { BASE_EXPOSURE, type PaletteUniforms } from './palette.ts';
 import { type ReverbFrame, ringLight, safeTint } from './reverb.ts';
-import { COMPOSITE_FRAG, ENERGY_FRAG, FULLSCREEN_VERT, PROBE_FRAG, ROOM_FRAG } from './shaders.ts';
+import {
+  COMPOSITE_FRAG,
+  ENERGY_FRAG,
+  FULLSCREEN_VERT,
+  GLASS_FRAG,
+  GLASS_MAX,
+  GLASS_STEPS,
+  PROBE_FRAG,
+  ROOM_FRAG,
+} from './shaders.ts';
 
 // StageRenderer (VISUALIZER_SPEC.md §5): room pass into a reduced-resolution float target, then
 // the composite to the canvas. three.js is used only for its context, render-target and
@@ -89,6 +100,12 @@ export class StageRenderer {
   private readonly camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
   private readonly roomScene = new Scene();
   private readonly compositeScene = new Scene();
+  // The glass pass (§5.2): the composite again, through the glass, over the glass boxes only.
+  private readonly glassScene = new Scene();
+  private readonly glassGeometry = new BufferGeometry();
+  private readonly glassMat: RawShaderMaterial;
+  private glassDirty = true;
+  private css = { w: 1, h: 1 };
   private readonly room = {
     uAspect: { value: 1 },
     uFlow: { value: 0 },
@@ -133,6 +150,16 @@ export class StageRenderer {
     uEnergyTex: { value: null as Texture | null },
     uEnergyOn: { value: 0 },
     uKeyUv: { value: new Vector2(0.5, 0.6) },
+    uGlassN: { value: 0 },
+    uGlassRect: { value: new Float32Array(GLASS_MAX * 4) },
+    uGlassCorner: { value: new Float32Array(GLASS_MAX * 4) },
+    uGlassBend: { value: new Float32Array(GLASS_STEPS) },
+    uGlassBezel: { value: 1 },
+    uGlassSat: { value: 1 },
+    uGlassSpec: { value: 0 },
+    uGlassLight: { value: new Vector2() },
+    uGlassBendOn: { value: 1 },
+    uGlassLightOn: { value: 1 },
   };
   private readonly energyMat: RawShaderMaterial;
   private readonly energyScene = new Scene();
@@ -168,6 +195,7 @@ export class StageRenderer {
     this.gl.toneMapping = NoToneMapping;
     this.gl.autoClear = false;
     this.tier = tier;
+    this.setTier(tier); // the glass follows the tier from the first frame
 
     this.geometry.setAttribute(
       'position',
@@ -189,6 +217,18 @@ export class StageRenderer {
       fragmentShader: COMPOSITE_FRAG,
       uniforms: this.composite,
     });
+    this.glassMat = new RawShaderMaterial({
+      ...common,
+      fragmentShader: GLASS_FRAG,
+      uniforms: this.composite,
+    });
+    this.glassGeometry.setAttribute(
+      'position',
+      new BufferAttribute(new Float32Array(GLASS_MAX * 18), 3),
+    );
+    const glassMesh = new Mesh(this.glassGeometry, this.glassMat);
+    glassMesh.frustumCulled = false; // its boxes move; there is nothing to cull anyway
+    this.glassScene.add(glassMesh);
     // The probe shares the composite's uniforms, so it sees exactly what is drawn.
     this.probeMat = new RawShaderMaterial({
       ...common,
@@ -227,6 +267,36 @@ export class StageRenderer {
   setTier(tier: Tier) {
     this.tier = tier;
     this.backing.w = 0; // force a rebuild at the next setSize
+    this.composite.uGlassBendOn.value = GLASS_BY_TIER[tier].bend ? 1 : 0;
+    this.composite.uGlassLightOn.value = GLASS_BY_TIER[tier].light ? 1 : 0;
+  }
+
+  /**
+   * The glass itself (DESIGN_SYSTEM.md §7.11): its bend across the rim (CSS px, ui/glass.ts
+   * bendProfile), rim width, saturation, rim light opacity and direction (degrees, y up).
+   */
+  setGlassLook(g: {
+    bend: Float32Array;
+    bezel: number;
+    saturate: number;
+    specular: number;
+    light: number;
+  }) {
+    const u = this.composite;
+    u.uGlassBend.value.set(g.bend.subarray(0, GLASS_STEPS));
+    u.uGlassBezel.value = g.bezel;
+    u.uGlassSat.value = g.saturate;
+    u.uGlassSpec.value = g.specular;
+    const a = (g.light * Math.PI) / 180;
+    u.uGlassLight.value.set(Math.cos(a), -Math.sin(a));
+  }
+
+  /** Where the glass is: ui/glass.ts glassUniforms, at most GLASS_MAX boxes. */
+  setGlass(g: { rects: Float32Array; corners: Float32Array; count: number }) {
+    this.composite.uGlassRect.value.set(g.rects.subarray(0, GLASS_MAX * 4));
+    this.composite.uGlassCorner.value.set(g.corners.subarray(0, GLASS_MAX * 4));
+    this.composite.uGlassN.value = Math.min(g.count, GLASS_MAX);
+    this.glassDirty = true;
   }
 
   setPalette(p: PaletteUniforms) {
@@ -347,6 +417,8 @@ export class StageRenderer {
     this.gl.setPixelRatio(dpr);
     this.gl.setSize(cssW, cssH, false);
     this.backing = { w, h, dpr };
+    this.css = { w: Math.max(1, cssW), h: Math.max(1, cssH) };
+    this.glassDirty = true;
     this.composite.uRes.value.set(w, h);
     this.composite.uDpr.value = dpr;
     this.room.uAspect.value = cssW / Math.max(1, cssH);
@@ -401,6 +473,22 @@ export class StageRenderer {
     } else this.composite.uEnergyOn.value = 0;
     this.gl.setRenderTarget(null);
     this.gl.render(this.compositeScene, this.camera);
+    this.renderGlass();
+  }
+
+  /** The glass pass over the composite: only the glass boxes' pixels, nothing at T3 or without glass. */
+  private renderGlass() {
+    const u = this.composite;
+    const n = u.uGlassN.value;
+    if (!n || !(u.uGlassBendOn.value || u.uGlassLightOn.value)) return;
+    if (this.glassDirty) {
+      const pos = this.glassGeometry.getAttribute('position') as BufferAttribute;
+      (pos.array as Float32Array).set(glassQuads(u.uGlassRect.value, n, this.css.w, this.css.h));
+      pos.needsUpdate = true;
+      this.glassGeometry.setDrawRange(0, n * 6);
+      this.glassDirty = false;
+    }
+    this.gl.render(this.glassScene, this.camera);
   }
 
   /** After a context restore: rebuild targets and recompile materials (§5.6). */
@@ -408,6 +496,7 @@ export class StageRenderer {
     this.buildTargets();
     this.roomMat.needsUpdate = true;
     this.compositeMat.needsUpdate = true;
+    this.glassMat.needsUpdate = true;
     this.probeMat.needsUpdate = true;
     this.energyMat.needsUpdate = true;
     if (this.noise) this.noise.needsUpdate = true;
@@ -420,6 +509,8 @@ export class StageRenderer {
     for (const t of this.covers) t?.dispose();
     this.roomMat.dispose();
     this.compositeMat.dispose();
+    this.glassMat.dispose();
+    this.glassGeometry.dispose();
     this.probeMat.dispose();
     this.energyMat.dispose();
     this.lumaRT?.dispose();

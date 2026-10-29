@@ -385,6 +385,12 @@ convex squircle rim, then saturation, then a specular rim light (an `feImage` ov
 element's own background is its role colour made translucent, so the surface keeps its M3 (Shell)
 or room (Stage) tone.
 
+**On the Stage**, while WebGL draws the room, a glass pass over the controls' boxes draws their
+glass itself, with the same physics (`VISUALIZER_SPEC.md` §5.2, pass 4b), so it works in
+every WebGL 2 browser, Firefox included; the controls keep only their CSS tint. The tiers thin it
+(`VISUALIZER_SPEC.md` §8.1): T2 drops the bend, T3 leaves the tint. Without WebGL 2, or while the
+context is lost, the controls fall back to the SVG or blur glass.
+
 **Two variants**, as in iOS: **regular** glass (sidebar, dock, sheets, dialogs) frosts what is
 behind it, so content passing under a panel never competes with the panel's text; **clear** glass
 (the Stage's round buttons and brightness pill) barely frosts, since it carries only icons over a
@@ -408,7 +414,8 @@ fades with the chrome.
 over `blur(--glass-blur) saturate(--glass-saturate)`, no refraction. `prefers-reduced-transparency:
 reduce`: no backdrop filter, and the fill goes to 100%, so every glass surface is the opaque surface
 it was before 2026-10-28. Reduced motion changes nothing: glass is static and never animates by
-itself. Hidden chrome (PRODUCT_SPEC.md §6.1) fades the glass with its controls.
+itself; on the Stage its bend follows the chrome level, which Still (reduced motion) switches
+instead of easing. Hidden chrome (PRODUCT_SPEC.md §6.1) fades the glass with its controls.
 
 **Open (Spotify).** A glass sheet over the Library bends the covers under it. Spotify forbids
 distorting or blurring its artwork (`PLAYBACK_ARCHITECTURE.md` §4.6, §8 here). Before Spotify ships

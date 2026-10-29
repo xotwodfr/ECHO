@@ -508,6 +508,14 @@ button {
   cursor: none;
 }
 
+/* While WebGL draws the room, its glass pass draws the Stage's glass (§7.11, stage/engine.ts)
+   and the controls keep only their tint. With the CSS room (no WebGL 2, a lost context) the SVG or
+   blur glass comes back. */
+.shell:has(.stage[data-renderer="webgl"]) .stage-chrome .glass,
+.shell:has(.stage[data-renderer="webgl"]) .dock::before {
+  backdrop-filter: none;
+}
+
 /* S6 Album detail header (§8: cover 240px) */
 .detail-head {
   display: flex;

@@ -2,6 +2,8 @@
 // as its backdrop-filter: a light frost, a displacement whose map is computed here from Snell's law
 // across the element's curved rim, saturation, and a specular rim light. The maps depend on the
 // box, so the filter is rebuilt when the element resizes. Other engines keep ui.css's blur fallback.
+// Over the Stage, while WebGL draws the room, its glass pass draws the same glass instead from the
+// boxes of the glass elements attached here (stage/engine.ts).
 
 export interface GlassParams {
   /** Slab thickness under the flat top, px. */
@@ -42,6 +44,64 @@ export function bend(g: GlassParams, t: number): number {
   const incidence = Math.atan(slope);
   const deviation = incidence - Math.asin(Math.sin(incidence) / g.ior);
   return (g.thickness + rim(t) * g.bezel) * Math.tan(deviation);
+}
+
+/** The bend across the rim at `n` even steps (edge first), refraction applied: the Stage's lookup. */
+export function bendProfile(g: GlassParams, n: number): Float32Array<ArrayBuffer> {
+  return Float32Array.from({ length: n }, (_, i) => bend(g, i / (n - 1)) * g.refraction);
+}
+
+export interface Box {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Glass boxes as the Stage's composite uniforms: CSS px from the canvas's top left (y down) as
+ * x, y, w, h, and the corner radii in CSS order, four floats each. Boxes with no area or wholly off
+ * the canvas are left out; at most `max`.
+ */
+export function glassUniforms(canvas: Box, items: { box: Box; radii: Radii }[], max: number) {
+  const rects = new Float32Array(max * 4);
+  const corners = new Float32Array(max * 4);
+  let count = 0;
+  for (const { box, radii } of items) {
+    if (count === max) break;
+    const x = box.x - canvas.x;
+    const y = box.y - canvas.y;
+    const off =
+      x >= canvas.width || y >= canvas.height || x + box.width <= 0 || y + box.height <= 0;
+    if (box.width < 1 || box.height < 1 || off) continue;
+    rects.set([x, y, box.width, box.height], count * 4);
+    corners.set(radii, count * 4);
+    count++;
+  }
+  return { rects, corners, count };
+}
+
+/**
+ * `glassUniforms` boxes as clip-space triangles, two per box (x, y, z each), over a `cssW`×`cssH`
+ * canvas: the Stage's glass pass draws only these pixels.
+ */
+export function glassQuads(rects: Float32Array, count: number, cssW: number, cssH: number) {
+  const out = new Float32Array(count * 18);
+  for (let i = 0; i < count; i++) {
+    const [x, y, w, h] = [0, 1, 2, 3].map((k) => rects[i * 4 + k] ?? 0) as [
+      number,
+      number,
+      number,
+      number,
+    ];
+    const x0 = (x / cssW) * 2 - 1;
+    const x1 = ((x + w) / cssW) * 2 - 1;
+    const y0 = 1 - (y / cssH) * 2;
+    const y1 = 1 - ((y + h) / cssH) * 2;
+    // Counter-clockwise, so they face the camera (three.js culls back faces).
+    out.set([x0, y1, 0, x1, y1, 0, x1, y0, 0, x0, y1, 0, x1, y0, 0, x0, y0, 0], i * 18);
+  }
+  return out;
 }
 
 /** Both filter maps for a `w`×`h` box: refraction and light live only inside the rim. */
@@ -124,7 +184,8 @@ function png(data: Uint8ClampedArray<ArrayBuffer>, w: number, h: number) {
   return c.toDataURL();
 }
 
-function radii(cs: CSSStyleDeclaration, w: number, h: number): Radii {
+/** The element's corner radii in px, percentages resolved, each at most half the box. */
+export function radii(cs: CSSStyleDeclaration, w: number, h: number): Radii {
   const r = (v: string) => {
     const n = Number.parseFloat(v) || 0;
     return Math.min(v.endsWith('%') ? (n / 100) * Math.min(w, h) : n, w / 2, h / 2);
@@ -137,9 +198,50 @@ function radii(cs: CSSStyleDeclaration, w: number, h: number): Radii {
   ];
 }
 
-/** Makes `el` liquid glass while attached (Chromium only); returns the detach. */
+/** The glass the --glass-* tokens describe, as `cs` (an element's computed style) resolves them. */
+export function glassParams(
+  cs: CSSStyleDeclaration,
+): GlassParams & { frost: number; saturate: number } {
+  const v = (name: string) => Number.parseFloat(cs.getPropertyValue(`--glass-${name}`));
+  return {
+    thickness: v('thickness'),
+    bezel: v('bezel'),
+    ior: v('ior'),
+    refraction: v('refraction'),
+    specular: v('specular'),
+    light: v('light'),
+    frost: v('frost'),
+    saturate: v('saturate'),
+  };
+}
+
+// Every attached glass element, for the Stage (engine.ts), which draws those over the room itself.
+const attached = new Set<HTMLElement>();
+const listeners = new Set<() => void>();
+export const glassElements = (): ReadonlySet<HTMLElement> => attached;
+export function onGlassChange(f: () => void) {
+  listeners.add(f);
+  return () => void listeners.delete(f);
+}
+const changed = () => {
+  for (const f of listeners) f();
+};
+
+/** Makes `el` liquid glass while attached; returns the detach. */
 export function attachGlass(el: HTMLElement | null): (() => void) | undefined {
-  if (!el || !svgBackdrop) return;
+  if (!el) return;
+  attached.add(el);
+  changed();
+  const svgOff = svgBackdrop ? svgFilter(el) : undefined;
+  return () => {
+    svgOff?.();
+    attached.delete(el);
+    changed();
+  };
+}
+
+/** The element's own SVG filter as its backdrop-filter (Chromium); returns the detach. */
+function svgFilter(el: HTMLElement) {
   if (!defs) {
     const root = svg('svg', { width: 0, height: 0, 'aria-hidden': 'true' });
     root.style.position = 'absolute';
@@ -179,15 +281,7 @@ export function attachGlass(el: HTMLElement | null): (() => void) | undefined {
     if (w < 2 || h < 2 || `${w}x${h}` === size) return; // closed dialogs measure 0
     size = `${w}x${h}`;
     const cs = getComputedStyle(el);
-    const v = (name: string) => Number.parseFloat(cs.getPropertyValue(`--glass-${name}`));
-    const g: GlassParams = {
-      thickness: v('thickness'),
-      bezel: v('bezel'),
-      ior: v('ior'),
-      refraction: v('refraction'),
-      specular: v('specular'),
-      light: v('light'),
-    };
+    const g = glassParams(cs);
     const m = glassMaps(w, h, radii(cs, w, h), g);
     for (const [img, data] of [
       [map, m.displacement],
@@ -197,9 +291,9 @@ export function attachGlass(el: HTMLElement | null): (() => void) | undefined {
       img.setAttribute('height', String(h));
       img.setAttribute('href', png(data, w, h));
     }
-    frost.setAttribute('stdDeviation', String(v('frost')));
+    frost.setAttribute('stdDeviation', String(g.frost));
     shift.setAttribute('scale', String(m.scale));
-    vivid.setAttribute('values', String(v('saturate')));
+    vivid.setAttribute('values', String(g.saturate));
     el.style.setProperty('--glass-filter', `url(#${id})`);
   };
   const observer = new ResizeObserver(build);

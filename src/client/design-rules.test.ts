@@ -71,6 +71,47 @@ describe('DS-01: no raw design values outside tokens.css', () => {
   });
 });
 
+// DS-01 for liquid glass (DESIGN_SYSTEM.md §7.11): every glass and scrim value the code reads is a
+// token, each is documented, and the fallback frost keeps §6's blur cap.
+describe('DS-01: liquid glass tokens', () => {
+  const defined = new Map(
+    [
+      ...readFileSync(join(ROOT, 'tokens.css'), 'utf8').matchAll(
+        /(--(?:glass|scrim)-[a-z-]+):\s*([^;]+);/g,
+      ),
+    ].map((m) => [String(m[1]), String(m[2]).trim()]),
+  );
+  const doc = readFileSync('docs/DESIGN_SYSTEM.md', 'utf8');
+  const section = (from: string, to: string) => doc.slice(doc.indexOf(from), doc.indexOf(to));
+
+  it('every one the code reads is defined in tokens.css', () => {
+    const used = new Set<string>();
+    for (const f of files) {
+      for (const m of f.text.matchAll(/var\((--(?:glass|scrim)-[a-z-]+)/g)) used.add(String(m[1]));
+      for (const m of f.text.matchAll(/'(--scrim-[a-z]+)'/g)) used.add(String(m[1]));
+    }
+    // ui/glass.ts reads the SVG filter's and the Stage's parameters by name.
+    const glassTs = files.find((f) => f.name === 'ui/glass.ts')?.text ?? '';
+    for (const m of glassTs.matchAll(/\bv\('([a-z]+)'\)/g)) used.add(`--glass-${m[1]}`);
+    used.delete('--glass-filter'); // set per element by ui/glass.ts, not a token
+    expect(used.size).toBeGreaterThan(10);
+    expect([...used].filter((t) => !defined.has(t))).toEqual([]);
+  });
+
+  it('every one is documented (glass in §7.11, scrims in §7)', () => {
+    const glass = section('### 7.11 Liquid glass', '## 8.');
+    const light = section('## 7. Light', '## 8.');
+    const missing = [...defined.keys()].filter(
+      (t) => !(t.startsWith('--glass-') ? glass : light).includes(`\`${t}\``),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it('the fallback frost stays within the 8 px blur cap (§6)', () => {
+    expect(Number.parseFloat(defined.get('--glass-blur') ?? '')).toBeLessThanOrEqual(8);
+  });
+});
+
 // DS-02 (inspection part): the shell has no gradients, glows, monospace or transformed capitals.
 // Under Material 3 (DESIGN_SYSTEM.md §1) letter-spacing comes only from the type scale's tracking
 // tokens, and shadows only from the elevation tokens, on floating surfaces. Backdrop filters and

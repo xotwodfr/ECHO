@@ -7,6 +7,12 @@ import sharp from 'sharp';
 // "no WebGL 2" test below covers that path on both browsers.
 
 const stage = (page: Page) => page.locator('.stage');
+/** The first Stage control's backdrop filter: 'none' while the composite draws the glass. */
+const glassFilter = (page: Page) =>
+  page
+    .locator('.stage-chrome .glass')
+    .first()
+    .evaluate((el) => getComputedStyle(el).backdropFilter);
 
 /** Counts executed requestAnimationFrame callbacks (window.__raf). */
 async function countFrames(page: Page) {
@@ -82,6 +88,8 @@ test('no WebGL 2: the CSS room, and Settings says visuals are limited', async ({
   expect(await page.locator('.stage-room-css').evaluate((el) => getComputedStyle(el).display)).toBe(
     'block',
   );
+  // No composite to draw the glass: the controls are SVG or blur glass instead (§7.11).
+  expect(await glassFilter(page)).not.toBe('none');
   expect(
     await page.locator('.stage-room-css').evaluate((el) => getComputedStyle(el).backgroundImage),
   ).toMatch(/radial-gradient.*radial-gradient/);
@@ -166,6 +174,7 @@ test.describe('with WebGL 2', () => {
     await countFrames(page);
     await openStage(page);
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
+    expect(await glassFilter(page)).toBe('none'); // the composite draws the glass
     await paletteSettled(page);
     await page.evaluate(() => {
       const gl = (document.querySelector('.stage-canvas') as HTMLCanvasElement).getContext(
@@ -181,6 +190,7 @@ test.describe('with WebGL 2', () => {
     expect(
       await page.locator('.stage-room-css').evaluate((el) => getComputedStyle(el).display),
     ).toBe('block');
+    expect(await glassFilter(page)).not.toBe('none'); // the CSS glass stands in
     await page.waitForTimeout(100);
     const lostAt = await frames(page);
     await page.waitForTimeout(500);
@@ -189,6 +199,7 @@ test.describe('with WebGL 2', () => {
       (window as unknown as { __lose: WEBGL_lose_context }).__lose.restoreContext(),
     );
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
+    expect(await glassFilter(page)).toBe('none');
     await expect.poll(() => frames(page)).toBeGreaterThan(lostAt + 2);
     expect(await brightest(await page.locator('.stage-canvas').screenshot())).toBeGreaterThan(10); // drawing again
   });

@@ -215,7 +215,23 @@ two meshes. Owned by `StageRenderer` (`TECHNICAL_ARCHITECTURE.md` §4).
 | 2 | **Energy** (Reverb only) | ½ | `energyRT_prev`, rings (uniform array of 3), key flare | `energyRT` (ping-pong) |
 | 3 | **Bloom** | ½ → mip chain | `roomRT + energyRT`, threshold L > 0.85 | bloom texture |
 | 4 | **Composite** | full (DPR-capped) | room + energy + bloom, halation, vignette, scrims, tone map, grain (opt), **dither** | canvas |
+| 4b | **Glass** (`DESIGN_SYSTEM.md` §7.11) | the glass boxes only | the composite again with the glass: room sampled through the bend, saturation inside, rim light after the tone map | canvas, over pass 4 |
 | 5 | **Probe** (every 250 ms) | 8×8 | composite downsample of the safe zone | `roomPeakL` for the contrast solver |
+
+**Liquid glass (2026-10-28):** pass 4b draws the glass of the Stage's controls (the top chrome's
+buttons and brightness pill, the dock), up to 8 boxes. It is the composite's own shader compiled
+with the glass, drawn as quads over those boxes; the full-screen composite is compiled with an
+empty glass function. Measured under SwiftShader, where every instruction runs for every pixel
+whatever the branches, glass inside the full-screen composite halved the frame rate; as its own
+pass over about a tenth of the pixels it costs about 30% there and next to nothing on a GPU. `engine.ts` measures every attached
+non-modal glass element (`ui/glass.ts`) with one ResizeObserver on each of them and the stage, and
+uploads their boxes and corner radii (`glassUniforms`, and `glassQuads` for the pass's
+geometry); the bend across the rim is a 32-step lookup that
+`ui/glass.ts` computes from the `--glass-*` tokens, the same physics as the SVG filter. The room
+sample (and Reverb's energy) is taken through the bend; saturation applies inside each box and the
+rim light after tone mapping. All of it is scaled by the chrome level, so it fades with the controls
+(Still snaps it: no moving bend under reduced motion). The controls keep only their CSS tint while
+WebGL draws; with the CSS room they use the SVG or blur glass instead (§9).
 
 **As built (M5):** bloom and halation are a small blur of the energy buffer inside the composite, not a
 separate mip-chain pass (`docs/reviews/M5.md`); revisit if the look needs more.
@@ -392,12 +408,15 @@ stays far below this:
 
 ### 8.1 Tiers
 
-| Tier | DPR cap | Room res | Energy/feedback | Bloom | Rings | Halation | Grain | Lyric background budget |
-|---|---|---|---|---|---|---|---|---|
-| **T0 High** | 1.5 | ½ | yes | yes (5 mips) | 3 | yes | opt | 24 |
-| **T1 Balanced** | 1.25 | ½ | yes | yes (3 mips) | 2 | yes | opt | 12 |
-| **T2 Low** | 1.0 | ⅓ | no | no | 1 (no feedback, direct draw) | no | no | 6 |
-| **T3 Minimal** | 1.0 | — | — | — | — | — | — | 0 (Still mode: one frame per palette change) |
+| Tier | DPR cap | Room res | Energy/feedback | Bloom | Rings | Halation | Grain | Lyric background budget | Glass (§5.2) |
+|---|---|---|---|---|---|---|---|---|---|
+| **T0 High** | 1.5 | ½ | yes | yes (5 mips) | 3 | yes | opt | 24 | bend, rim light, saturation |
+| **T1 Balanced** | 1.25 | ½ | yes | yes (3 mips) | 2 | yes | opt | 12 | bend, rim light, saturation |
+| **T2 Low** | 1.0 | ⅓ | no | no | 1 (no feedback, direct draw) | no | no | 6 | rim light, saturation |
+| **T3 Minimal** | 1.0 | — | — | — | — | — | — | 0 (Still mode: one frame per palette change) | tint only |
+
+The glass column is `GLASS_BY_TIER` in `governor.ts`: the bend is the only part that reads the room
+through a dependent fetch, so it is the first to go.
 
 ### 8.2 Governor
 
@@ -444,6 +463,7 @@ was mounted with until the Stage is reopened; the room follows every change. Uni
 |---|---|
 | WebGL2 unavailable | **CSS room**: `--art-room` background, two radial-gradient light pools in `--art-accent`/`--art-highlight` at 14% alpha, with a 128px tiled blue-noise PNG overlay at 3% to prevent banding. Palette transitions via CSS custom properties. Lyrics unaffected. Settings shows "Visuals limited: WebGL 2 isn't available in this browser." |
 | Context lost | CSS room until restored (§5.6) |
+| Either of the two above | The Stage's glass controls use the SVG or blur glass (`DESIGN_SYSTEM.md` §7.11) |
 | Feature extraction silent | Ambient (§3.5) |
 | Artwork fails to load | fallback palette, `palette.source = 'fallback'` |
 | Low tier or reduced motion | Still mode, with lyric degradation per `LYRICS_EXPERIENCE.md` §13 |
