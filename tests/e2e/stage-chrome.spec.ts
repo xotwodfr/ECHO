@@ -40,9 +40,8 @@ test.describe('chrome auto-hide', () => {
     await page.waitForTimeout(2500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome', 'hidden');
     await expect(shell(page)).toHaveAttribute('data-chrome', 'hidden', { timeout: 2000 });
-    // The top chrome fades per glass item (a fading row would cut the glass off from the room),
-    // and the pill as a whole.
-    await expect.poll(() => opacity(page, '.stage-chrome .glass')).toBe(0);
+    // The top chrome fades per control, and the pill as a whole.
+    await expect.poll(() => opacity(page, '.stage-chrome .stage-btn')).toBe(0);
     await expect.poll(() => opacity(page, '.dock')).toBe(0);
     expect(await page.locator('.stage').evaluate((el) => getComputedStyle(el).cursor)).toBe('none');
     // Hidden controls take no pointer input.
@@ -77,8 +76,6 @@ test.describe('chrome auto-hide', () => {
     await page.keyboard.press('q');
     const queue = page.getByRole('dialog', { name: 'Queue' });
     await expect(queue).toBeVisible();
-    // Over the Stage the sheet stays opaque, not glass (DESIGN_SYSTEM.md §6).
-    expect(await queue.evaluate((el) => getComputedStyle(el).backdropFilter)).toBe('none');
     await page.waitForTimeout(3500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome');
     await page.keyboard.press('Escape');

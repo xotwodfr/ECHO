@@ -75,9 +75,17 @@ test.describe('buttons', () => {
     const btn = section(page, 'Buttons').locator('button:disabled', { hasText: 'Shuffle' });
     await expect(btn).toHaveAccessibleDescription('Connect a server first');
     await expect(btn).toBeDisabled();
-    // Disabled is never opacity on the whole (§9.1): the label in --control grey.
+    // Disabled is never opacity on the whole (§9.1): the label in --control (M3 outline).
     expect(await btn.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
-    expect(await btn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(114, 114, 114)');
+    const control = await page.evaluate(() => {
+      const probe = document.createElement('span');
+      probe.style.color = 'var(--control)';
+      document.body.append(probe);
+      const c = getComputedStyle(probe).color;
+      probe.remove();
+      return c;
+    });
+    expect(await btn.evaluate((el) => getComputedStyle(el).color)).toBe(control);
   });
 
   test('loading keeps the name and focus, and ignores activation', async ({ page }) => {
@@ -350,7 +358,7 @@ test('menu: opens upward when the canvas has no room below, and stays inside it'
     (canvas?.y ?? 0) + (canvas?.height ?? 0),
   );
   expect(box?.y ?? -1).toBeGreaterThanOrEqual(canvas?.y ?? 0);
-  // With room below it opens downward. (A dispatched click: over the glass canvas Playwright's Firefox
+  // With room below it opens downward. (A dispatched click: over the canvas Playwright's Firefox
   // scrolls the trigger back down before a real one, though it is visible and hit-testable there.)
   await page.keyboard.press('Escape');
   await trigger.evaluate((el) => el.scrollIntoView({ block: 'start' }));
@@ -366,8 +374,6 @@ test.describe('sheet and dialog', () => {
     const sheet = page.getByRole('dialog', { name: 'Queue' });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole('button', { name: 'Close' })).toBeFocused();
-    // Glass in the Shell (DESIGN_SYSTEM.md §7.11): the SVG filter in Chromium, the blur elsewhere.
-    expect(await sheet.evaluate((el) => getComputedStyle(el).backdropFilter)).not.toBe('none');
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
     await expect(opener).toBeFocused();
@@ -506,7 +512,7 @@ test.describe('track rows and tiles', () => {
       })
       .toBe(true);
     expect(await style(page, '.tile .art img', 'object-fit')).toBe('cover');
-    expect(await style(page, '.tile .art', 'border-radius')).toBe('6px'); // a card's cover
+    expect(await style(page, '.tile .art', 'border-radius')).toBe('8px'); // a card's cover (M3 small)
     expect(await style(page, '.track-row .art', 'border-radius')).toBe('4px'); // a row's
     await play.click();
     await expect(page.getByRole('status')).toHaveText('Playing Tide Lines');

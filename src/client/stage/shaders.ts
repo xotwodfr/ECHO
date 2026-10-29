@@ -181,64 +181,12 @@ void main() {
   outColor = vec4(toSrgb(clamp(col, 0.0, 1.0)), 1.0);
 }`;
 
-/** Glass boxes the composite takes, and the steps of its bend lookup (ui/glass.ts bendProfile). */
-export const GLASS_MAX = 8;
-export const GLASS_STEPS = 32;
-
-// Liquid glass over the Stage's floating controls (DESIGN_SYSTEM.md §7.11), as ui/glass.ts's SVG
-// filter draws it elsewhere: the glass under CSS point p bends uv inward inside its rim; inside = 1
-// within a box, rim = the rim light there.
-const GLASS_GLSL = /* glsl */ `
-void glass(vec2 p, inout vec2 uv, out float inside, out float rim) {
-  inside = 0.0;
-  rim = 0.0;
-  // Find the box with straight-line tests first, then shape that one.
-  int hit = -1;
-  for (int i = 0; i < ${GLASS_MAX}; i++) {
-    vec2 h = uGlassRect[i].zw * 0.5;
-    vec2 a = abs(p - uGlassRect[i].xy - h);
-    hit = i < uGlassN && a.x <= h.x && a.y <= h.y ? i : hit; // the boxes never overlap
-  }
-  if (hit < 0) return;
-  vec2 h = uGlassRect[hit].zw * 0.5;
-  vec2 d = p - uGlassRect[hit].xy - h;
-  vec4 c = uGlassCorner[hit];
-  float r = d.y < 0.0 ? (d.x < 0.0 ? c.x : c.y) : (d.x < 0.0 ? c.w : c.z);
-  vec2 q = abs(d) - (h - r);
-  float depth;
-  vec2 n; // the edge's outward normal
-  if (q.x > 0.0 && q.y > 0.0) {
-    depth = r - length(q);
-    n = normalize(q) * sign(d);
-  } else {
-    depth = r - max(q.x, q.y);
-    n = q.x > q.y ? vec2(sign(d.x), 0.0) : vec2(0.0, sign(d.y));
-  }
-  if (depth < 0.0) return; // outside a rounded corner
-  inside = 1.0;
-  float bezel = max(1.0, min(uGlassBezel, min(h.x, h.y)));
-  if (depth >= bezel) return; // the flat top: unbent
-  float t = depth / bezel * ${GLASS_STEPS - 1}.0;
-  int k = int(t);
-  float s = mix(uGlassBend[k], uGlassBend[min(k + 1, ${GLASS_STEPS - 1})], fract(t));
-  // The outermost pixel is only partly glass: the rim fades in over one backing pixel, so its edge
-  // stays smooth on a backing store the tier keeps below the display's resolution.
-  float edge = clamp(depth * uDpr, 0.0, 1.0);
-  uv += edge * uGlassBendOn * vec2(-n.x, n.y) * s * uDpr / uRes; // inward; canvas uv is y up
-  rim = edge * uGlassLightOn * uGlassSpec * abs(dot(n, uGlassLight)) * pow(1.0 - depth / bezel, 6.0);
-}`;
-
-// Most of the stage is under no glass, and a software GPU (SwiftShader) runs every instruction
-// for every pixel whatever the branches: there the glass alone halved the frame rate. So the
-// full-screen composite gets an empty glass() that folds away, and the glass pass redraws only the
-// glass boxes with the real one.
-const NO_GLASS_GLSL = /* glsl */ `
-void glass(vec2 p, inout vec2 uv, out float inside, out float rim) {
-  inside = 0.0;
-  rim = 0.0;
-}`;
-
-const composite = (glass: string) => /* glsl */ `
+/**
+ * Pass 4, the composite (§5.2): room → vignette → scrims → filmic tone map → sRGB encode →
+ * blue-noise dither (±1 LSB, always the last step). Energy, bloom, halation and grain join here
+ * in later milestones.
+ */
+export const COMPOSITE_FRAG = /* glsl */ `
 precision highp float;
 uniform sampler2D uRoomTex;
 uniform sampler2D uNoise;      // 64×64 blue noise
@@ -254,21 +202,9 @@ uniform float uZoneScrim;      // 0…0.45: then a shadow scrim behind the activ
 uniform sampler2D uEnergyTex;  // Reverb: rings and flares (§4.4); black otherwise
 uniform float uEnergyOn;
 uniform vec2 uKeyUv;           // the key light, canvas uv (y up), for halation
-// The glass (DESIGN_SYSTEM.md §7.11). Boxes in CSS px from the canvas's top left, y down.
-uniform int uGlassN;
-uniform vec4 uGlassRect[${GLASS_MAX}];    // x, y, w, h
-uniform vec4 uGlassCorner[${GLASS_MAX}];  // radii: top-left, top-right, bottom-right, bottom-left
-uniform float uGlassBend[${GLASS_STEPS}]; // inward shift across the rim, CSS px, edge first
-uniform float uGlassBezel;
-uniform float uGlassSat;
-uniform float uGlassSpec;
-uniform vec2 uGlassLight;      // the rim light's direction, y down
-uniform float uGlassBendOn;    // per tier (governor.ts GLASS_BY_TIER)
-uniform float uGlassLightOn;
 in vec2 vUv;
 out vec4 outColor;
 ${ZONE_GLSL}
-${glass}
 
 vec3 hable(vec3 x) {
   const float A = ${HABLE.A}, B = ${HABLE.B}, C = ${HABLE.C}, D = ${HABLE.D}, E = ${HABLE.E}, F = ${HABLE.F};
@@ -279,22 +215,13 @@ vec3 toSrgb(vec3 c) {
 }
 
 void main() {
-  // The glass fades with the chrome it belongs to (Still snaps it, so reduced motion never sees the
-  // bend move).
-  vec2 uv = vUv;
-  float inside;
-  float rim;
-  glass(vec2(gl_FragCoord.x, uRes.y - gl_FragCoord.y) / uDpr, uv, inside, rim);
-  bool bent = uv != vUv;
-  uv = mix(vUv, uv, uChrome);
   vec3 col = texture(uRoomTex, vUv).rgb;
-  if (bent) col = texture(uRoomTex, uv).rgb;
 
   // Reverb (§4.3–§4.4, §5.2): the energy, masked to 40% in the reading corridor so rings pass
   // behind the words. A soft glow of it (a small blur standing in for the bloom chain), and
   // halation shifted toward red around the key light only.
   if (uEnergyOn > 0.5) {
-    vec2 at = bent ? uv : vUv;
+    vec2 at = vUv;
     vec3 e = texture(uEnergyTex, at).rgb;
     vec2 o = 6.0 / uRes;
     vec3 glow = (texture(uEnergyTex, at + vec2(o.x, o.y)).rgb + texture(uEnergyTex, at - vec2(o.x, o.y)).rgb
@@ -309,7 +236,7 @@ void main() {
   col = mix(col, uShadow, 0.16 * v);
 
   // Scrims (§7.7): 0 → --scrim-dock over 220px above the bottom edge, 0 → --scrim-top over 120px
-  // below the top. Light, since the glass chrome (§7.11) sits right on them.
+  // below the top. Light, since the chrome sits right on them.
   float fromBottom = gl_FragCoord.y / uDpr;
   float fromTop = (uRes.y - gl_FragCoord.y) / uDpr;
   col = mix(col, uShadow, uChrome * uScrimDock * clamp(1.0 - fromBottom / 220.0, 0.0, 1.0));
@@ -319,28 +246,11 @@ void main() {
   col *= 1.0 + uZoneExposure * zoneMask(vUv);
   col = mix(col, uShadow, uZoneScrim * scrimMask(vUv));
 
-  // What shows through the glass is more saturated (--glass-saturate).
-  if (inside > 0.0) {
-    float sat = mix(1.0, uGlassSat, uGlassLightOn * uChrome);
-    col = max(mix(vec3(dot(col, vec3(0.2126, 0.7152, 0.0722))), col, sat), 0.0);
-  }
-
   col = hable(col * uExposure) / hable(vec3(${HABLE.W.toFixed(1)}));
   col = toSrgb(clamp(col, 0.0, 1.0));
-  col = mix(col, vec3(1.0), rim * uChrome); // the glass's rim light, over the tone-mapped room
 
   // Blue-noise dither (§7.8): ±1 LSB, last.
   float n = texture(uNoise, gl_FragCoord.xy / 64.0).r;
   col += (n * 2.0 - 1.0) / 255.0;
   outColor = vec4(col, 1.0);
 }`;
-
-/**
- * Pass 4, the composite (§5.2): room → vignette → scrims → filmic tone map → sRGB encode →
- * blue-noise dither (±1 LSB, always the last step). Energy, bloom, halation and grain join here
- * in later milestones.
- */
-export const COMPOSITE_FRAG = composite(NO_GLASS_GLSL);
-
-/** Pass 4b: the composite again over the glass boxes only, through the glass (§7.11). */
-export const GLASS_FRAG = composite(GLASS_GLSL);

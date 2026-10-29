@@ -12,22 +12,30 @@ test('the client loads with tokens and no console errors', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/library');
   await expect(page.getByRole('heading', { name: 'Your Library', level: 1 })).toBeVisible();
-  // Spotify's frame (DESIGN_SYSTEM.md §3.1): the page black, the panels #121212 as glass (84%
-  // of it, the album-tinted frame behind showing through at the edges, §7.11).
-  const [body, panel] = await page.evaluate(() => {
-    const probe = document.createElement('div');
-    probe.style.background = 'var(--panel)';
-    document.body.append(probe);
-    const solid = getComputedStyle(probe).backgroundColor;
-    probe.remove();
-    return [getComputedStyle(document.body).backgroundColor, solid];
+  // M3 tonal surfaces (DESIGN_SYSTEM.md §3.1, §7.11): the frame the lowest surface container, the
+  // page one tone up and opaque, as the scheme's roles resolve.
+  const [frame, panel, canvas] = await page.evaluate(() => {
+    const role = (v: string) => {
+      const probe = document.createElement('div');
+      probe.style.background = `var(${v})`;
+      document.body.append(probe);
+      const c = getComputedStyle(probe).backgroundColor;
+      probe.remove();
+      return c;
+    };
+    const canvas = document.querySelector('.canvas') as HTMLElement;
+    return [
+      role('--md-sys-color-surface-container-lowest'),
+      role('--md-sys-color-surface-container-low'),
+      getComputedStyle(canvas).backgroundColor,
+    ];
   });
-  expect(body).toBe('rgb(0, 0, 0)');
-  expect(panel).toBe('rgb(18, 18, 18)');
-  await expect(page.locator('.canvas')).toHaveClass(/\bglass\b/);
-  expect(
-    await page.locator('.canvas').evaluate((el) => getComputedStyle(el).backgroundColor),
-  ).toMatch(/ \/ 0\.84\)$/);
+  expect(await page.locator('.shell').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+    frame,
+  );
+  expect(canvas).toBe(panel);
+  expect(canvas).not.toMatch(/\/|rgba/); // opaque
+  expect(panel).not.toBe(frame);
   expect(errors).toEqual([]);
 });
 

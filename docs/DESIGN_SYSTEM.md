@@ -1,7 +1,8 @@
 # ECHO — Design System
 
-Status: **Draft 4** · 2026-10-29: ECHO redesigned after Spotify, web and Android (owner decision;
-`docs/superpowers/specs/2026-10-29-spotify-redesign-design.md`) · liquid glass kept (§7.11)
+Status: **Draft 5** · 2026-10-29: ECHO redesigned after Spotify, web and Android (owner decision;
+`docs/superpowers/specs/2026-10-29-spotify-redesign-design.md`) · later that day liquid glass
+dropped for performance, the surfaces Material 3's (owner decision, §7.11)
 Related: [Redesign spec](superpowers/specs/2026-10-29-spotify-redesign-design.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
 This is the visual language of the whole application: tokens, component rules and the reason each
@@ -9,23 +10,24 @@ effect exists. Implementation takes every colour, size, duration and easing from
 `src/client/tokens.css` (§13). A raw value in a component counts as a defect
 (`ACCEPTANCE_CRITERIA.md` DS-01, checked by `src/client/design-rules.test.ts`).
 
-**2026-10-29: ECHO looks like Spotify.** The owner asked for the app to look "very much like
-Spotify", keeping liquid glass. This draft replaces the Material 3 shell (Draft 3, §0) and Reverb
-Chamber's player chrome. The name and the wordmark stay ECHO's; none of Spotify's brand marks are
+**2026-10-29: Spotify's layout, Material 3's surfaces.** The owner asked for the app to look "very
+much like Spotify", then for liquid glass to go ("it worsens the performance so much") in favour
+of a Material 3 design. The frame, pages and features are Spotify's; colour, surfaces, shape,
+type and states are M3's, the scheme following the playing album as in Draft 3. The name and the wordmark stay ECHO's; none of Spotify's brand marks are
 used, except Spotify's own logo where its attribution rules require it (§8).
 
 ---
 
 ## 1. Principles
 
-1. **Spotify's frame, ECHO's music.** A black frame, dark rounded panels, white and grey text, one
-   green accent. The page tints itself with its cover's colour; everything else stays neutral, so
-   artwork is the only colour on screen besides the green.
-2. **Green means play.** `--green` is for the play buttons, the song or context playing now, toggles
-   that are on, and saved hearts. Nothing else is green.
-3. **Glass floats.** Liquid glass is for what floats over content: the player pill, the phone mini
-   player and tab bar, the sticky page header, menus, sheets and dialogs (§7.11). Panels and pages
-   are never glass.
+1. **Spotify's frame, the album's scheme.** The frame is the lowest M3 surface container, the
+   panels one tone up, what floats higher still. The dark M3 content scheme comes from the playing
+   album's accent (`palette/m3.ts`), so the whole app takes the music's colour, as Material You
+   takes the wallpaper's.
+2. **Primary means play.** `--green` is an alias of `--md-sys-color-primary`: play buttons, the
+   song or context playing now, toggles that are on, saved hearts. Nothing else is primary.
+3. **Opaque surfaces.** Depth is tone and, for what floats, an M3 elevation shadow. Nothing reads
+   its backdrop (§7.11).
 4. **The lyrics view is the one immersive screen.** It fills the window with the cover, blurred
    (the room, `VISUALIZER_SPEC.md`), and keeps ECHO's word-timed lyric column (§4.3).
 
@@ -44,7 +46,7 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
 ├────────┬──────────────────────┬────────┤ ├────┬────────────┤       │             │
 │ Your   │  page (scrolls)      │ Now    │ │ lib│  page      │       │             │
 │ Library│                      │ Playing│ │    │            │       ├─────────────┤
-│        │  ╭── glass pill ──╮  │ / Queue│ │    │ ╭─ pill ─╮ │       │ mini player │
+│        │  ╭───── pill ─────╮  │ / Queue│ │    │ ╭─ pill ─╮ │       │ mini player │
 └────────┴──╰────────────────╯──┴────────┘ └────┴─╰────────╯─┘       │ ⌂  ⌕  Library│
                                                                       └─────────────┘
 ```
@@ -56,10 +58,12 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
 - **The page**: `--panel`, `--r-panel` corners, its own scroll.
 - **Right panel** (`--np-w`, wide only): Spotify's Now Playing view (cover, song and heart, About
   the artist, Next in queue) or the queue, toggled from the player.
-- **The player** floats over the bottom of the page as a liquid-glass pill (`--pill-h`,
-  `--pill-max`, `--pill-inset`); the page keeps room under its content for it.
-- **Compact**: no top bar or panels; the glass mini player (`--mini-h`, tinted by the playing
-  album) over the glass tab bar (`--tabbar`: Home, Search, Your Library). The mini player opens the
+- **The player** floats over the bottom of the page as an M3 floating toolbar: a
+  `surface-container` pill at elevation 3 (`--pill-h`, `--pill-max`, `--pill-inset`); the page
+  keeps room under its content for it.
+- **Compact**: no top bar or panels; the mini player (`--mini-h`, tinted by the playing album)
+  over the M3 navigation bar (`--tabbar`, 80px, docked, `surface-container`, a
+  `secondary-container` pill behind the current destination's icon: Home, Search, Your Library). The mini player opens the
   lyrics view.
 - **Lyrics view** (`/listen`): the whole window; the pill floats over it and fades when the pointer
   rests (PRODUCT_SPEC.md §6.1).
@@ -68,25 +72,28 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
 
 ### 3.1 Neutrals and the accent
 
-| Token | Value | Use |
-|---|---|---|
-| `--frame` | #000 | The frame around the panels |
-| `--panel` | #121212 | Panels, pages |
-| `--raised` / `--raised-2` / `--raised-3` | #1F1F1F / #2A2A2A / #333 | Search pill, cards on hover, chips, menus |
-| `--text` / `--muted` | #FFF / #B3B3B3 | Primary and secondary text |
-| `--green` (`--green-hover`, `--green-press`) | #1ED760 | Play, playing, on, saved |
-| `--hover-row`, `--selected-row` | white at 10% / 20% | Row and list states |
-| `--negative`, `--warning` | #F15E6C, #FFA42B | Errors, the offline note |
+The `--md-sys-color-*` roles are the dark `SchemeContent` (spec 2025) of the playing album's
+accent, written on `:root` and animated with the artwork palette by `palette/live.ts`;
+`tokens.css` holds the scheme of the fallback accent. The frame's names alias the roles:
 
-The `--md-sys-color-*` names the components were written against map onto these values; new code
-uses the names above.
+| Token | Role | Use |
+|---|---|---|
+| `--frame` | `surface-container-lowest` | The frame around the panels |
+| `--panel` | `surface-container-low` | Panels, pages |
+| `--raised` / `--raised-2` / `--raised-3` | `surface-container-high` / `-highest` / `surface-bright` | Search bar, cards on hover, chips |
+| `--text` / `--muted` | `on-surface` / `on-surface-variant` | Primary and secondary text |
+| `--green` (`--green-hover`, `--green-press`) | `primary` (with `on-primary` at 8% / 10%) | Play, playing, on, saved |
+| `--hover-row`, `--press-row` | `on-surface` at 8% / 10% | M3 state layers |
+| `--selected-row` | `secondary-container` | The current row or destination |
+| `--negative`, `--warning`, `--positive` | `error`, `warning`, `success` (custom colours harmonised to the seed) | Errors, the offline note |
+| `--focus` | `secondary` | The focus ring |
 
 ### 3.2 Tints from the cover
 
 A page header takes its cover's accent (the server's palette, `VISUALIZER_SPEC.md` §6) as
 `--tint`; `[data-tint]` turns it into `--head-colour`, Spotify's header tone: OKLCH lightness 0.42,
 chroma at most 0.13, the cover's hue. The body under the header fades from it to `--panel` over
-`--body-fade`. Without a tint, `--head-fallback` (#535353). The playing album's tone,
+`--body-fade`. Without a tint, `--head-fallback` (`surface-container-highest`). The playing album's tone,
 `--playing-tint`, colours the phone mini player. Liked Songs keeps Spotify's violet-to-mint
 (`--liked-from`, `--liked-to`); Browse all's genre cards take one of twelve category colours
 (`--genre-0…11`), picked by name.
@@ -114,9 +121,9 @@ everywhere, lyrics included. Figtree has no width axis: a long lyric line shrink
 | Role | Token | Use |
 |---|---|---|
 | Page title | `--title-xl/l/m/s` (800, 96/72/48/32px, tracking `--tracking-title`) | Album, artist, playlist headers, stepping down with the title's length |
-| Headline | `--md-sys-typescale-headline-medium` (700 32px) | Page headings, Good morning |
-| Section | `--md-sys-typescale-title-large` (700 24px) | Shelves, sections |
-| Title | `--md-sys-typescale-title-medium` / `-small` (700 16/14px) | Panel heads, card titles in shortcuts |
+| Headline | `--md-sys-typescale-headline-medium` (400 28px) | Page headings, Good morning |
+| Section | `--md-sys-typescale-title-large` (400 22px) | Shelves, sections |
+| Title | `--md-sys-typescale-title-medium` / `-small` (600 16/14px) | Panel heads, card titles in shortcuts |
 | Body | `--md-sys-typescale-body-large` / `-medium` (400 16/14px) | Rows, cards, text |
 | Small | `--md-sys-typescale-body-small` (400 12px) | Times, notes |
 
@@ -135,9 +142,12 @@ wide ≥ 1280px; container queries narrow the pill.
 
 ## 6. Surfaces and elevation
 
-Panels are flat (`--panel`). Shadows only on what floats (`--md-sys-elevation-level1…3`), on
-cards' covers (`--card-shadow`), page covers (`--shadow-art`) and the play buttons
-(`--shadow-play`). Frost on glass is ≤ 8px in the fallback path.
+Panels are flat (`--panel`). In the dark scheme a surface's tone carries its elevation; shadows,
+M3's (`--md-sys-elevation-level1…3`), are only on what floats: the player (3), menus (2), the
+sticky header (2), sheets (1), dialogs and snackbars (3), cards' covers (`--card-shadow`) and the
+play buttons (`--shadow-play`). Shapes are M3's corner scale (`--md-sys-shape-corner-*`): panels
+large (16px), cards medium (12px), menus and snackbars extra-small (4px), dialogs extra-large
+(28px), buttons and the player full.
 
 ## 7. Light, gradients and atmosphere
 
@@ -151,46 +161,18 @@ glow, the room drawn from the blurred cover, dither, optional grain.
 Under the lyrics view's chrome, a top scrim (0 → `--scrim-top`) and one above the pill
 (0 → `--scrim-dock`), in `--art-shadow`, so the controls keep contrast over the moving room.
 
-### 7.11 Liquid glass
+### 7.11 No glass
 
-**Technique.** In Chromium, each glass element gets its own SVG filter as its `backdrop-filter`
-(`ui/glass.ts`), rebuilt when the element resizes: a light frost, a displacement whose map is
-computed per element from Snell's law across a convex squircle rim, saturation, and a specular rim
-light. The element's own background is its surface colour made translucent. Over the lyrics view,
-while WebGL draws the room, a glass pass draws the pill's and the chrome's glass itself
-(`VISUALIZER_SPEC.md` §5.2); without WebGL 2 the SVG or blur glass comes back.
-
-**Where.** The three panels (Your Library, the page, Now Playing and the queue), mostly opaque
-so text reads, over a frame tinted by the playing album (`--ambient-*`) that the glass bends at
-their edges; the top bar's Home button and search pill; the player pill; the phone mini player
-(tinted by the playing album) and tab bar; the sticky page header (tinted by the page); menus;
-sheets; dialogs; toasts; the lyrics view's round close button (clear glass). Under the lyrics
-view the page panel is not glass: the Stage draws its own room and glass.
-
-**Tokens** (`tokens.css`):
-
-| Token | Controls |
-|---|---|
-| `--glass-fill` | Share of its surface colour a glass surface keeps (the rest is backdrop) |
-| `--glass-fill-stage` | Share of `--art-room` in glass over the lyrics view |
-| `--glass-tint-mini` | Share of the playing album's tone in the phone mini player |
-| `--glass-fill-panel` | Share of `--panel` the three panels keep |
-| `--glass-fill-pill` | Share of `--raised` the top bar's pills and the toast keep |
-| `--ambient-a`, `--ambient-b` | Share of the album's accent and highlight in the frame behind the panels |
-| `--glass-frost`, `--glass-frost-clear` | Blur before the bend: regular glass, and clear glass |
-| `--glass-blur` | Blur of the fallback (no SVG backdrop filters); ≤ 8px (§6) |
-| `--glass-saturate` | Saturation of what shows through |
-| `--glass-thickness`, `--glass-bezel`, `--glass-ior` | The glass the map is computed for |
-| `--glass-refraction` | Scale on the computed bend (0 = flat glass) |
-| `--glass-specular`, `--glass-light` | Rim light opacity and direction |
-| `--glass-edge` | The hairline around a glass surface |
-
-**Fallbacks.** Engines without SVG backdrop filters: the translucent fill over
-`blur(--glass-blur) saturate(--glass-saturate)`. `prefers-reduced-transparency: reduce`: no backdrop
-filter and opaque fills. Sheets over the lyrics view stay opaque.
+Liquid glass (Draft 4: an SVG displacement filter as each floating surface's `backdrop-filter`,
+and a second composite pass over the lyrics view) was dropped on 2026-10-29: a backdrop filter
+re-renders what is under its element whenever that changes, so scrolling, the palette animating
+and the lyrics view's moving room all re-filtered every glass surface each frame. Every surface is
+now an opaque M3 role (§3.1, §6); `design-rules.test.ts` fails on any `backdrop-filter`.
+Translucency without a backdrop filter (a scrim, a colour mixed with transparent) costs nothing
+and stays allowed.
 
 **Spotify artwork.** Spotify forbids overlaying or distorting its artwork (§8): the card's play
-button does not sit on a Spotify cover, and glass never rests over Spotify artwork for long.
+button does not sit on a Spotify cover.
 
 ## 8. Artwork
 
@@ -238,7 +220,9 @@ the chosen one white with black text.
 
 ### 9.6 Sheets, menus, dialogs, toasts
 
-All glass (§7.11). Menus are compact (40px items). Toasts are a white pill above the player.
+M3's: menus `surface-container` (40px items, 8px top and bottom), the modal side sheet
+`surface-container-low` over the scrim, dialogs `surface-container-high` with `headline-small`
+titles, and the toast an M3 snackbar (`inverse-surface`) above the player.
 
 ### 9.7 Connection status row (Settings)
 
@@ -285,5 +269,5 @@ The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 
 ## 13. Token file
 
-`src/client/tokens.css` is normative. Every colour, size, duration, easing, shadow and glass value
+`src/client/tokens.css` is normative. Every colour, size, duration, easing and shadow value
 lives there; component code reads only custom properties (DS-01).

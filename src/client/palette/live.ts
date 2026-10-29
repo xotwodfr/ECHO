@@ -3,13 +3,14 @@ import type { Track } from '../../shared/types.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { upcoming } from '../playback/queue.ts';
 import { createPaletteAnimator, ROLES, type Roles, VARS } from './animator.ts';
+import { M3_ROLES, type M3Role, m3Scheme, m3Var } from './m3.ts';
 
 // The live palette (VISUALIZER_SPEC.md §6.3–§6.4; TECHNICAL_ARCHITECTURE.md §5.4 `paletteStore`):
 // follows the current track's album, fetches its palette from the server (and the next track's in
 // the background), and animates the `--art-*` properties on :root. It runs at shell level, because
-// the player and the phone mini player take the album's colour too (tokens.css derives
-// --art-header from the accent); the lyrics view reads the same properties. Frames are requested
-// only while a transition runs.
+// the dock and the shell use the accent too; the Stage reads the same properties. The shell's M3
+// scheme (--md-sys-color-*, DESIGN_SYSTEM.md §3.1) is derived from the accent and animates with
+// them. Frames are requested only while a transition runs.
 
 /** Bumped whenever the properties change, so the Stage can re-upload its uniforms. */
 export const paletteStore = createStore<{ version: number; albumKey: string | null }>()(() => ({
@@ -46,13 +47,15 @@ export function startPalette(
   const root = opts.root ?? document.documentElement;
   const load = opts.load ?? fetchPalette;
   const cs = getComputedStyle(root);
-  const KEYS = ROLES;
-  const varOf = (k: keyof Roles) => VARS[k];
+  type All = Roles & Record<M3Role, string>;
+  const KEYS = [...ROLES, ...M3_ROLES] as (keyof All)[];
+  const varOf = (k: keyof All) => (k in VARS ? VARS[k as keyof Roles] : m3Var(k as M3Role));
+  const withScheme = (art: Roles): All => ({ ...art, ...m3Scheme(art.accent) });
   const initial = Object.fromEntries(
     KEYS.map((r) => [r, cs.getPropertyValue(varOf(r)).trim()]),
-  ) as Roles;
-  const fallback = initial; // tokens.css: the achromatic fallback
-  const anim = createPaletteAnimator<keyof Roles>(initial);
+  ) as All;
+  const fallback = withScheme(initial); // tokens.css: the achromatic fallback, seeded by Sodium
+  const anim = createPaletteAnimator<keyof All>(initial);
   const cache = new Map<string, Promise<Roles | null>>();
   const get = (key: string, art?: string) => {
     let p = cache.get(key);
@@ -86,7 +89,7 @@ export function startPalette(
   async function show(albumKey: string | null, art?: string) {
     paletteStore.setState({ albumKey });
     const fetched = albumKey ? await get(albumKey, art) : null;
-    const roles = fetched ?? fallback;
+    const roles = fetched ? withScheme(fetched) : fallback;
     if (paletteStore.getState().albumKey !== albumKey) return; // a newer track won
     // The same colours again (another track of the album, or fallback after fallback): nothing
     // to animate, nothing to write.

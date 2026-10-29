@@ -93,20 +93,15 @@
   gap: var(--sp-3);
 }
 
-/* The top chrome is clear glass (DESIGN_SYSTEM.md §7.11): icons only, over the blurred room. */
-.stage-chrome {
-  --glass-frost: var(--glass-frost-clear);
-}
-
 .stage-chrome .stage-btn {
   display: grid;
   place-items: center;
   width: var(--sp-7);
   height: var(--sp-7);
   padding: 0;
-  border: var(--rule) solid color-mix(in oklab, var(--text) 28%, transparent);
+  border: 0;
   border-radius: 50%;
-  background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
+  background: var(--md-sys-color-surface-container-high);
   color: var(--text);
   cursor: pointer;
   transition:
@@ -115,13 +110,14 @@
     background var(--dur-hover) ease;
 }
 
+/* M3 tonal icon buttons: a state layer on hover, the secondary container when selected. */
 .stage-chrome .stage-btn:hover {
-  border-color: color-mix(in oklab, var(--text) 60%, transparent);
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .stage-chrome .stage-btn[aria-pressed="true"] {
-  border-color: color-mix(in oklab, var(--text) 60%, transparent);
-  background: color-mix(in oklab, var(--text) 18%, transparent);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 /* The backdrop's brightness, like Control Center's slider lying on its side: the round button
@@ -133,21 +129,15 @@
   align-items: center;
   overflow: hidden; /* clips the fill's straight edges to the pill */
   border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
-  box-shadow: inset 0 0 0 var(--rule) color-mix(in oklab, var(--text) 28%, transparent);
+  background: var(--md-sys-color-surface-container-high);
   transition:
     opacity var(--dur-pop) var(--ease-out),
-    box-shadow var(--dur-hover) ease,
     background var(--dur-ui) ease;
 }
 
-.stage-brightness:hover {
-  box-shadow: inset 0 0 0 var(--rule) color-mix(in oklab, var(--text) 60%, transparent);
-}
-
+.stage-brightness:hover,
 .stage-brightness[data-open] {
-  background: color-mix(in oklab, var(--text) 18%, transparent);
-  box-shadow: none;
+  background: var(--md-sys-color-surface-container-highest);
 }
 
 .stage-chrome .stage-brightness .stage-btn {
@@ -750,10 +740,6 @@
 .ly-host {
   position: absolute;
   inset: 0;
-}
-
-.stage-chrome {
-  --glass-frost: var(--glass-frost-clear);
 }
 
 .stage-from {

@@ -7,15 +7,9 @@ import com.folk3s.echo.api.LyricsDoc
 import com.folk3s.echo.api.parseCss
 import com.folk3s.echo.api.toArgb
 import com.folk3s.echo.stage.Features
-import com.folk3s.echo.stage.GlassBox
-import com.folk3s.echo.stage.GlassParams
 import com.folk3s.echo.stage.LUMA_SLEW_PER_S
 import com.folk3s.echo.stage.Reverb
-import com.folk3s.echo.stage.bend
-import com.folk3s.echo.stage.bendProfile
 import com.folk3s.echo.stage.fft
-import com.folk3s.echo.stage.glassQuads
-import com.folk3s.echo.stage.glassUniforms
 import com.folk3s.echo.stage.lyrics.Spring
 import com.folk3s.echo.stage.lyrics.SpringParams
 import com.folk3s.echo.stage.lyrics.buildTimeline
@@ -33,40 +27,6 @@ import org.junit.Test
 
 // The ported pure logic, checked the way the web's tests check the originals (docs/ANDROID_CLIENT.md).
 class PortsTest {
-  @Test
-  fun `glass boxes become uniforms, empty and off-surface ones left out`() {
-    val r = floatArrayOf(24f, 24f, 24f, 24f)
-    val (rects, corners, n) =
-      glassUniforms(
-        412f,
-        915f,
-        listOf(GlassBox(10f, 10f, 0f, 48f, r), GlassBox(412f, 10f, 48f, 48f, r), GlassBox(0f, 820f, 412f, 95f, FloatArray(4)), GlassBox(300f, 24f, 48f, 48f, r)),
-        2,
-      )
-    assertEquals(2, n)
-    assertArrayEquals(floatArrayOf(0f, 820f, 412f, 95f, 300f, 24f, 48f, 48f), rects, 0f)
-    assertEquals(24f, corners[4])
-  }
-
-  @Test
-  fun `the glass pass's quads face the camera`() {
-    val q = glassQuads(floatArrayOf(103f, 0f, 206f, 229f), 1, 412f, 915f)
-    for (t in listOf(0, 9)) {
-      val area = (q[t + 3] - q[t]) * (q[t + 7] - q[t + 1]) - (q[t + 6] - q[t]) * (q[t + 4] - q[t + 1])
-      assertTrue("counter-clockwise", area > 0)
-    }
-    assertEquals(-0.5f, q.filterIndexed { i, _ -> i % 3 == 0 }.min(), 1e-5f)
-  }
-
-  @Test
-  fun `the bend is strongest at the edge and gone on the flat top`() {
-    val g = GlassParams()
-    val p = bendProfile(g)
-    assertTrue(p[0] > p[8] && p[8] > 0)
-    assertEquals(0.0, bend(g, 1.0), 1e-6)
-    assertEquals(0.0, bend(g.copy(ior = 1.0), 0.0), 1e-6)
-  }
-
   private fun doc(vararg lines: Pair<String, Long>) =
     LyricsDoc(trackKey = "navidrome:t", sync = "word", source = "fixture", attribution = Attribution("x"), lines = lines.map { (text, start) ->
       LyricLine(text, start, start + 900, words = listOf(LyricWord(text, start, start + 900)))

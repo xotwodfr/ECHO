@@ -2,14 +2,6 @@ import { DUR_PALETTE_MS } from '../palette/animator.ts';
 import { paletteStore } from '../palette/live.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { prefsStore } from '../prefs.ts';
-import {
-  bendProfile,
-  glassElements,
-  glassParams,
-  glassUniforms,
-  onGlassChange,
-  radii,
-} from '../ui/glass.ts';
 import type { FrameParams } from '../view.ts';
 import { contrastAt, type Inks, peaksOf, type Solve, solveStep } from './contrast.ts';
 import { createGovernor, firstTier, rememberedTier, rememberTier } from './governor.ts';
@@ -24,7 +16,6 @@ import { createLyricField, type LyricField } from './lyrics/field.ts';
 import { paletteUniforms, readPalette } from './palette.ts';
 import { type FrameInput, StageRenderer, type Tier } from './renderer.ts';
 import { createReverb } from './reverb.ts';
-import { GLASS_MAX, GLASS_STEPS } from './shaders.ts';
 import {
   lyricHost,
   lyricOffset,
@@ -334,28 +325,6 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     set({ mode: modeNow() });
   };
 
-  // Liquid glass (DESIGN_SYSTEM.md §7.11): the renderer's glass pass bends the room under the
-  // Stage's glass controls; modal sheets and dialogs keep their own. One ResizeObserver on each
-  // control and on the stage keeps the boxes current: a control that resizes (the brightness
-  // slider) moves its neighbours too, so any change measures them all.
-  const glassBoxes = new ResizeObserver(() => syncGlass());
-  let glassWatched = new Set<HTMLElement>();
-  const syncGlass = () => {
-    const els = [...glassElements()].filter((el) => !(el instanceof HTMLDialogElement));
-    for (const el of glassWatched) if (!els.includes(el)) glassBoxes.unobserve(el);
-    for (const el of els) if (!glassWatched.has(el)) glassBoxes.observe(el);
-    glassWatched = new Set(els);
-    if (!renderer) return;
-    const items = els.map((el) => ({
-      box: el.getBoundingClientRect(),
-      radii: radii(getComputedStyle(el), el.offsetWidth, el.offsetHeight),
-    }));
-    renderer.setGlass(glassUniforms(canvas.getBoundingClientRect(), items, GLASS_MAX));
-    if (drawing && loop.mode === 'still') loop.renderOnce();
-  };
-  glassBoxes.observe(root);
-  const offGlass = onGlassChange(syncGlass);
-
   // The room's base is the track's album cover, blurred (owner, 2026-10-28). Tracks of one album
   // share it; a cover that cannot be loaded (or used by WebGL: no CORS) leaves --art-room.
   let coverUrl: string | null = null;
@@ -428,9 +397,6 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
         Number.parseFloat(cs.getPropertyValue('--scrim-top')),
         Number.parseFloat(cs.getPropertyValue('--scrim-dock')),
       );
-      const g = glassParams(cs);
-      renderer.setGlassLook({ ...g, bend: bendProfile(g, GLASS_STEPS) });
-      syncGlass();
       showCover(artOf(c.player.getState()));
       resize();
       canvas.addEventListener('webglcontextlost', onLost);
@@ -466,8 +432,6 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       offPrefs();
       offVisuals();
       offTrack();
-      offGlass();
-      glassBoxes.disconnect();
       field?.dispose();
       observer.disconnect();
       reduced.removeEventListener('change', onReducedChange);

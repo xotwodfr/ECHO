@@ -17,7 +17,6 @@ import {
 } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
-import { glass } from '../ui/glass.ts';
 import { Artwork } from '../ui/media.tsx';
 import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
@@ -35,7 +34,7 @@ import spotifyLogo from './spotify-logo-white.svg';
 
 // The player (DESIGN_SYSTEM.md §5, §9.2; PRODUCT_SPEC.md §6.1), after Spotify's: the song and its
 // heart, the transport over the progress bar, and the view buttons (Now Playing, lyrics, queue,
-// sleep timer, volume). It floats over the page as a liquid-glass pill; on phones it is the glass
+// sleep timer, volume). It floats over the page as an M3 floating toolbar; on phones it is the
 // mini player above the tab bar, opening the Now Playing view.
 
 const ACTIVE = ['playing', 'loading', 'buffering'];
@@ -80,12 +79,7 @@ export function Dock({ stage }: { stage: boolean }) {
   const toggleListen = () => (stage ? history.back() : navigate({ view: 'listen' }));
 
   return (
-    <section
-      className="dock glass"
-      ref={glass}
-      aria-label={strings.dock.label}
-      data-status={status}
-    >
+    <section className="dock" aria-label={strings.dock.label} data-status={status}>
       <div className="dock-meta">
         {/* Phones: the mini player opens the Now Playing view; the whole strip is its target. */}
         {compact && !stage && t && (

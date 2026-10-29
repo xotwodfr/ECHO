@@ -78,25 +78,12 @@ import kotlinx.coroutines.delay
 
 enum class StageViewMode(val label: String) { Lyrics("Lyrics"), Cover("Cover"), Visual("Visual") }
 
-/** Chrome and glass shared between the Stage and the dock over it (the Shell draws the dock). */
+/** Chrome shared between the Stage and the dock over it (the Shell draws the dock). */
 class StageChrome {
   var visible by mutableStateOf(true)
-  val glass: SnapshotStateMap<String, GlassBox> = mutableStateMapOf()
 }
 
 val LocalStageChrome = staticCompositionLocalOf<StageChrome?> { null }
-
-/** Marks a control as Stage glass: its box (root dp) goes to the GL glass pass (§7.11). */
-fun Modifier.stageGlass(chrome: StageChrome?, key: String, radius: (w: Float, h: Float) -> Float, density: Float): Modifier =
-  if (chrome == null) this
-  else
-    onGloballyPositioned { c ->
-      val b = c.boundsInRoot()
-      val w = b.width / density
-      val h = b.height / density
-      val r = radius(w, h)
-      chrome.glass[key] = GlassBox(b.left / density, b.top / density, w, h, floatArrayOf(r, r, r, r))
-    }
 
 private const val LAST_TIER = "echo.visuals.lastTier"
 private const val IDLE_MS = 3000L
@@ -158,7 +145,6 @@ fun StageScreen(
     s?.showCover(p.track?.cover?.replace("size=600", "size=300"))
   }
   LaunchedEffect(s, p.track?.key) { s?.trackStartedAt = android.os.SystemClock.elapsedRealtime() }
-  LaunchedEffect(s, chrome.glass.toMap(), view) { s?.setGlass(chrome.glass.values.toList()) }
 
   // The GL view pauses with the activity: no frames while hidden (PERF-04); audio is not its business.
   val lifecycle = LocalLifecycleOwner.current.lifecycle
@@ -170,7 +156,6 @@ fun StageScreen(
     lifecycle.addObserver(obs)
     onDispose { lifecycle.removeObserver(obs) }
   }
-  DisposableEffect(Unit) { onDispose { chrome.glass.clear() } }
 
   Box(
     Modifier.fillMaxSize().background(Color(palette.room.toArgb())).pointerInput(Unit) {
@@ -238,7 +223,7 @@ private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float) 
     Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp, vertical = 12.dp).alpha(alpha),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    StageButton(EchoIcons.chevronDown, "Close Now playing", false, chrome.visible, Modifier.stageGlass(chrome, "close", { w, _ -> w / 2 }, density), onClose)
+    StageButton(EchoIcons.chevronDown, "Close Now playing", false, chrome.visible, Modifier, onClose)
     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
       ctx?.let {
         Text("PLAYING FROM", color = Chamber.text.copy(alpha = 0.7f), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
@@ -249,23 +234,22 @@ private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float) 
   }
 }
 
-/** A round Stage control (§9.1): 48 dp, a hairline ring, the room's tint; glass is drawn under it. */
+/** A round Stage control (§9.1): an M3 tonal icon button, 48 dp; selected, the secondary container. */
 @Composable
 private fun StageButton(icon: ImageVector, label: String, pressed: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
-  val palette = stagePalette()
+  val c = androidx.compose.material3.MaterialTheme.colorScheme
   Box(
     modifier
       .size(48.dp)
       .clip(CircleShape)
-      .background(if (pressed) Chamber.text.copy(alpha = 0.18f) else Color(palette.room.toArgb()).copy(alpha = 0.3f))
-      .border(1.dp, Chamber.text.copy(alpha = if (pressed) 0.6f else 0.28f), CircleShape)
+      .background(if (pressed) c.secondaryContainer else c.surfaceContainerHigh)
       .clickable(enabled = enabled, onClick = onClick)
       .semantics {
         contentDescription = label
         selected = pressed
       },
     contentAlignment = Alignment.Center,
-  ) { Icon(icon, null, tint = Chamber.text, modifier = Modifier.size(20.dp)) }
+  ) { Icon(icon, null, tint = if (pressed) c.onSecondaryContainer else c.onSurface, modifier = Modifier.size(20.dp)) }
 }
 
 /** The Lyrics view (§9.4): the field, or a note where the column would be; the credit above the dock. */

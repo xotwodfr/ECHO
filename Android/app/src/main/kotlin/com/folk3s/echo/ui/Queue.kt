@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,50 +55,45 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.launch
 
 /**
- * A sheet in the app's own window (§9.6), so it can be glass over what it covers (a platform
- * bottom sheet is a separate window, with nothing behind it to bend). Over the Stage it is opaque
- * (DESIGN_SYSTEM.md §6): no smeared motion through it. Drag down or Back closes it.
+ * An M3 modal bottom sheet (§9.6) in the app's own window, so it springs and drags with the rest
+ * of the Shell: surface-container-low over a 32% scrim. Drag down or Back closes it.
  */
 @Composable
-fun Sheet(onDismiss: () -> Unit, opaque: Boolean, fit: Boolean = false, fill: Float = GLASS_FILL, content: @Composable () -> Unit) {
+fun Sheet(onDismiss: () -> Unit, fit: Boolean = false, content: @Composable () -> Unit) {
   BackHandler(onBack = onDismiss)
   val scope = rememberCoroutineScope()
-  // A menu (fit) dims what it covers, as Spotify's; the queue sheet does not.
-  BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (fit) 0.5f else 0f)).pointerInput(Unit) { detectTapGestures { onDismiss() } }) {
+  BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)).pointerInput(Unit) { detectTapGestures { onDismiss() } }) {
     val full = constraints.maxHeight.toFloat()
     val y = remember { Animatable(full) }
     LaunchedEffect(Unit) { y.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 380f)) }
     val drag = rememberDraggableState { d -> scope.launch { y.snapTo((y.value + d).coerceAtLeast(0f)) } }
     val shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
-    CompositionLocalProvider(LocalBackdrop provides if (opaque) null else LocalBackdrop.current) {
-      GlassSurface(
-        if (opaque) Chamber.surface1 else MaterialTheme.colorScheme.surfaceContainerLow,
-        shape,
-        28.dp,
-        Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, y.value.roundToInt()) }.fillMaxWidth().let { if (fit) it else it.fillMaxHeight(0.88f) }
-          .pointerInput(Unit) { detectTapGestures {} } // taps on the sheet stay on it
-          .draggable(drag, Orientation.Vertical, onDragStopped = { v ->
-            if (y.value > full * 0.15f || v > 2000f) onDismiss() else y.animateTo(0f, spring(stiffness = 380f))
-          }),
-        fill = fill,
-      ) {
-        Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
-          Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.size(32.dp, 4.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(2.dp)))
-          }
-          content()
+    Surface(
+      Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, y.value.roundToInt()) }.fillMaxWidth().let { if (fit) it else it.fillMaxHeight(0.88f) }
+        .pointerInput(Unit) { detectTapGestures {} } // taps on the sheet stay on it
+        .draggable(drag, Orientation.Vertical, onDragStopped = { v ->
+          if (y.value > full * 0.15f || v > 2000f) onDismiss() else y.animateTo(0f, spring(stiffness = 380f))
+        }),
+      shape,
+      MaterialTheme.colorScheme.surfaceContainerLow,
+      shadowElevation = 1.dp,
+    ) {
+      Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
+        Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+          Box(Modifier.size(32.dp, 4.dp).background(MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f), RoundedCornerShape(2.dp)))
         }
+        content()
       }
     }
   }
 }
 
-/** Destructive confirmation (§9.6), in the window too, so it is glass over its 32% scrim. */
+/** Destructive confirmation (§9.6): an M3 basic dialog over its 32% scrim. */
 @Composable
 fun ConfirmDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
   BackHandler(onBack = onDismiss)
   Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.32f)).pointerInput(Unit) { detectTapGestures { onDismiss() } }, contentAlignment = Alignment.Center) {
-    GlassSurface(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(28.dp), 28.dp, Modifier.padding(24.dp).widthIn(max = 400.dp).pointerInput(Unit) { detectTapGestures {} }) {
+    Surface(Modifier.padding(24.dp).widthIn(max = 400.dp).pointerInput(Unit) { detectTapGestures {} }, RoundedCornerShape(28.dp), MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 6.dp) {
       Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(title, style = MaterialTheme.typography.headlineSmall)
         Text(text, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
@@ -112,12 +108,12 @@ fun ConfirmDialog(title: String, text: String, confirm: String, onConfirm: () ->
 
 /** The queue (§9.6): what plays now, Next up (added by the user), then the rest of what is playing. */
 @Composable
-fun QueueSheet(p: PlayerState, onClose: () -> Unit, overStage: Boolean) {
+fun QueueSheet(p: PlayerState, onClose: () -> Unit) {
   val app = LocalContext.current.echo
   val q = p.queue
   var confirm by remember { mutableStateOf(false) }
   val upcoming = q.nextUp + q.context
-  Sheet(onClose, opaque = overStage) {
+  Sheet(onClose) {
     Text("Queue", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 24.dp))
     if (q.now == null) return@Sheet Empty("Nothing queued. Play an album to start.")
     LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {

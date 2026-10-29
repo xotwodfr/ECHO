@@ -35,6 +35,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,12 +69,11 @@ import com.folk3s.echo.echo
 import com.folk3s.echo.playback.PlayerState
 import com.folk3s.echo.stage.StageChrome
 import com.folk3s.echo.stage.StageScreen
-import com.folk3s.echo.stage.stageGlass
 import kotlinx.coroutines.delay
 
-// The app after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md): three
-// tabs (Home, Search, Your Library) in a glass bar at the bottom, a glass mini player tinted by
-// the playing album floating over it, the Now Playing screen, and the lyrics view.
+// The app after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md), in
+// Material 3's surfaces: three tabs (Home, Search, Your Library) in an M3 navigation bar, the mini
+// player tinted by the playing album above it, the Now Playing screen, and the lyrics view.
 
 sealed interface Route {
   data object Home : Route
@@ -125,11 +127,10 @@ private fun Shell() {
   var picking by remember { mutableStateOf<List<Track>?>(null) }
   val chrome = remember { StageChrome() }
   BackHandler(enabled = nav.stack.size > 1) { nav.back() }
-  val backdrop = rememberBackdrop()
   val picker = { t: Track -> picking = listOf(t) }
 
   Box(Modifier.fillMaxSize().background(Chamber.ground)) {
-    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+    Box(Modifier.fillMaxSize()) {
       // The page under Now Playing and the lyrics view: the stack's top below them.
       val page = nav.stack.lastOrNull { it != Route.NowPlaying && it != Route.Listen } ?: Route.Home
       val pages = rememberSaveableStateHolder()
@@ -147,9 +148,9 @@ private fun Shell() {
           },
         )
       else {
-        // What the glass above it bends (§7.11): the page. A new page fades and rises in (the web's
-        // View Transition), the old one fades out quickly.
-        Box(Modifier.fillMaxSize().background(Chamber.surface1).backdropSource(backdrop).windowInsetsPadding(WindowInsets.statusBars)) {
+        // The page. A new one fades and rises in (the web's View Transition), the old one fades out
+        // quickly.
+        Box(Modifier.fillMaxSize().background(Chamber.surface1).windowInsetsPadding(WindowInsets.statusBars)) {
           AnimatedContent(
             page,
             transitionSpec = {
@@ -177,9 +178,8 @@ private fun Shell() {
             }
           }
         }
-        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 8.dp, vertical = 8.dp)) {
-          if (player.track != null) MiniPlayer(player) { nav.go(Route.NowPlaying) }
-          Spacer(Modifier.height(8.dp))
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+          if (player.track != null) Box(Modifier.padding(8.dp)) { MiniPlayer(player) { nav.go(Route.NowPlaying) } }
           TabBar(nav)
         }
       }
@@ -197,47 +197,45 @@ private fun Shell() {
           app.playback.dismissNotice()
         }
         Box(Modifier.fillMaxSize().padding(bottom = 160.dp), contentAlignment = Alignment.BottomCenter) {
-          GlassSurface(Chamber.surface3, RoundedCornerShape(12.dp), 12.dp, Modifier.padding(16.dp)) {
-            Text(msg, color = Chamber.text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+          // An M3 snackbar.
+          Surface(Modifier.padding(16.dp), RoundedCornerShape(4.dp), MaterialTheme.colorScheme.inverseSurface, shadowElevation = 6.dp) {
+            Text(msg, color = MaterialTheme.colorScheme.inverseOnSurface, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp))
           }
         }
       }
-      if (queueOpen) QueueSheet(player, onClose = { queueOpen = false }, overStage = nav.top == Route.Listen)
-      MenuSheet(opaque = nav.top == Route.Listen)
+      if (queueOpen) QueueSheet(player, onClose = { queueOpen = false })
+      MenuSheet()
       picking?.let { PlaylistPicker(it) { picking = null } }
     }
   }
 }
 
-/** The three tabs, Spotify's, on glass. */
+/** The three tabs, Spotify's, as an M3 navigation bar: a pill behind the current one's icon. */
 @Composable
 private fun TabBar(nav: Nav) {
   val tabs = listOf(Triple("Home", Route.Home, EchoIcons.home), Triple("Search", Route.Search, EchoIcons.search), Triple("Your Library", Route.Library, EchoIcons.library))
   val root = nav.stack.first()
-  GlassSurface(Chamber.surface2, CircleShape, 32.dp, Modifier.fillMaxWidth().height(64.dp)) {
-    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-      for ((label, route, icon) in tabs) {
-        val on = root == route
-        Column(
-          Modifier.clip(RoundedCornerShape(16.dp)).clickable { nav.root(route) }.padding(horizontal = 16.dp, vertical = 6.dp)
-            .semantics { contentDescription = label },
-          horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-          Icon(if (on && route == Route.Home) EchoIcons.homeFilled else icon, null, tint = if (on) Chamber.text else Chamber.muted, modifier = Modifier.size(24.dp))
-          Text(label, color = if (on) Chamber.text else Chamber.muted, style = MaterialTheme.typography.labelSmall)
-        }
-      }
+  NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+    for ((label, route, icon) in tabs) {
+      val on = root == route
+      NavigationBarItem(
+        selected = on,
+        onClick = { nav.root(route) },
+        icon = { Icon(if (on && route == Route.Home) EchoIcons.homeFilled else icon, null, modifier = Modifier.size(24.dp)) },
+        label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+        modifier = Modifier.semantics { contentDescription = label },
+      )
     }
   }
 }
 
-/** Spotify's mini player: the playing album's tone under glass, a hairline of progress. */
+/** Spotify's mini player: the playing album's tone, a hairline of progress. */
 @Composable
 private fun MiniPlayer(p: PlayerState, onOpen: () -> Unit) {
   val app = LocalContext.current.echo
   val t = p.track ?: return
   val tint = headerTone(albumAccent())
-  GlassSurface(tint, RoundedCornerShape(10.dp), 10.dp, Modifier.fillMaxWidth().height(56.dp)) {
+  Surface(Modifier.fillMaxWidth().height(56.dp), RoundedCornerShape(8.dp), tint, Chamber.text, shadowElevation = 3.dp) {
     Box(Modifier.fillMaxSize()) {
       // Swipe sideways for the next or previous song, up for Now Playing (Spotify's mini player).
       Row(
@@ -278,16 +276,15 @@ fun Progress(p: PlayerState, modifier: Modifier = Modifier, height: Int = 2, tra
   )
 }
 
-/** The transport over the lyrics view: a glass pill that fades with the chrome. */
+/** The transport over the lyrics view: an M3 floating toolbar that fades with the chrome. */
 @Composable
 private fun StageDock(p: PlayerState, chrome: StageChrome, onQueue: () -> Unit) {
   val app = LocalContext.current.echo
   val shown = chrome.visible
   val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 640), label = "dock")
-  val density = LocalDensity.current.density
   Row(
-    Modifier.fillMaxWidth().height(64.dp).alpha(alpha).clip(CircleShape).background(Chamber.ground.copy(alpha = 0.35f))
-      .stageGlass(chrome, "dock", { _, h -> h / 2 }, density).padding(horizontal = 12.dp),
+    Modifier.fillMaxWidth().height(64.dp).alpha(alpha).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer)
+      .padding(horizontal = 12.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     IconBtn(EchoIcons.previous, "Previous", Chamber.text, 24) { app.playback.previous() }

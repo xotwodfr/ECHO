@@ -13,16 +13,6 @@ import type { Tier } from './renderer.ts';
 
 const ORDER: Tier[] = ['T0', 'T1', 'T2', 'T3'];
 
-/**
- * Liquid glass on the Stage per tier (DESIGN_SYSTEM.md §7.11): the bend is a dependent read of the
- * room, the rim light and saturation are arithmetic. T3 (Still, Minimal) keeps only the CSS tint.
- */
-export const GLASS_BY_TIER: Record<Tier, { bend: boolean; light: boolean }> = {
-  T0: { bend: true, light: true },
-  T1: { bend: true, light: true },
-  T2: { bend: false, light: true },
-  T3: { bend: false, light: false },
-};
 const ALPHA = 0.1;
 const DOWN_AFTER_MS = 1000;
 const UP_AFTER_MS = 8000;

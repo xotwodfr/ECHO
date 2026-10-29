@@ -89,7 +89,11 @@ test('Offline: the library stays, with a freshness note while Navidrome is unrea
   await expect(page.locator('.tile:not(.tile--loading)').first()).toBeVisible();
   await faults('down=1');
   // Anything that reaches Navidrome now notices; the album list stays on screen.
-  await page.locator('.tile:not(.tile--loading)').first().getByRole('button').click();
+  await page
+    .locator('.tile:not(.tile--loading)')
+    .first()
+    .getByRole('button', { name: /^Play / })
+    .click();
   await expect(page.getByText(/Navidrome is unreachable\. Showing what was loaded at/)).toBeVisible(
     { timeout: 15_000 },
   );

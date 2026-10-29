@@ -113,15 +113,6 @@ class StageView(context: Context, initialTier: Tier, private val manualTier: Boo
     requestRender()
   }
 
-  fun setGlass(boxes: List<GlassBox>) {
-    val dp = resources.displayMetrics.density
-    val (rects, corners, n) = glassUniforms(width / dp, height / dp, boxes)
-    queueEvent {
-      renderer.setGlass(rects, corners, n)
-      requestRender()
-    }
-  }
-
   /** The track's cover, fetched and blurred off the GL thread, then crossfaded in. */
   fun showCover(url: String?) {
     val app = context.echo
@@ -163,9 +154,6 @@ class StageView(context: Context, initialTier: Tier, private val manualTier: Boo
   override fun onSurfaceCreated(gl: GL10?, config: EGLConfig?) {
     renderer.init()
     renderer.setTier(tier)
-    // The glass the --glass-* tokens describe (§7.11), the same physics as the web's.
-    val g = GlassParams()
-    renderer.setGlassLook(bendProfile(g), g.bezel.toFloat(), g.saturate.toFloat(), g.specular.toFloat(), g.light.toFloat())
     // A new context has no textures: the cover comes back at once, without a crossfade.
     renderer.setCover(coverBmp)
     renderer.setCover(coverBmp)
@@ -208,7 +196,7 @@ class StageView(context: Context, initialTier: Tier, private val manualTier: Boo
       drift += rate * (dt / 1000)
     }
 
-    // Scrims and glass follow the chrome: back in 160 ms, out over 640 ms; Still snaps.
+    // Scrims follow the chrome: back in 160 ms, out over 640 ms; Still snaps.
     val ct = if (chromeVisible) 1.0 else 0.0
     chrome = if (still) ct else if (chrome < ct) min(ct, chrome + dt / CHROME_IN_MS) else max(ct, chrome - dt / CHROME_OUT_MS)
 

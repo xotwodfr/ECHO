@@ -74,44 +74,33 @@ describe('DS-01: no raw design values outside tokens.css', () => {
   });
 });
 
-// DS-01 for liquid glass (DESIGN_SYSTEM.md §7.11): every glass and scrim value the code reads is a
-// token, each is documented, and the fallback frost keeps §6's blur cap.
-describe('DS-01: liquid glass tokens', () => {
+// DS-01 for the scrims (DESIGN_SYSTEM.md §7): every one the code reads is a token, documented.
+// No surface reads its backdrop (§7.11): backdrop filters re-render what is under them every
+// frame, which is what made liquid glass slow; M3's tonal surfaces are opaque.
+describe('DS-01: scrims, and no backdrop filters', () => {
   const defined = new Map(
     [
-      ...readFileSync(join(ROOT, 'tokens.css'), 'utf8').matchAll(
-        /(--(?:glass|scrim)-[a-z-]+):\s*([^;]+);/g,
-      ),
+      ...readFileSync(join(ROOT, 'tokens.css'), 'utf8').matchAll(/(--scrim-[a-z-]+):\s*([^;]+);/g),
     ].map((m) => [String(m[1]), String(m[2]).trim()]),
   );
   const doc = readFileSync('docs/DESIGN_SYSTEM.md', 'utf8');
-  const section = (from: string, to: string) => doc.slice(doc.indexOf(from), doc.indexOf(to));
+  const light = doc.slice(doc.indexOf('## 7. Light'), doc.indexOf('## 8.'));
 
-  it('every one the code reads is defined in tokens.css', () => {
+  it('every one the code reads is defined in tokens.css and documented in §7', () => {
     const used = new Set<string>();
     for (const f of files) {
-      for (const m of f.text.matchAll(/var\((--(?:glass|scrim)-[a-z-]+)/g)) used.add(String(m[1]));
+      for (const m of f.text.matchAll(/var\((--scrim-[a-z-]+)/g)) used.add(String(m[1]));
       for (const m of f.text.matchAll(/'(--scrim-[a-z]+)'/g)) used.add(String(m[1]));
     }
-    // ui/glass.ts reads the SVG filter's and the Stage's parameters by name.
-    const glassTs = files.find((f) => f.name === 'ui/glass.ts')?.text ?? '';
-    for (const m of glassTs.matchAll(/\bv\('([a-z]+)'\)/g)) used.add(`--glass-${m[1]}`);
-    used.delete('--glass-filter'); // set per element by ui/glass.ts, not a token
-    expect(used.size).toBeGreaterThan(10);
+    expect(used.size).toBeGreaterThan(0);
     expect([...used].filter((t) => !defined.has(t))).toEqual([]);
+    expect([...defined.keys()].filter((t) => !light.includes(`\`${t}\``))).toEqual([]);
   });
 
-  it('every one is documented (glass in §7.11, scrims in §7)', () => {
-    const glass = section('### 7.11 Liquid glass', '## 8.');
-    const light = section('## 7. Light', '## 8.');
-    const missing = [...defined.keys()].filter(
-      (t) => !(t.startsWith('--glass-') ? glass : light).includes(`\`${t}\``),
-    );
-    expect(missing).toEqual([]);
-  });
-
-  it('the fallback frost stays within the 8 px blur cap (§6)', () => {
-    expect(Number.parseFloat(defined.get('--glass-blur') ?? '')).toBeLessThanOrEqual(8);
+  it('no stylesheet uses backdrop-filter', () => {
+    const css = files.filter((f) => f.name.endsWith('.css'));
+    expect(css.length).toBeGreaterThan(2);
+    expect(css.filter((f) => /backdrop-filter\s*:/.test(f.text)).map((f) => f.name)).toEqual([]);
   });
 });
 

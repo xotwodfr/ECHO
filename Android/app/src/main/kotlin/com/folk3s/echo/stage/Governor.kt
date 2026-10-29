@@ -6,12 +6,11 @@ package com.folk3s.echo.stage
 // never in the first 3 s of a track or during a scrub, and never up within 20 s of any change. On
 // its own it goes no lower than T2: T3 is Still, which measures nothing and could never come back.
 
-enum class Tier(val dprCap: Float, val roomScale: Float, val bend: Boolean, val light: Boolean) {
-  // The glass columns are GLASS_BY_TIER (§8.1): the bend is a dependent read of the room.
-  T0(1.5f, 1 / 2f, true, true),
-  T1(1.25f, 1 / 2f, true, true),
-  T2(1.0f, 1 / 3f, false, true),
-  T3(1.0f, 1 / 3f, false, false),
+enum class Tier(val dprCap: Float, val roomScale: Float) {
+  T0(1.5f, 1 / 2f),
+  T1(1.25f, 1 / 2f),
+  T2(1.0f, 1 / 3f),
+  T3(1.0f, 1 / 3f),
 }
 
 private const val ALPHA = 0.1

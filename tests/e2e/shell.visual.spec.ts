@@ -13,8 +13,8 @@ const VIEWPORTS = [
   { width: 1024, height: 640 },
   { width: 390, height: 844 },
 ];
-// The glass over the album-tinted frame varies by a few dozen pixels between runs: allowed, a real
-// change moves thousands.
+// Antialiasing in the software renderer varies by a few dozen pixels between runs: allowed, a
+// real change moves thousands.
 const shot = {
   animations: 'disabled',
   caret: 'hide',

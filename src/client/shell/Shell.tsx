@@ -7,7 +7,6 @@ import { logout, sessionStore } from '../session.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
-import { glass } from '../ui/glass.ts';
 import { Icon } from '../ui/icons.tsx';
 import { Menu, ToastRegion } from '../ui/overlays.tsx';
 import {
@@ -48,7 +47,7 @@ import { StageChrome, StageContent } from './StageViews.tsx';
 
 // The frame (DESIGN_SYSTEM.md §5), after Spotify's: a top bar, Your Library on the left, the page
 // in the middle, Now Playing or the queue on the right, and the player floating over the page as
-// a glass pill. Phones: the page, a glass mini player and a glass tab bar. The lyrics view (Listen)
+// a pill. Phones: the page, a mini player and the navigation bar. The lyrics view (Listen)
 // fills the window, the pill floating over it.
 
 // The component gallery (DESIGN_SYSTEM.md §9, DS-06) is a development page:
@@ -70,8 +69,6 @@ function SearchField({ className }: { className: string }) {
       <span className="visually-hidden">{strings.nav.search}</span>
       <input
         type="search"
-        className="glass"
-        ref={glass}
         value={q}
         placeholder={strings.search.placeholder}
         // Spotify opens Browse on the first click into the box.
@@ -98,8 +95,7 @@ function TopBar({ route }: { route: Route }) {
       </Link>
       <nav className="topbar-nav" aria-label={strings.nav.label}>
         <Link
-          className="round-btn round-btn--lg glass"
-          ref={glass}
+          className="round-btn round-btn--lg"
           to={{ view: 'home' }}
           aria-label={strings.nav.home}
           title={strings.nav.home}
@@ -157,7 +153,7 @@ function AccountMenu() {
   );
 }
 
-/** Phones (§5): Home, Search and Your Library as a glass tab bar at the bottom. */
+/** Phones (§5): Home, Search and Your Library as an M3 navigation bar at the bottom. */
 function TabBar({ route }: { route: Route }) {
   const tab = (
     to: Route,
@@ -176,7 +172,7 @@ function TabBar({ route }: { route: Route }) {
     );
   };
   return (
-    <nav className="tabbar glass" ref={glass} aria-label={strings.nav.label}>
+    <nav className="tabbar" aria-label={strings.nav.label}>
       <ul>
         {tab({ view: 'home' }, ['home', 'mix', 'wrapped'], 'home', strings.nav.home)}
         {tab({ view: 'search', q: '' }, ['search', 'genre'], 'search', strings.nav.search)}
@@ -365,11 +361,6 @@ function Frame() {
   const right = useStore(panels, (s) => s.right);
   useChromeIdle(route.view === 'listen' && playing);
   const main = useRef<HTMLElement>(null);
-  // The page is a glass panel over the album's colours, except under the lyrics view's own room.
-  const mainGlass = useCallback((el: HTMLElement | null) => {
-    main.current = el;
-    return glass(el);
-  }, []);
   const first = useRef(true);
   const back = useView((s) => s.back);
   // Where each page was left, by its address, kept as it scrolls.
@@ -454,11 +445,7 @@ function Frame() {
     >
       {!listen && <TopBar route={route} />}
       {!listen && <LibraryPanel />}
-      <main
-        className={listen ? 'canvas' : 'canvas glass'}
-        ref={listen ? main : mainGlass}
-        onScroll={onScroll}
-      >
+      <main className="canvas" ref={main} onScroll={onScroll}>
         <View route={route} />
       </main>
       {!listen && <RightPanel />}

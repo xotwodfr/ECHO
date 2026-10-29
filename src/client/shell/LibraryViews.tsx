@@ -50,7 +50,7 @@ import { useTint } from './tint.ts';
 
 // The pages after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md): Album,
 // Artist, Playlist, Liked Songs, Genre and Search. A page opens with a header tinted by its cover,
-// a big title and the action row (the green play button first), then its rows or cards. A glass
+// a big title and the action row (the green play button first), then its rows or cards. A top
 // bar with the play button and the title slides in at the top once the header scrolls away.
 
 const albumContext = (a: Album): PlayContext => ({ kind: 'album', id: a.id, title: a.title });
@@ -91,7 +91,7 @@ export function PlayXL(p: {
 }
 
 /**
- * The tinted header (cover, kind, big title, facts) and, above it, the sticky glass bar that
+ * The tinted header (cover, kind, big title, facts) and, above it, the sticky top bar that
  * appears when the header has scrolled out of the canvas.
  */
 export function PageHead(p: {
@@ -128,7 +128,7 @@ export function PageHead(p: {
         data-tint={!!p.tint || undefined}
         style={tint}
       >
-        <div className="sticky-bar glass" inert={!past}>
+        <div className="sticky-bar" inert={!past}>
           {p.play && <PlayXL label={p.title} size="md" {...p.play} />}
           <span className="sticky-title">{p.title}</span>
         </div>

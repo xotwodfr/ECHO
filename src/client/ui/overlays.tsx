@@ -11,7 +11,6 @@ import {
 import { useStore } from 'zustand';
 import { strings } from '../strings.ts';
 import { Button, IconButton } from './controls.tsx';
-import { attachGlass } from './glass.ts';
 import type { IconName } from './icons.tsx';
 import { menuMove, toastStore } from './logic.ts';
 
@@ -22,7 +21,6 @@ import { menuMove, toastStore } from './logic.ts';
 function useModal(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDialogElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
-  useEffect(() => attachGlass(ref.current), []); // sheets and dialogs are glass (§7.11)
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -59,7 +57,7 @@ export function Sheet(props: {
     // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click is a pointer shortcut; keyboard closes with Esc (native)
     <dialog
       ref={ref}
-      className="sheet glass"
+      className="sheet"
       aria-labelledby={titleId}
       onClose={handleClose}
       onClick={onBackdrop}
@@ -100,7 +98,7 @@ export function ConfirmDialog(props: {
   return (
     <dialog
       ref={ref}
-      className="dialog glass"
+      className="dialog"
       role="alertdialog"
       aria-labelledby={titleId}
       aria-describedby={bodyId}
@@ -175,29 +173,30 @@ export function Menu({
     }
     let limit = window.innerHeight;
     let left = 0;
+    let top = 0;
     for (let p = el.parentElement; p; p = p.parentElement) {
       const cs = getComputedStyle(p);
       if (/(auto|scroll|hidden)/.test(cs.overflowY)) {
         // The floating player covers the canvas's scroll padding: that is not room either.
         const covered = Number.parseFloat(cs.scrollPaddingBottom) || 0;
-        limit = Math.min(limit, p.getBoundingClientRect().bottom - covered);
-        left = p.getBoundingClientRect().left;
+        const box = p.getBoundingClientRect();
+        limit = Math.min(limit, box.bottom - covered);
+        left = box.left;
+        top = box.top;
         break;
       }
     }
     // Right-aligned, it would leave its panel (or the window) on the left: open rightward.
     if (el.getBoundingClientRect().left < left) setAlign('start');
     const below = el.getBoundingClientRect().bottom <= limit;
-    const room = (triggerRef.current?.getBoundingClientRect().top ?? 0) > el.offsetHeight;
+    // Room above is inside the same container: above its top the menu would be clipped.
+    const room = (triggerRef.current?.getBoundingClientRect().top ?? 0) - top > el.offsetHeight;
     setPlacement(below || !room ? 'bottom' : 'top');
   }, [open]);
 
   useEffect(() => {
     if (active !== null && active >= 0) refs.current[active]?.focus({ preventScroll: true });
   }, [active]);
-
-  // Menus float over content: glass (§7.11).
-  useEffect(() => (open ? attachGlass(menu.current) : undefined), [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -266,7 +265,7 @@ export function Menu({
       {open && (
         <div
           ref={menu}
-          className="menu glass"
+          className="menu"
           role="menu"
           id={menuId}
           aria-label={label}
@@ -306,12 +305,7 @@ export function ToastRegion() {
   return (
     <div className="toast-region" role="status">
       {toast && (
-        <div
-          key={toast.id}
-          className="toast glass"
-          ref={attachGlass}
-          data-leaving={toast.leaving || undefined}
-        >
+        <div key={toast.id} className="toast" data-leaving={toast.leaving || undefined}>
           {toast.message}
         </div>
       )}

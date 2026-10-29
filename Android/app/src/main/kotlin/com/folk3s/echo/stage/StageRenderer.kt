@@ -18,8 +18,7 @@ import kotlin.math.sin
 
 // The Stage renderer (src/client/stage/renderer.ts; VISUALIZER_SPEC.md §5) on OpenGL ES 3.0, with
 // the web's own shaders (assets/stage, written by scripts/android-shaders.ts): the room into a
-// reduced-resolution target, Reverb's energy ping-pong, the composite to the screen, and the glass
-// pass over the controls' boxes. Runs on the GLSurfaceView's thread only.
+// reduced-resolution target, Reverb's energy ping-pong, and the composite to the screen. Runs on the GLSurfaceView's thread only.
 
 /** Filmic tone map (Hable), as palette.ts: the exposure that leaves dark colours unchanged. */
 private object Hable {
@@ -39,9 +38,6 @@ class FrameInput(
   val reverb: ReverbFrame?,
 )
 
-const val GLASS_MAX = 8
-const val GLASS_STEPS = 32
-
 class StageRenderer(private val ctx: Context) {
   private class Program(val id: Int) {
     private val locs = HashMap<String, Int>()
@@ -52,9 +48,7 @@ class StageRenderer(private val ctx: Context) {
   private lateinit var roomP: Program
   private lateinit var energyP: Program
   private lateinit var compositeP: Program
-  private lateinit var glassP: Program
   private var triangle = 0
-  private var quads = 0
   private var noise = 0
   private var halfFloat = false
 
@@ -76,16 +70,6 @@ class StageRenderer(private val ctx: Context) {
   private var brightness = 0.5f.pow(2.2f)
   private var scrimTop = 0.25f
   private var scrimDock = 0.4f
-  private val glassRect = FloatArray(GLASS_MAX * 4)
-  private val glassCorner = FloatArray(GLASS_MAX * 4)
-  private var glassN = 0
-  private var glassDirty = true
-  private val glassBend = FloatArray(GLASS_STEPS)
-  private var glassBezel = 20f
-  private var glassSat = 1.5f
-  private var glassSpec = 0.5f
-  private var glassLightX = 0f
-  private var glassLightY = 0f
   private var reverbOn = false
 
   val gpu: String? get() = glGetString(GL_RENDERER)
@@ -97,9 +81,7 @@ class StageRenderer(private val ctx: Context) {
     roomP = program(vert, asset("room_frag"))
     energyP = program(vert, asset("energy_frag"))
     compositeP = program(vert, asset("composite_frag"))
-    glassP = program(vert, asset("glass_frag"))
     triangle = buffer(floatArrayOf(-1f, -1f, 0f, 3f, -1f, 0f, -1f, 3f, 0f), GL_STATIC_DRAW)
-    quads = buffer(FloatArray(GLASS_MAX * 18), GL_DYNAMIC_DRAW)
     noise = noiseTexture()
     covers = intArrayOf(0, 0)
     built = false
@@ -200,7 +182,6 @@ class StageRenderer(private val ctx: Context) {
     h = max(1, height)
     dpr = pxPerDp
     buildTargets()
-    glassDirty = true
   }
 
   fun setTier(t: Tier) {
@@ -242,25 +223,6 @@ class StageRenderer(private val ctx: Context) {
       glClear(GL_COLOR_BUFFER_BIT)
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0)
-  }
-
-  /** The glass itself (§7.11): its bend across the rim (dp), rim width, saturation, rim light. */
-  fun setGlassLook(bend: FloatArray, bezel: Float, saturate: Float, specular: Float, lightDeg: Float) {
-    bend.copyInto(glassBend, 0, 0, GLASS_STEPS)
-    glassBezel = bezel
-    glassSat = saturate
-    glassSpec = specular
-    val a = lightDeg * PI / 180
-    glassLightX = cos(a).toFloat()
-    glassLightY = -sin(a).toFloat()
-  }
-
-  /** Where the glass is: dp from the surface's top left (Glass.kt glassUniforms). */
-  fun setGlass(rects: FloatArray, corners: FloatArray, count: Int) {
-    rects.copyInto(glassRect, 0, 0, GLASS_MAX * 4)
-    corners.copyInto(glassCorner, 0, 0, GLASS_MAX * 4)
-    glassN = count.coerceAtMost(GLASS_MAX)
-    glassDirty = true
   }
 
   private fun bind(unit: Int, tex: Int) {
@@ -341,23 +303,11 @@ class StageRenderer(private val ctx: Context) {
       energyHead = next
     }
 
-    // Pass 4, the composite, and 4b, the glass over the controls' boxes only.
+    // Pass 4, the composite.
     glBindFramebuffer(GL_FRAMEBUFFER, 0)
     glViewport(0, 0, w, h)
     composite(compositeP, f, rv)
     drawTriangle()
-    if (glassN > 0 && (tier.bend || tier.light)) {
-      composite(glassP, f, rv)
-      if (glassDirty) {
-        glBindBuffer(GL_ARRAY_BUFFER, quads)
-        glBufferSubData(GL_ARRAY_BUFFER, 0, glassN * 18 * 4, floats(glassQuads(glassRect, glassN, w / dpr, h / dpr)))
-        glassDirty = false
-      }
-      glBindBuffer(GL_ARRAY_BUFFER, quads)
-      glEnableVertexAttribArray(0)
-      glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0)
-      glDrawArrays(GL_TRIANGLES, 0, glassN * 6)
-    }
   }
 
   private fun composite(prog: Program, f: FrameInput, rv: ReverbFrame?) {
@@ -381,16 +331,6 @@ class StageRenderer(private val ctx: Context) {
       glUniform1f(u("uZoneExposure"), 0f)
       glUniform1f(u("uZoneScrim"), 0f)
       glUniform2f(u("uKeyUv"), f.keyX, 1 - f.keyY)
-      glUniform1i(u("uGlassN"), glassN)
-      glUniform4fv(u("uGlassRect[0]"), GLASS_MAX, glassRect, 0)
-      glUniform4fv(u("uGlassCorner[0]"), GLASS_MAX, glassCorner, 0)
-      glUniform1fv(u("uGlassBend[0]"), GLASS_STEPS, glassBend, 0)
-      glUniform1f(u("uGlassBezel"), glassBezel)
-      glUniform1f(u("uGlassSat"), glassSat)
-      glUniform1f(u("uGlassSpec"), glassSpec)
-      glUniform2f(u("uGlassLight"), glassLightX, glassLightY)
-      glUniform1f(u("uGlassBendOn"), if (tier.bend) 1f else 0f)
-      glUniform1f(u("uGlassLightOn"), if (tier.light) 1f else 0f)
     }
   }
 }

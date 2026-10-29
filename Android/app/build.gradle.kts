@@ -66,5 +66,6 @@ dependencies {
   implementation(libs.coil.network.okhttp)
   implementation(libs.okhttp)
   implementation(libs.serialization.json)
+  implementation(libs.materialkolor)
   testImplementation(libs.junit)
 }

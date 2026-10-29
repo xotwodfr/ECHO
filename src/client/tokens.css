@@ -1,52 +1,55 @@
 :root {
   color-scheme: dark;
 
-  /* ---------- Spotify's palette (DESIGN_SYSTEM.md §3) ----------
-     A black frame, #121212 panels, raised greys, white and #B3B3B3 text, and Spotify's green as
-     the one accent. The album palette below only tints: page headers and the Now Playing view. */
-  --frame: #000000;
-  --panel: #121212;
-  --raised: #1F1F1F;
-  --raised-2: #2A2A2A;
-  --raised-3: #333333;
-  --hover-row: rgba(255, 255, 255, 0.1);
-  --press-row: rgba(255, 255, 255, 0.16);
-  --selected-row: rgba(255, 255, 255, 0.2);
-  --green: #1ED760;
-  --green-hover: #3BE477;
-  --green-press: #1DB954;
-  --on-green: #000000;
-  --white-hover: #F0F0F0;
-  --backdrop-dim: rgba(0, 0, 0, 0.5);
+  /* ---------- The frame's colours, as Material 3 roles (DESIGN_SYSTEM.md §3) ----------
+     Spotify's layout in M3 tonal surfaces: the frame is the lowest container, the panels sit one
+     tone up, floating surfaces higher still. No translucency: depth is tone and shadow. The roles
+     follow the playing album (palette/m3.ts), so every one of these does too. */
+  --frame: var(--md-sys-color-surface-container-lowest);
+  --panel: var(--md-sys-color-surface-container-low);
+  --raised: var(--md-sys-color-surface-container-high);
+  --raised-2: var(--md-sys-color-surface-container-highest);
+  --raised-3: var(--md-sys-color-surface-bright);
+  /* state layers: on-surface at the M3 opacities */
+  --hover-row: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+  --press-row: color-mix(in srgb, var(--md-sys-color-on-surface) 10%, transparent);
+  --selected-row: var(--md-sys-color-secondary-container);
+  --green: var(--md-sys-color-primary);
+  --green-hover: color-mix(in srgb, var(--md-sys-color-primary), var(--md-sys-color-on-primary) 8%);
+  --green-press: color-mix(in srgb, var(--md-sys-color-primary), var(--md-sys-color-on-primary) 10%);
+  --on-green: var(--md-sys-color-on-primary);
+  --white-hover: color-mix(in srgb, var(--md-sys-color-inverse-surface), var(--md-sys-color-inverse-on-surface) 8%);
+  --backdrop-dim: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
   --header-shade: rgba(0, 0, 0, 0.5);
   --header-shade-2: rgba(0, 0, 0, 0.25);
   --liked-from: #450AF5;
   --liked-to: #C4EFD9;
   --text-on-tint: rgba(255, 255, 255, 0.72);
-  --head-fallback: #535353;
-  --avatar: #F59B23;
-  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  --chip: rgba(255, 255, 255, 0.07);
-  --chip-hover: rgba(255, 255, 255, 0.12);
-  --shortcut: rgba(255, 255, 255, 0.07);
-  --shortcut-hover: rgba(255, 255, 255, 0.2);
-  --rule-soft: rgba(255, 255, 255, 0.1);
-  --follow-edge: rgba(255, 255, 255, 0.3);
+  --head-fallback: var(--md-sys-color-surface-container-highest);
+  --avatar: var(--md-sys-color-tertiary-container);
+  --card-shadow: var(--md-sys-elevation-level2);
+  --chip: var(--md-sys-color-surface-container-high);
+  --chip-hover: var(--md-sys-color-surface-container-highest);
+  --shortcut: var(--md-sys-color-surface-container);
+  --shortcut-hover: var(--md-sys-color-surface-container-highest);
+  --rule-soft: var(--md-sys-color-outline-variant);
+  --follow-edge: var(--md-sys-color-outline);
   /* Browse all: Spotify's category colours, one per genre by name */
   --genre-0: #E8115B; --genre-1: #1E3264; --genre-2: #8D67AB; --genre-3: #E91429;
   --genre-4: #148A08; --genre-5: #BA5D07; --genre-6: #503750; --genre-7: #0D73EC;
   --genre-8: #DC148C; --genre-9: #27856A; --genre-10: #477D95; --genre-11: #AF2896;
 
-  /* the names the components were written against, at Spotify's values */
-  --ground: #000000;  --surface-1: #121212;  --surface-2: #1F1F1F;  --surface-3: #2A2A2A;
-  --line: #282828;    --control: #727272;
-  --text: #FFFFFF;    --muted: #B3B3B3;      --faint: #A7A7A7;      --focus: #FFFFFF;
-  --positive: #1ED760; --warning: #FFA42B;   --negative: #F15E6C;
-  --pill-pos-bg: #133A22;  --pill-pos-ink: #1ED760;
-  --pill-warn-bg: #3A2A12; --pill-warn-ink: #FFA42B;
-  --pill-neg-bg: #3B1A1E;  --pill-neg-ink: #F15E6C;
-  --pill-neutral-bg: #2A2A2A; --pill-neutral-ink: #FFFFFF;
-  --fallback-accent: #1ED760;
+  /* the names the components were written against, as M3 roles */
+  --ground: var(--frame);  --surface-1: var(--panel);  --surface-2: var(--raised);  --surface-3: var(--raised-2);
+  --line: var(--md-sys-color-outline-variant);    --control: var(--md-sys-color-outline);
+  --text: var(--md-sys-color-on-surface);    --muted: var(--md-sys-color-on-surface-variant);
+  --faint: var(--md-sys-color-on-surface-variant);      --focus: var(--md-sys-color-secondary);
+  --positive: var(--md-sys-color-success); --warning: var(--md-sys-color-warning);   --negative: var(--md-sys-color-error);
+  --pill-pos-bg: var(--md-sys-color-success-container);  --pill-pos-ink: var(--md-sys-color-on-success-container);
+  --pill-warn-bg: var(--md-sys-color-warning-container); --pill-warn-ink: var(--md-sys-color-on-warning-container);
+  --pill-neg-bg: var(--md-sys-color-error-container);  --pill-neg-ink: var(--md-sys-color-on-error-container);
+  --pill-neutral-bg: var(--md-sys-color-surface-container-highest); --pill-neutral-ink: var(--md-sys-color-on-surface);
+  --fallback-accent: var(--md-sys-color-primary);
 
   /* dynamic artwork palette (runtime-overwritten; these are the achromatic fallback) */
   --art-room:      oklch(0.16 0.006 250);
@@ -93,7 +96,7 @@
   --pill-h: 72px;
   --pill-inset: 16px;
   --pill-max: 980px;
-  --tabbar: 64px;
+  --tabbar: 80px;
   --mini-h: 56px;
   --home-h: 48px;
   --header-pad-top: 88px;
@@ -106,11 +109,12 @@
   --np-head: 136px;
 
   /* shape */
-  --r-pill: 500px; --r-control: 4px; --r-panel: 8px; --r-art: 4px; --r-art-lg: 6px;
-  --r-card: 6px;
-  --shadow-float: 0 16px 24px rgba(0,0,0,.3), 0 6px 8px rgba(0,0,0,.2);
+  --r-pill: var(--md-sys-shape-corner-full); --r-control: var(--md-sys-shape-corner-small);
+  --r-panel: var(--md-sys-shape-corner-large); --r-art: var(--md-sys-shape-corner-extra-small);
+  --r-art-lg: var(--md-sys-shape-corner-small); --r-card: var(--md-sys-shape-corner-medium);
+  --shadow-float: var(--md-sys-elevation-level3);
   --shadow-art: 0 4px 60px rgba(0,0,0,.5);
-  --shadow-play: 0 8px 8px rgba(0,0,0,.3);
+  --shadow-play: var(--md-sys-elevation-level2);
   /* a field's focus: a second pixel of its edge, inside */
   --ring-focus: inset 0 0 0 var(--rule) var(--text);
   --ring-error: inset 0 0 0 var(--rule) var(--negative);
@@ -130,7 +134,7 @@
   --tile-min-compact: 140px;
   --target-min: 24px; /* WCAG 2.5.8: the smallest target (A11Y-07) */
   --sheet-w: 400px; --signin-w: 324px;
-  --primary-hover: #FFFFFF;
+  --primary-hover: var(--green-hover);
   --genre-h: 180px;
   /* Made For You's covers: the mix's name sized and inset by the cover's own width. */
   --mix-title: 800 14cqi/1.02; --mix-pad: 7cqi; --mix-photo: 0.6;
@@ -147,62 +151,84 @@
   --ease-in-out: cubic-bezier(.65,0,.35,1);
   --ease-exit: cubic-bezier(.4,0,1,1);
 
-  /* ---------- The role names the components read (§3.1), at Spotify's values ---------- */
-  --md-sys-color-primary: #1ED760; --md-sys-color-on-primary: #000000;
-  --md-sys-color-primary-container: #1ED760; --md-sys-color-on-primary-container: #000000;
-  --md-sys-color-secondary: #FFFFFF; --md-sys-color-on-secondary: #000000;
-  --md-sys-color-secondary-container: #2A2A2A; --md-sys-color-on-secondary-container: #FFFFFF;
-  --md-sys-color-tertiary: #FFFFFF; --md-sys-color-on-tertiary: #000000;
-  --md-sys-color-tertiary-container: #333333; --md-sys-color-on-tertiary-container: #FFFFFF;
-  --md-sys-color-error: #F15E6C; --md-sys-color-on-error: #000000;
-  --md-sys-color-error-container: #3B1A1E; --md-sys-color-on-error-container: #FFD4D8;
-  --md-sys-color-surface: #121212; --md-sys-color-surface-dim: #000000; --md-sys-color-surface-bright: #2A2A2A;
-  --md-sys-color-surface-container-lowest: #000000; --md-sys-color-surface-container-low: #121212;
-  --md-sys-color-surface-container: #1F1F1F; --md-sys-color-surface-container-high: #2A2A2A;
-  --md-sys-color-surface-container-highest: #333333;
-  --md-sys-color-on-surface: #FFFFFF; --md-sys-color-on-surface-variant: #B3B3B3;
-  --md-sys-color-outline: #7C7C7C; --md-sys-color-outline-variant: #333333;
-  --md-sys-color-inverse-surface: #FFFFFF; --md-sys-color-inverse-on-surface: #000000;
-  --md-sys-color-inverse-primary: #1DB954; --md-sys-color-scrim: #000000; --md-sys-color-shadow: #000000;
-  --md-sys-color-success: #1ED760; --md-sys-color-on-success: #000000;
-  --md-sys-color-success-container: #133A22; --md-sys-color-on-success-container: #B3F5C9;
-  --md-sys-color-warning: #FFA42B; --md-sys-color-on-warning: #000000;
-  --md-sys-color-warning-container: #3A2A12; --md-sys-color-on-warning-container: #FFDDAF;
+  /* ---------- Material 3 colour roles (§3.1): the dark content scheme of the playing album's
+     accent (palette/m3.ts). These are the scheme of the fallback accent, before anything plays. */
+  --md-sys-color-primary: #C8C6C6;
+  --md-sys-color-on-primary: #303030;
+  --md-sys-color-primary-container: #535353;
+  --md-sys-color-on-primary-container: #C8C7C6;
+  --md-sys-color-secondary: #C8C6C5;
+  --md-sys-color-on-secondary: #313030;
+  --md-sys-color-secondary-container: #474746;
+  --md-sys-color-on-secondary-container: #B7B4B4;
+  --md-sys-color-tertiary: #CAC5C7;
+  --md-sys-color-on-tertiary: #323032;
+  --md-sys-color-tertiary-container: #555254;
+  --md-sys-color-on-tertiary-container: #CBC5C8;
+  --md-sys-color-error: #FFB4AB;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000A;
+  --md-sys-color-on-error-container: #FFDAD6;
+  --md-sys-color-surface: #141313;
+  --md-sys-color-surface-dim: #141313;
+  --md-sys-color-surface-bright: #3A3939;
+  --md-sys-color-surface-container-lowest: #0E0E0E;
+  --md-sys-color-surface-container-low: #1C1B1B;
+  --md-sys-color-surface-container: #201F1F;
+  --md-sys-color-surface-container-high: #2A2A2A;
+  --md-sys-color-surface-container-highest: #353434;
+  --md-sys-color-on-surface: #E5E2E1;
+  --md-sys-color-on-surface-variant: #C4C7C7;
+  --md-sys-color-outline: #8E9192;
+  --md-sys-color-outline-variant: #444748;
+  --md-sys-color-inverse-surface: #E5E2E1;
+  --md-sys-color-inverse-on-surface: #313030;
+  --md-sys-color-inverse-primary: #5E5E5E;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-success: #6FD9B8;
+  --md-sys-color-on-success: #00382B;
+  --md-sys-color-success-container: #00513F;
+  --md-sys-color-on-success-container: #8BF6D4;
+  --md-sys-color-warning: #E6C44B;
+  --md-sys-color-on-warning: #3B2F00;
+  --md-sys-color-warning-container: #564500;
+  --md-sys-color-on-warning-container: #FFE07E;
 
-  /* type scale (weight size/line): Spotify's, bold titles, no tracking */
-  --md-sys-typescale-display-small: 800 32px/40px;
-  --md-sys-typescale-headline-large: 700 32px/40px;
-  --md-sys-typescale-headline-large-emphasized: 800 32px/40px;
-  --md-sys-typescale-headline-medium: 700 32px/40px;
-  --md-sys-typescale-headline-small: 700 24px/32px;
-  --md-sys-typescale-title-large: 700 24px/32px;
-  --md-sys-typescale-title-large-emphasized: 800 24px/32px;
-  --md-sys-typescale-title-medium: 700 16px/24px;
-  --md-sys-typescale-title-small: 700 14px/20px;
+  /* type: the M3 type scale (weight size/line) in Figtree */
+  --md-sys-typescale-display-small: 400 36px/44px;
+  --md-sys-typescale-headline-large: 400 32px/40px;
+  --md-sys-typescale-headline-large-emphasized: 700 32px/40px;
+  --md-sys-typescale-headline-medium: 400 28px/36px;
+  --md-sys-typescale-headline-small: 400 24px/32px;
+  --md-sys-typescale-title-large: 400 22px/28px;
+  --md-sys-typescale-title-large-emphasized: 700 22px/28px;
+  --md-sys-typescale-title-medium: 600 16px/24px;
+  --md-sys-typescale-title-small: 600 14px/20px;
   --md-sys-typescale-body-large: 400 16px/24px;
   --md-sys-typescale-body-medium: 400 14px/20px;
   --md-sys-typescale-body-small: 400 12px/16px;
-  --md-sys-typescale-label-large: 700 14px/20px;
+  --md-sys-typescale-label-large: 600 14px/20px;
   --md-sys-typescale-label-large-emphasized: 700 14px/20px;
   --md-sys-typescale-label-medium: 600 12px/16px;
   --md-sys-typescale-label-small: 600 11px/16px;
-  --md-sys-tracking-title-medium: normal; --md-sys-tracking-small: normal;
-  --md-sys-tracking-body-large: normal; --md-sys-tracking-body-medium: normal;
-  --md-sys-tracking-body-small: normal; --md-sys-tracking-label: normal;
+  --md-sys-tracking-title-medium: 0.15px; --md-sys-tracking-small: 0.1px;
+  --md-sys-tracking-body-large: 0.5px; --md-sys-tracking-body-medium: 0.25px;
+  --md-sys-tracking-body-small: 0.4px; --md-sys-tracking-label: 0.5px;
 
   /* shape */
-  --md-sys-shape-corner-extra-small: 4px; --md-sys-shape-corner-small: 4px;
-  --md-sys-shape-corner-medium: 6px; --md-sys-shape-corner-large: 8px;
-  --md-sys-shape-corner-large-increased: 8px; --md-sys-shape-corner-extra-large: 12px;
-  --md-sys-shape-corner-extra-large-increased: 16px; --md-sys-shape-corner-full: 500px;
+  --md-sys-shape-corner-extra-small: 4px; --md-sys-shape-corner-small: 8px;
+  --md-sys-shape-corner-medium: 12px; --md-sys-shape-corner-large: 16px;
+  --md-sys-shape-corner-large-increased: 20px; --md-sys-shape-corner-extra-large: 28px;
+  --md-sys-shape-corner-extra-large-increased: 32px; --md-sys-shape-corner-full: 999px;
 
-  /* elevation: shadows on floating surfaces only */
-  --md-sys-elevation-level1: 0 4px 12px rgba(0,0,0,.3);
-  --md-sys-elevation-level2: 0 16px 24px rgba(0,0,0,.3), 0 6px 8px rgba(0,0,0,.2);
-  --md-sys-elevation-level3: 0 16px 48px rgba(0,0,0,.5);
+  /* elevation: in the dark scheme a surface's tone carries it; shadows only on what floats */
+  --md-sys-elevation-level1: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
+  --md-sys-elevation-level2: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
+  --md-sys-elevation-level3: 0 1px 3px rgba(0,0,0,.3), 0 4px 8px 3px rgba(0,0,0,.15);
 
   /* state layers */
-  --md-sys-state-hover: 0.1; --md-sys-state-focus: 0.1; --md-sys-state-pressed: 0.16;
+  --md-sys-state-hover: 0.08; --md-sys-state-focus: 0.1; --md-sys-state-pressed: 0.1;
   --md-sys-state-dragged: 0.16;
   --md-sys-disabled-content: 38%; --md-sys-disabled-container: 12%;
   --md-focus-ring: 2px; --md-focus-offset: 2px;
@@ -226,22 +252,6 @@
   --md-chip-h: 32px; --md-snackbar-h: 48px; --md-tab-h: 48px; --md-tab-indicator: 3px;
   --md-dialog-pad: 24px; --md-outline: 1px; --md-field-focus: 2px; --md-button-group-gap: 8px;
 
-  /* ---------- Liquid glass (DESIGN_SYSTEM.md §7.11) ---------- */
-  --glass-fill: 62%;          /* share of its surface colour a glass surface keeps */
-  --glass-fill-stage: 30%;    /* share of --art-room in a glass surface over the lyrics view */
-  --glass-frost: 10px;        /* SVG filter, blur before the bend: regular glass, panels with text */
-  --glass-frost-clear: 0.5px; /* clear glass: icon buttons over an already blurred room */
-  --glass-blur: 8px;          /* fallback without SVG backdrop filters; ≤ 8px (§6) */
-  --glass-saturate: 1.8;
-  --glass-thickness: 24px; --glass-bezel: 20px; --glass-ior: 1.5;   /* the glass the map is computed for */
-  --glass-refraction: 1;      /* scale on the computed bend; 0 = flat glass */
-  --glass-specular: 0.55; --glass-light: 135deg;   /* rim light opacity, and where it comes from */
-  --glass-edge: rgba(255, 255, 255, 0.14);
-  --glass-tint-mini: 55%;     /* share of the album colour in the phone mini player */
-  --glass-fill-panel: 84%;    /* share of --panel the big panels keep: glass at the edges, text reads */
-  --glass-fill-pill: 70%;     /* share of --raised the top bar's pills and the toast keep */
-  --ambient-a: 38%; --ambient-b: 24%;  /* the album's accent and highlight in the frame behind the panels */
-
   /* scrims under the lyrics view's chrome (§7.7) */
   --scrim-top: 0.25; --scrim-dock: 0.4;
 }
@@ -258,9 +268,5 @@
 [data-hue="8"] { --hue: var(--genre-8); }  [data-hue="9"] { --hue: var(--genre-9); }
 [data-hue="10"] { --hue: var(--genre-10); } [data-hue="11"] { --hue: var(--genre-11); }
 
-/* Reduced transparency: every glass surface is its opaque surface again (§7.11). */
-@media (prefers-reduced-transparency: reduce) {
-  :root { --glass-fill: 100%; --glass-fill-stage: 100%; --glass-tint-mini: 100%; --glass-fill-panel: 100%; --glass-fill-pill: 100%; }
-}
 
 .num { font-variant-numeric: tabular-nums; }

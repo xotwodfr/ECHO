@@ -6,7 +6,6 @@ import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/contex
 import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
-import { glass } from '../ui/glass.ts';
 import { Artwork } from '../ui/media.tsx';
 import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
@@ -22,7 +21,7 @@ export function RightPanel() {
   if (!right) return null;
   const title = right === 'queue' ? strings.queue.title : strings.panel.nowPlaying;
   return (
-    <aside className="right-panel glass" ref={glass} aria-label={title}>
+    <aside className="right-panel" aria-label={title}>
       {right === 'queue' ? <QueuePane /> : <NowPlayingPane />}
     </aside>
   );

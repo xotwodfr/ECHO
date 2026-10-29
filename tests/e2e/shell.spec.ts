@@ -228,12 +228,13 @@ for (const vp of VIEWPORTS) {
       });
       expect(m.overflowX, url).toBe(0);
       if (vp.width < 720) {
-        // Phones: no top bar or panels; the glass tab bar of 3 at the bottom, no mini player
+        // Phones: no top bar or panels; the navigation bar of 3 at the bottom, no mini player
         // while nothing has played.
         expect(m.topbar, url).toBeNull();
         expect(m.library, url).toBeNull();
         expect(m.tabs, url).toBe(3);
-        expect(m.tabbar?.bottom, url).toBe(vp.height - 8);
+        expect(m.tabbar?.bottom, url).toBe(vp.height); // M3's navigation bar is docked
+        expect(m.tabbar?.height, url).toBe(80);
         expect(m.dock, url).toBeNull();
       } else {
         expect(m.topbar?.height, url).toBe(64);

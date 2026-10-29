@@ -1,11 +1,12 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -15,29 +16,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.folk3s.echo.R
 import com.folk3s.echo.stage.stagePalette
+import com.materialkolor.DynamicMaterialTheme
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
 
-// ECHO after Spotify (docs/DESIGN_SYSTEM.md, 2026-10-29): Spotify's fixed neutrals and its green,
-// Figtree everywhere. The album palette only tints: page headers, the Now Playing screen and the
-// mini player.
+// ECHO: Spotify's layout, Material 3's surfaces (docs/DESIGN_SYSTEM.md Draft 5, 2026-10-29). The
+// colour scheme is the dark M3 content scheme of the playing album's accent (the web's
+// palette/m3.ts), animated over 1200 ms like the web's palette; Figtree everywhere.
 
-/** Spotify's palette (tokens.css). */
+/** The frame's colours as M3 roles (tokens.css): read in composition, they follow the album. */
 object Chamber {
-  val ground = Color(0xFF000000)
-  val surface1 = Color(0xFF121212)
-  val surface2 = Color(0xFF1F1F1F)
-  val surface3 = Color(0xFF2A2A2A)
-  val surface4 = Color(0xFF333333)
-  val line = Color(0xFF282828)
-  val control = Color(0xFF727272)
-  val text = Color(0xFFFFFFFF)
-  val muted = Color(0xFFB3B3B3)
-  val faint = Color(0xFFA7A7A7)
-  val green = Color(0xFF1ED760)
-  val greenPress = Color(0xFF1DB954)
-  val negative = Color(0xFFF15E6C)
+  private val c @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme
+  val ground @Composable @ReadOnlyComposable get() = c.surfaceContainerLowest
+  val surface1 @Composable @ReadOnlyComposable get() = c.surfaceContainerLow
+  val surface2 @Composable @ReadOnlyComposable get() = c.surfaceContainer
+  val surface3 @Composable @ReadOnlyComposable get() = c.surfaceContainerHigh
+  val surface4 @Composable @ReadOnlyComposable get() = c.surfaceContainerHighest
+  val line @Composable @ReadOnlyComposable get() = c.outlineVariant
+  val control @Composable @ReadOnlyComposable get() = c.outline
+  val text @Composable @ReadOnlyComposable get() = c.onSurface
+  val muted @Composable @ReadOnlyComposable get() = c.onSurfaceVariant
+  val faint @Composable @ReadOnlyComposable get() = c.onSurfaceVariant
+  val green @Composable @ReadOnlyComposable get() = c.primary
+  val negative @Composable @ReadOnlyComposable get() = c.error
+  val headFallback @Composable @ReadOnlyComposable get() = c.surfaceContainerHighest
   val likedFrom = Color(0xFF450AF5)
   val likedTo = Color(0xFFC4EFD9)
-  val headFallback = Color(0xFF535353)
 }
 
 private fun variable(res: Int, vararg weights: Int) =
@@ -46,63 +50,42 @@ private fun variable(res: Int, vararg weights: Int) =
 /** ECHO's face: Figtree (OFL), a free face close to Spotify's Circular. */
 val Figtree = variable(R.font.figtree, 400, 500, 600, 700, 800, 900)
 
-private fun style(weight: Int, size: Int, line: Int) =
-  TextStyle(fontFamily = Figtree, fontWeight = FontWeight(weight), fontSize = size.sp, lineHeight = line.sp, letterSpacing = 0.sp)
+private fun style(weight: Int, size: Int, line: Int, tracking: Double) =
+  TextStyle(fontFamily = Figtree, fontWeight = FontWeight(weight), fontSize = size.sp, lineHeight = line.sp, letterSpacing = tracking.sp)
 
+/** The M3 type scale (tokens.css --md-sys-typescale-*), in Figtree. */
 private val EchoTypography =
   Typography(
-    displayLarge = style(800, 48, 52),
-    displayMedium = style(800, 40, 44),
-    displaySmall = style(800, 32, 38),
-    headlineLarge = style(800, 32, 38),
-    headlineMedium = style(700, 26, 32),
-    headlineSmall = style(700, 22, 28),
-    titleLarge = style(700, 20, 26),
-    titleMedium = style(700, 16, 22),
-    titleSmall = style(700, 14, 20),
-    bodyLarge = style(400, 16, 22),
-    bodyMedium = style(400, 14, 20),
-    bodySmall = style(400, 12, 16),
-    labelLarge = style(700, 14, 20),
-    labelMedium = style(600, 12, 16),
-    labelSmall = style(600, 11, 14),
-  )
-
-private val SpotifyScheme =
-  darkColorScheme(
-    primary = Chamber.green,
-    onPrimary = Chamber.ground,
-    primaryContainer = Chamber.green,
-    onPrimaryContainer = Chamber.ground,
-    secondary = Chamber.text,
-    onSecondary = Chamber.ground,
-    secondaryContainer = Chamber.surface3,
-    onSecondaryContainer = Chamber.text,
-    tertiary = Chamber.text,
-    background = Chamber.ground,
-    onBackground = Chamber.text,
-    surface = Chamber.surface1,
-    onSurface = Chamber.text,
-    surfaceVariant = Chamber.surface3,
-    onSurfaceVariant = Chamber.muted,
-    surfaceContainerLowest = Chamber.ground,
-    surfaceContainerLow = Chamber.surface1,
-    surfaceContainer = Chamber.surface2,
-    surfaceContainerHigh = Chamber.surface3,
-    surfaceContainerHighest = Chamber.surface4,
-    inverseSurface = Chamber.text,
-    inverseOnSurface = Chamber.ground,
-    outline = Chamber.control,
-    outlineVariant = Chamber.surface4,
-    error = Chamber.negative,
-    onError = Chamber.ground,
+    displayLarge = style(400, 57, 64, -0.25),
+    displayMedium = style(400, 45, 52, 0.0),
+    displaySmall = style(400, 36, 44, 0.0),
+    headlineLarge = style(400, 32, 40, 0.0),
+    headlineMedium = style(400, 28, 36, 0.0),
+    headlineSmall = style(400, 24, 32, 0.0),
+    titleLarge = style(400, 22, 28, 0.0),
+    titleMedium = style(600, 16, 24, 0.15),
+    titleSmall = style(600, 14, 20, 0.1),
+    bodyLarge = style(400, 16, 24, 0.5),
+    bodyMedium = style(400, 14, 20, 0.25),
+    bodySmall = style(400, 12, 16, 0.4),
+    labelLarge = style(600, 14, 20, 0.1),
+    labelMedium = style(600, 12, 16, 0.5),
+    labelSmall = style(600, 11, 16, 0.5),
   )
 
 @Composable
 fun EchoTheme(content: @Composable () -> Unit) {
-  MaterialTheme(colorScheme = SpotifyScheme, typography = EchoTypography) {
-    // White text by default, as Spotify's: pages draw on the ground, not on a Surface.
-    CompositionLocalProvider(LocalContentColor provides Chamber.text, content = content)
+  DynamicMaterialTheme(
+    seedColor = stagePalette().accentColor,
+    isDark = true,
+    style = PaletteStyle.Content,
+    specVersion = ColorSpec.SpecVersion.SPEC_2025,
+    typography = EchoTypography,
+    animate = true,
+    animationSpec = tween(1200),
+  ) {
+    // Pages draw on the frame, not on a Surface: on-surface text by default.
+    CompositionLocalProvider(LocalContentColor provides MaterialTheme.colorScheme.onSurface, content = content)
   }
 }
 

@@ -4,7 +4,7 @@ Status: **v0.1 built** (2026-10-29), tested on an Android 17 emulator against a 
 
 A native Android app (Kotlin, Jetpack Compose, Media3) for the owner's ECHO at
 `https://echo.folk3s.com`. Owner decisions (2026-10-29): **full parity** with the web player (the
-library, playback, the Stage with its room, Reverb, word-synced lyrics and liquid glass), **Kotlin +
+library, playback, the Stage with its room, Reverb and word-synced lyrics; liquid glass was later dropped for Material 3's surfaces), **Kotlin +
 Compose**, the server **fixed** to echo.folk3s.com, **Navidrome only** (Spotify's Web Playback SDK
 cannot run in a third-party Android app; `PLAYBACK_ARCHITECTURE.md` §4.7).
 
@@ -16,10 +16,10 @@ cannot run in a third-party Android app; `PLAYBACK_ARCHITECTURE.md` §4.7).
 | `library-navidrome.ts` | `library/Library.kt`: the same Subsonic calls through `/api/v1/navidrome/rest/*` |
 | `playback/*` (an `<audio>` element) | `playback/`: a Media3 `MediaSessionService` (ExoPlayer, background playback, notification and lock-screen controls), streams from `/navidrome/stream/{id}` with the bearer header |
 | `playback/analyser.ts` (Web Audio) | `playback/Features.kt`: the same FFT features from a `TeeAudioProcessor` tap |
-| `stage/*` (three.js, WebGL 2) | `stage/`: OpenGL ES 3.0 with the same GLSL ES 3.00 shaders (room, energy, composite, glass, probe), the governor and Reverb ported as is |
+| `stage/*` (three.js, WebGL 2) | `stage/`: OpenGL ES 3.0 with the same GLSL ES 3.00 shaders (room, energy, composite, probe), the governor and Reverb ported as is |
 | `stage/lyrics/*` | `stage/lyrics/`: timing, springs, beat and the field model ported as is; layout and drawing in Compose |
 | `palette/m3.ts` | MaterialKolor's `SchemeContent` from the album accent |
-| `ui/glass.ts` | Stage: the GL glass pass; Shell: an AGSL `RuntimeShader` over a recorded backdrop (API 33+), blur on 31–32, tint below |
+| `tokens.css` M3 surfaces | `ui/Theme.kt`: `Chamber`'s names alias the scheme's roles; sheets, dialogs, the snackbar and the navigation bar are M3 surfaces |
 
 The pure modules keep their names and structure so a change to one is easy to carry to the other.
 
@@ -56,13 +56,14 @@ with covers, WAV streams and timed lyrics.
   3 s of play, the governor's tiers, Still under reduced motion (the system's Remove animations).
 - **Lyrics**: word-synced sweep, glow, depth, emphasis, backing vocals, duets, interlude dots,
   line-timed washes, unsynced text, the credit, the global timing offset.
-- **Glass**: the Stage's controls and dock in the GL glass pass; the queue sheet and the
-  confirmation dialog over the Library as AGSL glass (API 33+), frosted on 31–32, opaque below.
+- **Material 3 surfaces** (2026-10-29, replacing liquid glass for performance): the album-seeded
+  dark content scheme (MaterialKolor, animated over 1200 ms), an M3 navigation bar, the mini player
+  in the album's tone, modal bottom sheets and dialogs over a 32% scrim, an M3 snackbar, and tonal
+  icon buttons and a floating toolbar over the Stage.
 
 **Not in v0.1** (the web keeps them): account and admin settings, Navidrome connection, the
 lyric source menu and per-track lyric nudges, streaming quality and ReplayGain, the contrast
-solver that darkens the lyric zone behind bright covers. The Shell's dock and navigation bar are
-not glass: nothing passes behind them in this layout, the same caveat as the web's (§7.11).
+solver that darkens the lyric zone behind bright covers.
 
 **Needs the server's 2026-10-29 palette fix** (commit 07e10fb): before it, the palette route refused
 device tokens, so album colours fall back to Sodium until echo.folk3s.com is redeployed.

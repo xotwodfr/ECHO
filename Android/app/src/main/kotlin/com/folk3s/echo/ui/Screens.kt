@@ -261,8 +261,9 @@ fun Chip(text: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun tintOf(albumKey: String?): Color {
   val app = LocalContext.current.echo
-  val tint by produceState(Chamber.headFallback, albumKey) {
-    value = albumKey?.let { app.palette.forAlbum(it) }?.let { headerTone(it.accentColor) } ?: Chamber.headFallback
+  val fallback = Chamber.headFallback
+  val tint by produceState(fallback, albumKey) {
+    value = albumKey?.let { app.palette.forAlbum(it) }?.let { headerTone(it.accentColor) } ?: fallback
   }
   return tint
 }

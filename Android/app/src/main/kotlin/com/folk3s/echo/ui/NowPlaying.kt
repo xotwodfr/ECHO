@@ -160,6 +160,7 @@ private fun SeekBar(p: PlayerState) {
   var dragValue by remember { mutableFloatStateOf(0f) }
   val d = p.durationMs.coerceAtLeast(1)
   val value = if (dragging) dragValue else (now.toFloat() / d).coerceIn(0f, 1f)
+  val ink = Chamber.text
   Column(Modifier.padding(horizontal = 24.dp, vertical = 12.dp)) {
     // Spotify's seek bar: a thin white line on grey with a round thumb; tap or drag to seek.
     Box(
@@ -184,9 +185,9 @@ private fun SeekBar(p: PlayerState) {
         .drawBehind {
           val y = size.height / 2
           val h = 4.dp.toPx()
-          drawRoundRect(Chamber.text.copy(alpha = 0.25f), Offset(0f, y - h / 2), Size(size.width, h), CornerRadius(h / 2))
-          drawRoundRect(Chamber.text, Offset(0f, y - h / 2), Size(size.width * value, h), CornerRadius(h / 2))
-          drawCircle(Chamber.text, 6.dp.toPx(), Offset(size.width * value, y))
+          drawRoundRect(ink.copy(alpha = 0.25f), Offset(0f, y - h / 2), Size(size.width, h), CornerRadius(h / 2))
+          drawRoundRect(ink, Offset(0f, y - h / 2), Size(size.width * value, h), CornerRadius(h / 2))
+          drawCircle(ink, 6.dp.toPx(), Offset(size.width * value, y))
         },
     )
     Row(Modifier.fillMaxWidth()) {

@@ -59,20 +59,7 @@ a {
   box-sizing: border-box;
   height: 100dvh;
   padding: 0 var(--panel-gap) var(--panel-gap);
-  /* Behind the glass panels: the playing album's colours, dimmed, following the palette as it
-     animates, so the glass has something to bend (DESIGN_SYSTEM.md §7.11). */
-  background:
-    radial-gradient(
-      70% 90% at 0% 0%,
-      color-mix(in oklab, var(--art-accent) var(--ambient-a), var(--frame)),
-      transparent
-    ),
-    radial-gradient(
-      60% 80% at 100% 100%,
-      color-mix(in oklab, var(--art-highlight) var(--ambient-b), var(--frame)),
-      transparent
-    ),
-    var(--frame);
+  background: var(--frame);
 }
 
 .shell[data-right] {
@@ -131,7 +118,7 @@ a {
 .round-btn--lg {
   width: var(--md-button-h);
   height: var(--md-button-h);
-  background: color-mix(in oklab, var(--raised) var(--glass-fill-pill), transparent);
+  background: var(--raised);
 }
 
 .round-btn--lg .icon {
@@ -172,9 +159,9 @@ a {
   height: var(--search-h);
   box-sizing: border-box;
   padding: 0 var(--sp-7) 0 var(--sp-7);
-  border: var(--rule) solid var(--glass-edge);
+  border: var(--rule) solid transparent;
   border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--raised) var(--glass-fill-pill), transparent);
+  background: var(--raised);
   color: var(--text);
   font: var(--md-sys-typescale-body-large) var(--font-ui);
   transition:
@@ -245,13 +232,13 @@ a {
   margin-left: auto;
 }
 
-/* The panels: #121212 glass, rounded, each scrolling on its own. */
+/* The panels: M3 panes, one tone above the frame, rounded, each scrolling on its own. */
 .library-panel,
 .canvas,
 .right-panel {
   min-height: 0;
   border-radius: var(--r-panel);
-  background: color-mix(in oklab, var(--panel) var(--glass-fill-panel), transparent);
+  background: var(--panel);
 }
 
 .canvas {
@@ -387,8 +374,8 @@ a {
 }
 
 .chip[aria-pressed="true"] {
-  background: var(--text);
-  color: var(--on-green);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 .chip--clear {
@@ -758,7 +745,7 @@ a {
   font: var(--md-sys-typescale-title-medium) var(--font-ui);
 }
 
-/* ---- The player: a liquid-glass pill floating over the bottom of the page ---- */
+/* ---- The player: an M3 floating toolbar, a pill over the bottom of the page ---- */
 .dock {
   position: relative;
   z-index: 5;
@@ -776,9 +763,8 @@ a {
   height: var(--pill-h);
   margin-bottom: var(--pill-inset);
   padding: 0 var(--sp-5) 0 var(--sp-2);
-  border: var(--rule) solid var(--glass-edge);
   border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--raised) var(--glass-fill), transparent);
+  background: var(--md-sys-color-surface-container);
   box-shadow: var(--md-sys-elevation-level3);
   container: pill / inline-size;
 }
@@ -947,19 +933,18 @@ a {
 
 .shell[data-view="listen"] .dock {
   grid-area: 1 / 1;
-  background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
 }
 
 /* Auto-hide (PRODUCT_SPEC.md §6.1): the pill fades out after idle and returns at once on movement;
    hidden controls take no pointer input. Spotify's artwork and metadata never hide
    (data-attribution, DESIGN_SYSTEM.md §8). */
 .dock,
-.stage-chrome .glass {
+.stage-chrome :is(.stage-btn, .stage-brightness) {
   transition: opacity var(--dur-pop) var(--ease-out);
 }
 
 .shell[data-chrome="hidden"]:not([data-attribution]) .dock,
-.shell[data-chrome="hidden"] .stage-chrome .glass {
+.shell[data-chrome="hidden"] .stage-chrome :is(.stage-btn, .stage-brightness) {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-art) var(--ease-in-out);
@@ -967,14 +952,6 @@ a {
 
 .shell[data-chrome="hidden"] .stage {
   cursor: none;
-}
-
-/* While WebGL draws the room, its glass pass draws the lyrics view's glass (§7.11,
-   stage/engine.ts): the controls keep only their tint. Without WebGL the SVG or blur glass comes
-   back. */
-.shell:has(.stage[data-renderer="webgl"]) .stage-chrome .glass,
-.shell:has(.stage[data-renderer="webgl"]) .dock {
-  backdrop-filter: none;
 }
 
 .stage-chrome {
@@ -1202,7 +1179,8 @@ a {
   height: var(--hit-lg);
 }
 
-/* The glass bar that slides in at the top once a page's header has scrolled away. */
+/* The bar that slides in at the top once a page's header has scrolled away: an M3 top app bar
+   in the header's colour. */
 .sticky-head {
   position: sticky;
   top: 0;
@@ -1221,8 +1199,8 @@ a {
   gap: var(--sp-3);
   height: var(--sticky-h);
   padding: 0 var(--gutter);
-  border-bottom: var(--rule) solid var(--glass-edge);
-  background: color-mix(in oklab, var(--head-colour) var(--glass-fill), transparent);
+  background: var(--head-colour);
+  box-shadow: var(--md-sys-elevation-level2);
   opacity: 0;
   transition: opacity var(--dur-ui) var(--ease-out);
 }
@@ -1664,8 +1642,8 @@ a {
 }
 
 .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
-  background: var(--text);
-  color: var(--on-green);
+  background: var(--md-sys-color-secondary-container);
+  color: var(--md-sys-color-on-secondary-container);
 }
 
 /* /__ui component gallery (development page) */
@@ -2021,7 +1999,7 @@ a {
   }
 }
 
-/* ---- Compact (< 720px): the page full width, the glass mini player and tab bar ---- */
+/* ---- Compact (< 720px): the page full width, the mini player over the M3 navigation bar ---- */
 @media (max-width: 719.98px) {
   .shell,
   .shell[data-right] {
@@ -2066,11 +2044,11 @@ a {
     display: none;
   }
 
-  /* The mini player: the playing album's colour under glass, a hairline of progress. */
+  /* The mini player: the playing album's colour, a hairline of progress. */
   .dock {
     position: fixed;
     right: var(--sp-2);
-    bottom: calc(var(--tabbar) + 2 * var(--sp-2));
+    bottom: calc(var(--tabbar) + var(--sp-2));
     left: var(--sp-2);
     justify-self: stretch;
     align-self: stretch;
@@ -2082,7 +2060,8 @@ a {
     grid-template-areas: "meta transport right";
     column-gap: var(--sp-2);
     border-radius: var(--r-panel);
-    background: color-mix(in oklab, var(--playing-tint) var(--glass-tint-mini), transparent);
+    background: var(--playing-tint);
+    box-shadow: var(--md-sys-elevation-level2);
   }
 
   /* Nothing has played yet: no mini player (Spotify's). */
@@ -2140,16 +2119,13 @@ a {
 
   .tabbar {
     position: fixed;
-    right: var(--sp-2);
-    bottom: var(--sp-2);
-    left: var(--sp-2);
+    right: 0;
+    bottom: 0;
+    left: 0;
     z-index: 5;
     display: block;
     height: var(--tabbar);
-    border: var(--rule) solid var(--glass-edge);
-    border-radius: var(--r-pill);
-    background: color-mix(in oklab, var(--raised) var(--glass-fill), transparent);
-    box-shadow: var(--md-sys-elevation-level3);
+    background: var(--md-sys-color-surface-container);
   }
 
   .tabbar ul {
@@ -2166,19 +2142,32 @@ a {
     display: grid;
     justify-items: center;
     gap: var(--sp-1);
-    padding: var(--sp-1) var(--sp-4);
+    padding: var(--sp-1) 0;
     color: var(--muted);
-    font: var(--md-sys-typescale-label-small) var(--font-ui);
+    font: var(--md-sys-typescale-label-medium) var(--font-ui);
+    letter-spacing: var(--md-sys-tracking-label);
   }
 
   .tabbar a .icon {
+    box-sizing: content-box;
     width: var(--icon-lg);
     height: var(--icon-lg);
+    padding: var(--sp-1) calc((var(--md-nav-indicator-w) - var(--icon-lg)) / 2);
+    border-radius: var(--r-pill);
+    transition: background-color var(--dur-hover) ease;
+  }
+
+  .tabbar a:hover .icon {
+    background: var(--hover-row);
   }
 
   .tabbar a[aria-current="page"] {
     color: var(--text);
-    font-weight: 700;
+  }
+
+  .tabbar a[aria-current="page"] .icon {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
   }
 
   /* The lyrics view on a phone: the pill holds the transport. */
@@ -2288,8 +2277,8 @@ a {
    Only the page moves: it fades out quickly and the new one rises in, while the frame, the panels
    and the player hold still. A clicked card's cover flies into its page's header (named there for
    the one change). */
-/* Named only while a change runs (html.vt): a named element composites on its own, which would
-   change the glass over it the rest of the time. */
+/* Named only while a change runs (html.vt): a named element composites on its own layer, which
+   costs memory the rest of the time. */
 .vt .canvas {
   view-transition-name: page;
 }

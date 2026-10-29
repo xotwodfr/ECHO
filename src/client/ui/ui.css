@@ -1149,7 +1149,7 @@
   width: 100%;
 }
 
-/* ---- Menu (§9.6): glass, Spotify's compact items ---- */
+/* ---- Menu (§9.6): an M3 menu, surface-container at level 2 ---- */
 /* Above a track row's full-row play target. */
 .menu-wrap {
   position: relative;
@@ -1163,10 +1163,9 @@
   right: 0;
   z-index: 10;
   min-width: 14em;
-  padding: var(--sp-1);
-  border: var(--rule) solid var(--glass-edge);
-  border-radius: var(--r-control);
-  background: color-mix(in oklab, var(--raised-2) var(--glass-fill), transparent);
+  padding: var(--sp-2) 0;
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-surface-container);
   box-shadow: var(--md-sys-elevation-level2);
   transform-origin: top right;
   animation: menu-in var(--dur-ui) var(--ease-out);
@@ -1224,26 +1223,13 @@
   cursor: not-allowed;
 }
 
-/* ---- Sheet and dialog (§9.6): glass panels ---- */
+/* ---- Sheet and dialog (§9.6): an M3 modal side sheet and basic dialog ---- */
 .sheet,
 .dialog {
   box-sizing: border-box;
   padding: 0;
   border: 0;
   color: var(--text);
-}
-
-/* ---- Liquid glass (DESIGN_SYSTEM.md §7.11): ui/glass.ts points --glass-filter at the element's
-   own SVG filter in Chromium; elsewhere the backdrop is frosted instead. Each glass surface makes
-   its own background translucent with --glass-fill. ---- */
-.glass {
-  backdrop-filter: var(--glass-filter, blur(var(--glass-blur)) saturate(var(--glass-saturate)));
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .glass {
-    backdrop-filter: none;
-  }
 }
 
 .sheet {
@@ -1255,16 +1241,9 @@
   max-height: none;
   margin: 0;
   overflow: auto;
-  border: var(--rule) solid var(--glass-edge);
   border-radius: var(--r-panel);
-  background: color-mix(in oklab, var(--raised) var(--glass-fill), transparent);
-  box-shadow: var(--md-sys-elevation-level3);
-}
-
-/* Over the lyrics view a sheet stays opaque: no smeared motion through it (DESIGN_SYSTEM.md §6). */
-.shell[data-view="listen"] .sheet {
-  background: var(--raised);
-  backdrop-filter: none;
+  background: var(--md-sys-color-surface-container-low);
+  box-shadow: var(--md-sys-elevation-level1);
 }
 
 .sheet[open] {
@@ -1275,7 +1254,7 @@
 }
 
 .sheet::backdrop {
-  background: transparent;
+  background: var(--backdrop-dim);
 }
 
 .sheet-head {
@@ -1304,9 +1283,8 @@
 .dialog {
   width: min(var(--sheet-w), 100% - 2 * var(--sp-4));
   padding: var(--md-dialog-pad);
-  border: var(--rule) solid var(--glass-edge);
-  border-radius: var(--r-panel);
-  background: color-mix(in oklab, var(--raised-2) var(--glass-fill), transparent);
+  border-radius: var(--md-sys-shape-corner-extra-large);
+  background: var(--md-sys-color-surface-container-high);
   box-shadow: var(--md-sys-elevation-level3);
 }
 
@@ -1336,7 +1314,7 @@
   gap: var(--sp-2);
 }
 
-/* ---- Toast (§9.6): Spotify's, a blue pill bottom-centre above the player, max 1 ---- */
+/* ---- Toast (§9.6): an M3 snackbar, bottom-centre above the player, max 1 ---- */
 .toast-region {
   position: fixed;
   bottom: calc(var(--pill-h) + 2 * var(--pill-inset) + var(--sp-4));
@@ -1351,13 +1329,12 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  min-height: var(--hit-lg);
+  min-height: var(--md-snackbar-h);
   padding: var(--sp-2) var(--sp-4);
-  border: var(--rule) solid var(--glass-edge);
-  border-radius: var(--r-panel);
-  background: color-mix(in oklab, var(--raised-2) var(--glass-fill-pill), transparent);
-  color: var(--text);
-  box-shadow: var(--md-sys-elevation-level2);
+  border-radius: var(--md-sys-shape-corner-extra-small);
+  background: var(--md-sys-color-inverse-surface);
+  color: var(--md-sys-color-inverse-on-surface);
+  box-shadow: var(--md-sys-elevation-level3);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
   transition: opacity var(--dur-toast) var(--ease-out);
 
@@ -1493,7 +1470,7 @@
 
   /* Above the mini player and the tab bar. */
   .toast-region {
-    bottom: calc(var(--tabbar) + var(--mini-h) + 4 * var(--sp-2));
+    bottom: calc(var(--tabbar) + var(--mini-h) + 3 * var(--sp-2));
   }
 
   .conn-row {
@@ -1556,7 +1533,8 @@
   }
 
   .tabs a[aria-current="page"],
-  .chip[aria-pressed="true"] {
+  .chip[aria-pressed="true"],
+  .view-switch button[aria-pressed="true"] {
     forced-color-adjust: none;
     background: Highlight;
     color: HighlightText;

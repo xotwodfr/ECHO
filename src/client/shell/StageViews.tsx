@@ -9,7 +9,6 @@ import { sessionStore } from '../session.ts';
 import { lyricHost, lyricOffset, lyricsStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
-import { glass } from '../ui/glass.ts';
 import { Icon } from '../ui/icons.tsx';
 import { formatTime } from '../ui/logic.ts';
 import { Artwork } from '../ui/media.tsx';
@@ -42,8 +41,7 @@ export function StageChrome() {
     <div className="stage-chrome">
       <button
         type="button"
-        className="stage-btn glass"
-        ref={glass}
+        className="stage-btn"
         aria-label={strings.nowPlaying.close}
         title={strings.nowPlaying.close}
         onClick={close}

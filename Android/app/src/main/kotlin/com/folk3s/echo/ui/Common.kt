@@ -129,7 +129,7 @@ fun TrackRow(
   }
 }
 
-/** The open "…" menu, one at a time: the Shell shows it as a glass sheet (Spotify's), not a popup. */
+/** The open "…" menu, one at a time: the Shell shows it as a bottom sheet (Spotify's), not a popup. */
 object Menus {
   var open by mutableStateOf<Pair<String, List<Pair<String, () -> Unit>>>?>(null)
 }
@@ -141,12 +141,11 @@ fun MoreMenu(label: String, items: List<Pair<String, () -> Unit>>) {
   }
 }
 
-/** The menu as a glass sheet over the screen; a choice closes it first. */
+/** The menu as an M3 bottom sheet over the screen; a choice closes it first. */
 @Composable
-fun MenuSheet(opaque: Boolean) {
+fun MenuSheet() {
   val (label, items) = Menus.open ?: return
-  // Nearly solid: a list of choices must read at a glance; the rim and a hint of tint stay glass.
-  Sheet({ Menus.open = null }, opaque, fit = true, fill = 0.95f) {
+  Sheet({ Menus.open = null }, fit = true) {
     Column(Modifier.padding(bottom = 16.dp)) {
       Text(label.removePrefix("More for "), style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
       for ((text, action) in items)

@@ -3,7 +3,6 @@ import { useStore } from 'zustand';
 import { ALBUM_SORTS, type Album, type AlbumSort, type Playlist } from '../library.ts';
 import { useLibrary, usePlayer, useQueue } from '../playback/context.tsx';
 import { strings } from '../strings.ts';
-import { glass } from '../ui/glass.ts';
 import { Icon } from '../ui/icons.tsx';
 import { Artwork } from '../ui/media.tsx';
 import type { Route } from '../view.ts';
@@ -233,11 +232,7 @@ export function LibraryPanel({ page = false }: { page?: boolean }) {
   };
   const Heading = page ? 'h1' : 'h2';
   return (
-    <nav
-      className={page ? 'library-page' : 'library-panel glass'}
-      ref={page ? undefined : glass}
-      aria-label={strings.nav.library}
-    >
+    <nav className={page ? 'library-page' : 'library-panel'} aria-label={strings.nav.library}>
       <header className="lp-head">
         <Heading className="lp-title" tabIndex={page ? -1 : undefined}>
           <Icon name="library" />
