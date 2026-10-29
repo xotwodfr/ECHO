@@ -163,7 +163,7 @@ describe('gate G1 (SP-03, SP-04): palettes from Spotify cover art', () => {
         undefined,
         cookie,
       );
-    return { db, dir, arts, get, app };
+    return { db, dir, arts, get, app, id, now: t.clock.t };
   }
 
   it('on: the i.scdn.co cover is fetched into memory; only the palette is cached', async () => {
@@ -176,6 +176,19 @@ describe('gate G1 (SP-03, SP-04): palettes from Spotify cover art', () => {
     expect(JSON.parse(await readFile(join(s.dir, files[0] as string), 'utf8'))).toHaveProperty(
       'room',
     );
+  });
+
+  // The Android client signs in with a device token, not a cookie (docs/ANDROID_CLIENT.md).
+  it('a device token is signed in here too', async () => {
+    const s = await spotify();
+    const { createSession } = await import('./auth/sessions.ts');
+    const token = createSession(s.db, s.id, 'device', s.now);
+    const res = await s.app.request(
+      `/api/v1/palette/spotify:album:abc?art=${encodeURIComponent('https://i.scdn.co/image/x')}`,
+      { headers: { authorization: `Bearer ${token}` } },
+    );
+    expect(res.status).toBe(200);
+    expect((await res.json()).source).toBe('art');
   });
 
   it('only https://i.scdn.co, and another image never repaints the album for others', async () => {

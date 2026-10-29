@@ -12,7 +12,7 @@ import { adminRoutes, matchLibrary, spicyKey, spotifySettings } from './admin.ts
 import { nightlyBackup } from './admin-cli.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
-import { pruneSessions, resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
+import { DEVICE_BEARER, pruneSessions, resolveSession, SESSION_COOKIE } from './auth/sessions.ts';
 import { loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
@@ -132,12 +132,13 @@ export function createApp(deps: AppDeps) {
     return c.json({ status: 'ok' });
   });
 
-  // The album's palette (VISUALIZER_SPEC.md §6.3), computed on a miss. Unauthenticated until
-  // accounts arrive (M5): the only covers it can load until then are the generated fixtures.
+  // The album's palette (VISUALIZER_SPEC.md §6.3), computed on a miss, for a session or a device
+  // token (the Android client, SETTINGS_AND_SECURITY.md §4.6) like every signed-in route.
   app.get('/api/v1/palette/:albumKey', async (c) => {
     const key = c.req.param('albumKey');
     if (!ALBUM_KEY.test(key)) return c.json({ error: 'bad_album_key' }, 400);
-    const token = getCookie(c, SESSION_COOKIE);
+    const bearer = c.req.header('authorization')?.match(DEVICE_BEARER)?.[1];
+    const token = bearer ?? getCookie(c, SESSION_COOKIE);
     const user = token ? resolveSession(deps.auth.db, token, deps.auth.now()) : null;
     // Signed in, or a development server answering for its generated covers (E2E).
     if (!user && !deps.devFixtures) return c.json({ error: 'unauthenticated' }, 401);
