@@ -6,7 +6,7 @@ package com.folk3s.echo.stage.lyrics
 object L {
   const val anchorY = 0.4
   const val unlitMix = 0.22
-  const val maxWidth = 0.64
+  const val maxWidth = 0.84 // the web's since the redesign (2026-10-29): lines start near the song header
   const val maxRows = 2
   const val shrinkMax = 0.12
 

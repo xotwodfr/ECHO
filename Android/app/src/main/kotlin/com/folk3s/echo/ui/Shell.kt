@@ -1,6 +1,8 @@
 package com.folk3s.echo.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -16,14 +18,13 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Snackbar
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -36,48 +37,52 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.folk3s.echo.api.Track
 import com.folk3s.echo.echo
 import com.folk3s.echo.playback.PlayerState
 import com.folk3s.echo.stage.StageChrome
 import com.folk3s.echo.stage.StageScreen
 import com.folk3s.echo.stage.stageGlass
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
 
+// The app after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md): three
+// tabs (Home, Search, Your Library) in a glass bar at the bottom, a glass mini player tinted by
+// the playing album floating over it, the Now Playing screen, and the lyrics view.
+
 sealed interface Route {
-  data object Listen : Route
-  data class Library(val tab: LibraryTab = LibraryTab.Albums) : Route
+  data object Home : Route
+  data object Search : Route
+  data object Library : Route
   data class Album(val id: String) : Route
   data class Artist(val id: String) : Route
-  data object Search : Route
+  data class Playlist(val id: String) : Route
+  data object Liked : Route
+  data class Genre(val name: String) : Route
   data object Settings : Route
+  data object NowPlaying : Route
+  data object Listen : Route
 }
 
-/** The back stack: the four destinations are roots; albums and artists stack on them. */
+/** The back stack: the three tabs are roots; pages stack on them. */
 class Nav {
-  val stack = mutableStateListOf<Route>(Route.Library())
+  val stack = mutableStateListOf<Route>(Route.Home)
   val top: Route get() = stack.last()
 
   fun go(r: Route) {
     stack += r
-  }
-
-  fun replace(r: Route) {
-    stack[stack.lastIndex] = r
   }
 
   fun root(r: Route) {
@@ -94,8 +99,8 @@ class Nav {
 fun EchoRoot() {
   val app = LocalContext.current.echo
   val token by app.tokens.token.collectAsStateWithLifecycle()
-  // Signed out there is no album: Sodium, and the player is not touched.
-  EchoTheme(seed = if (token == null) Sodium else albumSeed()) { if (token == null) SignInScreen() else Shell() }
+  LaunchedEffect(token) { if (token != null) app.library.refreshCollections() }
+  EchoTheme { if (token == null) SignInScreen() else Shell() }
 }
 
 @Composable
@@ -104,118 +109,150 @@ private fun Shell() {
   val nav = remember { Nav() }
   val player by app.playback.state.collectAsStateWithLifecycle()
   var queueOpen by remember { mutableStateOf(false) }
+  var picking by remember { mutableStateOf<List<Track>?>(null) }
   val chrome = remember { StageChrome() }
   BackHandler(enabled = nav.stack.size > 1) { nav.back() }
-  val listen = nav.top == Route.Listen
   val backdrop = rememberBackdrop()
+  val picker = { t: Track -> picking = listOf(t) }
 
-  Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
-   CompositionLocalProvider(LocalBackdrop provides backdrop) {
-    if (listen) {
-      // S1 Listen: the Stage full-bleed, the dock over it; no navigation bar (§5).
-      StageScreen(
-        chrome,
-        onClose = { nav.root(Route.Library()) },
-        dock = {
-          Box(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
-            Dock(player, onOpenStage = {}, onQueue = { queueOpen = true }, stage = true, chrome = chrome)
+  Box(Modifier.fillMaxSize().background(Chamber.ground)) {
+    CompositionLocalProvider(LocalBackdrop provides backdrop) {
+      when (nav.top) {
+        Route.Listen ->
+          // The lyrics view: the room and the lyrics, the transport floating over it.
+          StageScreen(
+            chrome,
+            onClose = { nav.back() },
+            dock = {
+              Box(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(12.dp)) {
+                StageDock(player, chrome, onQueue = { queueOpen = true })
+              }
+            },
+          )
+        Route.NowPlaying -> NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker)
+        else -> {
+          // What the glass above it bends (§7.11): the page.
+          Box(Modifier.fillMaxSize().background(Chamber.surface1).backdropSource(backdrop).windowInsetsPadding(WindowInsets.statusBars)) {
+            when (val r = nav.top) {
+              Route.Home -> HomeScreen(nav, onProfile = { nav.go(Route.Settings) })
+              Route.Search -> SearchScreen(nav, picker)
+              Route.Library -> YourLibraryScreen(nav, onProfile = { nav.go(Route.Settings) })
+              is Route.Album -> AlbumScreen(r.id, nav, picker)
+              is Route.Artist -> ArtistScreen(r.id, nav, picker)
+              is Route.Playlist -> PlaylistScreen(r.id, nav, picker)
+              Route.Liked -> LikedScreen(nav, picker)
+              is Route.Genre -> GenreScreen(r.name, nav)
+              Route.Settings -> SettingsScreen()
+              else -> {}
+            }
           }
-        },
-      )
-    } else {
-      // What the sheets and dialogs above it bend (§7.11): the Shell's screens, dock and bar.
-      Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).backdropSource(backdrop)) {
-        Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars)) {
-          when (val r = nav.top) {
-            is Route.Library -> LibraryScreen(r.tab, nav)
-            is Route.Album -> AlbumScreen(r.id, nav)
-            is Route.Artist -> ArtistScreen(r.id, nav)
-            Route.Search -> SearchScreen(nav)
-            Route.Settings -> SettingsScreen()
-            Route.Listen -> {}
+          Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 8.dp, vertical = 8.dp)) {
+            if (player.track != null) MiniPlayer(player) { nav.go(Route.NowPlaying) }
+            Spacer(Modifier.height(8.dp))
+            TabBar(nav)
           }
         }
-        Dock(player, onOpenStage = { nav.go(Route.Listen) }, onQueue = { queueOpen = true }, stage = false)
-        NavBar(nav)
       }
+      player.notice?.let { msg ->
+        LaunchedEffect(msg) {
+          delay(3000)
+          app.playback.dismissNotice()
+        }
+        Box(Modifier.fillMaxSize().padding(bottom = 160.dp), contentAlignment = Alignment.BottomCenter) {
+          Snackbar(Modifier.padding(16.dp), containerColor = Chamber.text, contentColor = Chamber.ground) { Text(msg) }
+        }
+      }
+      if (queueOpen) QueueSheet(player, onClose = { queueOpen = false }, overStage = nav.top == Route.Listen)
+      picking?.let { PlaylistPicker(it) { picking = null } }
     }
-    player.notice?.let { msg ->
-      LaunchedEffect(msg) {
-        delay(4000)
-        app.playback.dismissNotice()
-      }
-      Box(Modifier.fillMaxSize().padding(bottom = 160.dp), contentAlignment = Alignment.BottomCenter) {
-        Snackbar(Modifier.padding(16.dp)) { Text(msg) }
-      }
-    }
-    if (queueOpen) QueueSheet(player, onClose = { queueOpen = false }, overStage = listen)
-   }
   }
 }
 
-/** Below 720 dp the drawer is a navigation bar: text labels, ECHO's nav has no icons (§0). */
+/** The three tabs, Spotify's, on glass. */
 @Composable
-private fun NavBar(nav: Nav) {
-  val items = listOf("Listen" to Route.Listen, "Library" to Route.Library(), "Search" to Route.Search, "Settings" to Route.Settings)
-  val current = nav.stack.first()
-  Row(
-    Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainer).windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 8.dp, vertical = 10.dp),
-    horizontalArrangement = Arrangement.SpaceEvenly,
-  ) {
-    for ((label, route) in items) {
-      val selected = current::class == route::class
-      Box(
-        Modifier.clip(CircleShape)
-          .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
-          .clickable { if (route == Route.Listen) nav.go(Route.Listen) else nav.root(route) }
-          .padding(horizontal = 16.dp, vertical = 8.dp),
-      ) {
-        Text(
-          label,
-          color = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-          style = MaterialTheme.typography.labelLarge,
-        )
+private fun TabBar(nav: Nav) {
+  val tabs = listOf(Triple("Home", Route.Home, EchoIcons.home), Triple("Search", Route.Search, EchoIcons.search), Triple("Your Library", Route.Library, EchoIcons.library))
+  val root = nav.stack.first()
+  GlassSurface(Chamber.surface2, CircleShape, 32.dp, Modifier.fillMaxWidth().height(64.dp)) {
+    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+      for ((label, route, icon) in tabs) {
+        val on = root == route
+        Column(
+          Modifier.clip(RoundedCornerShape(16.dp)).clickable { nav.root(route) }.padding(horizontal = 16.dp, vertical = 6.dp)
+            .semantics { contentDescription = label },
+          horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+          Icon(if (on && route == Route.Home) EchoIcons.homeFilled else icon, null, tint = if (on) Chamber.text else Chamber.muted, modifier = Modifier.size(24.dp))
+          Text(label, color = if (on) Chamber.text else Chamber.muted, style = MaterialTheme.typography.labelSmall)
+        }
       }
     }
   }
 }
 
-/**
- * The transport dock (§9.2), compact: progress, the cover, title and artist (to the Stage), play,
- * next and the queue. Shell in form, Stage in colour: the progress fill takes the album's accent.
- */
+/** Spotify's mini player: the playing album's tone under glass, a hairline of progress. */
 @Composable
-fun Dock(p: PlayerState, onOpenStage: () -> Unit, onQueue: () -> Unit, stage: Boolean, chrome: StageChrome? = null) {
+private fun MiniPlayer(p: PlayerState, onOpen: () -> Unit) {
   val app = LocalContext.current.echo
-  val t = p.track
-  val bg = if (stage) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
-  // On the Stage the dock fades with the chrome; the progress stays at 40% (§6.1).
-  val shown = chrome?.visible ?: true
+  val t = p.track ?: return
+  val tint = headerTone(albumAccent())
+  GlassSurface(tint, RoundedCornerShape(10.dp), 10.dp, Modifier.fillMaxWidth().height(56.dp)) {
+    Box(Modifier.fillMaxSize()) {
+      Row(Modifier.fillMaxSize().clickable(onClick = onOpen).padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Artwork(t.cover, t.album.title, 40.dp)
+        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+          Text(t.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          Text(t.artist, color = Chamber.text.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Heart(t, 22)
+        Box(
+          Modifier.size(44.dp).clip(CircleShape).clickable(onClick = app.playback::toggle).semantics { contentDescription = if (p.playing) "Pause" else "Play" },
+          contentAlignment = Alignment.Center,
+        ) { Icon(if (p.playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.text, modifier = Modifier.size(24.dp)) }
+      }
+      Progress(p, Modifier.align(Alignment.BottomCenter).padding(horizontal = 8.dp))
+    }
+  }
+}
+
+/** The progress, drawn every frame from the extrapolated position (no recomposition per frame). */
+@Composable
+fun Progress(p: PlayerState, modifier: Modifier = Modifier, height: Int = 2, track: Color = Chamber.text.copy(alpha = 0.25f), fill: Color = Chamber.text) {
+  var frame by remember { mutableStateOf(0L) }
+  LaunchedEffect(p.playing) {
+    while (p.playing) withFrameMillis { frame = it }
+  }
+  Box(
+    modifier.fillMaxWidth().height(height.dp).drawBehind {
+      @Suppress("UNUSED_EXPRESSION") frame
+      drawRect(track)
+      val d = p.durationMs
+      if (d > 0) drawRect(fill, Offset.Zero, Size(size.width * (p.positionNow().toFloat() / d).coerceIn(0f, 1f), size.height))
+    },
+  )
+}
+
+/** The transport over the lyrics view: a glass pill that fades with the chrome. */
+@Composable
+private fun StageDock(p: PlayerState, chrome: StageChrome, onQueue: () -> Unit) {
+  val app = LocalContext.current.echo
+  val shown = chrome.visible
   val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 640), label = "dock")
   val density = LocalDensity.current.density
-  Column(Modifier.fillMaxWidth().background(bg).stageGlass(chrome, "dock", { _, _ -> 0f }, density)) {
-    Box(Modifier.alpha(maxOf(alpha, 0.4f))) { Progress(p) }
-    Row(Modifier.fillMaxWidth().alpha(alpha).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-      Row(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable(enabled = t != null, onClick = onOpenStage), verticalAlignment = Alignment.CenterVertically) {
-        Artwork(t?.cover, t?.album?.title ?: "", 48.dp)
-        Spacer(Modifier.size(12.dp))
-        Column(Modifier.weight(1f)) {
-          Text(t?.title ?: "Nothing playing", style = MaterialTheme.typography.bodyLarge, color = if (stage) Chamber.text else MaterialTheme.colorScheme.onSurface, maxLines = 1, overflow = TextOverflow.Ellipsis)
-          if (t != null) Text("${t.artist} – ${t.album.title}", style = MaterialTheme.typography.bodySmall, color = if (stage) Chamber.muted else MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-      }
-      PlayButton(p.playing, enabled = t != null, onClick = app.playback::toggle)
-      IconButton(onClick = app.playback::next, enabled = t != null && p.queue.nextUp.size + p.queue.context.size > 0, modifier = Modifier.semantics { contentDescription = "Next" }) {
-        Icon(EchoIcons.next, null, tint = if (stage) Chamber.text else MaterialTheme.colorScheme.onSurface)
-      }
-      IconButton(onClick = onQueue, modifier = Modifier.semantics { contentDescription = "Queue" }) {
-        Icon(EchoIcons.queue, null, tint = if (stage) Chamber.text else MaterialTheme.colorScheme.onSurface)
-      }
-    }
+  Row(
+    Modifier.fillMaxWidth().height(64.dp).alpha(alpha).clip(CircleShape).background(Chamber.ground.copy(alpha = 0.35f))
+      .stageGlass(chrome, "dock", { _, h -> h / 2 }, density).padding(horizontal = 12.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    IconBtn(EchoIcons.previous, "Previous", Chamber.text, 24) { app.playback.previous() }
+    PlayButton(p.playing, enabled = p.track != null, onClick = app.playback::toggle, size = 44)
+    IconBtn(EchoIcons.next, "Next", Chamber.text, 24) { app.playback.next() }
+    Box(Modifier.weight(1f).padding(horizontal = 8.dp)) { Progress(p, height = 3) }
+    IconBtn(EchoIcons.queue, "Queue", Chamber.text, 22, onQueue)
   }
 }
 
-/** Play/pause (§9.2): a filled circle, the glyph in the ground colour. */
+/** Play/pause: Spotify's white disc, the glyph in black. */
 @Composable
 fun PlayButton(playing: Boolean, enabled: Boolean, onClick: () -> Unit, size: Int = 48) {
   Box(
@@ -223,24 +260,6 @@ fun PlayButton(playing: Boolean, enabled: Boolean, onClick: () -> Unit, size: In
       .semantics { contentDescription = if (playing) "Pause" else "Play" },
     contentAlignment = Alignment.Center,
   ) {
-    Icon(if (playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.ground, modifier = Modifier.size((size / 2).dp))
+    Icon(if (playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.ground, modifier = Modifier.size((size * 0.45f).dp))
   }
-}
-
-/** The progress, drawn every frame from the extrapolated position (no recomposition per frame). */
-@Composable
-private fun Progress(p: PlayerState) {
-  val accent = albumAccent()
-  var frame by remember { mutableStateOf(0L) }
-  LaunchedEffect(p.playing) {
-    while (p.playing) withFrameMillis { frame = it }
-  }
-  Box(
-    Modifier.fillMaxWidth().height(3.dp).drawBehind {
-      @Suppress("UNUSED_EXPRESSION") frame
-      drawRect(Chamber.surface3)
-      val d = p.durationMs
-      if (d > 0) drawRect(accent, Offset.Zero, Size(size.width * (p.positionNow().toFloat() / d).coerceIn(0f, 1f), size.height))
-    },
-  )
 }

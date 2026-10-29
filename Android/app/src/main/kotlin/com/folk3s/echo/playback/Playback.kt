@@ -85,7 +85,14 @@ class Playback(private val app: EchoApp) {
   private val pending = mutableListOf<(MediaController) -> Unit>()
   private val tracks = HashMap<String, Track>()
   private var nextUp = 0 // items right after the current one that the user added
-  private var source: PlayContext? = null
+  private val _context = MutableStateFlow<PlayContext?>(null)
+  /** Where the music plays from (an album, a playlist, Liked Songs, a radio): pages mark it. */
+  val context: StateFlow<PlayContext?> = _context
+  private var source: PlayContext?
+    get() = _context.value
+    set(v) {
+      _context.value = v
+    }
   private var lastIndex = -1
   private var scrobbled = "none"
   private var queueBase = 0L
@@ -234,6 +241,9 @@ class Playback(private val app: EchoApp) {
   private fun note(msg: String) {
     _state.value = _state.value.copy(notice = msg)
   }
+
+  /** A short message over the player (the web's toast): hearts, playlists, the radio. */
+  fun notify(msg: String) = note(msg)
 
   // ---- state ----
 

@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 
-// Visual baselines for the shell with the fixture library (M2 task 3): the dock while a track is
-// paused at 0:42, the library grid, the album detail and the queue sheet. Chromium only
-// (TECHNICAL_ARCHITECTURE.md §8). Update with: pnpm test:e2e --project=chromium shell.visual -u
+// Visual baselines for the frame with the fixture library: Home, Your Library and an album with the
+// player paused at 0:42, the queue (the right panel, or a sheet on phones), and the lyrics view.
+// Chromium only (TECHNICAL_ARCHITECTURE.md §8). Update in the CI image:
+// scripts/e2e-container.sh --project=chromium shell.visual -u
 
 test.skip(({ browserName }) => browserName !== 'chromium', 'pixel baselines are Chromium only');
 
@@ -17,13 +18,11 @@ const shot = { animations: 'disabled', caret: 'hide', threshold: 0.05 } as const
 /** Plays Harbour Lights track 1 and pauses it at 0:42, with fonts and covers loaded. */
 async function pausedAt42(page: Page, url: string) {
   await page.clock.install();
-  await page.goto('/library');
-  const tile = page.locator('.tile', { hasText: 'Harbour Lights' });
-  await tile.hover();
-  await tile.getByRole('button', { name: 'Play Harbour Lights' }).click();
+  await page.goto('/library/album/al-harbour');
+  await page.locator('.action-bar').getByRole('button', { name: 'Play Harbour Lights' }).click();
   await page.clock.runFor(150 + 42_000);
   await page.getByRole('region', { name: 'Player' }).getByRole('button', { name: 'Pause' }).click();
-  if (url !== '/library') {
+  if (url !== '/library/album/al-harbour') {
     await page.evaluate((u) => {
       history.pushState(null, '', u);
       dispatchEvent(new PopStateEvent('popstate'));
@@ -43,6 +42,17 @@ async function pausedAt42(page: Page, url: string) {
 }
 
 for (const vp of VIEWPORTS) {
+  test(`Home with the player paused at ${vp.width}`, async ({ page }) => {
+    await page.setViewportSize(vp);
+    await pausedAt42(page, '/');
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Good /);
+    // The greeting follows the hour: masked, so the baseline holds all day.
+    await expect(page).toHaveScreenshot(`home-${vp.width}.png`, {
+      ...shot,
+      mask: [page.locator('.home-greeting')],
+    });
+  });
+
   test(`library with the dock paused at ${vp.width}`, async ({ page }) => {
     await page.setViewportSize(vp);
     await pausedAt42(page, '/library');
@@ -59,11 +69,13 @@ for (const vp of [
     await pausedAt42(page, '/library/album/al-harbour');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Harbour Lights');
     await expect(page).toHaveScreenshot(`album-${vp.width}.png`, shot);
-    await page
-      .getByRole('region', { name: 'Player' })
-      .getByRole('button', { name: 'Queue' })
-      .click();
-    await expect(page.getByRole('dialog', { name: 'Queue' })).toBeVisible();
+    // Q: the right panel on wide screens, a sheet on phones (whose mini player has no queue button).
+    await page.keyboard.press('q');
+    await expect(
+      page
+        .getByRole('complementary', { name: 'Queue' })
+        .or(page.getByRole('dialog', { name: 'Queue' })),
+    ).toBeVisible();
     await expect(page).toHaveScreenshot(`queue-${vp.width}.png`, shot);
   });
 }
@@ -90,7 +102,7 @@ for (const vp of VIEWPORTS) {
   test(`Listen stage, Still, at ${vp.width}`, async ({ page }) => {
     await page.setViewportSize(vp);
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.goto('/');
+    await page.goto('/listen');
     await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
       timeout: 15_000,
     });
@@ -105,14 +117,13 @@ for (const vp of VIEWPORTS) {
 async function playOnStage(page: Page, vp: { width: number; height: number }) {
   await page.setViewportSize(vp);
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/library');
-  const tile = page.locator('.tile', { hasText: 'Harbour Lights' });
-  await tile.hover();
-  await tile.getByRole('button', { name: 'Play Harbour Lights' }).click();
-  await page
-    .getByRole('region', { name: 'Player' })
-    .getByRole('button', { name: 'Lyrics', exact: true })
-    .click();
+  await page.goto('/library/album/al-harbour');
+  await page.locator('.action-bar').getByRole('button', { name: 'Play Harbour Lights' }).click();
+  // In-app navigation to the lyrics view (phones reach it by tapping the mini player).
+  await page.evaluate(() => {
+    history.pushState(null, '', '/listen');
+    dispatchEvent(new PopStateEvent('popstate'));
+  });
   await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
     timeout: 15_000,
   });
@@ -122,6 +133,7 @@ async function playOnStage(page: Page, vp: { width: number; height: number }) {
 const timeMask = (page: Page) => [
   page.locator('.scrubber-time'),
   page.locator('.dock-scrub .slider'),
+  page.locator('.np-progress'),
 ];
 
 for (const vp of [
@@ -130,14 +142,14 @@ for (const vp of [
 ]) {
   test(`Cover mode at ${vp.width}`, async ({ page }) => {
     await playOnStage(page, vp);
-    await page.keyboard.press('c'); // Cover has no button (owner, 2026-10-28)
+    await page.keyboard.press('c'); // the cover and title alone, centred
     await page
       .getByRole('region', { name: 'Player' })
       .getByRole('button', { name: 'Pause' })
       .click();
     await page.mouse.move(0, 0);
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
-    await expect(page.locator('.stage-cover-item')).toHaveCount(1);
+    await expect(page.locator('.np-view')).toHaveAttribute('data-mode', 'cover');
     await expect(page).toHaveScreenshot(`cover-${vp.width}.png`, { ...shot, mask: timeMask(page) });
   });
 }

@@ -160,10 +160,10 @@ export function Menu({
   const disabled = items.map((i) => !!i.disabled);
   const own = trigger;
 
-  // Open upward when the menu would run past the bottom of its scroll container (the canvas
-  // ends above the dock) or the window; align to the trigger's left edge when, right-aligned, it
-  // would leave the window on the left (a trigger near the left edge). Measured before paint, so
-  // it never flashes.
+  // Open upward when the menu would run past the bottom of its scroll container (above the
+  // floating player) or the window; align to the trigger's left edge when, right-aligned, it would
+  // leave its panel on the left (a trigger near the left edge). Measured before paint, so it never
+  // flashes.
   const menu = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
   const [align, setAlign] = useState<'end' | 'start'>('end');
@@ -173,17 +173,20 @@ export function Menu({
       setAlign('end');
       return setPlacement('bottom');
     }
-    if (el.getBoundingClientRect().left < 0) setAlign('start');
     let limit = window.innerHeight;
+    let left = 0;
     for (let p = el.parentElement; p; p = p.parentElement) {
       const cs = getComputedStyle(p);
       if (/(auto|scroll|hidden)/.test(cs.overflowY)) {
         // The floating player covers the canvas's scroll padding: that is not room either.
         const covered = Number.parseFloat(cs.scrollPaddingBottom) || 0;
         limit = Math.min(limit, p.getBoundingClientRect().bottom - covered);
+        left = p.getBoundingClientRect().left;
         break;
       }
     }
+    // Right-aligned, it would leave its panel (or the window) on the left: open rightward.
+    if (el.getBoundingClientRect().left < left) setAlign('start');
     const below = el.getBoundingClientRect().bottom <= limit;
     const room = (triggerRef.current?.getBoundingClientRect().top ?? 0) > el.offsetHeight;
     setPlacement(below || !room ? 'bottom' : 'top');

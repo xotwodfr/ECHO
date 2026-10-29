@@ -49,7 +49,25 @@ data class Album(
   val key: String get() = "navidrome:$id"
 }
 
-data class Playlist(val id: String, val name: String, val tracks: Int)
+data class Playlist(val id: String, val name: String, val tracks: Int, val cover: String? = null, val owner: String? = null)
+
+/** An artist as a reference with a picture (similar artists, search, starred). */
+data class ArtistCard(val id: String, val name: String, val image: String? = null)
+
+data class ArtistInfo(val bio: String?, val image: String?, val similar: List<ArtistCard>)
+
+data class Genre(val name: String, val albums: Int)
+
+data class PlaylistDetail(
+  val playlist: Playlist,
+  val comment: String?,
+  val covers: List<String>,
+  val entries: List<Track>,
+) {
+  val durationMs: Long get() = entries.sumOf { it.durationMs }
+}
+
+data class Starred(val tracks: List<Track> = emptyList(), val albums: List<Album> = emptyList(), val artists: List<ArtistCard> = emptyList())
 
 @Serializable data class PlayContext(val kind: String, val id: String? = null, val title: String)
 

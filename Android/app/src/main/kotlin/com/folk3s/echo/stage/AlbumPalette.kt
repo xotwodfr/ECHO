@@ -50,17 +50,19 @@ class AlbumPalette(private val app: EchoApp) {
   init {
     app.scope.launch {
       app.playback.state.map { it.track?.album?.key }.distinctUntilChanged().collect { key ->
-        _current.value = if (key == null) StagePalette.FALLBACK else cache[key] ?: fetch(key)
+        _current.value = if (key == null) StagePalette.FALLBACK else forAlbum(key) ?: StagePalette.FALLBACK
       }
     }
   }
 
-  private suspend fun fetch(key: String): StagePalette {
+  /** Any album's palette (a page header's tint too); null when the server has none. */
+  suspend fun forAlbum(key: String): StagePalette? {
+    cache[key]?.let { return it }
     val p =
       runCatching {
           StagePalette.of(EchoJson.decodeFromJsonElement<Palette>(app.api.get("/palette/${URLEncoder.encode(key, "UTF-8")}")))
         }
-        .getOrNull() ?: return StagePalette.FALLBACK
+        .getOrNull() ?: return null
     cache[key] = p
     return p
   }

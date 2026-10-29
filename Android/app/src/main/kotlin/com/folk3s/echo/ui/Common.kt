@@ -64,7 +64,7 @@ fun Artwork(path: String?, title: String, size: Dp?, modifier: Modifier = Modifi
         Text(
           title,
           color = Chamber.muted,
-          fontFamily = MonaSans,
+          fontFamily = Figtree,
           fontWeight = FontWeight.SemiBold,
           fontSize = ((size ?: 168.dp).value * 0.18f).coerceIn(8f, 40f).sp,
           lineHeight = ((size ?: 168.dp).value * 0.2f).coerceIn(9f, 44f).sp,
@@ -172,4 +172,9 @@ fun Empty(text: String) {
 @Composable
 fun CenterBox(content: @Composable () -> Unit) {
   Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
+}
+
+@Composable
+fun SectionLabel(text: String) {
+  Text(text, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp))
 }

@@ -33,9 +33,25 @@ private fun icon(name: String, vararg paths: P, filled: Boolean = false): ImageV
 
 object EchoIcons {
   val play = icon("play", P("M7 4.5v15l12.5-7.5z"), filled = true)
-  val pause = icon("pause", P("M8 5v14"), P("M16 5v14"))
-  val previous = icon("previous", P("M18 5v14L8 12z"), P("M6 5v14"))
-  val next = icon("next", P("M6 5v14l10-7z"), P("M18 5v14"))
+  val pause = icon("pause", P("M6.5 5.5a1 1 0 0 1 1-1h1.5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H7.5a1 1 0 0 1-1-1z"), P("M14 5.5a1 1 0 0 1 1-1h1.5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H15a1 1 0 0 1-1-1z"), filled = true)
+  val previous = icon("previous", P("M18 5v14L8 12z"), P("M6 5v14"), filled = true)
+  val next = icon("next", P("M6 5v14l10-7z"), P("M18 5v14"), filled = true)
+  val home = icon("home", P("M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z"))
+  val homeFilled = icon("homeFilled", P("M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z"), filled = true)
+  val search = icon("search", P(circle(10.5f, 10.5f, 6.5f)), P("m15.5 15.5 5 5"))
+  val library = icon("library", P("M4.5 4v16M9.5 4v16M14 4.6l5.5 15"))
+  val plus = icon("plus", P("M12 5v14M5 12h14"))
+  val heart = icon("heart", P("M12 19.5s-7.5-4.4-7.5-10A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.5c0 5.6-7.5 10-7.5 10z"))
+  val heartFilled = icon("heartFilled", P("M12 19.5s-7.5-4.4-7.5-10A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.5c0 5.6-7.5 10-7.5 10z"), filled = true)
+  val check = icon("check", P("m5 12.5 4.5 4.5L19 7.5"))
+  val chevronDown = icon("chevronDown", P("m6 9 6 6 6-6"))
+  val chevronLeft = icon("chevronLeft", P("m15 6-6 6 6 6"))
+  val mic = icon("mic", P("M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"), P("M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"))
+  val radio = icon("radio", P(circle(12f, 12f, 2f)), P("M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 15.8a5.4 5.4 0 0 0 0-7.6M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 18.7a9.5 9.5 0 0 0 0-13.4"))
+  val user = icon("user", P(circle(12f, 8.5f, 4f)), P("M4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5"))
+  val moon = icon("moon", P("M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z"))
+  val music = icon("music", P("M9 17.5V6l10-2v11.5"), P(circle(6.5f, 17.5f, 2.5f)), P(circle(16.5f, 15.5f, 2.5f)))
+  val volume = icon("volume", P("M4 9.5h3.5L12 5.5v13l-4.5-4H4z"), P("M15.5 9a4 4 0 0 1 0 6"), P("M18 6.5a7.5 7.5 0 0 1 0 11"))
   val shuffle =
     icon(
       "shuffle",

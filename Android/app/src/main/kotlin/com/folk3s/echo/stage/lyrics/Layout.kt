@@ -27,17 +27,17 @@ import kotlin.math.min
 
 const val LINE_HEIGHT = 1.12f
 const val LINE_HEIGHT_CJK = 1.2f
-private const val WDTH_MIN = 82
+private const val WDTH_MIN = 100 // Figtree has no width axis: a long line shrinks, then wraps
 private const val WDTH_STEP = 2
 private const val SIZE_STEP = 0.02
 const val BG_SIZE = 0.62f
 
 private val families = HashMap<Int, FontFamily>()
 
-/** Mona Sans Bold at a width (`wdth` 82–100): lines condense before they shrink. */
+/** The lyrics' face, Figtree Bold (the width argument stays for the layout's search; always 100). */
 fun monaBold(wdth: Int): FontFamily =
   families.getOrPut(wdth) {
-    FontFamily(Font(R.font.mona_sans, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700), FontVariation.width(wdth.toFloat()))))
+    FontFamily(Font(R.font.figtree, FontWeight.Bold, variationSettings = FontVariation.Settings(FontVariation.weight(700))))
   }
 
 private fun isCjk(text: String) =
@@ -159,7 +159,7 @@ fun measureDoc(m: TextMeasurer, doc: LyricsDoc, lines: List<LyricLine>, width: F
       val lineSide = side(line)
       val end = lineSide == Side.Right
       val (text, ranges) = leadText(line)
-      // Two rows at most: condense to wdth 82, then shrink by up to 12% (§3.3).
+      // Two rows at most: shrink by up to 12% (§3.3).
       var wdth = 100
       var size = 1.0
       fun rows() = m.measure(text, style(fontPx, wdth, size.toFloat(), cjk, end = end), constraints = c).lineCount

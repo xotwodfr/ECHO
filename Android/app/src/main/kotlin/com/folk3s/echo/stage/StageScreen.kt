@@ -23,7 +23,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
@@ -198,15 +198,31 @@ fun StageScreen(
           Text("Nothing playing. Pick an album to start.", color = Chamber.muted)
           OutlinedButton(onClick = onClose, modifier = Modifier.padding(top = 12.dp)) { Text("Open the Library", color = Chamber.text) }
         }
-      view == StageViewMode.Cover ->
+      view != StageViewMode.Lyrics ->
+        // The cover and the song alone, centred (the owner's reference: no lyrics, the cover).
         BoxWithConstraints(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-          val side = minOf(maxWidth, maxHeight * 0.6f, 640.dp)
-          Artwork(t.cover, t.album.title, side, radius = 8.dp)
+          val side = minOf(maxWidth, maxHeight * 0.55f, 640.dp)
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Artwork(t.cover, t.album.title, side, radius = 8.dp)
+            Text(t.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 20.dp))
+            Text(t.artist, color = Chamber.muted, style = androidx.compose.material3.MaterialTheme.typography.bodyLarge)
+          }
         }
-      view == StageViewMode.Lyrics -> LyricsView(s, dockPx, chrome)
-      else -> {}
+      else ->
+        // The song as a header, the lyric column under it (the phone layout of the reference).
+        Column(Modifier.fillMaxSize()) {
+          Spacer(Modifier.windowInsetsPadding(WindowInsets.statusBars).height(72.dp))
+          Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
+            Artwork(t.cover, t.album.title, 48.dp, radius = 6.dp)
+            Column(Modifier.padding(start = 12.dp)) {
+              Text(t.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1)
+              Text(t.artist, color = Chamber.muted, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, maxLines = 1)
+            }
+          }
+          Box(Modifier.weight(1f).fillMaxWidth()) { LyricsView(s, dockPx, chrome) }
+        }
     }
-    TopChrome(chrome, view, { view = it }, onClose, dp)
+    TopChrome(chrome, onClose, dp)
     Box(Modifier.align(Alignment.BottomCenter).onGloballyPositioned { dockPx = it.size.height.toFloat() }) { dock() }
     // Hidden chrome takes no input: a blind tap brings it back and never hits a control (§6.1).
     if (!chrome.visible) Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { touchedAt = System.currentTimeMillis() } })
@@ -214,31 +230,22 @@ fun StageScreen(
 }
 
 @Composable
-private fun TopChrome(chrome: StageChrome, view: StageViewMode, setView: (StageViewMode) -> Unit, onClose: () -> Unit, density: Float) {
+private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float) {
   val alpha by animateFloatAsState(if (chrome.visible) 1f else 0f, tween(if (chrome.visible) 160 else 640), label = "chrome")
-  val activity = LocalContext.current as? Activity
-  val root = LocalView.current
-  var full by remember { mutableStateOf(false) }
+  val app = LocalContext.current.echo
+  val ctx by app.playback.context.collectAsStateWithLifecycle()
   Row(
     Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp, vertical = 12.dp).alpha(alpha),
-    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    val circle = { w: Float, _: Float -> w / 2 }
-    for ((v, icon) in listOf(StageViewMode.Lyrics to EchoIcons.lyrics, StageViewMode.Visual to EchoIcons.visual)) {
-      StageButton(icon, v.label, view == v, chrome.visible, Modifier.stageGlass(chrome, "view-$v", circle, density)) { setView(if (view == v) StageViewMode.Cover else v) }
+    StageButton(EchoIcons.chevronDown, "Close Now playing", false, chrome.visible, Modifier.stageGlass(chrome, "close", { w, _ -> w / 2 }, density), onClose)
+    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+      ctx?.let {
+        Text("PLAYING FROM", color = Chamber.text.copy(alpha = 0.7f), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+        Text(it.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, maxLines = 1)
+      }
     }
-    StageButton(EchoIcons.fullscreen, "Full screen", full, chrome.visible, Modifier.stageGlass(chrome, "full", circle, density)) {
-      val w = activity?.window ?: return@StageButton
-      val c = WindowCompat.getInsetsController(w, root)
-      full = !full
-      if (full) {
-        c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        c.hide(WindowInsetsCompat.Type.systemBars())
-      } else c.show(WindowInsetsCompat.Type.systemBars())
-    }
-    Brightness(chrome, density)
-    StageButton(EchoIcons.close, "Library", false, chrome.visible, Modifier.stageGlass(chrome, "close", circle, density), onClose)
+    Spacer(Modifier.size(48.dp))
   }
 }
 
@@ -259,46 +266,6 @@ private fun StageButton(icon: ImageVector, label: String, pressed: Boolean, enab
       },
     contentAlignment = Alignment.Center,
   ) { Icon(icon, null, tint = Chamber.text, modifier = Modifier.size(20.dp)) }
-}
-
-/**
- * The backdrop's brightness (per device), like Control Center's slider lying on its side: the
- * round button widens into a pill that is the slider, white filling it from the left.
- */
-@Composable
-private fun Brightness(chrome: StageChrome, density: Float) {
-  val app = LocalContext.current.echo
-  val prefs by app.prefs.state.collectAsStateWithLifecycle()
-  val palette = stagePalette()
-  var open by remember { mutableStateOf(false) }
-  val track: Dp = 154.dp
-  val width by animateDpAsState(if (open) 48.dp + track else 48.dp, tween(240), label = "bright")
-  Box(
-    Modifier.height(48.dp).width(width).clip(CircleShape)
-      .background(if (open) Chamber.text.copy(alpha = 0.18f) else Color(palette.room.toArgb()).copy(alpha = 0.3f))
-      .border(1.dp, Chamber.text.copy(alpha = if (open) 0f else 0.28f), CircleShape)
-      .stageGlass(chrome, "brightness", { _, h -> h / 2 }, density)
-      .semantics { contentDescription = "Background brightness" },
-  ) {
-    Row(Modifier.fillMaxHeight()) {
-      Box(
-        Modifier.size(48.dp).background(if (open) Chamber.text else Color.Transparent).clickable { open = !open },
-        contentAlignment = Alignment.Center,
-      ) { Icon(EchoIcons.brightness, null, tint = if (open) Chamber.ground else Chamber.text, modifier = Modifier.size(20.dp)) }
-      if (open) {
-        Box(
-          Modifier.fillMaxHeight().widthIn(max = track).fillMaxWidth()
-            .pointerInput(Unit) {
-              detectTapGestures { o -> app.prefs.update { it.copy(backdrop = (o.x / size.width).coerceIn(0f, 1f)) } }
-            }
-            .pointerInput(Unit) {
-              detectHorizontalDragGestures { change, _ -> app.prefs.update { it.copy(backdrop = (change.position.x / size.width).coerceIn(0f, 1f)) } }
-            }
-            .drawBehind { drawRect(Chamber.text, size = Size(size.width * prefs.backdrop, size.height)) },
-        )
-      }
-    }
-  }
 }
 
 /** The Lyrics view (§9.4): the field, or a note where the column would be; the credit above the dock. */
@@ -322,7 +289,7 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome) {
       else
         androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(horizontal = 32.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 120.dp, bottom = 200.dp)) {
           item { Text("Lyrics aren’t time-synced for this track", color = Chamber.faint, modifier = Modifier.padding(bottom = 24.dp)) }
-          items(doc.lines.size) { i -> Text(doc.lines[i].text, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(fontFamily = com.folk3s.echo.ui.MonaSans), modifier = Modifier.padding(vertical = 6.dp)) }
+          items(doc.lines.size) { i -> Text(doc.lines[i].text, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(fontFamily = com.folk3s.echo.ui.Figtree), modifier = Modifier.padding(vertical = 6.dp)) }
         }
     else -> com.folk3s.echo.stage.lyrics.LyricsField(stage, dockPx)
   }

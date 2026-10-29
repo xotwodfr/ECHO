@@ -2064,7 +2064,8 @@ a {
     pointer-events: auto;
   }
 
-  .shell[data-view="listen"] .dock-right .icon-btn[aria-pressed] {
+  /* The lyrics view on a phone keeps lyrics and the queue (the mini player has neither). */
+  .shell[data-view="listen"] .dock-right .icon-btn:is([aria-pressed], [aria-haspopup]) {
     display: grid;
   }
 
