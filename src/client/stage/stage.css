@@ -320,6 +320,8 @@
   position: absolute;
   top: 0;
   left: 0;
+  pointer-events: auto; /* a click plays from the line (field.ts); the rest of the field lets clicks through */
+  cursor: pointer;
   width: max-content;
   transform-origin: 0 50%;
   font-weight: 700;
@@ -815,4 +817,16 @@
   .ly-field {
     font-size: calc(var(--ly-phone) * var(--ly-scale, 1));
   }
+}
+
+/* Motion = Off: a timed line is a button that plays from it (StageViews.tsx). */
+.ly-sheet-jump {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: pointer;
 }

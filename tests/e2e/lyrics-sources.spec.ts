@@ -120,3 +120,19 @@ test('rapid skipping never shows another track’s lyrics (LYR-19)', async ({ pa
   for (const n of [1, 2, 3, 4])
     expect(texts.join('\n')).not.toContain(`morning, Glass Weather ${n}`);
 });
+
+test('a click on a lyric line plays from it, even when paused', async ({ page }) => {
+  await signedInWithNavidrome(page);
+  await playAlbum(page, 'al-1'); // Harbour Lights 1: "Second line here" starts at 5 s
+  const dock = page.getByRole('region', { name: 'Player' });
+  await dock.getByRole('button', { name: 'Pause', exact: true }).click();
+  await expect(dock).toHaveAttribute('data-status', 'paused');
+  // The field keeps its lines gently moving (springs): never "stable" to Playwright, so forced.
+  await page.locator('.ly-field .ly-line', { hasText: 'Second line here' }).click({ force: true });
+  await expect(dock).toHaveAttribute('data-status', 'playing');
+  const seek = dock.getByRole('slider', { name: 'Seek' });
+  await expect
+    .poll(async () => Number(await seek.getAttribute('aria-valuenow')), { timeout: 5000 })
+    .toBeGreaterThanOrEqual(4900);
+  expect(Number(await seek.getAttribute('aria-valuenow'))).toBeLessThan(9000);
+});

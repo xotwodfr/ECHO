@@ -2,6 +2,8 @@ package com.folk3s.echo.stage.lyrics
 
 import android.os.Build
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -156,14 +158,19 @@ fun LyricsField(stage: StageView?, dock: Float) {
       drawContent()
       drawRect(mask, blendMode = BlendMode.DstIn)
     }) {
-      for (inst in members) key(inst) { Line(inst, layout.lines[inst.i], frame, palette, density.density, reduced) }
+      // Spotify's: a tap on a line plays from it.
+      val playFrom = { i: Int ->
+        app.playback.seek(tl.lines[i].start.toLong() + offset)
+        if (!app.playback.state.value.playing) app.playback.toggle()
+      }
+      for (inst in members) key(inst) { Line(inst, layout.lines[inst.i], frame, palette, density.density, reduced) { playFrom(inst.i) } }
       Dots(model, frame, palette, fontPx, W, H)
     }
   }
 }
 
 @Composable
-private fun Line(inst: Inst, lay: LineLayout, frame: State<Long>, palette: StagePalette, dp: Float, reduced: Boolean) {
+private fun Line(inst: Inst, lay: LineLayout, frame: State<Long>, palette: StagePalette, dp: Float, reduced: Boolean, onTap: () -> Unit) {
   val pad = lay.em * 0.5f
   val w = lay.box.w + 2 * pad
   val h = lay.box.h + 2 * pad
@@ -183,7 +190,7 @@ private fun Line(inst: Inst, lay: LineLayout, frame: State<Long>, palette: Stage
       alpha = inst.opacity.toFloat()
       val b = inst.blur * dp
       renderEffect = if (blurs && b > 0.05) BlurEffect(b.toFloat(), b.toFloat(), TileMode.Decal) else null
-    },
+    }.pointerInput(Unit) { detectTapGestures { onTap() } },
   ) {
     frame.value
     val inks = Inks(palette, inst, right)

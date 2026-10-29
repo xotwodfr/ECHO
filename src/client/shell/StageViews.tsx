@@ -308,10 +308,28 @@ function StillLyrics({ doc }: { doc: LyricsDoc }) {
       .querySelector('.ly-sheet-line[aria-current="true"]')
       ?.scrollIntoView({ block: 'center', behavior: 'instant' });
   }, [active]);
-  return <LyricSheet doc={doc} active={active} />;
+  return (
+    <LyricSheet
+      doc={doc}
+      active={active}
+      onLine={(ms) => {
+        c.seek(ms + lyricOffset());
+        c.resume();
+      }}
+    />
+  );
 }
 
-function LyricSheet({ doc, active }: { doc: LyricsDoc; active?: number }) {
+function LyricSheet({
+  doc,
+  active,
+  onLine,
+}: {
+  doc: LyricsDoc;
+  active?: number;
+  /** Timed lines are buttons that play from their start. */
+  onLine?: (startMs: number) => void;
+}) {
   const lines = doc.lines.filter((l) => l.text.trim());
   return (
     // biome-ignore lint/a11y/noNoninteractiveTabindex: §11, the sheet is focusable for scrolling
@@ -325,7 +343,13 @@ function LyricSheet({ doc, active }: { doc: LyricsDoc; active?: number }) {
             dir="auto"
             aria-current={i === active ? 'true' : undefined}
           >
-            {l.text}
+            {onLine && doc.sync !== 'none' ? (
+              <button type="button" className="ly-sheet-jump" onClick={() => onLine(l.start)}>
+                {l.text}
+              </button>
+            ) : (
+              l.text
+            )}
             {i === 0 && doc.sync === 'none' && (
               <span className="ly-sheet-note">
                 {strings.stage.unsynced} · {doc.attribution.text}

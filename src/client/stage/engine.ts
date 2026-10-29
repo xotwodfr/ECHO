@@ -306,6 +306,10 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     field = createLyricField(el, {
       tier,
       announce: lyricPrefs.getState().announce,
+      onLine: (ms) => {
+        c.seek(ms + lyricOffset());
+        c.resume();
+      },
       onReady: () => {
         loop.renderOnce();
         loop.wake();

@@ -80,7 +80,13 @@ const div = (cls: string) => {
 
 export function createLyricField(
   host: HTMLElement,
-  opts: { tier: Tier; announce?: boolean; onReady?: () => void },
+  opts: {
+    tier: Tier;
+    announce?: boolean;
+    onReady?: () => void;
+    /** A click on a timed line: its start, ms (the player jumps there and plays). */
+    onLine?: (startMs: number) => void;
+  },
 ) {
   const blurs = BLURS[opts.tier];
   host.classList.add('ly-field');
@@ -106,6 +112,12 @@ export function createLyricField(
   live.setAttribute('role', 'status');
   live.setAttribute('aria-live', 'polite');
   host.append(measure, scene, transcript, live);
+  // Spotify's: a click on a line plays from it. Static lyrics have no times to go to.
+  scene.addEventListener('click', (e) => {
+    const el = (e.target as Element).closest<HTMLElement>('[data-line]');
+    const line = el && model?.lines[Number(el.dataset.line)];
+    if (line && doc?.sync !== 'none') opts.onLine?.(line.start);
+  });
   const announcer = new Announcer();
   let announce = !!opts.announce;
   let current: HTMLElement | null = null; // the transcript item with aria-current
@@ -137,6 +149,7 @@ export function createLyricField(
     const root = pool.pop() ?? document.createElement('div');
     buildLine(root, line, lay.fit, layout.fontPx, layout.maxWidth);
     root.dataset.side = lay.side;
+    root.dataset.line = String(inst.i);
     const lead = root.firstElementChild as HTMLElement;
     const spans = (parent: Element) => [...parent.querySelectorAll<HTMLElement>('.ly-w')];
     const em = layout.fontPx * lay.fit.size;
