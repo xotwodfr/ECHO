@@ -342,6 +342,7 @@ class Playback(private val app: EchoApp) {
   }
 
   private fun scrobble(t: Track, at: Long) {
+    if (!app.prefs.state.value.scrobble) return
     fun post(submission: Boolean) =
       app.scope.launch {
         runCatching { app.api.send("POST", "/navidrome/rest/scrobble?id=${URLEncoder.encode(t.id, "UTF-8")}&submission=$submission") }

@@ -48,7 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.folk3s.echo.echo
 import com.folk3s.echo.playback.PlayerState
+import com.folk3s.echo.stage.StageChrome
 import com.folk3s.echo.stage.StageScreen
+import com.folk3s.echo.stage.stageGlass
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
 
 sealed interface Route {
@@ -97,18 +103,22 @@ private fun Shell() {
   val nav = remember { Nav() }
   val player by app.playback.state.collectAsStateWithLifecycle()
   var queueOpen by remember { mutableStateOf(false) }
+  val chrome = remember { StageChrome() }
   BackHandler(enabled = nav.stack.size > 1) { nav.back() }
   val listen = nav.top == Route.Listen
 
   Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
     if (listen) {
       // S1 Listen: the Stage full-bleed, the dock over it; no navigation bar (§5).
-      Box(Modifier.fillMaxSize()) {
-        StageScreen(onClose = { nav.root(Route.Library()) })
-        Box(Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars)) {
-          Dock(player, onOpenStage = {}, onQueue = { queueOpen = true }, stage = true)
-        }
-      }
+      StageScreen(
+        chrome,
+        onClose = { nav.root(Route.Library()) },
+        dock = {
+          Box(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
+            Dock(player, onOpenStage = {}, onQueue = { queueOpen = true }, stage = true, chrome = chrome)
+          }
+        },
+      )
     } else {
       Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars)) {
@@ -170,13 +180,17 @@ private fun NavBar(nav: Nav) {
  * next and the queue. Shell in form, Stage in colour: the progress fill takes the album's accent.
  */
 @Composable
-fun Dock(p: PlayerState, onOpenStage: () -> Unit, onQueue: () -> Unit, stage: Boolean) {
+fun Dock(p: PlayerState, onOpenStage: () -> Unit, onQueue: () -> Unit, stage: Boolean, chrome: StageChrome? = null) {
   val app = LocalContext.current.echo
   val t = p.track
   val bg = if (stage) Color.Transparent else MaterialTheme.colorScheme.surfaceContainer
-  Column(Modifier.fillMaxWidth().background(bg)) {
-    Progress(p)
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+  // On the Stage the dock fades with the chrome; the progress stays at 40% (§6.1).
+  val shown = chrome?.visible ?: true
+  val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 640), label = "dock")
+  val density = LocalDensity.current.density
+  Column(Modifier.fillMaxWidth().background(bg).stageGlass(chrome, "dock", { _, _ -> 0f }, density)) {
+    Box(Modifier.alpha(maxOf(alpha, 0.4f))) { Progress(p) }
+    Row(Modifier.fillMaxWidth().alpha(alpha).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
       Row(Modifier.weight(1f).clip(RoundedCornerShape(8.dp)).clickable(enabled = t != null, onClick = onOpenStage), verticalAlignment = Alignment.CenterVertically) {
         Artwork(t?.cover, t?.album?.title ?: "", 48.dp)
         Spacer(Modifier.size(12.dp))

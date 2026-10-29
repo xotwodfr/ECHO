@@ -221,8 +221,11 @@ void glass(vec2 p, inout vec2 uv, out float inside, out float rim) {
   float t = depth / bezel * ${GLASS_STEPS - 1}.0;
   int k = int(t);
   float s = mix(uGlassBend[k], uGlassBend[min(k + 1, ${GLASS_STEPS - 1})], fract(t));
-  uv += uGlassBendOn * vec2(-n.x, n.y) * s * uDpr / uRes; // inward; canvas uv is y up
-  rim = uGlassLightOn * uGlassSpec * abs(dot(n, uGlassLight)) * pow(1.0 - depth / bezel, 6.0);
+  // The outermost pixel is only partly glass: the rim fades in over one backing pixel, so its edge
+  // stays smooth on a backing store the tier keeps below the display's resolution.
+  float edge = clamp(depth * uDpr, 0.0, 1.0);
+  uv += edge * uGlassBendOn * vec2(-n.x, n.y) * s * uDpr / uRes; // inward; canvas uv is y up
+  rim = edge * uGlassLightOn * uGlassSpec * abs(dot(n, uGlassLight)) * pow(1.0 - depth / bezel, 6.0);
 }`;
 
 // Most of the stage is under no glass, and a software GPU (SwiftShader) runs every instruction

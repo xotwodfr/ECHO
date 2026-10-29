@@ -25,6 +25,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   val library by lazy { Library(api, scope) }
   val playback by lazy { Playback(this) }
   val palette by lazy { AlbumPalette(this) }
+  val prefs by lazy { PrefsStore(this) }
 
   override fun onCreate() {
     super.onCreate()
