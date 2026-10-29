@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { ArtistInfo } from '../library.ts';
-import { useLibrary, usePlayer, useQueue } from '../playback/context.tsx';
+import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { glass } from '../ui/glass.ts';
 import { Artwork } from '../ui/media.tsx';
+import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
 import { Link } from './link.tsx';
 import { panels } from './panels.ts';
@@ -41,10 +42,12 @@ function PaneHead({ title }: { title: string }) {
 }
 
 function QueuePane() {
+  const c = usePlayback();
   return (
     <>
       <PaneHead title={strings.queue.title} />
-      <div className="rp-body">
+      {/* A song dropped on the queue joins its end (drag.ts). */}
+      <div className="rp-body" {...dropTracks((t) => c.addToQueue(t, t[0]?.title ?? ''))}>
         <QueueList scope=".right-panel" />
       </div>
     </>

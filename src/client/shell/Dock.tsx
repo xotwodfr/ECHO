@@ -21,7 +21,9 @@ import { glass } from '../ui/glass.ts';
 import { Artwork } from '../ui/media.tsx';
 import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
+import { collections, setStar } from './collections.ts';
 import { useCompact, useWide } from './compact.ts';
+import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { panels, toggleRight } from './panels.ts';
@@ -205,6 +207,7 @@ export function Dock({ stage }: { stage: boolean }) {
           pressed={sheet ? undefined : right === 'queue'}
           aria-expanded={sheet ? queueOpen : undefined}
           onClick={toggleQueue}
+          {...dropTracks((t) => c.addToQueue(t, t[0]?.title ?? ''))}
         />
         <SleepMenu />
         <Volume value={volume} onChange={c.setVolume} />
@@ -291,6 +294,13 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
       volumeUp: () => c.setVolume(c.player.getState().volume + VOLUME_STEP),
       volumeDown: () => c.setVolume(c.player.getState().volume - VOLUME_STEP),
       mute: c.toggleMute,
+      like: () => {
+        const t = c.player.getState().track;
+        if (t?.provider !== 'navidrome') return;
+        const s = collections.getState().starred;
+        const on = !!s && s !== 'error' && s.tracks.some((x) => x.id === t.id);
+        void setStar('track', t, !on);
+      },
       lyricsEarlier: () => nudgeLyrics(-1),
       lyricsLater: () => nudgeLyrics(1),
       shuffle: c.toggleShuffle,

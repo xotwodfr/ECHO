@@ -400,6 +400,21 @@ function Frame() {
   }, [route, back]);
 
   useEffect(() => {
+    // A right-click opens the item's own menu (Spotify's): a song's, a card's, a row of Your
+    // Library's. Shift+right-click keeps the browser's (open in a new tab, copy link).
+    const onMenu = (e: MouseEvent) => {
+      if (e.shiftKey || !(e.target instanceof Element)) return;
+      const item = e.target.closest('.track-row, .tile, .lp-row');
+      const trigger = item?.querySelector<HTMLButtonElement>('[aria-haspopup="menu"]');
+      if (!trigger) return;
+      e.preventDefault();
+      if (trigger.getAttribute('aria-expanded') !== 'true') trigger.click();
+    };
+    document.addEventListener('contextmenu', onMenu);
+    return () => document.removeEventListener('contextmenu', onMenu);
+  }, []);
+
+  useEffect(() => {
     // `/` or Ctrl/⌘+K focuses the visible search field (the hint shown in it); where none is
     // visible (the lyrics view), it opens Search.
     const onKey = (e: KeyboardEvent) => {

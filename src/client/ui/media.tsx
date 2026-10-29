@@ -180,6 +180,8 @@ export function AlbumTile(p: {
   force?: Force;
   /** A picture made for the card instead of a cover (Made For You's mixes). */
   art?: ReactNode;
+  /** The card's own menu: its ⋯ on hover or focus, and a right-click (Shell.tsx). */
+  menu?: MenuItem[];
 }) {
   return (
     <li
@@ -205,6 +207,11 @@ export function AlbumTile(p: {
       <Link className="tile-link" to={p.to ?? { view: 'album', id: p.id }}>
         <span className="tile-title">{p.title}</span>
       </Link>
+      {p.menu && (
+        <span className="tile-menu">
+          <Menu label={strings.ui.moreFor(p.title)} items={p.menu} />
+        </span>
+      )}
       <span className="tile-artist">{p.artist}</span>
     </li>
   );

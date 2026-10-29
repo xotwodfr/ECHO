@@ -25,6 +25,7 @@ export type Shortcut =
   | 'goSettings'
   | 'goListen'
   | 'fullscreen'
+  | 'like'
   | 'help';
 
 /**
@@ -42,7 +43,10 @@ export function shortcutFor(
   stage: boolean,
   afterG = false,
 ): Shortcut | null {
-  if (target === 'text' || e.altKey) return null;
+  if (target === 'text') return null;
+  // Spotify's Like: Alt+Shift+B (its only Alt shortcut here; Alt is the browser's otherwise).
+  if (e.altKey)
+    return e.shiftKey && !e.ctrlKey && !e.metaKey && e.key.toLowerCase() === 'b' ? 'like' : null;
   const mod = e.ctrlKey || e.metaKey;
   const owned = target === 'control';
   if (afterG && !mod) {

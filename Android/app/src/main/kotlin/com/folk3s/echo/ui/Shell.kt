@@ -239,7 +239,12 @@ private fun MiniPlayer(p: PlayerState, onOpen: () -> Unit) {
   val tint = headerTone(albumAccent())
   GlassSurface(tint, RoundedCornerShape(10.dp), 10.dp, Modifier.fillMaxWidth().height(56.dp)) {
     Box(Modifier.fillMaxSize()) {
-      Row(Modifier.fillMaxSize().clickable(onClick = onOpen).padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+      // Swipe sideways for the next or previous song, up for Now Playing (Spotify's mini player).
+      Row(
+        Modifier.fillMaxSize().swipes(left = app.playback::next, right = app.playback::previous, up = onOpen).clickable(onClick = onOpen)
+          .padding(start = 8.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
         Artwork(t.cover, t.album.title, 40.dp)
         Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
           Text(t.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)

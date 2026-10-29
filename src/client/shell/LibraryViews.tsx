@@ -40,6 +40,7 @@ import {
   useStarred,
   useStarredAll,
 } from './collections.ts';
+import { dragTracks } from './drag.ts';
 import { useFresh } from './fresh.ts';
 import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
@@ -245,6 +246,7 @@ export function Rows({
         onPlay={() => c.playList(tracks, i, context)}
         heart={<HeartButton track={t} />}
         menu={menuOf(t, extraMenu?.(t, i))}
+        rowProps={dragTracks([t])}
       />
     );
   });
@@ -262,8 +264,62 @@ function useAlbumPlay() {
   };
 }
 
+/** An album card's menu (right-click or its ⋯): Spotify's queue, playlist, save and artist. */
+export function useAlbumMenu() {
+  const c = usePlayback();
+  const library = useLibrary();
+  const navigate = useView((s) => s.navigate);
+  const starred = useStarredAll();
+  const s = strings.album;
+  // A server library lists albums before their tracks: fetched when a choice needs them.
+  const tracks = async (a: Album) => {
+    const full = a.tracks.length ? a : await library?.loadAlbum?.(a.id).catch(() => null);
+    if (!full?.tracks.length) toastStore.getState().show(strings.states.albumFailed);
+    return full?.tracks ?? [];
+  };
+  return (a: Album): MenuItem[] => {
+    const nav = !a.id.startsWith('spotify:');
+    const saved = starred && starred !== 'error' && starred.albums.some((x) => x.id === a.id);
+    return [
+      {
+        label: s.playNext,
+        onSelect: () => void tracks(a).then((t) => t.length && c.playNext(t, a.title)),
+      },
+      {
+        label: s.addToQueue,
+        onSelect: () => void tracks(a).then((t) => t.length && c.addToQueue(t, a.title)),
+      },
+      ...(nav && library?.updatePlaylist
+        ? [
+            {
+              label: strings.playlist.addTo,
+              onSelect: () => void tracks(a).then((t) => t.length && openPicker(t)),
+            },
+          ]
+        : []),
+      ...(nav && library?.setStar
+        ? [
+            {
+              label: saved ? strings.liked.removeAlbum : strings.liked.saveAlbum,
+              onSelect: () => void setStar('album', a, !saved),
+            },
+          ]
+        : []),
+      ...(a.artistId
+        ? [
+            {
+              label: s.goToArtist,
+              onSelect: () => navigate({ view: 'artist', id: a.artistId ?? '' }),
+            },
+          ]
+        : []),
+    ];
+  };
+}
+
 export function Albums({ albums, sub }: { albums: Album[]; sub?: (a: Album) => string }) {
   const play = useAlbumPlay();
+  const menu = useAlbumMenu();
   const tile = (a: Album) => (
     <AlbumTile
       key={a.id}
@@ -272,6 +328,7 @@ export function Albums({ albums, sub }: { albums: Album[]; sub?: (a: Album) => s
       artist={sub ? sub(a) : a.artist}
       cover={a.cover}
       onPlay={() => void play(a)}
+      menu={menu(a)}
     />
   );
   // A large library is windowed (LIB-02); a small one stays a plain grid.

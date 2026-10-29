@@ -7,7 +7,14 @@ import { glass } from '../ui/glass.ts';
 import { Icon } from '../ui/icons.tsx';
 import { Artwork } from '../ui/media.tsx';
 import type { Route } from '../view.ts';
-import { createPlaylist, usePlaylists, useStarredAll } from './collections.ts';
+import {
+  addToPlaylist,
+  createPlaylist,
+  setStar,
+  usePlaylists,
+  useStarredAll,
+} from './collections.ts';
+import { dropTracks } from './drag.ts';
 import { Link, useView } from './link.tsx';
 import { type LibraryFilter, panels } from './panels.ts';
 
@@ -140,8 +147,17 @@ function LibraryRow({ row }: { row: Row }) {
       {playing && <Icon name="volume" className="lp-speaker" />}
     </>
   );
+  // A song dropped here (drag.ts): onto a playlist it is added, onto Liked Songs it is liked.
+  const drop =
+    row.kind === 'playlist'
+      ? dropTracks((t) => void addToPlaylist(row.p, t))
+      : row.kind === 'liked'
+        ? dropTracks((t) => {
+            for (const x of t) void setStar('track', x, true);
+          })
+        : {};
   return (
-    <li className="lp-row">
+    <li className="lp-row" {...drop}>
       {to ? (
         <Link to={to} aria-current={current ? 'page' : undefined}>
           {body}

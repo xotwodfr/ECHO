@@ -1,5 +1,13 @@
 package com.folk3s.echo.ui
 
+import kotlin.math.abs
+
+import androidx.compose.ui.input.pointer.pointerInput
+
+import androidx.compose.runtime.rememberUpdatedState
+
+import androidx.compose.foundation.gestures.detectDragGestures
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -192,4 +200,35 @@ fun CenterBox(content: @Composable () -> Unit) {
 @Composable
 fun SectionLabel(text: String) {
   Text(text, color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 8.dp, top = 16.dp, bottom = 8.dp))
+}
+
+/**
+ * Spotify's swipes: a drag past 48 dp along its main direction, on release. Taps stay clicks, and
+ * controls inside (a seek bar) keep their own drags.
+ */
+@Composable
+fun Modifier.swipes(left: (() -> Unit)? = null, right: (() -> Unit)? = null, up: (() -> Unit)? = null, down: (() -> Unit)? = null): Modifier {
+  val l by rememberUpdatedState(left)
+  val r by rememberUpdatedState(right)
+  val u by rememberUpdatedState(up)
+  val d by rememberUpdatedState(down)
+  return pointerInput(Unit) {
+    val far = 48.dp.toPx()
+    var dx = 0f
+    var dy = 0f
+    detectDragGestures(
+      onDragStart = {
+        dx = 0f
+        dy = 0f
+      },
+      onDragEnd = {
+        if (abs(dx) > abs(dy)) (if (dx < -far) l else if (dx > far) r else null)?.invoke()
+        else (if (dy < -far) u else if (dy > far) d else null)?.invoke()
+      },
+    ) { change, drag ->
+      change.consume()
+      dx += drag.x
+      dy += drag.y
+    }
+  }
 }

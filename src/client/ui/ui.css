@@ -957,6 +957,23 @@
   background: var(--raised);
 }
 
+/* The card's ⋯ (album cards): on hover or focus, and while its menu is open; a right-click opens
+   it too (Shell.tsx). Above the stretched link. */
+.tile-menu {
+  position: absolute;
+  top: var(--sp-1);
+  right: var(--sp-1);
+  z-index: 2;
+  opacity: 0;
+  transition: opacity var(--dur-hover) ease;
+}
+
+.tile:hover .tile-menu,
+.tile:focus-within .tile-menu,
+.tile-menu:has([aria-expanded="true"]) {
+  opacity: 1;
+}
+
 .tile-cover {
   position: relative;
   display: block;
@@ -1544,4 +1561,15 @@
     background: Highlight;
     color: HighlightText;
   }
+}
+
+/* A place a dragged song can land, while one is over it (shell/drag.ts). */
+[data-drop] {
+  outline: var(--md-focus-ring) solid var(--green);
+  outline-offset: calc(-1 * var(--md-focus-ring));
+  background-color: var(--hover-row);
+}
+
+.track-row[draggable="true"] {
+  cursor: grab;
 }

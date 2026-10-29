@@ -26,6 +26,7 @@ describe('shortcutFor (PRODUCT_SPEC.md §7)', () => {
     ['s', {}, 'shuffle'],
     ['r', {}, 'repeat'],
     ['q', {}, 'queue'],
+    ['B', { alt: true, shift: true }, 'like'],
   ] as const)('%s %o → %s', (k, mods, action) => {
     expect(shortcutFor(key(k, mods), 'other', false)).toBe(action);
   });
@@ -39,6 +40,7 @@ describe('shortcutFor (PRODUCT_SPEC.md §7)', () => {
     expect(shortcutFor(key('f'), 'other', true)).toBe('fullscreen');
     expect(shortcutFor(key('?', { shift: true }), 'other', false)).toBe('help');
     expect(shortcutFor(key('g'), 'text', false)).toBeNull();
+    expect(shortcutFor(key('b', { alt: true }), 'other', false)).toBeNull(); // Alt+B: the browser's
   });
 
   it('[ and ] shift the lyrics on the Stage only (LYR-25)', () => {

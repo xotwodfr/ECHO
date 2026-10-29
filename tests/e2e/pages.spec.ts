@@ -197,3 +197,66 @@ test('Back is instant: the page as it was, where it was left', async ({ page }) 
   await expect(page.locator('.page-head')).toBeVisible();
   await expect(page.locator('.rows-loading')).toHaveCount(0);
 });
+
+test('right-click opens a song’s or a card’s menu; Shift+right-click is the browser’s', async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page, 'ctx');
+  await page.goto('/library/album/al-1');
+  await page.locator('.track-row', { hasText: 'Harbour Lights 2' }).click({ button: 'right' });
+  await expect(page.getByRole('menuitem', { name: 'Add to queue' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await page.locator('.track-row', { hasText: 'Harbour Lights 2' }).click({
+    button: 'right',
+    modifiers: ['Shift'],
+  });
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  // An album card on Home: its own menu, and a choice from it.
+  await page.goto('/');
+  const card = page.getByRole('region', { name: 'New in your library' }).locator('.tile').first();
+  await card.click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Add to queue' }).click();
+  await expect(toast(page, /^Added .* to the queue|^Added to queue/)).toBeVisible();
+});
+
+test('drag a song onto a playlist or Liked Songs; Alt+Shift+B likes the playing song', async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page, 'drag');
+  const name = `Drop ${Date.now().toString(36)}`;
+  const post = (path: string) =>
+    page.evaluate(
+      async (p) =>
+        (
+          await fetch(p, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: '{}',
+          })
+        ).json(),
+      path,
+    );
+  const made = await post(`/api/v1/navidrome/rest/createPlaylist?name=${encodeURIComponent(name)}`);
+  const id = made['subsonic-response'].playlist.id as string;
+  try {
+    await page.goto('/library/album/al-2');
+    const row = page.locator('.track-row', { hasText: 'Copper Rain 1' });
+    await row.dragTo(library(page).locator('.lp-row', { hasText: name }));
+    await expect(toast(page, `Added to ${name}`)).toBeVisible();
+    await row.dragTo(library(page).locator('.lp-row', { hasText: 'Liked Songs' }));
+    await expect(toast(page, 'Added to Liked Songs')).toBeVisible();
+    const heart = row.getByRole('button', { name: 'Remove Copper Rain 1 from Liked Songs' });
+    await expect(heart).toHaveAttribute('aria-pressed', 'true');
+    await heart.click(); // the mock outlives runs: as it was
+    // Alt+Shift+B: the playing song into Liked Songs and out again.
+    await page.locator('.action-bar').getByRole('button', { name: 'Play Copper Rain' }).click();
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+    await page.keyboard.press('Alt+Shift+B');
+    await expect(toast(page, 'Added to Liked Songs')).toBeVisible();
+    await page.keyboard.press('Alt+Shift+B');
+    await expect(toast(page, 'Removed from Liked Songs')).toBeVisible();
+  } finally {
+    await post(`/api/v1/navidrome/rest/deletePlaylist?id=${id}`);
+  }
+});

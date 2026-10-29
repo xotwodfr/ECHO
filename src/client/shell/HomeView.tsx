@@ -11,6 +11,7 @@ import { BlockEmpty, BlockError, GridLoading } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
 import { usePlaylists, useStarredAll } from './collections.ts';
 import { useFresh } from './fresh.ts';
+import { useAlbumMenu } from './LibraryViews.tsx';
 import { Link } from './link.tsx';
 import { MixArt, WrappedArt } from './MixViews.tsx';
 import { trackOf, useJumpBackIn, useMixes } from './mixes.ts';
@@ -111,6 +112,7 @@ function AlbumShelf({
   retry: () => void;
 }) {
   const play = useAlbumPlay();
+  const menu = useAlbumMenu();
   const id = `shelf-${shelf.kind}`;
   if (Array.isArray(albums) && !albums.length) return null;
   return (
@@ -130,6 +132,7 @@ function AlbumShelf({
               artist={a.artist}
               cover={a.cover}
               onPlay={() => void play(a)}
+              menu={menu(a)}
             />
           ))}
         </ul>

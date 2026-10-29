@@ -3,6 +3,7 @@ package com.folk3s.echo.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -189,7 +190,9 @@ fun SongRow(t: Track, nowPlaying: Boolean, onPlay: () -> Unit, showArt: Boolean,
   val app = LocalContext.current.echo
   val starred by app.library.starredFlow.collectAsStateWithLifecycle()
   Row(
-    Modifier.fillMaxWidth().clickable(onClick = onPlay).padding(horizontal = 16.dp, vertical = 8.dp),
+    // A long press opens the song's menu (Spotify's), as its ⋯ does.
+    Modifier.fillMaxWidth().combinedClickable(onClick = onPlay, onLongClick = { if (menu.isNotEmpty()) Menus.open = "More for ${t.title}" to menu })
+      .padding(horizontal = 16.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
     horizontalArrangement = Arrangement.spacedBy(12.dp),
   ) {

@@ -99,7 +99,8 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
     Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(tone, tone.copy(alpha = 0.55f).compositeOverGround(), Chamber.ground)))
       .windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).verticalScroll(rememberScrollState()),
   ) {
-    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    // Swipe down on the top or the cover closes it; sideways on the cover changes the song.
+    Row(Modifier.fillMaxWidth().swipes(down = { nav.back() }).padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
       IconBtn(EchoIcons.chevronDown, "Close Now playing", Chamber.text, 28) { nav.back() }
       Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
         Text("PLAYING FROM ${FROM[ctx?.kind] ?: "YOUR LIBRARY"}", color = Chamber.text.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall)
@@ -112,7 +113,7 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           (if (SleepTimer.minutes != null) listOf("Turn off sleep timer" to { SleepTimer.set(app, null) }) else emptyList()),
       )
     }
-    Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp).aspectRatio(1f)) {
+    Box(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 24.dp).aspectRatio(1f).swipes(left = app.playback::next, right = app.playback::previous, down = { nav.back() })) {
       Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = 8.dp)
     }
     Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), verticalAlignment = Alignment.CenterVertically) {
