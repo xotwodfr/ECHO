@@ -71,6 +71,8 @@ sealed interface Route {
   data class Playlist(val id: String) : Route
   data object Liked : Route
   data class Genre(val name: String) : Route
+  data class Mix(val id: String) : Route
+  data class Wrapped(val year: Int) : Route
   data object Settings : Route
   data object NowPlaying : Route
   data object Listen : Route
@@ -142,6 +144,8 @@ private fun Shell() {
               is Route.Playlist -> PlaylistScreen(r.id, nav, picker)
               Route.Liked -> LikedScreen(nav, picker)
               is Route.Genre -> GenreScreen(r.name, nav)
+              is Route.Mix -> MixScreen(r.id, nav, picker)
+              is Route.Wrapped -> WrappedScreen(r.year, nav)
               Route.Settings -> SettingsScreen()
               else -> {}
             }

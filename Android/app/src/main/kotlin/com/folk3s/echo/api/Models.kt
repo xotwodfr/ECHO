@@ -144,3 +144,69 @@ data class LyricsDoc(
 @Serializable data class Override(val offsetMs: Long? = null, val pinnedSource: String? = null)
 
 @Serializable data class LyricsAnswer(val doc: LyricsDoc? = null, val override: Override? = null)
+
+// ECHO's own play history and what is made from it (src/server/plays.ts).
+
+/** A Navidrome song as the history keeps it. */
+@Serializable
+data class TrackRef(
+  val id: String,
+  val title: String,
+  val artist: String,
+  val artistId: String? = null,
+  val album: String,
+  val albumId: String? = null,
+  val durationMs: Long,
+  val cover: String? = null,
+) {
+  fun toTrack() =
+    Track(
+      key = "navidrome:$id",
+      id = id,
+      title = title,
+      artists = listOf(ArtistRef(artistId, artist)),
+      album = AlbumRef(albumId, album, "navidrome:${albumId ?: id}"),
+      durationMs = durationMs,
+      artwork = listOfNotNull(cover?.let { Artwork(it) }),
+    )
+}
+
+/** One of Made For You's mixes. */
+@Serializable data class Mix(val id: String, val kind: String, val title: String, val subtitle: String, val tracks: List<TrackRef>)
+
+/** Jump back in: an album, playlist, artist or mix played from lately. */
+@Serializable data class PlayedContext(val kind: String, val id: String, val title: String? = null, val cover: String? = null, val at: Long)
+
+@Serializable data class WrappedArtist(val name: String, val id: String? = null, val plays: Int)
+
+@Serializable
+data class WrappedTrack(
+  val id: String,
+  val title: String,
+  val artist: String,
+  val artistId: String? = null,
+  val album: String,
+  val albumId: String? = null,
+  val durationMs: Long,
+  val cover: String? = null,
+  val plays: Int,
+) {
+  fun toTrack() = TrackRef(id, title, artist, artistId, album, albumId, durationMs, cover).toTrack()
+}
+
+@Serializable data class WrappedAlbum(val title: String, val id: String? = null, val artist: String, val cover: String? = null, val plays: Int)
+
+@Serializable data class TopDay(val date: String, val plays: Int)
+
+/** A year in review. */
+@Serializable
+data class Wrapped(
+  val year: Int,
+  val minutes: Int,
+  val plays: Int,
+  val artists: List<WrappedArtist> = emptyList(),
+  val tracks: List<WrappedTrack> = emptyList(),
+  val albums: List<WrappedAlbum> = emptyList(),
+  val topDay: TopDay? = null,
+  val distinctArtists: Int = 0,
+)

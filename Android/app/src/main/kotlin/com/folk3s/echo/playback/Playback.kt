@@ -95,6 +95,8 @@ class Playback(private val app: EchoApp) {
     }
   private var lastIndex = -1
   private var scrobbled = "none"
+  /** Whether this track's play is in ECHO's history yet (whatever the scrobble setting). */
+  private var recorded = false
   private var queueBase = 0L
   private var saveJob: Job? = null
 
@@ -281,6 +283,7 @@ class Playback(private val app: EchoApp) {
       // Moving into Next up uses it up; scrobbling starts over for the new track.
       nextUp = (nextUp - (index - lastIndex).coerceAtLeast(0)).coerceAtLeast(0)
       scrobbled = "none"
+      recorded = false
     }
     lastIndex = index
     val up = upcomingIndices(mc).mapNotNull { trackAt(mc, it) }
@@ -347,6 +350,7 @@ class Playback(private val app: EchoApp) {
       if (!s.playing) continue
       publish()
       scrobble(t, _state.value.positionNow())
+      record(t, _state.value.positionNow())
       sinceSave += 1000
       if (sinceSave >= SAVE_EVERY_MS) {
         sinceSave = 0
@@ -369,6 +373,15 @@ class Playback(private val app: EchoApp) {
       scrobbled = "done"
       post(true)
     }
+  }
+
+  /** ECHO's own history (mixes.ts): at the same point, songs of 30 s or more, Navidrome only. */
+  private fun record(t: Track, at: Long) {
+    if (recorded || t.provider != "navidrome" || t.durationMs < 30_000) return
+    if (at < t.durationMs / 2 && at < SCROBBLE_MS) return
+    recorded = true
+    val ctx = source
+    app.scope.launch { runCatching { app.library.recordPlay(t, ctx) } }
   }
 
   // ---- the saved queue (queueSync.ts) ----

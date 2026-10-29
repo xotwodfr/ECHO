@@ -102,7 +102,7 @@ fun <T> load(key: Any?, fetch: suspend () -> T): Pair<Load<T>, () -> Unit> {
 }
 
 @Composable
-private fun nowKey(): String? {
+fun nowKey(): String? {
   val s by LocalContext.current.echo.playback.state.collectAsStateWithLifecycle()
   return s.track?.key
 }
@@ -125,7 +125,7 @@ fun PlayFab(label: String, live: Boolean, playing: Boolean, onPlay: () -> Unit, 
 }
 
 @Composable
-private fun contextLive(kind: String, id: String?): Pair<Boolean, Boolean> {
+fun contextLive(kind: String, id: String?): Pair<Boolean, Boolean> {
   val s by LocalContext.current.echo.playback.state.collectAsStateWithLifecycle()
   val ctx = LocalContext.current.echo.playback.context.collectAsStateWithLifecycle().value
   val live = s.track != null && ctx?.kind == kind && (id == null || ctx.id == id)
@@ -198,10 +198,18 @@ fun SongRow(t: Track, nowPlaying: Boolean, onPlay: () -> Unit, showArt: Boolean,
 
 /** A card: the cover (round for artists), a title and a subtitle. */
 @Composable
-fun Card(cover: String?, title: String, subtitle: String, width: Int? = 144, round: Boolean = false, onClick: () -> Unit) {
+fun Card(
+  cover: String?,
+  title: String,
+  subtitle: String,
+  width: Int? = 144,
+  round: Boolean = false,
+  art: (@Composable () -> Unit)? = null,
+  onClick: () -> Unit,
+) {
   Column((if (width != null) Modifier.width(width.dp) else Modifier).clip(RoundedCornerShape(6.dp)).clickable(onClick = onClick)) {
     Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(if (round) CircleShape else RoundedCornerShape(6.dp))) {
-      Artwork(cover, title, null, radius = if (round) 999.dp else 6.dp)
+      if (art != null) art() else Artwork(cover, title, null, radius = if (round) 999.dp else 6.dp)
     }
     Spacer(Modifier.height(8.dp))
     Text(title, color = Chamber.text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -219,7 +227,7 @@ fun LikedArt(size: Int) {
 }
 
 @Composable
-private fun Shelf(title: String, content: LazyListScope.() -> Unit) {
+fun Shelf(title: String, content: LazyListScope.() -> Unit) {
   Column(Modifier.padding(top = 24.dp)) {
     Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
     LazyRow(contentPadding = PaddingValues(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), content = content)
@@ -245,13 +253,13 @@ fun tintOf(albumKey: String?): Color {
 
 /** A page's top: the tint fading into the page, with its content (cover, title, facts) on it. */
 @Composable
-private fun TintedHeader(tint: Color, content: @Composable () -> Unit) {
+fun TintedHeader(tint: Color, content: @Composable () -> Unit) {
   Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(tint, tint.copy(alpha = 0.6f).compositeOver(Chamber.surface1), Chamber.surface1)))) {
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 8.dp)) { content() }
   }
 }
 
-private fun Color.compositeOver(bg: Color): Color =
+fun Color.compositeOver(bg: Color): Color =
   Color(red * alpha + bg.red * (1 - alpha), green * alpha + bg.green * (1 - alpha), blue * alpha + bg.blue * (1 - alpha), 1f)
 
 @Composable
@@ -275,6 +283,8 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
   val (newest, _) = load("newest") { app.library.albumList(AlbumList.Newest, 12) }
   val (frequent, _) = load("frequent") { app.library.albumList(AlbumList.Frequent, 12) }
   val (random, _) = load("random") { app.library.albumList(AlbumList.Random, 12) }
+  val (mixes, _) = load("mixes") { app.library.mixes() }
+  val (contexts, _) = load("contexts") { app.library.playedContexts() }
   var filter by remember { mutableStateOf("All") }
   fun albums(l: Load<List<Album>>) = (l as? Load.Ok)?.value ?: emptyList()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
@@ -301,6 +311,7 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
         }
       }
     }
+    if (filter != "Playlists") madeForYou(mixes, contexts, nav)
     if (filter != "Playlists") {
       for ((title, l) in listOf("Recently played" to recent, "New in your library" to newest)) {
         val list = albums(l)
@@ -336,7 +347,7 @@ private fun Shortcut(title: String, art: @Composable () -> Unit, onClick: () -> 
 
 // ---- Search ----
 
-private val GENRE_COLOURS = listOf(0xFFE8115B, 0xFF1E3264, 0xFF8D67AB, 0xFFE91429, 0xFF148A08, 0xFFBA5D07, 0xFF503750, 0xFF0D73EC, 0xFFDC148C, 0xFF27856A, 0xFF477D95, 0xFFAF2896)
+val GENRE_COLOURS = listOf(0xFFE8115B, 0xFF1E3264, 0xFF8D67AB, 0xFFE91429, 0xFF148A08, 0xFFBA5D07, 0xFF503750, 0xFF0D73EC, 0xFFDC148C, 0xFF27856A, 0xFF477D95, 0xFFAF2896)
 
 /** A genre keeps its colour: picked by name, as on the web. */
 fun genreColour(name: String): Color {
@@ -674,6 +685,7 @@ fun PlaylistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
             Spacer(Modifier.weight(1f))
             if (p.entries.isNotEmpty()) {
               IconBtn(EchoIcons.shuffle, "Shuffle ${p.playlist.name}") { app.playback.playList(p.entries.shuffled(), 0, ctx) }
+              IconBtn(EchoIcons.smartShuffle, "Smart Shuffle ${p.playlist.name}") { smartShuffle(app, scope, p.entries, ctx) }
               PlayFab(p.playlist.name, live, playing, { app.playback.playList(p.entries, 0, ctx) })
             }
           }
@@ -733,6 +745,7 @@ fun LikedScreen(nav: Nav, picker: (Track) -> Unit) {
   val tracks = starred?.tracks ?: emptyList()
   val ctx = PlayContext("starred", title = "Liked Songs")
   val (live, playing) = contextLive("starred", null)
+  val scope = rememberCoroutineScope()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item {
       Box(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Chamber.likedFrom, Chamber.likedFrom.copy(alpha = 0.35f).compositeOver(Chamber.surface1), Chamber.surface1)))) {
@@ -745,6 +758,7 @@ fun LikedScreen(nav: Nav, picker: (Track) -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
           Spacer(Modifier.weight(1f))
           IconBtn(EchoIcons.shuffle, "Shuffle Liked Songs") { app.playback.playList(tracks.shuffled(), 0, ctx) }
+          IconBtn(EchoIcons.smartShuffle, "Smart Shuffle Liked Songs") { smartShuffle(app, scope, tracks, ctx) }
           PlayFab("Liked Songs", live, playing, { app.playback.playList(tracks, 0, ctx) })
         }
     }

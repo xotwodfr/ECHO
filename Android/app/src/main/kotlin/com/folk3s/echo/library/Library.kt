@@ -9,6 +9,10 @@ import com.folk3s.echo.api.ArtistInfo
 import com.folk3s.echo.api.ArtistRef
 import com.folk3s.echo.api.Artwork
 import com.folk3s.echo.api.Genre
+import com.folk3s.echo.api.Mix
+import com.folk3s.echo.api.PlayContext
+import com.folk3s.echo.api.PlayedContext
+import com.folk3s.echo.api.Wrapped
 import com.folk3s.echo.api.PlaylistDetail
 import com.folk3s.echo.api.Starred
 import com.folk3s.echo.api.EchoJson
@@ -16,6 +20,10 @@ import com.folk3s.echo.api.Playlist
 import com.folk3s.echo.api.ReplayGain
 import com.folk3s.echo.api.Track
 import java.net.URLEncoder
+import java.util.TimeZone
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +39,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.encodeToJsonElement
 
 // The signed-in user's Navidrome library through ECHO's proxy (src/client/library-navidrome.ts):
 // the album list up front (getAlbumList2, paged), an album's tracks when it is opened or played
@@ -83,6 +92,15 @@ private data class SubAlbum(
 private const val PAGE = 500
 
 private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
+
+/** `POST /me/plays`'s body. The provider is a default, which EchoJson leaves out; the server wants it said. */
+fun playBody(t: Track, ctx: PlayContext?): JsonObject =
+  JsonObject(
+    buildMap {
+      put("track", JsonObject(EchoJson.encodeToJsonElement(t).jsonObject + ("provider" to JsonPrimitive(t.provider))))
+      if (ctx != null) put("context", EchoJson.encodeToJsonElement(ctx))
+    },
+  )
 
 private fun cover(id: String?, size: Int = 300) = id?.let { "/api/v1/navidrome/cover/${enc(it)}?size=$size" }
 
@@ -358,6 +376,44 @@ class Library(private val api: Api, private val scope: CoroutineScope) {
     if (similar.isNotEmpty()) return similar
     return songs(rest("getRandomSongs", "size=$count").at("randomSongs", "song")).filter { it.id != t.id }
   }
+
+  /**
+   * Smart Shuffle (radio.ts's): the list shuffled with songs like a few of its own mixed in, one
+   * after every three; with how many were mixed in.
+   */
+  suspend fun smartShuffle(tracks: List<Track>): Pair<List<Track>, Int> = coroutineScope {
+    val order = tracks.shuffled()
+    val own = tracks.map { it.id }.toSet()
+    val recs =
+      order.take(4).map { async { runCatching { similarSongs(it, 10) }.getOrDefault(emptyList()) } }.awaitAll()
+        .flatten().distinctBy { it.id }.filter { it.id !in own }
+    var r = 0
+    val out = buildList {
+      order.forEachIndexed { i, t ->
+        add(t)
+        if (i % 3 == 2 && r < recs.size) add(recs[r++])
+      }
+    }
+    out to r
+  }
+
+  // ---- ECHO's own history (src/server/plays.ts) ----
+
+  /** A play past the scrobble point, with what it was played from. */
+  suspend fun recordPlay(t: Track, ctx: PlayContext?) {
+    api.send("POST", "/me/plays", playBody(t, ctx))
+  }
+
+  /** Made For You; the daylist follows the device's time of day (getTimezoneOffset's sign). */
+  suspend fun mixes(): List<Mix> {
+    val tz = -TimeZone.getDefault().getOffset(System.currentTimeMillis()) / 60_000
+    return EchoJson.decodeFromJsonElement(api.get("/me/mixes?tz=$tz").jsonObject["mixes"] ?: JsonArray(emptyList()))
+  }
+
+  suspend fun playedContexts(): List<PlayedContext> =
+    EchoJson.decodeFromJsonElement(api.get("/me/plays/contexts").jsonObject["contexts"] ?: JsonArray(emptyList()))
+
+  suspend fun wrapped(year: Int): Wrapped = EchoJson.decodeFromJsonElement(api.get("/me/wrapped?year=$year"))
 
   suspend fun genres(): List<Genre> =
     (rest("getGenres").at<List<JsonObject>>("genres", "genre") ?: emptyList())
