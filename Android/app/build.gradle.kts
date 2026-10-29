@@ -19,11 +19,15 @@ android {
     // Fixed to the owner's server (2026-10-29). Debug builds may point at a test server instead:
     // ./gradlew assembleDebug -Pecho.devUrl=http://10.0.2.2:18797
     buildConfigField("String", "ECHO_URL", "\"https://echo.folk3s.com\"")
+    manifestPlaceholders["cleartext"] = "false"
   }
 
+  // A test server (-Pecho.devUrl, plain HTTP allowed) for debug and qa builds only; release is fixed.
+  val devUrl = project.findProperty("echo.devUrl") as String?
   buildTypes {
     debug {
-      (project.findProperty("echo.devUrl") as String?)?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      devUrl?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      manifestPlaceholders["cleartext"] = "true"
     }
     release {
       isMinifyEnabled = true
@@ -31,6 +35,12 @@ android {
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       // Sideloaded builds use the local debug key; a Play release needs its own (docs/ANDROID_CLIENT.md).
       signingConfig = signingConfigs.getByName("debug")
+    }
+    // The release build, minified the same way, against a test server: R8 problems show here first.
+    create("qa") {
+      initWith(getByName("release"))
+      devUrl?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      manifestPlaceholders["cleartext"] = "true"
     }
   }
 

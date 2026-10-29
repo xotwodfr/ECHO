@@ -30,6 +30,11 @@ each milestone's record, including what is still open, is in [`docs/reviews/`](d
 - pnpm **12.11.2** via corepack: `corepack enable`
 - Docker with Compose v2, for the container
 
+## Android
+
+A native Android client lives in `Android/` (Kotlin, Compose, Media3): `cd Android && ./gradlew
+assembleRelease`. See [docs/ANDROID_CLIENT.md](docs/ANDROID_CLIENT.md).
+
 ## Develop
 
 ```sh

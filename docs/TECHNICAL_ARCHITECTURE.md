@@ -77,6 +77,7 @@ The deciding constraints are:
 | Edge, Brave | ✅ | likely (Chromium) | Not tested in CI |
 | Safari | ⚠️ untested | ❌ not a target | |
 | Future native desktop | ✅ via API | Electron ECS required for in-app Spotify (signing burden) | post-MVP |
+| Android app (`Android/`, 2026-10-29) | ✅ native client of `/api/v1`, device token (`docs/ANDROID_CLIENT.md`) | ❌ Navidrome only | Kotlin, Compose, Media3; the Stage on OpenGL ES with the web's shaders |
 | Future mobile | ✅ via API | **No in-app Spotify playback:** the Web Playback SDK is desktop-browser only. Mobile acts as a **Spotify Connect remote** for the official Spotify app (`PLAYBACK_ARCHITECTURE.md` §4.7) | post-MVP |
 
 Widevine detection: `navigator.requestMediaKeySystemAccess('com.widevine.alpha', [...])` at Spotify
