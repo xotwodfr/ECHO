@@ -26,6 +26,7 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -106,8 +107,10 @@ private fun Shell() {
   val chrome = remember { StageChrome() }
   BackHandler(enabled = nav.stack.size > 1) { nav.back() }
   val listen = nav.top == Route.Listen
+  val backdrop = rememberBackdrop()
 
   Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.surface) {
+   CompositionLocalProvider(LocalBackdrop provides backdrop) {
     if (listen) {
       // S1 Listen: the Stage full-bleed, the dock over it; no navigation bar (§5).
       StageScreen(
@@ -120,7 +123,8 @@ private fun Shell() {
         },
       )
     } else {
-      Column(Modifier.fillMaxSize()) {
+      // What the sheets and dialogs above it bend (§7.11): the Shell's screens, dock and bar.
+      Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface).backdropSource(backdrop)) {
         Box(Modifier.weight(1f).windowInsetsPadding(WindowInsets.statusBars)) {
           when (val r = nav.top) {
             is Route.Library -> LibraryScreen(r.tab, nav)
@@ -144,8 +148,9 @@ private fun Shell() {
         Snackbar(Modifier.padding(16.dp)) { Text(msg) }
       }
     }
+    if (queueOpen) QueueSheet(player, onClose = { queueOpen = false }, overStage = listen)
+   }
   }
-  if (queueOpen) QueueSheet(player, onClose = { queueOpen = false }, overStage = listen)
 }
 
 /** Below 720 dp the drawer is a navigation bar: text labels, ECHO's nav has no icons (§0). */
