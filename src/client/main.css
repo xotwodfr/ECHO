@@ -67,7 +67,11 @@ button {
   flex-direction: column;
   gap: var(--sp-4);
   padding: var(--sp-4) var(--sp-3);
-  background: var(--md-sys-color-surface-container-low);
+  background: color-mix(
+    in oklab,
+    var(--md-sys-color-surface-container-low) var(--glass-fill),
+    transparent
+  );
   border-radius: 0 var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0;
 }
 
@@ -334,7 +338,11 @@ button {
   align-items: center;
   column-gap: var(--sp-5);
   padding: 0 var(--gutter);
-  background: var(--md-sys-color-surface-container);
+  background: color-mix(
+    in oklab,
+    var(--md-sys-color-surface-container) var(--glass-fill),
+    transparent
+  );
   border-top: var(--rule) solid transparent; /* no divider under M3; the row keeps its 1px */
 }
 
@@ -435,6 +443,25 @@ button {
 
 .shell[data-view="listen"] .dock {
   background: transparent;
+  backdrop-filter: none;
+}
+
+/* On the Stage the dock's glass (§7.11) is a layer under its controls, so it can fade with the
+   chrome while the progress and Spotify's attribution stay. */
+.shell[data-view="listen"] .dock::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
+  backdrop-filter: var(--glass-filter, blur(var(--glass-blur)) saturate(var(--glass-saturate)));
+  transition: opacity var(--dur-pop) var(--ease-out);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .shell[data-view="listen"] .dock::before {
+    backdrop-filter: none;
+  }
 }
 
 .stage-chrome {
@@ -450,8 +477,9 @@ button {
 /* Stage chrome auto-hide (PRODUCT_SPEC.md §6.1): top bar and dock controls fade out over 640 ms
    after idle and return in 160 ms; progress stays at 40%. Hidden chrome takes no pointer input,
    so a blind click never hits an invisible control (moving the pointer brings it back first).
-   Spotify's artwork and metadata never hide (data-attribution, DESIGN_SYSTEM.md §8). */
-.stage-chrome,
+   Spotify's artwork and metadata never hide (data-attribution, DESIGN_SYSTEM.md §8).
+   The top chrome fades per glass item, not as a row: a fading ancestor would cut the glass off
+   from the room behind it mid-fade (its transitions are in stage.css). */
 .dock-meta,
 .dock-transport,
 .dock-scrub,
@@ -459,7 +487,13 @@ button {
   transition: opacity var(--dur-pop) var(--ease-out);
 }
 
-.shell[data-chrome="hidden"] :is(.stage-chrome, .dock-transport, .dock-right, .dock-scrub),
+.shell[data-chrome="hidden"] .stage-chrome {
+  pointer-events: none;
+}
+
+.shell[data-chrome="hidden"] :is(.dock-transport, .dock-right, .dock-scrub),
+.shell[data-chrome="hidden"] .stage-chrome .glass,
+.shell[data-chrome="hidden"] .dock::before,
 .shell[data-chrome="hidden"]:not([data-attribution]) .dock-meta {
   opacity: 0;
   pointer-events: none;
@@ -666,7 +700,11 @@ button {
     grid-area: 3 / 1;
     padding: var(--sp-3) var(--sp-2);
     border-radius: 0;
-    background: var(--md-sys-color-surface-container);
+    background: color-mix(
+      in oklab,
+      var(--md-sys-color-surface-container) var(--glass-fill),
+      transparent
+    );
   }
 
   .shell .wordmark,

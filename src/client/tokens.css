@@ -147,6 +147,26 @@
   --md-switch-handle-on: 24px; --md-switch-handle-pressed: 28px; --md-switch-outline: 2px;
   --md-chip-h: 32px; --md-snackbar-h: 48px; --md-tab-h: 48px; --md-tab-indicator: 3px;
   --md-dialog-pad: 24px; --md-outline: 1px; --md-field-focus: 2px; --md-button-group-gap: 2px;
+
+  /* ---------- Liquid glass, both zones (DESIGN_SYSTEM.md §7.11, 2026-10-28) ---------- */
+  --glass-fill: 80%;          /* share of its M3 surface colour a Shell glass surface keeps; at 80%
+                                 its text keeps AA even over a white cover */
+  --glass-fill-stage: 30%;    /* share of --art-room in a Stage glass surface */
+  --glass-frost: 8px;         /* SVG filter, blur before the bend: regular glass, panels with text */
+  --glass-frost-clear: 0.5px; /* clear glass: the Stage's icon buttons, over an already blurred room */
+  --glass-blur: 8px;          /* fallback without SVG backdrop filters; ≤ 8px (§6) */
+  --glass-saturate: 1.5;
+  --glass-thickness: 24px; --glass-bezel: 20px; --glass-ior: 1.5;   /* the glass the map is computed for */
+  --glass-refraction: 1;      /* scale on the computed bend; 0 = flat glass */
+  --glass-specular: 0.5; --glass-light: 135deg;   /* rim light opacity, and where it comes from */
+
+  /* Stage scrims under the chrome (§7.7), lightened for glass on 2026-10-28 (were 0.5 and 0.72) */
+  --scrim-top: 0.25; --scrim-dock: 0.4;
+}
+
+/* Reduced transparency: every glass surface is its opaque surface again (§7.11). */
+@media (prefers-reduced-transparency: reduce) {
+  :root { --glass-fill: 100%; --glass-fill-stage: 100%; }
 }
 
 /* The player view (the Stage on Listen, and the dock's player controls) keeps Reverb Chamber

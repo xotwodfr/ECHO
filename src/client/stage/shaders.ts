@@ -194,6 +194,8 @@ uniform vec2 uRes;             // backing-store px
 uniform float uDpr;            // backing px per CSS px
 uniform vec3 uShadow;          // --art-shadow, linear
 uniform float uChrome;         // 0..1: scrims follow chrome visibility (DESIGN_SYSTEM.md §7.7)
+uniform float uScrimTop;       // --scrim-top
+uniform float uScrimDock;      // --scrim-dock
 uniform float uExposure;
 uniform float uZoneExposure;   // −0.4…0: the contrast solver darkens the lyric zone (DESIGN_SYSTEM.md §3.4)
 uniform float uZoneScrim;      // 0…0.45: then a shadow scrim behind the active line
@@ -232,11 +234,12 @@ void main() {
   float v = smoothstep(0.30, 0.71, length(vUv - 0.5));
   col = mix(col, uShadow, 0.16 * v);
 
-  // Scrims (§7.7): 0 → 0.72 over 220px above the bottom edge, 0 → 0.5 over 120px below the top.
+  // Scrims (§7.7): 0 → --scrim-dock over 220px above the bottom edge, 0 → --scrim-top over 120px
+  // below the top. Light, since the glass chrome (§7.11) sits right on them.
   float fromBottom = gl_FragCoord.y / uDpr;
   float fromTop = (uRes.y - gl_FragCoord.y) / uDpr;
-  col = mix(col, uShadow, uChrome * 0.72 * clamp(1.0 - fromBottom / 220.0, 0.0, 1.0));
-  col = mix(col, uShadow, uChrome * 0.50 * clamp(1.0 - fromTop / 120.0, 0.0, 1.0));
+  col = mix(col, uShadow, uChrome * uScrimDock * clamp(1.0 - fromBottom / 220.0, 0.0, 1.0));
+  col = mix(col, uShadow, uChrome * uScrimTop * clamp(1.0 - fromTop / 120.0, 0.0, 1.0));
 
   // Contrast (§5.4): the lyric zone is darkened, never the ink changed.
   col *= 1.0 + uZoneExposure * zoneMask(vUv);

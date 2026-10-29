@@ -93,6 +93,11 @@
   gap: var(--sp-3);
 }
 
+/* The top chrome is clear glass (DESIGN_SYSTEM.md §7.11): icons only, over the blurred room. */
+.stage-chrome {
+  --glass-frost: var(--glass-frost-clear);
+}
+
 .stage-chrome .stage-btn {
   display: grid;
   place-items: center;
@@ -101,10 +106,11 @@
   padding: 0;
   border: var(--rule) solid color-mix(in oklab, var(--text) 28%, transparent);
   border-radius: 50%;
-  background: color-mix(in oklab, var(--art-room) 35%, transparent);
+  background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
   color: var(--text);
   cursor: pointer;
   transition:
+    opacity var(--dur-pop) var(--ease-out),
     border-color var(--dur-hover) ease,
     background var(--dur-hover) ease;
 }
@@ -127,9 +133,10 @@
   align-items: center;
   overflow: hidden; /* clips the fill's straight edges to the pill */
   border-radius: var(--r-pill);
-  background: color-mix(in oklab, var(--art-room) 35%, transparent);
+  background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
   box-shadow: inset 0 0 0 var(--rule) color-mix(in oklab, var(--text) 28%, transparent);
   transition:
+    opacity var(--dur-pop) var(--ease-out),
     box-shadow var(--dur-hover) ease,
     background var(--dur-ui) ease;
 }

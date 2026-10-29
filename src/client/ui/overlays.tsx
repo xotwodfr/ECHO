@@ -11,6 +11,7 @@ import {
 import { useStore } from 'zustand';
 import { strings } from '../strings.ts';
 import { Button, IconButton } from './controls.tsx';
+import { attachGlass } from './glass.ts';
 import type { IconName } from './icons.tsx';
 import { menuMove, toastStore } from './logic.ts';
 
@@ -21,6 +22,7 @@ import { menuMove, toastStore } from './logic.ts';
 function useModal(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDialogElement>(null);
   const returnTo = useRef<HTMLElement | null>(null);
+  useEffect(() => attachGlass(ref.current), []); // sheets and dialogs are glass (§7.11)
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
@@ -57,7 +59,7 @@ export function Sheet(props: {
     // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click is a pointer shortcut; keyboard closes with Esc (native)
     <dialog
       ref={ref}
-      className="sheet"
+      className="sheet glass"
       aria-labelledby={titleId}
       onClose={handleClose}
       onClick={onBackdrop}
@@ -98,7 +100,7 @@ export function ConfirmDialog(props: {
   return (
     <dialog
       ref={ref}
-      className="dialog"
+      className="dialog glass"
       role="alertdialog"
       aria-labelledby={titleId}
       aria-describedby={bodyId}

@@ -18,6 +18,7 @@ import {
 } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
+import { glass } from '../ui/glass.ts';
 import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
 import { ConfirmDialog, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
@@ -60,7 +61,12 @@ export function Dock({ stage }: { stage: boolean }) {
   const repeatLabel = strings.dock.repeat[repeat];
 
   return (
-    <section className="dock" aria-label={strings.dock.label} data-status={status}>
+    <section
+      className="dock glass"
+      ref={glass}
+      aria-label={strings.dock.label}
+      data-status={status}
+    >
       <div className="dock-meta">
         {t ? (
           <Artwork size="dock" src={t.artwork[0]?.url} title={t.album.title} />

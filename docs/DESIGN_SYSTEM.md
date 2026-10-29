@@ -370,7 +370,7 @@ only. 7.11, liquid glass, is approved for both zones (owner, 2026-10-28).
 | 7.4 | **Room light field:** the environment shader (`VISUALIZER_SPEC.md`) | Ambient light *from the cover*; carries energy without moving the text | Exposure capped by §3.4 rule 6 |
 | 7.5 | **Wavefront rings** (Reverb mode): expanding rings from onsets with exponential decay | Turns the idea (an echo) into the visual response to transients | ≤ 3 alive at once; alpha ≤ 0.22; disabled in reduced motion |
 | 7.6 | **Vignette:** elliptical, `--art-shadow`, 12–20% falloff | Pulls the eye to the centre and darkens corners under chrome for contrast | Static |
-| 7.7 | **Scrims:** a bottom gradient under the dock (0 → 0.72 alpha over 220px) and a top one (0 → 0.5 over 120px) when chrome is visible | Contrast for controls over a moving field | Neutral `--art-shadow` only |
+| 7.7 | **Scrims:** a bottom gradient under the dock (0 → `--scrim-dock` alpha over 220px) and a top one (0 → `--scrim-top` over 120px) when chrome is visible. 2026-10-28: lightened from 0.72 and 0.5 to 0.4 and 0.25, because the glass chrome (7.11) sits right on them and its fill now carries part of the contrast | Contrast for controls over a moving field | Neutral `--art-shadow` only |
 | 7.8 | **Dither:** blue-noise ±1 LSB as the last shader step, on every gradient | Prevents 8-bit banding in dark gradients (functional, not stylistic) | Always on |
 | 7.9 | **Grain (optional, off by default):** luminance-only, 2–3%, 24 fps | Film texture for users who want it | Settings → Visuals → "Film grain" |
 | 7.10 | **Bloom:** threshold bloom on the lit word and wavefronts only | Lets light bleed like a lamp | Threshold L > 0.85, intensity ≤ 0.6, ½ res. **No anamorphic streaks** (rejected, §14) |
@@ -385,13 +385,19 @@ convex squircle rim, then saturation, then a specular rim light (an `feImage` ov
 element's own background is its role colour made translucent, so the surface keeps its M3 (Shell)
 or room (Stage) tone.
 
+**Two variants**, as in iOS: **regular** glass (sidebar, dock, sheets, dialogs) frosts what is
+behind it, so content passing under a panel never competes with the panel's text; **clear** glass
+(the Stage's round buttons and brightness pill) barely frosts, since it carries only icons over a
+room that is already blurred. On the Stage the dock's glass is a layer under its controls, so it
+fades with the chrome.
+
 **Tokens** (`tokens.css`; DS-01 holds: no glass value lives in component code):
 
 | Token | Controls |
 |---|---|
 | `--glass-fill` | Share of its M3 surface colour a Shell glass surface keeps (the rest is backdrop) |
 | `--glass-fill-stage` | Share of `--art-room` in a Stage glass surface |
-| `--glass-frost` | Blur before the bend (SVG filter) |
+| `--glass-frost`, `--glass-frost-clear` | Blur before the bend (SVG filter): regular glass, and clear glass (the Stage chrome sets `--glass-frost` to it) |
 | `--glass-blur` | Blur of the fallback (no SVG backdrop filters); ≤ 8px (§6) |
 | `--glass-saturate` | Saturation of what shows through, both paths |
 | `--glass-thickness`, `--glass-bezel`, `--glass-ior` | The glass the map is computed for: slab thickness, rim width, refractive index |

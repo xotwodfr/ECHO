@@ -7,6 +7,7 @@ import { sessionStore } from '../session.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
+import { glass } from '../ui/glass.ts';
 import { ToastRegion } from '../ui/overlays.tsx';
 import {
   LIBRARY_TABS,
@@ -65,7 +66,7 @@ function Sidebar({ route }: { route: Route }) {
   const current = (view: Route['view'][]) =>
     view.includes(route.view) ? ('page' as const) : undefined;
   return (
-    <nav className="sidebar" aria-label={strings.nav.label}>
+    <nav className="sidebar glass" ref={glass} aria-label={strings.nav.label}>
       <p className="wordmark">{strings.app}</p>
       <ul>
         <li>

@@ -125,6 +125,8 @@ export class StageRenderer {
     uDpr: { value: 1 },
     uShadow: { value: new Vector3() },
     uChrome: { value: 1 },
+    uScrimTop: { value: 0 },
+    uScrimDock: { value: 0 },
     uExposure: { value: BASE_EXPOSURE },
     uZoneExposure: { value: 0 },
     uZoneScrim: { value: 0 },
@@ -260,6 +262,12 @@ export class StageRenderer {
   setReverb(r: ReverbFrame | null) {
     if (!r && this.reverb) this.clearEnergy();
     this.reverb = r;
+  }
+
+  /** The scrims' full strength under the top chrome and the dock (DESIGN_SYSTEM.md §7.7). */
+  setScrims(top: number, dock: number) {
+    this.composite.uScrimTop.value = top;
+    this.composite.uScrimDock.value = dock;
   }
 
   /** The contrast solver's darkening of the lyric zone (DESIGN_SYSTEM.md §3.4 rule 6). */

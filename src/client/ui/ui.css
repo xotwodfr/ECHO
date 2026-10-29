@@ -1327,6 +1327,19 @@
   color: var(--md-sys-color-on-surface);
 }
 
+/* ---- Liquid glass (DESIGN_SYSTEM.md §7.11): ui/glass.ts points --glass-filter at the element's
+   own SVG filter in Chromium; elsewhere the backdrop is frosted instead. Each glass surface makes
+   its own background translucent with --glass-fill. ---- */
+.glass {
+  backdrop-filter: var(--glass-filter, blur(var(--glass-blur)) saturate(var(--glass-saturate)));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass {
+    backdrop-filter: none;
+  }
+}
+
 .sheet {
   position: fixed;
   inset: 0 0 var(--dock) auto;
@@ -1338,8 +1351,18 @@
   overflow: auto;
   border-left: var(--rule) solid var(--md-sys-color-outline-variant);
   border-radius: var(--md-sys-shape-corner-large) 0 0 var(--md-sys-shape-corner-large);
-  background: var(--md-sys-color-surface-container-low);
+  background: color-mix(
+    in oklab,
+    var(--md-sys-color-surface-container-low) var(--glass-fill),
+    transparent
+  );
   box-shadow: var(--md-sys-elevation-level1);
+}
+
+/* Over the Stage a sheet stays opaque: no smeared motion through it (DESIGN_SYSTEM.md §6). */
+.shell[data-view="listen"] .sheet {
+  background: var(--md-sys-color-surface-container-low);
+  backdrop-filter: none;
 }
 
 .sheet[open] {
@@ -1381,7 +1404,11 @@
   width: min(var(--sheet-w), 100% - 2 * var(--sp-4));
   padding: var(--md-dialog-pad);
   border-radius: var(--md-sys-shape-corner-extra-large);
-  background: var(--md-sys-color-surface-container-high);
+  background: color-mix(
+    in oklab,
+    var(--md-sys-color-surface-container-high) var(--glass-fill),
+    transparent
+  );
   box-shadow: var(--md-sys-elevation-level3);
 }
 

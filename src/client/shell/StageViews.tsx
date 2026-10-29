@@ -8,6 +8,7 @@ import { sessionStore } from '../session.ts';
 import { lyricHost, lyricOffset, lyricsStore, type StageView, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
+import { attachGlass, glass } from '../ui/glass.ts';
 import { Icon, type IconName } from '../ui/icons.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
@@ -53,7 +54,8 @@ export function StageChrome() {
           <button
             key={v}
             type="button"
-            className="stage-btn"
+            className="stage-btn glass"
+            ref={glass}
             aria-label={strings.stage.views[v]}
             title={strings.stage.views[v]}
             aria-pressed={view === v}
@@ -65,7 +67,8 @@ export function StageChrome() {
       </fieldset>
       <button
         type="button"
-        className="stage-btn"
+        className="stage-btn glass"
+        ref={glass}
         aria-label={strings.stage.fullscreen}
         title={strings.stage.fullscreen}
         aria-pressed={full}
@@ -75,7 +78,8 @@ export function StageChrome() {
       </button>
       <Brightness />
       <Link
-        className="stage-btn"
+        className="stage-btn glass"
+        ref={glass}
         to={{ view: 'library', tab: 'albums' }}
         aria-label={strings.nav.library}
         title={strings.nav.library}
@@ -114,9 +118,10 @@ function Brightness() {
       document.removeEventListener('keydown', onEscape);
     };
   }, [open]);
+  useEffect(() => attachGlass(wrap.current), []);
   const set = (v: number) => void setPref('visuals', 'backdrop', v);
   return (
-    <div className="stage-brightness" ref={wrap} data-open={open || undefined}>
+    <div className="stage-brightness glass" ref={wrap} data-open={open || undefined}>
       <button
         ref={trigger}
         type="button"

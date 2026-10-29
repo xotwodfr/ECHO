@@ -388,6 +388,11 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
       if (disposed || !renderer) return;
       renderer.setPalette(paletteUniforms(readPalette()));
       renderer.setBrightness(visuals().backdrop);
+      const cs = getComputedStyle(document.documentElement);
+      renderer.setScrims(
+        Number.parseFloat(cs.getPropertyValue('--scrim-top')),
+        Number.parseFloat(cs.getPropertyValue('--scrim-dock')),
+      );
       showCover(artOf(c.player.getState()));
       resize();
       canvas.addEventListener('webglcontextlost', onLost);

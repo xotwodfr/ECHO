@@ -365,7 +365,8 @@ test.describe('sheet and dialog', () => {
     const sheet = page.getByRole('dialog', { name: 'Queue' });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole('button', { name: 'Close' })).toBeFocused();
-    expect(await sheet.evaluate((el) => getComputedStyle(el).backdropFilter)).toBe('none');
+    // Glass in the Shell (DESIGN_SYSTEM.md §7.11): the SVG filter in Chromium, the blur elsewhere.
+    expect(await sheet.evaluate((el) => getComputedStyle(el).backdropFilter)).not.toBe('none');
     await page.keyboard.press('Escape');
     await expect(sheet).toBeHidden();
     await expect(opener).toBeFocused();
