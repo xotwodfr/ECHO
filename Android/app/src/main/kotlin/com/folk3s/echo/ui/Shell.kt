@@ -1,6 +1,16 @@
 package com.folk3s.echo.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -119,23 +129,34 @@ private fun Shell() {
 
   Box(Modifier.fillMaxSize().background(Chamber.ground)) {
     CompositionLocalProvider(LocalBackdrop provides backdrop) {
-      when (nav.top) {
-        Route.Listen ->
-          // The lyrics view: the room and the lyrics, the transport floating over it.
-          StageScreen(
-            chrome,
-            onClose = { nav.back() },
-            dock = {
-              Box(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(12.dp)) {
-                StageDock(player, chrome, onQueue = { queueOpen = true })
-              }
+      // The page under Now Playing and the lyrics view: the stack's top below them.
+      val page = nav.stack.lastOrNull { it != Route.NowPlaying && it != Route.Listen } ?: Route.Home
+      val prefs by app.prefs.state.collectAsStateWithLifecycle()
+      val still = app.prefs.reducedMotion(prefs)
+      if (nav.top == Route.Listen)
+        // The lyrics view: the room and the lyrics, the transport floating over it.
+        StageScreen(
+          chrome,
+          onClose = { nav.back() },
+          dock = {
+            Box(Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(12.dp)) {
+              StageDock(player, chrome, onQueue = { queueOpen = true })
+            }
+          },
+        )
+      else {
+        // What the glass above it bends (§7.11): the page. A new page fades and rises in (the web's
+        // View Transition), the old one fades out quickly.
+        Box(Modifier.fillMaxSize().background(Chamber.surface1).backdropSource(backdrop).windowInsetsPadding(WindowInsets.statusBars)) {
+          AnimatedContent(
+            page,
+            transitionSpec = {
+              if (still) EnterTransition.None togetherWith ExitTransition.None
+              else (fadeIn(tween(240, delayMillis = 60)) + slideInVertically(tween(280)) { it / 40 }) togetherWith fadeOut(tween(100))
             },
-          )
-        Route.NowPlaying -> NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker)
-        else -> {
-          // What the glass above it bends (§7.11): the page.
-          Box(Modifier.fillMaxSize().background(Chamber.surface1).backdropSource(backdrop).windowInsetsPadding(WindowInsets.statusBars)) {
-            when (val r = nav.top) {
+            label = "page",
+          ) { r ->
+            when (r) {
               Route.Home -> HomeScreen(nav, onProfile = { nav.go(Route.Settings) })
               Route.Search -> SearchScreen(nav, picker)
               Route.Library -> YourLibraryScreen(nav, onProfile = { nav.go(Route.Settings) })
@@ -150,12 +171,20 @@ private fun Shell() {
               else -> {}
             }
           }
-          Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 8.dp, vertical = 8.dp)) {
-            if (player.track != null) MiniPlayer(player) { nav.go(Route.NowPlaying) }
-            Spacer(Modifier.height(8.dp))
-            TabBar(nav)
-          }
         }
+        Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars).padding(horizontal = 8.dp, vertical = 8.dp)) {
+          if (player.track != null) MiniPlayer(player) { nav.go(Route.NowPlaying) }
+          Spacer(Modifier.height(8.dp))
+          TabBar(nav)
+        }
+      }
+      // Now Playing rises from the mini player over the page, and sinks back (Spotify's).
+      AnimatedVisibility(
+        nav.top == Route.NowPlaying,
+        enter = if (still) EnterTransition.None else slideInVertically(spring(dampingRatio = 0.9f, stiffness = 420f)) { it } + fadeIn(tween(160)),
+        exit = if (still) ExitTransition.None else slideOutVertically(tween(260)) { it } + fadeOut(tween(260)),
+      ) {
+        NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker)
       }
       player.notice?.let { msg ->
         LaunchedEffect(msg) {
