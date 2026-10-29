@@ -43,6 +43,21 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, { faile
   static getDerivedStateFromError() {
     return { failed: true };
   }
+  /** Into the server's log through the CSP report route (rate limited there): otherwise unseen. */
+  componentDidCatch(error: Error, info: { componentStack?: string | null }) {
+    const report = {
+      kind: 'render-error',
+      message: String(error?.message ?? error).slice(0, 500),
+      stack: String(error?.stack ?? '').slice(0, 3000),
+      componentStack: String(info.componentStack ?? '').slice(0, 2000),
+      path: location.pathname,
+    };
+    void fetch('/api/v1/csp-report', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ 'csp-report': report }),
+    }).catch(() => undefined);
+  }
   render() {
     if (!this.state.failed) return this.props.children;
     return (
