@@ -16,6 +16,7 @@ import { SpotifyProvider } from './playback/spotify.ts';
 import { loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { startCollections } from './shell/collections.ts';
+import { startHistory } from './shell/mixes.ts';
 import { confirmReplace } from './shell/ReplaceQueue.tsx';
 import { startAutoplay } from './shell/radio.ts';
 import { Shell } from './shell/Shell.tsx';
@@ -137,6 +138,7 @@ if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().sho
 // songs when the music runs out.
 startCollections(library);
 startAutoplay(controller, library, () => prefs().playback.autoplay);
+startHistory(controller, !!ownLibrary);
 
 // The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
 startPalette(controller, { instant: !!frame, ...(frame?.palette && { albumKey: frame.palette }) });

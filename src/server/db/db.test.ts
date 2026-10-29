@@ -12,6 +12,7 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'audit_log',
       'connections',
       'invites',
+      'plays',
       'queue_state',
       'recovery_codes',
       'server_settings',

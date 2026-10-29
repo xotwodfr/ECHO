@@ -97,6 +97,19 @@ describe('SEC-11: isolation between users', () => {
       pinnedSource: 'lrclib',
     });
     await as(A, 'PUT', '/api/v1/me/settings', { visuals: { intensity: 'subtle' } });
+    const aPlay = {
+      track: {
+        provider: 'navidrome',
+        id: track,
+        title: 'ALICE-PLAY',
+        artists: [{ name: 'ALICE-ARTIST' }],
+        album: { title: 'ALICE-ALBUM' },
+        durationMs: 1000,
+        artwork: [],
+      },
+      context: { kind: 'album', id: 'ALICE-CONTEXT', title: 'ALICE-CONTEXT' },
+    };
+    for (let i = 0; i < 6; i++) await as(A, 'POST', '/api/v1/me/plays', aPlay);
     db.prepare(
       "INSERT INTO connections (user_id, provider, config_json, secret_enc, status, updated_at) VALUES (?, 'spotify', '{\"displayName\":\"ALICE-SPOTIFY\"}', 'v1:x:y', 'connected', 0)",
     ).run(A.id);
@@ -114,6 +127,10 @@ describe('SEC-11: isolation between users', () => {
       '/api/v1/me/queue',
       `/api/v1/me/tracks/navidrome:${track}/override`,
       '/api/v1/me/settings',
+      '/api/v1/me/plays/recent',
+      '/api/v1/me/plays/contexts',
+      '/api/v1/me/mixes',
+      '/api/v1/me/wrapped',
       '/api/v1/me/sessions',
       '/api/v1/me/connections/navidrome',
       '/api/v1/spotify/status',
@@ -139,6 +156,7 @@ describe('SEC-11: isolation between users', () => {
     await as(B, 'PUT', '/api/v1/me/queue', { queue: null, positionMs: 0, baseUpdatedAt: 0 });
     await as(B, 'PUT', `/api/v1/me/tracks/navidrome:${track}/override`, { offsetMs: -50 });
     await as(B, 'PUT', '/api/v1/me/settings', { visuals: { intensity: 'balanced' } });
+    await as(B, 'POST', '/api/v1/me/plays', { ...aPlay, track: { ...aPlay.track, title: 'B' } });
     for (const id of aSessions)
       expect((await as(B, 'DELETE', `/api/v1/me/sessions/${id}`)).status).toBe(404);
     expect(
@@ -162,6 +180,12 @@ describe('SEC-11: isolation between users', () => {
       JSON.parse(await json(await call(app, 'GET', '/api/v1/me/settings', undefined, A.cookie)))
         .visuals.intensity,
     ).toBe('subtle');
+    expect(
+      db
+        .prepare('SELECT COUNT(*) FROM plays WHERE user_id = ? AND title = ?')
+        .pluck()
+        .get(A.id, 'ALICE-PLAY'),
+    ).toBe(6);
     expect(db.prepare('SELECT COUNT(*) FROM sessions WHERE user_id = ?').pluck().get(A.id)).toBe(
       aSessions.length,
     );

@@ -36,6 +36,7 @@ import {
   SearchResults,
 } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
+import { MixView, WrappedView } from './MixViews.tsx';
 import { PlaylistPicker } from './PlaylistPicker.tsx';
 import { panels } from './panels.ts';
 import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
@@ -173,7 +174,7 @@ function TabBar({ route }: { route: Route }) {
   return (
     <nav className="tabbar glass" ref={glass} aria-label={strings.nav.label}>
       <ul>
-        {tab({ view: 'home' }, ['home'], 'home', strings.nav.home)}
+        {tab({ view: 'home' }, ['home', 'mix', 'wrapped'], 'home', strings.nav.home)}
         {tab({ view: 'search', q: '' }, ['search', 'genre'], 'search', strings.nav.search)}
         {tab(
           { view: 'library', tab: 'albums' },
@@ -287,6 +288,10 @@ function View({ route }: { route: Route }) {
       return <LikedView />;
     case 'genre':
       return <GenreView name={route.name} />;
+    case 'mix':
+      return <MixView id={route.id} />;
+    case 'wrapped':
+      return <WrappedView year={route.year} />;
     case 'search':
       return (
         <>
@@ -335,6 +340,8 @@ const TITLES: Record<Route['view'], string> = {
   playlist: strings.playlist.title,
   liked: strings.liked.title,
   genre: strings.genre.title,
+  mix: strings.mix.madeForYou,
+  wrapped: strings.wrapped.title,
   search: strings.nav.search,
   settings: strings.nav.settings,
   ui: strings.gallery.title,

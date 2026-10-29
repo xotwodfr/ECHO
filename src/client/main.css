@@ -1416,6 +1416,126 @@ a {
   margin: 0;
 }
 
+/* Made For You's covers (MixViews.tsx): the first song's cover in luminosity over the mix's
+   colour, the mix's name in bold at the bottom. Wrapped's is the colour alone. */
+.art.mix-art {
+  container-type: inline-size;
+  background: var(--hue);
+}
+
+.mix-art img {
+  mix-blend-mode: luminosity;
+  opacity: var(--mix-photo);
+}
+
+.mix-art-title {
+  position: absolute;
+  inset: auto 0 0;
+  padding: var(--mix-pad);
+  font: var(--mix-title) var(--font);
+  letter-spacing: var(--tracking-title);
+  overflow-wrap: anywhere;
+}
+
+.art.mix-art--wrapped {
+  background: linear-gradient(135deg, var(--hue), var(--genre-2));
+}
+
+/* Wrapped: the year's figure big on its colour, then a card per list. */
+.wrapped {
+  display: grid;
+  gap: var(--sp-5);
+  padding: var(--sp-5) var(--gutter) var(--sp-8);
+}
+
+.wrapped-hero {
+  display: grid;
+  gap: var(--sp-3);
+  padding: var(--sp-6);
+  border-radius: var(--r-panel);
+  background: linear-gradient(135deg, var(--hue), var(--genre-2));
+}
+
+.wrapped-hero h1 {
+  margin: 0;
+  font: var(--title-m) var(--font);
+  letter-spacing: var(--tracking-title);
+}
+
+.wrapped-hero .ph-kind,
+.wrapped-hero .action-bar {
+  margin: 0;
+  padding: 0;
+}
+
+.wrapped-figure {
+  display: grid;
+  margin: 0;
+}
+
+.wrapped-figure strong {
+  font: var(--title-s) var(--font);
+  letter-spacing: var(--tracking-title);
+}
+
+.wrapped-play-label {
+  font-weight: 700;
+}
+
+.wrapped-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--np-w), 1fr));
+  align-items: start;
+  gap: var(--sp-5);
+}
+
+.wrapped-card {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-4);
+  padding: var(--sp-5);
+  border-radius: var(--r-panel);
+  background: linear-gradient(transparent, var(--header-shade)), var(--hue);
+}
+
+.wrapped-card h2 {
+  margin: 0;
+}
+
+.wrapped-card ol {
+  display: grid;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-weight: 700;
+}
+
+.wrapped-card li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.wrapped-rank {
+  min-width: var(--sp-4);
+  font: var(--md-sys-typescale-title-large) var(--font-ui);
+}
+
+.wrapped-song {
+  display: grid;
+  min-width: 0;
+}
+
+.wrapped-count {
+  color: var(--text-on-tint);
+  font-weight: 400;
+}
+
+.wrapped-more {
+  margin: 0;
+}
+
 /* Add to playlist, and the playlist's details. */
 .picker {
   display: grid;

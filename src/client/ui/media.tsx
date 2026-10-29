@@ -178,6 +178,8 @@ export function AlbumTile(p: {
   to?: Route;
   round?: boolean;
   force?: Force;
+  /** A picture made for the card instead of a cover (Made For You's mixes). */
+  art?: ReactNode;
 }) {
   return (
     <li
@@ -188,7 +190,7 @@ export function AlbumTile(p: {
       data-provider={p.id.startsWith('spotify:') ? 'spotify' : undefined}
     >
       <span className="tile-cover">
-        <Artwork size="grid" src={p.cover} title={p.title} />
+        {p.art ?? <Artwork size="grid" src={p.cover} title={p.title} />}
         {p.onPlay && (
           <button
             type="button"

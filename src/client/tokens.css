@@ -132,6 +132,8 @@
   --sheet-w: 400px; --signin-w: 324px;
   --primary-hover: #FFFFFF;
   --genre-h: 180px;
+  /* Made For You's covers: the mix's name sized and inset by the cover's own width. */
+  --mix-title: 800 14cqi/1.02; --mix-pad: 7cqi; --mix-photo: 0.6;
 
   /* motion */
   --dur-press: 140ms; --dur-hover: 180ms; --dur-ui: 240ms; --dur-toast: 320ms;

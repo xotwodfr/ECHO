@@ -40,6 +40,7 @@ import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { fallbackPalette } from './palette/extract.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 import { fetchSpotifyCover, spotifyArt } from './palette/spotify.ts';
+import { playsRoutes } from './plays.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
 import {
@@ -175,6 +176,17 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', spotifyRoutes(deps.spotify, requireUser(deps.auth), deps.spotifyTokens));
   app.route('/api/v1', settingsRoutes(deps.auth.db, requireUser(deps.auth)));
   app.route('/api/v1', accountRoutes(deps.auth, requireUser(deps.auth)));
+  app.route(
+    '/api/v1',
+    playsRoutes(
+      {
+        db: deps.auth.db,
+        now: deps.auth.now,
+        navidrome: (id) => navidromeClientFor(deps.navidrome, id),
+      },
+      requireUser(deps.auth),
+    ),
+  );
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.

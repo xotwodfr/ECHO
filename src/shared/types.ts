@@ -79,7 +79,7 @@ export interface FeatureSource {
 }
 
 export interface PlayContext {
-  kind: 'album' | 'playlist' | 'artist' | 'search' | 'starred' | 'radio';
+  kind: 'album' | 'playlist' | 'artist' | 'search' | 'starred' | 'radio' | 'mix';
   id?: string;
   title: string;
 }
@@ -171,4 +171,48 @@ export interface QueueState {
   contextSource?: PlayContext;
   history: Track[]; // last 50, for Previous (Navidrome)
   shuffleOrder?: number[];
+}
+
+// ECHO's own play history and what is made from it (src/server/plays.ts).
+
+/** A Navidrome song as the history keeps it; the client turns it back into a Track. */
+export interface TrackRef {
+  id: string;
+  title: string;
+  artist: string;
+  artistId?: string;
+  album: string;
+  albumId?: string;
+  durationMs: number;
+  cover?: string;
+}
+
+/** One of Spotify's Made For You mixes, made from the user's plays. */
+export interface Mix {
+  id: string;
+  kind: 'daily' | 'onRepeat' | 'rewind' | 'discover' | 'daylist';
+  title: string;
+  subtitle: string;
+  tracks: TrackRef[];
+}
+
+/** "Jump back in": an album, playlist, artist or mix played from lately. */
+export interface PlayedContext {
+  kind: 'album' | 'playlist' | 'artist' | 'mix';
+  id: string;
+  title?: string;
+  cover?: string;
+  at: number;
+}
+
+/** A year in review. */
+export interface Wrapped {
+  year: number;
+  minutes: number;
+  plays: number;
+  artists: { name: string; id?: string; plays: number }[];
+  tracks: (TrackRef & { plays: number })[];
+  albums: { title: string; id?: string; artist: string; cover?: string; plays: number }[];
+  topDay: { date: string; plays: number } | null;
+  distinctArtists: number;
 }

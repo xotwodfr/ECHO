@@ -116,6 +116,27 @@ const MIGRATIONS: string[] = [
     PRIMARY KEY (scope, navidrome_id)
   );
   `,
+  // Project 2 of the Spotify redesign: what each user played (Navidrome songs past the scrobble
+  // point), for Made For You, Jump back in and Wrapped (src/server/plays.ts). Kept two years.
+  `
+  CREATE TABLE plays (
+    id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    played_at INTEGER NOT NULL,
+    track_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL,
+    artist_id TEXT,
+    album TEXT NOT NULL,
+    album_id TEXT,
+    cover TEXT,
+    duration_ms INTEGER NOT NULL,
+    context_kind TEXT,
+    context_id TEXT,
+    context_title TEXT
+  );
+  CREATE INDEX plays_user_time ON plays (user_id, played_at);
+  `,
 ];
 
 export function openDb(path: string): Db {

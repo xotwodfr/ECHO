@@ -60,7 +60,7 @@ const lengthOf = (title: string) =>
   title.length <= 12 ? 'xl' : title.length <= 24 ? 'l' : title.length <= 40 ? 'm' : 's';
 
 /** Whether this context is what plays, and whether it is playing now. */
-function useContextPlaying(match: (ctx: PlayContext | null) => boolean) {
+export function useContextPlaying(match: (ctx: PlayContext | null) => boolean) {
   const status = usePlayer((p) => p.status);
   const isCurrent = useQueue((q) => match(q.contextSource ?? null));
   const live = isCurrent && status !== 'idle' && status !== 'ended';
@@ -68,7 +68,7 @@ function useContextPlaying(match: (ctx: PlayContext | null) => boolean) {
 }
 
 /** Spotify's big green play button; while its context plays it pauses and resumes it instead. */
-function PlayXL(p: {
+export function PlayXL(p: {
   label: string;
   live: boolean;
   playing: boolean;
@@ -92,7 +92,7 @@ function PlayXL(p: {
  * The tinted header (cover, kind, big title, facts) and, above it, the sticky glass bar that
  * appears when the header has scrolled out of the canvas.
  */
-function PageHead(p: {
+export function PageHead(p: {
   kind: string;
   title: string;
   art: ReactNode;
@@ -152,7 +152,7 @@ function PageHead(p: {
 }
 
 /** The page body under a tinted header: the tint fades out over its first rows. */
-function PageBody({ tint, children }: { tint: string | null; children: ReactNode }) {
+export function PageBody({ tint, children }: { tint: string | null; children: ReactNode }) {
   return (
     <div
       className="page-body"
@@ -202,7 +202,7 @@ function useTrackMenu() {
 }
 
 /** Rows of a track list, wired to the controller: click plays the list from that row. */
-function Rows({
+export function Rows({
   tracks,
   context,
   numbered,

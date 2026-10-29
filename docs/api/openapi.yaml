@@ -356,6 +356,74 @@ paths:
         '400': { description: Not a queue }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
+  /me/plays:
+    post:
+      summary: Record a play (a Navidrome song past its scrobble point) for the user's history
+      description: The history feeds Made For You, Jump back in and Wrapped; plays older than two years are dropped.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [track]
+              properties:
+                track: { type: object, description: 'The client''s Track (provider navidrome); a cover is kept only from /api/v1/navidrome/cover/' }
+                context: { type: object, properties: { kind: { type: string }, id: { type: string }, title: { type: string } } }
+      responses:
+        '200': { description: Recorded, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean } } } } } }
+        '400': { description: 'bad_play: not a Navidrome song with a title and an artist' }
+
+  /me/plays/recent:
+    get:
+      summary: Songs played lately, each once, latest first
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 50, default: 20 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { tracks: { type: array, items: { $ref: '#/components/schemas/TrackRef' } } } } } } }
+
+  /me/plays/contexts:
+    get:
+      summary: '"Jump back in": albums, playlists, artists and mixes played from lately'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  contexts:
+                    type: array
+                    items: { type: object, required: [kind, id, at], properties: { kind: { type: string }, id: { type: string }, title: { type: string }, cover: { type: string }, at: { type: integer } } }
+
+  /me/mixes:
+    get:
+      summary: Made For You — Daily Mixes, Discover Weekly, On Repeat, Repeat Rewind and the daylist
+      description: Made from the user's plays and their Navidrome (top songs, similar artists); rebuilt daily.
+      parameters:
+        - { name: tz, in: query, description: 'The client''s UTC offset in minutes, as getTimezoneOffset gives it (for the daylist)', schema: { type: integer } }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  mixes:
+                    type: array
+                    items: { type: object, required: [id, kind, title, subtitle, tracks], properties: { id: { type: string }, kind: { type: string }, title: { type: string }, subtitle: { type: string }, tracks: { type: array, items: { $ref: '#/components/schemas/TrackRef' } } } }
+
+  /me/wrapped:
+    get:
+      summary: A year in review (UTC)
+      parameters:
+        - { name: year, in: query, schema: { type: integer, minimum: 2000, maximum: 3000 } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, required: [year, minutes, plays], properties: { year: { type: integer }, minutes: { type: integer }, plays: { type: integer }, artists: { type: array }, tracks: { type: array }, albums: { type: array }, topDay: { type: [object, 'null'] }, distinctArtists: { type: integer } } } } } }
+        '400': { description: bad_year }
+
   /lyrics:
     get:
       summary: The track's lyrics (cache first, then the sources), with the user's override for it
@@ -736,6 +804,18 @@ components:
     session: { type: apiKey, in: cookie, name: __Host-echo_session }
     device: { type: http, scheme: bearer, bearerFormat: echo_dt_… }
   schemas:
+    TrackRef:
+      type: object
+      required: [id, title, artist, album, durationMs]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        artist: { type: string }
+        artistId: { type: string }
+        album: { type: string }
+        albumId: { type: string }
+        durationMs: { type: integer }
+        cover: { type: string }
     Override:
       type: object
       properties:

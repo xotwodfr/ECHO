@@ -11,10 +11,13 @@ import { BlockEmpty, BlockError, GridLoading } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
 import { usePlaylists, useStarredAll } from './collections.ts';
 import { Link } from './link.tsx';
+import { MixArt, WrappedArt } from './MixViews.tsx';
+import { trackOf, useJumpBackIn, useMixes } from './mixes.ts';
 
 // Home (Spotify's): a grid of shortcuts to what was played last, then shelves of covers: recently
 // played, new in the library, most played, something different, the user's playlists and the
-// artists they play. Each shelf is one row of cards (scrolling sideways on phones).
+// artists they play. Each shelf is one row of cards (scrolling sideways on phones). Made For You
+// and Jump back in come from ECHO's own play history (mixes.ts).
 
 const SHELF = 12;
 const SHORTCUTS = 8;
@@ -138,6 +141,77 @@ function AlbumShelf({
   );
 }
 
+/** The mixes made from the user's plays, then their year so far (Wrapped). */
+function MadeForYouShelf() {
+  const c = usePlayback();
+  const mixes = useMixes();
+  if (!Array.isArray(mixes) || !mixes.length) return null;
+  const year = new Date().getFullYear();
+  return (
+    <section className="shelf" aria-labelledby="shelf-mixes">
+      <h2 id="shelf-mixes">{strings.mix.madeForYou}</h2>
+      <ul className="album-grid card-row" aria-label={strings.mix.madeForYou}>
+        {mixes.map((m) => (
+          <AlbumTile
+            key={m.id}
+            id={m.id}
+            title={m.title}
+            artist={m.subtitle}
+            art={<MixArt mix={m} size="grid" />}
+            to={{ view: 'mix', id: m.id }}
+            onPlay={() =>
+              c.playList(m.tracks.map(trackOf), 0, { kind: 'mix', id: m.id, title: m.title })
+            }
+          />
+        ))}
+        <AlbumTile
+          id={`wrapped-${year}`}
+          title={strings.wrapped.heading(year)}
+          artist={strings.wrapped.tile}
+          art={<WrappedArt year={year} />}
+          to={{ view: 'wrapped' }}
+        />
+      </ul>
+    </section>
+  );
+}
+
+const ROUTE_OF = {
+  album: (id: string): Route => ({ view: 'album', id }),
+  playlist: (id: string): Route => ({ view: 'playlist', id }),
+  artist: (id: string): Route => ({ view: 'artist', id }),
+  mix: (id: string): Route => ({ view: 'mix', id }),
+};
+
+/** What was played from lately: albums, playlists, artists and mixes. */
+function JumpBackInShelf() {
+  const contexts = useJumpBackIn();
+  const mixes = useMixes();
+  if (contexts.length < 2) return null;
+  return (
+    <section className="shelf" aria-labelledby="shelf-jump">
+      <h2 id="shelf-jump">{strings.mix.jumpBackIn}</h2>
+      <ul className="album-grid card-row" aria-label={strings.mix.jumpBackIn}>
+        {contexts.map((x) => {
+          const mix = x.kind === 'mix' && Array.isArray(mixes) && mixes.find((m) => m.id === x.id);
+          return (
+            <AlbumTile
+              key={`${x.kind}:${x.id}`}
+              id={x.id}
+              title={x.title ?? ''}
+              artist={strings.mix.kinds[x.kind]}
+              cover={x.cover}
+              round={x.kind === 'artist'}
+              art={mix ? <MixArt mix={mix} size="grid" /> : undefined}
+              to={ROUTE_OF[x.kind](x.id)}
+            />
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
 function PlaylistShelf() {
   const playlists = usePlaylists();
   if (!Array.isArray(playlists) || !playlists.length) return null;
@@ -220,6 +294,8 @@ export function HomeView() {
       ) : (
         <>
           <Shortcuts recent={shortcutsFrom} />
+          <MadeForYouShelf />
+          <JumpBackInShelf />
           {SHELVES.slice(0, 2).map((s) => (
             <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />
           ))}

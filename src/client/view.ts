@@ -40,6 +40,8 @@ export type Route =
   | { view: 'playlist'; id: string }
   | { view: 'liked' }
   | { view: 'genre'; name: string }
+  | { view: 'mix'; id: string }
+  | { view: 'wrapped'; year?: number }
   | { view: 'search'; q: string }
   | { view: 'settings'; section: SettingsSection }
   | { view: 'ui' }
@@ -99,6 +101,11 @@ export function parseRoute(pathname: string, search = ''): Route {
   if (head === 'playlist' && a && b === undefined) return { view: 'playlist', id: a };
   if (head === 'collection' && a === 'tracks' && b === undefined) return { view: 'liked' };
   if (head === 'genre' && a && b === undefined) return { view: 'genre', name: a };
+  if (head === 'mix' && a && b === undefined) return { view: 'mix', id: a };
+  if (head === 'wrapped' && b === undefined) {
+    if (a === undefined) return { view: 'wrapped' };
+    if (/^\d{4}$/.test(a)) return { view: 'wrapped', year: Number(a) };
+  }
   if (head === '__ui' && a === undefined) return { view: 'ui' };
   if (head === 'login' && a === undefined) return { view: 'login' };
   if (head === 'setup' && a === undefined) return { view: 'setup' };
@@ -147,6 +154,10 @@ export function routePath(route: Route): string {
       return '/collection/tracks';
     case 'genre':
       return `/genre/${encodeURIComponent(route.name)}`;
+    case 'mix':
+      return `/mix/${encodeURIComponent(route.id)}`;
+    case 'wrapped':
+      return route.year ? `/wrapped/${route.year}` : '/wrapped';
     case 'search':
       return route.q ? `/search?${new URLSearchParams({ q: route.q })}` : '/search';
     case 'settings':
