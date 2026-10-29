@@ -13,3 +13,11 @@ secrets/
 # tool state
 .taste-skill/
 .remember/
+
+# Android client build output (docs/ANDROID_CLIENT.md)
+Android/.gradle/
+Android/.kotlin/
+Android/build/
+Android/app/build/
+Android/local.properties
+Android/*.apk

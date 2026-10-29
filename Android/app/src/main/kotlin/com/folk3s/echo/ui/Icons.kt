@@ -1,0 +1,88 @@
+package com.folk3s.echo.ui
+
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.unit.dp
+
+// ECHO's outline icons (src/client/ui/icons.tsx, DESIGN_SYSTEM.md §9.1): the same paths on a
+// 24-unit grid at 1.5 stroke, round caps and joins. `Icon(tint = …)` colours them.
+
+private class P(val d: String, val fill: Boolean = false)
+
+private fun circle(cx: Float, cy: Float, r: Float) = "M${cx - r} ${cy}a$r $r 0 1 0 ${2 * r} 0a$r $r 0 1 0 ${-2 * r} 0z"
+
+private fun icon(name: String, vararg paths: P, filled: Boolean = false): ImageVector =
+  ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
+    .apply {
+      for (p in paths) {
+        addPath(
+          pathData = PathParser().parsePathString(p.d).toNodes(),
+          fill = if (filled || p.fill) SolidColor(Color.Black) else null,
+          stroke = SolidColor(Color.Black),
+          strokeLineWidth = 1.5f,
+          strokeLineCap = StrokeCap.Round,
+          strokeLineJoin = StrokeJoin.Round,
+        )
+      }
+    }
+    .build()
+
+object EchoIcons {
+  val play = icon("play", P("M7 4.5v15l12.5-7.5z"), filled = true)
+  val pause = icon("pause", P("M8 5v14"), P("M16 5v14"))
+  val previous = icon("previous", P("M18 5v14L8 12z"), P("M6 5v14"))
+  val next = icon("next", P("M6 5v14l10-7z"), P("M18 5v14"))
+  val shuffle =
+    icon(
+      "shuffle",
+      P("M3 7h3.5c4 0 7 10 11 10H21"),
+      P("M3 17h3.5c1.6 0 2.9-1.6 4-3.6"),
+      P("M13.5 9.6c1.1-1.4 2.4-2.6 4-2.6H21"),
+      P("m18.5 4.5 2.5 2.5-2.5 2.5"),
+      P("m18.5 14.5 2.5 2.5-2.5 2.5"),
+    )
+  val repeat =
+    icon("repeat", P("M4 11V9a3 3 0 0 1 3-3h13"), P("m17 3 3 3-3 3"), P("M20 13v2a3 3 0 0 1-3 3H4"), P("m7 21-3-3 3-3"))
+  val repeatOne =
+    icon(
+      "repeatOne",
+      P("M4 11V9a3 3 0 0 1 3-3h13"),
+      P("m17 3 3 3-3 3"),
+      P("M20 13v2a3 3 0 0 1-3 3H4"),
+      P("m7 21-3-3 3-3"),
+      P("M11 10.5 12.5 9.5v5"),
+    )
+  val queue = icon("queue", P("M4 6h16"), P("M4 12h16"), P("M4 18h10"))
+  val settings =
+    icon(
+      "settings",
+      P(circle(12f, 12f, 3f)),
+      P("M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"),
+    )
+  val more =
+    icon("more", P(circle(5.5f, 12f, 1f), fill = true), P(circle(12f, 12f, 1f), fill = true), P(circle(18.5f, 12f, 1f), fill = true))
+  val close = icon("close", P("m6 6 12 12"), P("M18 6 6 18"))
+  val alert = icon("alert", P(circle(12f, 12f, 9f)), P("M12 7.5v5.5"), P("M12 16.2v.3"))
+  val info = icon("info", P(circle(12f, 12f, 9f)), P("M12 11v5.5"), P("M12 7.7v.3"))
+  val lyrics = icon("lyrics", P("M4 6h12"), P("M4 10.5h16"), P("M4 15h9"), P("M4 19.5h13"))
+  val visual = icon("visual", P("M3 12h3l2.5-6 4 12 3-9 2 3H21"))
+  val brightness =
+    icon(
+      "brightness",
+      P(circle(12f, 12f, 4f)),
+      P("M12 8v8a4 4 0 0 0 0-8z", fill = true),
+      P("M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"),
+    )
+  val fullscreen =
+    icon(
+      "fullscreen",
+      P("M4 9V5a1 1 0 0 1 1-1h4"),
+      P("M15 4h4a1 1 0 0 1 1 1v4"),
+      P("M20 15v4a1 1 0 0 1-1 1h-4"),
+      P("M9 20H5a1 1 0 0 1-1-1v-4"),
+    )
+}

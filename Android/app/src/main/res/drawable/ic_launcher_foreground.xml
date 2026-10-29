@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- public/favicon.svg's glyph (a source and its echoes) on the 108 dp adaptive canvas: its 64-unit
+     box scaled into the 66 dp the launcher's mask always shows. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+  android:width="108dp"
+  android:height="108dp"
+  android:viewportWidth="108"
+  android:viewportHeight="108">
+  <group
+    android:scaleX="1.03125"
+    android:scaleY="1.03125"
+    android:translateX="21"
+    android:translateY="21">
+    <path
+      android:fillColor="@color/glyph"
+      android:pathData="M22,28a4,4 0 1,1 0,8a4,4 0 1,1 0,-8z" />
+    <path
+      android:pathData="M32,22a14,14 0 0,1 0,20"
+      android:strokeWidth="5"
+      android:strokeColor="@color/glyph"
+      android:strokeLineCap="round" />
+    <path
+      android:pathData="M40,14a26,26 0 0,1 0,36"
+      android:strokeAlpha="0.6"
+      android:strokeWidth="5"
+      android:strokeColor="@color/glyph"
+      android:strokeLineCap="round" />
+  </group>
+</vector>

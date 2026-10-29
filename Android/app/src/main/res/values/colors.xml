@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- The page's theme-color (index.html) and the favicon's glyph (public/favicon.svg). -->
+  <color name="ground">#17130E</color>
+  <color name="glyph">#FFCE89</color>
+</resources>
