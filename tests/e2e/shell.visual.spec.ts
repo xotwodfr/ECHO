@@ -20,6 +20,7 @@ const shot = {
   caret: 'hide',
   threshold: 0.05,
   maxDiffPixels: 100,
+  timeout: 15_000, // 2560 wide in the CI image's software renderer: slow to come out stable
 } as const;
 
 /** Plays Harbour Lights track 1 and pauses it at 0:42, with fonts and covers loaded. */

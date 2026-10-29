@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
+import { lazy, Suspense, type UIEvent, useCallback, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import type { Library } from '../library.ts';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
@@ -14,6 +14,7 @@ import {
   LIBRARY_TABS,
   type LibraryTab,
   type Route,
+  routePath,
   SETTINGS_SECTIONS,
   type SettingsSection,
   type ViewStore,
@@ -370,6 +371,13 @@ function Frame() {
     return glass(el);
   }, []);
   const first = useRef(true);
+  const back = useView((s) => s.back);
+  // Where each page was left, by its address, kept as it scrolls.
+  const scrolls = useRef(new Map<string, number>());
+  const onScroll = useCallback(
+    (e: UIEvent<HTMLElement>) => scrolls.current.set(routePath(route), e.currentTarget.scrollTop),
+    [route],
+  );
 
   useEffect(() => {
     document.title = `${TITLES[route.view]} · ${strings.app}`;
@@ -379,9 +387,17 @@ function Frame() {
     }
     // After a navigation, move focus to the new view's heading so keyboard and screen-reader users
     // start there. Not while typing in the search field, which navigates on every keystroke.
-    if (!isTextField(document.activeElement)) main.current?.querySelector('h1')?.focus();
-    main.current?.scrollTo(0, 0);
-  }, [route]);
+    if (!isTextField(document.activeElement))
+      main.current?.querySelector('h1')?.focus({ preventScroll: true });
+    // A new page starts at its top; Back returns to where it was left (its content is cached,
+    // fresh.ts, so it is there to scroll to; once more a moment later for what was not).
+    const el = main.current;
+    const to = back ? (scrolls.current.get(routePath(route)) ?? 0) : 0;
+    el?.scrollTo(0, to);
+    if (!to) return;
+    const again = setTimeout(() => el?.scrollTo(0, to), 400);
+    return () => clearTimeout(again);
+  }, [route, back]);
 
   useEffect(() => {
     // `/` or Ctrl/⌘+K focuses the visible search field (the hint shown in it); where none is
@@ -423,7 +439,11 @@ function Frame() {
     >
       {!listen && <TopBar route={route} />}
       {!listen && <LibraryPanel />}
-      <main className={listen ? 'canvas' : 'canvas glass'} ref={listen ? main : mainGlass}>
+      <main
+        className={listen ? 'canvas' : 'canvas glass'}
+        ref={listen ? main : mainGlass}
+        onScroll={onScroll}
+      >
         <View route={route} />
       </main>
       {!listen && <RightPanel />}

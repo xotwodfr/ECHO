@@ -184,6 +184,8 @@ export interface HistoryHost {
 
 export interface ViewState {
   route: Route;
+  /** The route came from Back or Forward (the page keeps its scroll position then). */
+  back: boolean;
   /** Push a history entry (or replace the current one) and show `route`. */
   navigate(route: Route, opts?: { replace?: boolean }): void;
 }
@@ -203,22 +205,23 @@ export function createViewStore(
 
   const store = createStore<ViewState>()((set) => ({
     route: initial,
+    back: false,
     navigate(route, opts) {
       const path = routePath(route);
       // Re-selecting the current view must not stack duplicate entries for Back.
       if (opts?.replace || path === here()) {
         host.history.replaceState(null, '', path);
-        set({ route });
+        set({ route, back: false });
       } else {
         host.history.pushState(null, '', path);
-        transition(() => set({ route }), store.getState().route, route);
+        transition(() => set({ route, back: false }), store.getState().route, route);
       }
     },
   }));
 
   host.addEventListener('popstate', () => {
     const route = parseRoute(host.location.pathname, host.location.search);
-    transition(() => store.setState({ route }), store.getState().route, route);
+    transition(() => store.setState({ route, back: true }), store.getState().route, route);
   });
   return store;
 }

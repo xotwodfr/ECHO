@@ -159,3 +159,41 @@ test('the sleep timer pauses after its minutes', async ({ page }) => {
   await expect(dock(page)).toHaveAttribute('data-status', 'paused');
   await expect(dock(page).getByRole('button', { name: 'Sleep timer' })).toBeVisible();
 });
+
+test('Back is instant: the page as it was, where it was left', async ({ page }) => {
+  await signedInWithNavidrome(page, 'back');
+  await page.setViewportSize({ width: 1280, height: 640 }); // Home taller than the canvas
+  await page.goto('/');
+  await expect(
+    page.getByRole('region', { name: 'Recently played' }).locator('.tile').first(),
+  ).toBeVisible();
+  const canvas = page.locator('.canvas');
+  const card = page
+    .getByRole('region', { name: 'New in your library' })
+    .locator('.tile-link')
+    .first();
+  await card.scrollIntoViewIfNeeded();
+  const left = await canvas.evaluate((el) => el.scrollTop);
+  expect(left).toBeGreaterThan(0);
+  await card.click();
+  await expect(page.locator('.page-head')).toBeVisible();
+  await expect.poll(() => canvas.evaluate((el) => el.scrollTop)).toBe(0); // a new page: its top
+  // Back: no skeleton at all (from the cache), and the old place.
+  const sawSkeleton = page.evaluate(
+    () =>
+      new Promise<boolean>((resolve) => {
+        const seen = () => !!document.querySelector('.tile--loading, .rows-loading');
+        const mo = new MutationObserver(() => seen() && resolve(true));
+        mo.observe(document.body, { childList: true, subtree: true });
+        setTimeout(() => resolve(seen()), 1500);
+      }),
+  );
+  await page.goBack();
+  expect(await sawSkeleton).toBe(false);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Good /);
+  await expect.poll(() => canvas.evaluate((el) => el.scrollTop)).toBe(left);
+  // An album seen before opens without its skeleton too.
+  await page.goForward();
+  await expect(page.locator('.page-head')).toBeVisible();
+  await expect(page.locator('.rows-loading')).toHaveCount(0);
+});

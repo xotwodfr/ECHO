@@ -40,6 +40,7 @@ import {
   useStarred,
   useStarredAll,
 } from './collections.ts';
+import { useFresh } from './fresh.ts';
 import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
@@ -421,15 +422,18 @@ export function AlbumView({ id }: { id: string }) {
   const a = library?.album(id);
   // A server library fetches the album (and its tracks) when it is opened: until then, its
   // skeleton, not "missing".
+  // An album opened before (its tracks loaded) shows at once and refreshes behind (fresh.ts).
+  const loaded = () => !!library?.album(id)?.tracks.length;
   const [load, setLoad] = useState<'loading' | 'ready' | 'error'>(
-    library?.loadAlbum ? 'loading' : 'ready',
+    library?.loadAlbum && !loaded() ? 'loading' : 'ready',
   );
   const fetchAlbum = useCallback(() => {
     if (!library?.loadAlbum) return setLoad('ready');
-    setLoad('loading');
+    const had = !!library.album(id)?.tracks.length;
+    if (!had) setLoad('loading');
     library.loadAlbum(id).then(
       () => setLoad('ready'),
-      () => setLoad('error'),
+      () => !had && setLoad('error'),
     );
   }, [library, id]);
   useEffect(fetchAlbum, [fetchAlbum]);
@@ -555,35 +559,20 @@ export function ArtistView({ id }: { id: string }) {
   const library = useLibrary();
   const c = usePlayback();
   const known = library?.albums.find((a) => a.artistId === id)?.artist.trim();
-  const [artist, setArtist] = useState<
-    { name: string; albums: Album[] } | 'loading' | 'error' | null
-  >('loading');
-  const [info, setInfo] = useState<ArtistInfo | null>(null);
-  const [top, setTop] = useState<Track[] | null>(null);
-  const fetchArtist = useCallback(() => {
-    if (!library?.artist) return setArtist(null);
-    setArtist('loading');
-    library.artist(id).then(
-      (a) => setArtist(a ?? null),
-      () => setArtist('error'),
-    );
-    setInfo(null);
-    library.artistInfo?.(id).then(setInfo, () => undefined);
-  }, [library, id]);
-  useEffect(fetchArtist, [fetchArtist]);
+  const [artist, reloadArtist] = useFresh(`artist:${id}`, async () =>
+    library?.artist ? ((await library.artist(id)) ?? null) : null,
+  );
+  const fetchArtist = () => void reloadArtist();
+  const [about] = useFresh(
+    `artist-info:${id}`,
+    async () => (await library?.artistInfo?.(id)) ?? null,
+  );
+  const info: ArtistInfo | null = typeof about === 'object' ? about : null;
   const name = typeof artist === 'object' && artist ? artist.name.trim() : known;
-  useEffect(() => {
-    setTop(null);
-    if (!name || !library?.topSongs) return;
-    let current = true;
-    library.topSongs(name, 10).then(
-      (x) => current && setTop(x),
-      () => current && setTop([]),
-    );
-    return () => {
-      current = false;
-    };
-  }, [library, name]);
+  const [popular] = useFresh(`top:${name ?? ''}`, async () =>
+    name && library?.topSongs ? library.topSongs(name, 10).catch(() => []) : [],
+  );
+  const top: Track[] | null = Array.isArray(popular) ? popular : null;
   const first = typeof artist === 'object' && artist ? artist.albums[0] : undefined;
   const tint = useTint(first ? `navidrome:${first.id}` : null);
   const s = strings.artist;
@@ -735,18 +724,10 @@ export function PlaylistView({ id }: { id: string }) {
   const library = useLibrary();
   const c = usePlayback();
   const navigate = useView((s) => s.navigate);
-  const [p, setP] = useState<PlaylistDetail | 'loading' | 'error' | null>('loading');
-  const load = useCallback(() => {
-    if (!library?.playlist) return setP(null);
-    library.playlist(id).then(
-      (x) => setP(x ?? null),
-      () => setP('error'),
-    );
-  }, [library, id]);
-  useEffect(() => {
-    setP('loading');
-    load();
-  }, [load]);
+  const [p, reload] = useFresh(`playlist:${id}`, async () =>
+    library?.playlist ? ((await library.playlist(id)) ?? null) : null,
+  );
+  const load = () => void reload();
   const firstAlbum = typeof p === 'object' && p ? p.entries[0]?.album.key : undefined;
   const tint = useTint(firstAlbum ?? null);
   const { live, playing } = useContextPlaying((x) => x?.kind === 'playlist' && x.id === id);
@@ -1040,13 +1021,9 @@ const genreColour = (name: string) =>
 
 function BrowseAll() {
   const library = useLibrary();
-  const [genres, setGenres] = useState<Genre[] | 'error' | null>(null);
-  const load = useCallback(() => {
-    setGenres(null);
-    if (!library?.genres) return setGenres([]);
-    library.genres().then(setGenres, () => setGenres('error'));
-  }, [library]);
-  useEffect(load, [load]);
+  const [v, reload] = useFresh('genres', async () => (library?.genres ? library.genres() : []));
+  const genres = v === 'loading' ? null : v;
+  const load = () => void reload();
   if (genres === null) return <GridLoading count={8} />;
   if (genres === 'error') return <BlockError what={strings.genre.failed} onRetry={load} />;
   if (!genres.length) return <p className="empty">{strings.search.prompt}</p>;
@@ -1069,13 +1046,11 @@ function BrowseAll() {
 
 export function GenreView({ name }: { name: string }) {
   const library = useLibrary();
-  const [albums, setAlbums] = useState<Album[] | 'error' | null>(null);
-  const load = useCallback(() => {
-    setAlbums(null);
-    if (!library?.genreAlbums) return setAlbums([]);
-    library.genreAlbums(name).then(setAlbums, () => setAlbums('error'));
-  }, [library, name]);
-  useEffect(load, [load]);
+  const [v, reload] = useFresh(`genre:${name}`, async () =>
+    library?.genreAlbums ? library.genreAlbums(name) : [],
+  );
+  const albums = v === 'loading' ? null : v;
+  const load = () => void reload();
   return (
     <>
       <header className="page-head page-head--plain genre-head" data-hue={genreColour(name)}>

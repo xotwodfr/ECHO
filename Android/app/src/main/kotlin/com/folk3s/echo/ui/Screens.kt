@@ -90,13 +90,26 @@ sealed interface Load<out T> {
   data object Failed : Load<Nothing>
 }
 
+/** Back is instant (the web's fresh.ts): the last answer per type and key, oldest out at 60. */
+@PublishedApi
+internal val loaded = object : LinkedHashMap<Pair<Any, Any?>, Any?>(64, 0.75f, true) {
+  override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Pair<Any, Any?>, Any?>) = size > 60
+}
+
+/** A screen's data: shown at once when seen before and refreshed behind; a failed refresh keeps it. */
 @Composable
-fun <T> load(key: Any?, fetch: suspend () -> T): Pair<Load<T>, () -> Unit> {
+inline fun <reified T> load(key: Any?, noinline fetch: suspend () -> T): Pair<Load<T>, () -> Unit> {
+  val id = T::class to key
   var attempt by remember { mutableIntStateOf(0) }
-  var state by remember(key) { mutableStateOf<Load<T>>(Load.Loading) }
+  @Suppress("UNCHECKED_CAST")
+  var state by remember(key) { mutableStateOf<Load<T>>(if (loaded.containsKey(id)) Load.Ok(loaded[id] as T) else Load.Loading) }
   LaunchedEffect(key, attempt) {
-    state = Load.Loading
-    state = runCatching { fetch() }.fold({ Load.Ok(it) }, { Load.Failed })
+    val had = loaded.containsKey(id)
+    if (!had) state = Load.Loading
+    runCatching { fetch() }.fold({
+      loaded[id] = it
+      state = Load.Ok(it)
+    }, { if (!had) state = Load.Failed })
   }
   return state to { attempt++ }
 }

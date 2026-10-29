@@ -10,6 +10,7 @@ import { AlbumTile, Artwork } from '../ui/media.tsx';
 import { BlockEmpty, BlockError, GridLoading } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
 import { usePlaylists, useStarredAll } from './collections.ts';
+import { useFresh } from './fresh.ts';
 import { Link } from './link.tsx';
 import { MixArt, WrappedArt } from './MixViews.tsx';
 import { trackOf, useJumpBackIn, useMixes } from './mixes.ts';
@@ -33,14 +34,10 @@ const SHELVES: Shelf[] = [
 
 function useAlbumList(kind: AlbumListKind) {
   const library = useLibrary();
-  const [albums, setAlbums] = useState<Album[] | 'error' | null>(null);
-  const load = useCallback(() => {
-    setAlbums(null);
-    if (!library?.albumList) return setAlbums(library?.albums.slice(0, SHELF) ?? []);
-    library.albumList(kind, SHELF).then(setAlbums, () => setAlbums('error'));
-  }, [library, kind]);
-  useEffect(load, [load]);
-  return [albums, load] as const;
+  const [v, reload] = useFresh(`home:${kind}`, async () =>
+    library?.albumList ? library.albumList(kind, SHELF) : (library?.albums.slice(0, SHELF) ?? []),
+  );
+  return [v === 'loading' ? null : v, () => void reload()] as const;
 }
 
 function useAlbumPlay() {

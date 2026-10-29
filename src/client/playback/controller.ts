@@ -39,6 +39,8 @@ export { positionNow };
 
 type Provider = PlaybackProvider & { label?: string };
 
+const PRELOAD_IN_MS = 5000;
+
 export function createPlaybackController(opts: {
   provider: Provider | null;
   /** Spotify, when the user has connected it (M7). */
@@ -164,7 +166,10 @@ export function createPlaybackController(opts: {
 
   const isActive = () => ['playing', 'loading', 'buffering'].includes(player.getState().status);
 
-  /** The next track is buffered 20 s before this one ends, for a gapless hand-over (§5.6). */
+  /**
+   * The next track is buffered 5 s into this one (Next starts at once: instant, step 4), or 20 s
+   * before it ends when it is shorter, for a gapless hand-over (§5.6).
+   */
   let preloadTimer: ReturnType<Clock['setTimeout']> | null = null;
   function schedulePreload(track: Track, startMs: number) {
     if (preloadTimer) clock.clearTimeout(preloadTimer);
@@ -179,9 +184,18 @@ export function createPlaybackController(opts: {
         if (q.now?.key === track.key && next && player.getState().repeat !== 'one')
           void p.preload?.(next);
       },
-      Math.max(0, track.durationMs - startMs - 20_000),
+      Math.min(PRELOAD_IN_MS, Math.max(0, track.durationMs - startMs - 20_000)),
     );
   }
+  // A different next track (Play next, Add to queue, shuffle) is buffered in its turn.
+  let nextKey: string | undefined;
+  queue.subscribe((q) => {
+    const k = Q.upcoming(q)[0]?.key;
+    if (k === nextKey) return;
+    nextKey = k;
+    const s = player.getState();
+    if (q.now && s.track?.key === q.now.key) schedulePreload(q.now, positionNow(s, clock.now()));
+  });
 
   function load(q: QueueState, autoplay: boolean, startMs = 0) {
     queue.setState(q, true);

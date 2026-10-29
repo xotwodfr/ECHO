@@ -2,6 +2,7 @@ package com.folk3s.echo.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -131,6 +132,7 @@ private fun Shell() {
     CompositionLocalProvider(LocalBackdrop provides backdrop) {
       // The page under Now Playing and the lyrics view: the stack's top below them.
       val page = nav.stack.lastOrNull { it != Route.NowPlaying && it != Route.Listen } ?: Route.Home
+      val pages = rememberSaveableStateHolder()
       val prefs by app.prefs.state.collectAsStateWithLifecycle()
       val still = app.prefs.reducedMotion(prefs)
       if (nav.top == Route.Listen)
@@ -156,6 +158,8 @@ private fun Shell() {
             },
             label = "page",
           ) { r ->
+            // Each page keeps its scroll position (and other saved state) for Back.
+            pages.SaveableStateProvider(r.toString()) {
             when (r) {
               Route.Home -> HomeScreen(nav, onProfile = { nav.go(Route.Settings) })
               Route.Search -> SearchScreen(nav, picker)
@@ -169,6 +173,7 @@ private fun Shell() {
               is Route.Wrapped -> WrappedScreen(r.year, nav)
               Route.Settings -> SettingsScreen()
               else -> {}
+            }
             }
           }
         }
