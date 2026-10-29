@@ -141,7 +141,7 @@ val glassAvailable: Boolean get() = Build.VERSION.SDK_INT >= Build.VERSION_CODES
  * Without a backdrop, or on a platform that cannot blur, it is that colour, opaque.
  */
 @Composable
-fun GlassSurface(color: Color, shape: Shape, radius: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+fun GlassSurface(color: Color, shape: Shape, radius: androidx.compose.ui.unit.Dp, modifier: Modifier = Modifier, fill: Float = GLASS_FILL, content: @Composable () -> Unit) {
   val b = LocalBackdrop.current
   val px = LocalDensity.current.density
   val glassLayer = rememberGraphicsLayer()
@@ -163,7 +163,7 @@ fun GlassSurface(color: Color, shape: Shape, radius: androidx.compose.ui.unit.Dp
           else RenderEffect.createChainEffect(saturation(g.saturate.toFloat()), RenderEffect.createBlurEffect((g.frost * px).toFloat(), (g.frost * px).toFloat(), Shader.TileMode.CLAMP)))
             .asComposeRenderEffect()
         drawLayer(glassLayer)
-        drawRect(color.copy(alpha = color.alpha * GLASS_FILL))
+        drawRect(color.copy(alpha = color.alpha * fill))
       },
   ) { content() }
 }

@@ -163,10 +163,13 @@ private fun Shell() {
           app.playback.dismissNotice()
         }
         Box(Modifier.fillMaxSize().padding(bottom = 160.dp), contentAlignment = Alignment.BottomCenter) {
-          Snackbar(Modifier.padding(16.dp), containerColor = Chamber.text, contentColor = Chamber.ground) { Text(msg) }
+          GlassSurface(Chamber.surface3, RoundedCornerShape(12.dp), 12.dp, Modifier.padding(16.dp)) {
+            Text(msg, color = Chamber.text, modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp))
+          }
         }
       }
       if (queueOpen) QueueSheet(player, onClose = { queueOpen = false }, overStage = nav.top == Route.Listen)
+      MenuSheet(opaque = nav.top == Route.Listen)
       picking?.let { PlaylistPicker(it) { picking = null } }
     }
   }

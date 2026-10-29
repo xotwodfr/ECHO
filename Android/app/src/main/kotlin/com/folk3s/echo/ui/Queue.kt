@@ -59,10 +59,11 @@ import kotlinx.coroutines.launch
  * (DESIGN_SYSTEM.md §6): no smeared motion through it. Drag down or Back closes it.
  */
 @Composable
-fun Sheet(onDismiss: () -> Unit, opaque: Boolean, content: @Composable () -> Unit) {
+fun Sheet(onDismiss: () -> Unit, opaque: Boolean, fit: Boolean = false, fill: Float = GLASS_FILL, content: @Composable () -> Unit) {
   BackHandler(onBack = onDismiss)
   val scope = rememberCoroutineScope()
-  BoxWithConstraints(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { onDismiss() } }) {
+  // A menu (fit) dims what it covers, as Spotify's; the queue sheet does not.
+  BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black.copy(alpha = if (fit) 0.5f else 0f)).pointerInput(Unit) { detectTapGestures { onDismiss() } }) {
     val full = constraints.maxHeight.toFloat()
     val y = remember { Animatable(full) }
     LaunchedEffect(Unit) { y.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 380f)) }
@@ -73,11 +74,12 @@ fun Sheet(onDismiss: () -> Unit, opaque: Boolean, content: @Composable () -> Uni
         if (opaque) Chamber.surface1 else MaterialTheme.colorScheme.surfaceContainerLow,
         shape,
         28.dp,
-        Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, y.value.roundToInt()) }.fillMaxWidth().fillMaxHeight(0.88f)
+        Modifier.align(Alignment.BottomCenter).offset { IntOffset(0, y.value.roundToInt()) }.fillMaxWidth().let { if (fit) it else it.fillMaxHeight(0.88f) }
           .pointerInput(Unit) { detectTapGestures {} } // taps on the sheet stay on it
           .draggable(drag, Orientation.Vertical, onDragStopped = { v ->
             if (y.value > full * 0.15f || v > 2000f) onDismiss() else y.animateTo(0f, spring(stiffness = 380f))
           }),
+        fill = fill,
       ) {
         Column(Modifier.windowInsetsPadding(WindowInsets.navigationBars)) {
           Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {

@@ -121,20 +121,35 @@ fun TrackRow(
   }
 }
 
+/** The open "…" menu, one at a time: the Shell shows it as a glass sheet (Spotify's), not a popup. */
+object Menus {
+  var open by mutableStateOf<Pair<String, List<Pair<String, () -> Unit>>>?>(null)
+}
+
 @Composable
 fun MoreMenu(label: String, items: List<Pair<String, () -> Unit>>) {
-  var open by remember { mutableStateOf(false) }
-  Box {
-    IconButton(onClick = { open = true }, modifier = Modifier.semantics { contentDescription = label }) {
-      Icon(EchoIcons.more, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-    DropdownMenu(open, onDismissRequest = { open = false }) {
-      for ((text, action) in items) {
-        DropdownMenuItem(text = { Text(text) }, onClick = {
-          open = false
-          action()
-        })
-      }
+  IconButton(onClick = { Menus.open = label to items }, modifier = Modifier.semantics { contentDescription = label }) {
+    Icon(EchoIcons.more, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+  }
+}
+
+/** The menu as a glass sheet over the screen; a choice closes it first. */
+@Composable
+fun MenuSheet(opaque: Boolean) {
+  val (label, items) = Menus.open ?: return
+  // Nearly solid: a list of choices must read at a glance; the rim and a hint of tint stay glass.
+  Sheet({ Menus.open = null }, opaque, fit = true, fill = 0.95f) {
+    Column(Modifier.padding(bottom = 16.dp)) {
+      Text(label.removePrefix("More for "), style = MaterialTheme.typography.titleMedium, maxLines = 1, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+      for ((text, action) in items)
+        Text(
+          text,
+          style = MaterialTheme.typography.bodyLarge,
+          modifier = Modifier.fillMaxWidth().clickable {
+            Menus.open = null
+            action()
+          }.padding(horizontal = 24.dp, vertical = 16.dp),
+        )
     }
   }
 }
