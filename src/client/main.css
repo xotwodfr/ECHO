@@ -1643,6 +1643,12 @@ a {
   justify-self: stretch;
 }
 
+/* Spotify's sign-in: the wordmark and the title centred over the form. */
+.auth > h1 {
+  margin: 0;
+  text-align: center;
+}
+
 .recovery-codes {
   display: grid;
   grid-template-columns: repeat(2, max-content);
