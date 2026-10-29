@@ -59,7 +59,20 @@ a {
   box-sizing: border-box;
   height: 100dvh;
   padding: 0 var(--panel-gap) var(--panel-gap);
-  background: var(--frame);
+  /* Behind the glass panels: the playing album's colours, dimmed, following the palette as it
+     animates, so the glass has something to bend (DESIGN_SYSTEM.md §7.11). */
+  background:
+    radial-gradient(
+      70% 90% at 0% 0%,
+      color-mix(in oklab, var(--art-accent) var(--ambient-a), var(--frame)),
+      transparent
+    ),
+    radial-gradient(
+      60% 80% at 100% 100%,
+      color-mix(in oklab, var(--art-highlight) var(--ambient-b), var(--frame)),
+      transparent
+    ),
+    var(--frame);
 }
 
 .shell[data-right] {
@@ -118,7 +131,7 @@ a {
 .round-btn--lg {
   width: var(--md-button-h);
   height: var(--md-button-h);
-  background: var(--raised);
+  background: color-mix(in oklab, var(--raised) var(--glass-fill-pill), transparent);
 }
 
 .round-btn--lg .icon {
@@ -159,9 +172,9 @@ a {
   height: var(--search-h);
   box-sizing: border-box;
   padding: 0 var(--sp-7) 0 var(--sp-7);
-  border: var(--rule) solid transparent;
+  border: var(--rule) solid var(--glass-edge);
   border-radius: var(--r-pill);
-  background: var(--raised);
+  background: color-mix(in oklab, var(--raised) var(--glass-fill-pill), transparent);
   color: var(--text);
   font: var(--md-sys-typescale-body-large) var(--font-ui);
   transition:
@@ -232,13 +245,13 @@ a {
   margin-left: auto;
 }
 
-/* The panels: #121212, rounded, each scrolling on its own. */
+/* The panels: #121212 glass, rounded, each scrolling on its own. */
 .library-panel,
 .canvas,
 .right-panel {
   min-height: 0;
   border-radius: var(--r-panel);
-  background: var(--panel);
+  background: color-mix(in oklab, var(--panel) var(--glass-fill-panel), transparent);
 }
 
 .canvas {

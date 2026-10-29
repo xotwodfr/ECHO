@@ -127,8 +127,13 @@ test('a click on a lyric line plays from it, even when paused', async ({ page })
   const dock = page.getByRole('region', { name: 'Player' });
   await dock.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(dock).toHaveAttribute('data-status', 'paused');
-  // The field keeps its lines gently moving (springs): never "stable" to Playwright, so forced.
-  await page.locator('.ly-field .ly-line', { hasText: 'Second line here' }).click({ force: true });
+  // The field keeps its lines moving (springs) and recycles their elements, so Playwright's
+  // retrying click can miss under load: a click at the line's centre, from the page itself.
+  await page.locator('.ly-field .ly-line', { hasText: 'Second line here' }).evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    const at = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    (at as HTMLElement | null)?.click();
+  });
   await expect(dock).toHaveAttribute('data-status', 'playing');
   const seek = dock.getByRole('slider', { name: 'Seek' });
   await expect

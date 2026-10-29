@@ -1336,9 +1336,10 @@
   align-items: center;
   min-height: var(--hit-lg);
   padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--r-control);
-  background: var(--text);
-  color: var(--on-green);
+  border: var(--rule) solid var(--glass-edge);
+  border-radius: var(--r-panel);
+  background: color-mix(in oklab, var(--raised-2) var(--glass-fill-pill), transparent);
+  color: var(--text);
   box-shadow: var(--md-sys-elevation-level2);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
   transition: opacity var(--dur-toast) var(--ease-out);

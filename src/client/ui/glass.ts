@@ -167,6 +167,7 @@ const svgBackdrop = (
 ).some((b) => b.brand === 'Chromium');
 
 const NS = 'http://www.w3.org/2000/svg';
+const REBUILD_MS = 150;
 let defs: SVGDefsElement | undefined;
 let count = 0;
 
@@ -296,9 +297,17 @@ function svgFilter(el: HTMLElement) {
     vivid.setAttribute('values', String(g.saturate));
     el.style.setProperty('--glass-filter', `url(#${id})`);
   };
-  const observer = new ResizeObserver(build);
+  // A page-sized panel's maps take a while (every pixel, then a PNG): the first at once, then once
+  // a resize settles (the old maps stretch meanwhile).
+  let later: ReturnType<typeof setTimeout> | undefined;
+  const observer = new ResizeObserver(() => {
+    if (!size) return build();
+    clearTimeout(later);
+    later = setTimeout(build, REBUILD_MS);
+  });
   observer.observe(el);
   return () => {
+    clearTimeout(later);
     observer.disconnect();
     filter.remove();
     el.style.removeProperty('--glass-filter');

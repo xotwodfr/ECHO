@@ -235,6 +235,9 @@
   --glass-specular: 0.55; --glass-light: 135deg;   /* rim light opacity, and where it comes from */
   --glass-edge: rgba(255, 255, 255, 0.14);
   --glass-tint-mini: 55%;     /* share of the album colour in the phone mini player */
+  --glass-fill-panel: 84%;    /* share of --panel the big panels keep: glass at the edges, text reads */
+  --glass-fill-pill: 70%;     /* share of --raised the top bar's pills and the toast keep */
+  --ambient-a: 38%; --ambient-b: 24%;  /* the album's accent and highlight in the frame behind the panels */
 
   /* scrims under the lyrics view's chrome (§7.7) */
   --scrim-top: 0.25; --scrim-dock: 0.4;
@@ -254,7 +257,7 @@
 
 /* Reduced transparency: every glass surface is its opaque surface again (§7.11). */
 @media (prefers-reduced-transparency: reduce) {
-  :root { --glass-fill: 100%; --glass-fill-stage: 100%; --glass-tint-mini: 100%; }
+  :root { --glass-fill: 100%; --glass-fill-stage: 100%; --glass-tint-mini: 100%; --glass-fill-panel: 100%; --glass-fill-pill: 100%; }
 }
 
 .num { font-variant-numeric: tabular-nums; }

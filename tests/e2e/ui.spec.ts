@@ -350,10 +350,11 @@ test('menu: opens upward when the canvas has no room below, and stays inside it'
     (canvas?.y ?? 0) + (canvas?.height ?? 0),
   );
   expect(box?.y ?? -1).toBeGreaterThanOrEqual(canvas?.y ?? 0);
-  // With room below it opens downward.
+  // With room below it opens downward. (A dispatched click: over the glass canvas Playwright's Firefox
+  // scrolls the trigger back down before a real one, though it is visible and hit-testable there.)
   await page.keyboard.press('Escape');
   await trigger.evaluate((el) => el.scrollIntoView({ block: 'start' }));
-  await trigger.click();
+  await trigger.dispatchEvent('click');
   await expect(menu).toHaveAttribute('data-placement', 'bottom');
 });
 

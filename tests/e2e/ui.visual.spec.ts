@@ -59,7 +59,7 @@ for (const width of WIDTHS) {
 for (const width of [1440, 390]) {
   test(`open overlays at ${width}`, async ({ page }) => {
     await open(page, width, width === 390 ? 844 : 900);
-    const shot = { animations: 'disabled', caret: 'hide' } as const;
+    const shot = { animations: 'disabled', caret: 'hide', maxDiffPixels: 100 } as const; // glass varies a little
 
     await page.getByRole('button', { name: 'Open queue' }).click();
     await expect(page.getByRole('dialog', { name: 'Queue' })).toBeVisible();

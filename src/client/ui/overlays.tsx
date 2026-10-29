@@ -306,7 +306,12 @@ export function ToastRegion() {
   return (
     <div className="toast-region" role="status">
       {toast && (
-        <div key={toast.id} className="toast" data-leaving={toast.leaving || undefined}>
+        <div
+          key={toast.id}
+          className="toast glass"
+          ref={attachGlass}
+          data-leaving={toast.leaving || undefined}
+        >
           {toast.message}
         </div>
       )}

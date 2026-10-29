@@ -160,9 +160,12 @@ light. The element's own background is its surface colour made translucent. Over
 while WebGL draws the room, a glass pass draws the pill's and the chrome's glass itself
 (`VISUALIZER_SPEC.md` §5.2); without WebGL 2 the SVG or blur glass comes back.
 
-**Where.** The player pill; the phone mini player (tinted by the playing album) and tab bar; the
-sticky page header (tinted by the page); menus; sheets; dialogs; the lyrics view's round close
-button (clear glass).
+**Where.** The three panels (Your Library, the page, Now Playing and the queue), mostly opaque
+so text reads, over a frame tinted by the playing album (`--ambient-*`) that the glass bends at
+their edges; the top bar's Home button and search pill; the player pill; the phone mini player
+(tinted by the playing album) and tab bar; the sticky page header (tinted by the page); menus;
+sheets; dialogs; toasts; the lyrics view's round close button (clear glass). Under the lyrics
+view the page panel is not glass: the Stage draws its own room and glass.
 
 **Tokens** (`tokens.css`):
 
@@ -171,6 +174,9 @@ button (clear glass).
 | `--glass-fill` | Share of its surface colour a glass surface keeps (the rest is backdrop) |
 | `--glass-fill-stage` | Share of `--art-room` in glass over the lyrics view |
 | `--glass-tint-mini` | Share of the playing album's tone in the phone mini player |
+| `--glass-fill-panel` | Share of `--panel` the three panels keep |
+| `--glass-fill-pill` | Share of `--raised` the top bar's pills and the toast keep |
+| `--ambient-a`, `--ambient-b` | Share of the album's accent and highlight in the frame behind the panels |
 | `--glass-frost`, `--glass-frost-clear` | Blur before the bend: regular glass, and clear glass |
 | `--glass-blur` | Blur of the fallback (no SVG backdrop filters); ≤ 8px (§6) |
 | `--glass-saturate` | Saturation of what shows through |

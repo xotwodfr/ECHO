@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import type { Library } from '../library.ts';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
@@ -69,6 +69,8 @@ function SearchField({ className }: { className: string }) {
       <span className="visually-hidden">{strings.nav.search}</span>
       <input
         type="search"
+        className="glass"
+        ref={glass}
         value={q}
         placeholder={strings.search.placeholder}
         // Spotify opens Browse on the first click into the box.
@@ -95,7 +97,8 @@ function TopBar({ route }: { route: Route }) {
       </Link>
       <nav className="topbar-nav" aria-label={strings.nav.label}>
         <Link
-          className="round-btn round-btn--lg"
+          className="round-btn round-btn--lg glass"
+          ref={glass}
           to={{ view: 'home' }}
           aria-label={strings.nav.home}
           title={strings.nav.home}
@@ -361,6 +364,11 @@ function Frame() {
   const right = useStore(panels, (s) => s.right);
   useChromeIdle(route.view === 'listen' && playing);
   const main = useRef<HTMLElement>(null);
+  // The page is a glass panel over the album's colours, except under the lyrics view's own room.
+  const mainGlass = useCallback((el: HTMLElement | null) => {
+    main.current = el;
+    return glass(el);
+  }, []);
   const first = useRef(true);
 
   useEffect(() => {
@@ -415,7 +423,7 @@ function Frame() {
     >
       {!listen && <TopBar route={route} />}
       {!listen && <LibraryPanel />}
-      <main className="canvas" ref={main}>
+      <main className={listen ? 'canvas' : 'canvas glass'} ref={listen ? main : mainGlass}>
         <View route={route} />
       </main>
       {!listen && <RightPanel />}
