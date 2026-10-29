@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import type { FeatureSource } from '../shared/types.ts';
 import './fonts.css';
@@ -24,14 +25,60 @@ import { spotifyStatus } from './shell/SpotifyViews.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
-import { createViewStore } from './view.ts';
+import { createViewStore, type Route } from './view.ts';
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
 // development builds play the fixture library (M2 task 3); the image (ECHO_DEV_PAGES=0) has no
 // fixtures and sends visitors to sign in.
 const fixtures = __ECHO_FIXTURES__ ? await import('./fixtures/playback.ts') : null;
 
-const store = createViewStore(window);
+/** Settings → Motion, or the system's choice under "system": less motion is reduced or off. */
+const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
+function lessMotion() {
+  const m = prefsStore.getState().visuals.motion;
+  return m === 'off' || m === 'reduced' || (m === 'system' && reducedQuery.matches);
+}
+// CSS motion of the shell's own (the lyrics view's entrance) reads it as <html data-motion>.
+const markMotion = () => (document.documentElement.dataset.motion = lessMotion() ? 'less' : 'full');
+markMotion();
+prefsStore.subscribe((s, prev) => s.visuals !== prev.visuals && markMotion());
+reducedQuery.addEventListener('change', markMotion);
+
+/**
+ * A page change as a View Transition: the page cross-fades and rises, and a clicked card's cover
+ * flies into its page's header (main.css, "Page changes"); the rest of the frame holds still. Not
+ * with less motion, and not into or out of the lyrics view: snapshotting its live room is slow, and
+ * it has its own entrance (stage.css).
+ */
+function pageTransition(update: () => void, from: Route, to: Route) {
+  const less = lessMotion();
+  const stage = from.view === 'listen' || to.view === 'listen';
+  // From a text field (the search box opens Search on focus) the page changes at once, under the typing.
+  const typing = document.activeElement?.matches('input, textarea, [contenteditable="true"]');
+  if (!document.startViewTransition || less || stage || typing || document.hidden) return update();
+  const card = lastClicked?.closest('.tile')?.querySelector<HTMLElement>('.art');
+  const named: HTMLElement[] = [];
+  if (card) {
+    for (const el of document.querySelectorAll<HTMLElement>('.page-head .art')) {
+      el.style.viewTransitionName = 'none'; // one cover per name in the old page
+      named.push(el);
+    }
+    card.style.viewTransitionName = 'cover';
+    named.push(card);
+  }
+  lastClicked = null;
+  const root = document.documentElement;
+  root.classList.add('vt'); // main.css names the page and its cover only during the change
+  const t = document.startViewTransition(() => flushSync(update));
+  void t.finished.finally(() => {
+    root.classList.remove('vt');
+    for (const el of named) el.style.viewTransitionName = '';
+  });
+}
+let lastClicked: Element | null = null;
+document.addEventListener('click', (e) => (lastClicked = e.target as Element), { capture: true });
+
+const store = createViewStore(window, pageTransition);
 
 // Deterministic mode (VISUALIZER_SPEC.md §10): `fixture` supplies Features (a lyric fixture's name
 // supplies its paired track), and `track` (ECHO's own param) cues that track paused at the frame

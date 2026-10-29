@@ -641,6 +641,31 @@
   --dock: var(--dock-listen);
 }
 
+/* The lyrics view's entrance: it fades in and the cover grows out of the player's corner (no
+   View Transition here, main.tsx). Only with full motion (<html data-motion>). */
+[data-motion="full"] .np-view {
+  animation: np-in var(--dur-ui) var(--ease-out);
+}
+
+[data-motion="full"] .np-side .art--cover {
+  transform-origin: 0 100%;
+  animation: np-cover-in var(--dur-morph) var(--ease-out) both;
+}
+
+@keyframes np-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes np-cover-in {
+  from {
+    opacity: 0;
+    scale: var(--np-cover-from);
+    translate: 0 var(--np-cover-rise);
+  }
+}
+
 .np-side {
   position: absolute;
   top: var(--sp-8);

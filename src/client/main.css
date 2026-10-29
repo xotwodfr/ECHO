@@ -2283,3 +2283,63 @@ a {
     padding: var(--sp-6) var(--sp-5);
   }
 }
+
+/* ---- Page changes (main.tsx pageTransition, View Transitions) ----
+   Only the page moves: it fades out quickly and the new one rises in, while the frame, the panels
+   and the player hold still. A clicked card's cover flies into its page's header (named there for
+   the one change). */
+/* Named only while a change runs (html.vt): a named element composites on its own, which would
+   change the glass over it the rest of the time. */
+.vt .canvas {
+  view-transition-name: page;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+}
+
+/* The new page is already in place under the pictures: clicks and drags reach it at once. */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(page) {
+  animation: page-out var(--dur-page-out) var(--ease-exit) both;
+}
+
+::view-transition-new(page) {
+  animation: page-in var(--dur-page) var(--ease-out) both;
+}
+
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes page-in {
+  from {
+    opacity: 0;
+    translate: 0 var(--page-rise);
+  }
+}
+
+.vt .page-head .art {
+  view-transition-name: cover;
+}
+
+::view-transition-group(cover) {
+  animation-duration: var(--dur-morph);
+  animation-timing-function: var(--ease-out);
+}
+
+/* The flying cover is the picture itself: no cross-fade between its two sizes. */
+::view-transition-old(cover) {
+  animation: none;
+  opacity: 0;
+}
+
+::view-transition-new(cover) {
+  animation: none;
+}

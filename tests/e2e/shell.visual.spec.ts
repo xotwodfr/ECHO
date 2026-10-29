@@ -34,6 +34,16 @@ async function pausedAt42(page: Page, url: string) {
       history.pushState(null, '', u);
       dispatchEvent(new PopStateEvent('popstate'));
     }, url);
+    // The page change runs as a View Transition: past it (the fake clock holds it otherwise).
+    await expect
+      .poll(
+        async () => {
+          await page.clock.runFor(250);
+          return page.evaluate(() => document.documentElement.classList.contains('vt'));
+        },
+        { timeout: 20_000 },
+      )
+      .toBe(false);
   }
   await page.mouse.move(0, 0);
   // No focus ring or hover left over from the clicks above.

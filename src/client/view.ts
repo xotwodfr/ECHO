@@ -188,7 +188,14 @@ export interface ViewState {
   navigate(route: Route, opts?: { replace?: boolean }): void;
 }
 
-export function createViewStore(host: HistoryHost) {
+/**
+ * `transition` wraps each page change (main.tsx: a View Transition, so the page cross-fades and
+ * covers fly); a replaced entry (typing in search) changes in place.
+ */
+export function createViewStore(
+  host: HistoryHost,
+  transition = (update: () => void, _from: Route, _to: Route) => update(),
+) {
   const here = () => host.location.pathname + host.location.search;
   const initial = parseRoute(host.location.pathname, host.location.search);
   // Deep links arrive in any spelling (`/library/albums`, `/settings/`); keep the canonical one.
@@ -199,15 +206,20 @@ export function createViewStore(host: HistoryHost) {
     navigate(route, opts) {
       const path = routePath(route);
       // Re-selecting the current view must not stack duplicate entries for Back.
-      if (opts?.replace || path === here()) host.history.replaceState(null, '', path);
-      else host.history.pushState(null, '', path);
-      set({ route });
+      if (opts?.replace || path === here()) {
+        host.history.replaceState(null, '', path);
+        set({ route });
+      } else {
+        host.history.pushState(null, '', path);
+        transition(() => set({ route }), store.getState().route, route);
+      }
     },
   }));
 
-  host.addEventListener('popstate', () =>
-    store.setState({ route: parseRoute(host.location.pathname, host.location.search) }),
-  );
+  host.addEventListener('popstate', () => {
+    const route = parseRoute(host.location.pathname, host.location.search);
+    transition(() => store.setState({ route }), store.getState().route, route);
+  });
   return store;
 }
 

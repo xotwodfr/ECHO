@@ -122,11 +122,20 @@ test('rapid skipping never shows another track’s lyrics (LYR-19)', async ({ pa
 });
 
 test('a click on a lyric line plays from it, even when paused', async ({ page }) => {
+  test.setTimeout(60_000); // sign-in, Navidrome, playback and lyrics: slow on a loaded run
   await signedInWithNavidrome(page);
   await playAlbum(page, 'al-1'); // Harbour Lights 1: "Second line here" starts at 5 s
   const dock = page.getByRole('region', { name: 'Player' });
   await dock.getByRole('button', { name: 'Pause', exact: true }).click();
   await expect(dock).toHaveAttribute('data-status', 'paused');
+  // The mock's songs last 20 s: on a slow run the next may have started; back to the first.
+  for (
+    let i = 0;
+    i < 3 && (await dock.locator('.dock-title').textContent()) !== 'Harbour Lights 1';
+    i++
+  )
+    await dock.getByRole('button', { name: 'Previous' }).click();
+  await expect(dock.locator('.dock-title')).toHaveText('Harbour Lights 1');
   // The field keeps its lines moving (springs) and recycles their elements, so Playwright's
   // retrying click can miss under load: a click at the line's centre, from the page itself.
   await page.locator('.ly-field .ly-line', { hasText: 'Second line here' }).evaluate((el) => {
