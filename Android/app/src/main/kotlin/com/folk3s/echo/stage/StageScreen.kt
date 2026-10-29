@@ -107,7 +107,6 @@ fun StageScreen(
   chrome: StageChrome,
   onClose: () -> Unit,
   dock: @Composable () -> Unit,
-  lyrics: @Composable (StageView?) -> Unit = {},
 ) {
   val ctx = LocalContext.current
   val app = ctx.echo
@@ -128,6 +127,7 @@ fun StageScreen(
       Quality.Auto -> sp.getString(LAST_TIER, null)?.let { runCatching { Tier.valueOf(it) }.getOrNull() }?.takeIf { it != Tier.T3 } ?: Tier.T1
     }
   var stage by remember { mutableStateOf<StageView?>(null) }
+  var dockPx by remember { mutableStateOf(0f) }
 
   // Idle chrome hides after 3 s while playing (§6.1); any touch brings it back.
   var touchedAt by remember { mutableStateOf(System.currentTimeMillis()) }
@@ -203,11 +203,11 @@ fun StageScreen(
           val side = minOf(maxWidth, maxHeight * 0.6f, 640.dp)
           Artwork(t.cover, t.album.title, side, radius = 8.dp)
         }
-      view == StageViewMode.Lyrics -> lyrics(s)
+      view == StageViewMode.Lyrics -> LyricsView(s, dockPx, chrome)
       else -> {}
     }
     TopChrome(chrome, view, { view = it }, onClose, dp)
-    Box(Modifier.align(Alignment.BottomCenter)) { dock() }
+    Box(Modifier.align(Alignment.BottomCenter).onGloballyPositioned { dockPx = it.size.height.toFloat() }) { dock() }
     // Hidden chrome takes no input: a blind tap brings it back and never hits a control (§6.1).
     if (!chrome.visible) Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { touchedAt = System.currentTimeMillis() } })
   }
@@ -297,6 +297,39 @@ private fun Brightness(chrome: StageChrome, density: Float) {
             .drawBehind { drawRect(Chamber.text, size = Size(size.width * prefs.backdrop, size.height)) },
         )
       }
+    }
+  }
+}
+
+/** The Lyrics view (§9.4): the field, or a note where the column would be; the credit above the dock. */
+@Composable
+private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome) {
+  val app = LocalContext.current.echo
+  val ls by app.lyrics.state.collectAsStateWithLifecycle()
+  val prefs by app.prefs.state.collectAsStateWithLifecycle()
+  val doc = ls.doc
+  val alpha by animateFloatAsState(if (chrome.visible) 1f else 0f, tween(if (chrome.visible) 160 else 640), label = "credit")
+  @Composable
+  fun note(text: String) =
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+      Text(text, color = Chamber.muted, modifier = Modifier.padding(start = maxWidth * 0.18f, top = maxHeight * 0.4f))
+    }
+  when {
+    ls.status == com.folk3s.echo.stage.lyrics.LyricsStatus.Waiting -> note("Finding lyrics…")
+    doc == null -> note("No lyrics found")
+    doc.sync == "none" ->
+      if (!prefs.showUnsynced) note("Lyrics aren’t time-synced for this track")
+      else
+        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(horizontal = 32.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 120.dp, bottom = 200.dp)) {
+          item { Text("Lyrics aren’t time-synced for this track", color = Chamber.faint, modifier = Modifier.padding(bottom = 24.dp)) }
+          items(doc.lines.size) { i -> Text(doc.lines[i].text, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(fontFamily = com.folk3s.echo.ui.MonaSans), modifier = Modifier.padding(vertical = 6.dp)) }
+        }
+    else -> com.folk3s.echo.stage.lyrics.LyricsField(stage, dockPx)
+  }
+  // The credit stays with the chrome (LYRICS_INTEGRATION.md §8: removing it is a defect).
+  if (doc != null) {
+    Box(Modifier.fillMaxSize().padding(start = 24.dp, bottom = with(LocalDensity.current) { dockPx.toDp() } + 8.dp).alpha(alpha), contentAlignment = Alignment.BottomStart) {
+      Text(doc.attribution.text, color = Chamber.faint, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
     }
   }
 }

@@ -26,6 +26,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   val playback by lazy { Playback(this) }
   val palette by lazy { AlbumPalette(this) }
   val prefs by lazy { PrefsStore(this) }
+  val lyrics by lazy { com.folk3s.echo.stage.lyrics.Lyrics(this) }
 
   override fun onCreate() {
     super.onCreate()

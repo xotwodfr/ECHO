@@ -53,6 +53,10 @@ class StageView(context: Context, initialTier: Tier, private val manualTier: Boo
   @Volatile var keyY = 0.4f
   @Volatile var trackStartedAt = 0L
 
+  /** The newest audio features (§3.4), for the lyric field's beat terms. */
+  @Volatile var features = Features.SILENT
+    private set
+
   /** Called on the GL thread when the governor changes the tier (the screen remembers it). */
   var onTier: (Tier) -> Unit = {}
 
@@ -210,6 +214,7 @@ class StageView(context: Context, initialTier: Tier, private val manualTier: Boo
 
     val reverbOn = room == RoomMode.Reverb && !still
     val features = if (reverbOn) analyser.sample(dt) else Features.SILENT
+    this.features = features
     renderer.setReverb(reverbOn)
     val rv = if (reverbOn) reverb.step(features, dt, keyX.toDouble(), keyY.toDouble()) else null
 
