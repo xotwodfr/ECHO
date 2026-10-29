@@ -12,7 +12,10 @@ test('REL-02: a broken stream is reloaded, then skipped with a toast', async ({ 
   await signedInWithNavidrome(page);
   await page.goto('/library/album/al-2');
   await faults('breakStreamAt=4000'); // every stream breaks after 4 KB
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   await expect(page.getByText('This track could not be played. Skipped to the next.')).toBeVisible({
     timeout: 15_000,
   });
@@ -30,7 +33,10 @@ test('REL-02: a stream failing before it starts is reloaded and plays, with no s
   await signedInWithNavidrome(page);
   await page.goto('/library/album/al-2');
   await faults('failStreams=2');
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   const dock = page.getByRole('region', { name: 'Player' });
   await expect(dock).toHaveAttribute('data-status', 'playing', { timeout: 15_000 });
   await expect(dock).toContainText('Copper Rain 1');

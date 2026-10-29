@@ -12,7 +12,7 @@ export interface Prefs {
     crossfadeSec: number;
     replayGain: 'off' | 'track' | 'album' | 'auto';
     scrobble: boolean;
-    /** When the music runs out, similar songs follow (Spotify's Autoplay). */
+    /** When the music runs out, similar songs follow (Spotify's Autoplay); per device, as Spotify's. */
     autoplay: boolean;
     quality: 'auto' | 'raw' | '320' | '192' | '128'; // per device
     volume: number; // 0..1, per device (its own speakers)
@@ -66,7 +66,7 @@ export const DEFAULT_PREFS: Prefs = {
 type Section = keyof Prefs;
 /** Keys kept per device, in localStorage, never sent to the server. */
 const DEVICE: { [S in Section]?: (keyof Prefs[S])[] } = {
-  playback: ['quality', 'volume'],
+  playback: ['quality', 'volume', 'autoplay'],
   visuals: ['quality', 'backdrop'],
 };
 const isDevice = (s: Section, k: string) => (DEVICE[s] as string[] | undefined)?.includes(k);

@@ -68,7 +68,7 @@ async function hasWebGL2(page: Page) {
 }
 
 async function openStage(page: Page) {
-  await page.goto('/');
+  await page.goto('/listen');
   await expect(stage(page)).not.toHaveAttribute('data-renderer', 'pending', { timeout: 15_000 });
 }
 
@@ -93,11 +93,9 @@ test('no WebGL 2: the CSS room, and Settings says visuals are limited', async ({
   expect(
     await page.locator('.stage-room-css').evaluate((el) => getComputedStyle(el).backgroundImage),
   ).toMatch(/radial-gradient.*radial-gradient/);
-  await page.getByRole('link', { name: 'Library', exact: true }).click();
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Settings' })
-    .click();
+  await page.getByRole('button', { name: 'Close Now playing' }).click();
+  await page.getByRole('button', { name: 'Profile' }).click();
+  await page.getByRole('menuitem', { name: 'Settings' }).click();
   await expect(page.getByText("WebGL 2 isn't available in this browser.")).toBeVisible();
   await expect(page.locator('.notice .pill')).toHaveText('Visuals limited');
   expect(errors).toEqual([]);
@@ -113,13 +111,7 @@ test.describe('with WebGL 2', () => {
     // Most tests here navigate again. A `goto` while the first page's font is still downloading
     // aborts it, and Firefox logs that as a console error, which tests counting errors would see.
     // `fonts.ready` is not enough: it resolves at once if the load has not started yet.
-    // Since the Material 3 shell, the Library loads Roboto Flex too.
-    await page.evaluate(() =>
-      Promise.all([
-        document.fonts.load('16px "Mona Sans"'),
-        document.fonts.load('16px "Roboto Flex"'),
-      ]).then(() => undefined),
-    );
+    await page.evaluate(() => document.fonts.load('16px "Figtree"').then(() => undefined));
   });
 
   test('renders the room in Ambient mode, without errors', async ({ page }) => {
@@ -145,8 +137,8 @@ test.describe('with WebGL 2', () => {
     await tile.hover();
     await tile.getByRole('button', { name: /^Play / }).click();
     await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Listen' })
+      .getByRole('region', { name: 'Player' })
+      .getByRole('button', { name: 'Lyrics', exact: true })
       .click();
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });
     const setHidden = (hidden: boolean) =>
@@ -237,7 +229,7 @@ test.describe('with WebGL 2', () => {
     await countFrames(page);
     await openStage(page);
     await expect(stage(page)).toHaveAttribute('data-renderer', 'webgl');
-    await page.getByRole('link', { name: 'Library', exact: true }).click();
+    await page.getByRole('button', { name: 'Close Now playing' }).click();
     await expect(stage(page)).toHaveCount(0);
     await paletteSettled(page);
     const a = await frames(page);

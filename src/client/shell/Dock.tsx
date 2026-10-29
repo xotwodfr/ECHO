@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import { connectionStore } from '../connection.ts';
@@ -21,6 +21,7 @@ import { glass } from '../ui/glass.ts';
 import { Artwork } from '../ui/media.tsx';
 import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
+import { useCompact, useWide } from './compact.ts';
 import { HeartButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { panels, toggleRight } from './panels.ts';
@@ -40,13 +41,6 @@ const SEEK_MS = 5000; // ←/→ (§7)
 const SEEK_FAR_MS = 15000; // Shift+←/→
 const VOLUME_STEP = 0.05; // ↑/↓
 
-const COMPACT = '(max-width: 719.98px)';
-const onCompact = (f: () => void) => {
-  const m = window.matchMedia(COMPACT);
-  m.addEventListener('change', f);
-  return () => m.removeEventListener('change', f);
-};
-
 export function Dock({ stage }: { stage: boolean }) {
   const c = usePlayback();
   // Everything but the position: the dock re-renders on state changes, the scrubber on its tick.
@@ -58,16 +52,18 @@ export function Dock({ stage }: { stage: boolean }) {
   const hasUpcoming = useQueue((q) => upcoming(q).length > 0);
   const right = useStore(panels, (s) => s.right);
   const navigate = useView((s) => s.navigate);
-  const compact = useSyncExternalStore(onCompact, () => window.matchMedia(COMPACT).matches);
+  const compact = useCompact();
+  // The queue lives in the right panel where there is one; elsewhere it is a sheet.
+  const sheet = !useWide() || stage;
   const [queueOpen, setQueueOpen] = useState(false);
   const idleId = useId();
   const endId = useId();
   const active = ACTIVE.includes(status);
   // Q: the queue in the right panel on wide screens, a sheet on phones and over the lyrics view.
   const toggleQueue = useCallback(() => {
-    if (compact || stage) setQueueOpen((open) => !open);
+    if (sheet) setQueueOpen((open) => !open);
     else toggleRight('queue');
-  }, [compact, stage]);
+  }, [sheet]);
   const [helpOpen, setHelpOpen] = useState(false);
   const openHelp = useCallback(() => setHelpOpen(true), []);
   useShortcuts(stage, toggleQueue, openHelp);
@@ -205,9 +201,9 @@ export function Dock({ stage }: { stage: boolean }) {
         <IconButton
           label={strings.dock.queue}
           icon="queue"
-          aria-haspopup={compact || stage ? 'dialog' : undefined}
-          pressed={!compact && !stage ? right === 'queue' : undefined}
-          aria-expanded={compact || stage ? queueOpen : undefined}
+          aria-haspopup={sheet ? 'dialog' : undefined}
+          pressed={sheet ? undefined : right === 'queue'}
+          aria-expanded={sheet ? queueOpen : undefined}
           onClick={toggleQueue}
         />
         <SleepMenu />

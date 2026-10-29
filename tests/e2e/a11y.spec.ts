@@ -84,20 +84,11 @@ test('A11Y-01: every §7 function by keyboard alone; nothing fires while typing'
   await expect(d.getByRole('button', { name: 'Shuffle' })).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('r');
   await expect(d.getByRole('button', { name: 'Repeat all' })).toBeVisible();
-  // Stage views.
-  const view = page.getByRole('group', { name: 'Stage view' });
-  await page.keyboard.press('c'); // Cover has no button (owner, 2026-10-28)
-  await expect(page.locator('.stage-cover')).toBeVisible();
-  await page.keyboard.press('v');
-  await expect(view.getByRole('button', { name: 'Visual' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  // The lyrics view's modes: C shows the cover alone, L the lyrics again.
+  await page.keyboard.press('c');
+  await expect(page.locator('.np-view')).toHaveAttribute('data-mode', 'cover');
   await page.keyboard.press('l');
-  await expect(view.getByRole('button', { name: 'Lyrics' })).toHaveAttribute(
-    'aria-pressed',
-    'true',
-  );
+  await expect(page.locator('.np-view')).toHaveAttribute('data-mode', 'lyrics');
   // Queue sheet, opened and closed by keys.
   await page.keyboard.press('q');
   await expect(page.getByRole('dialog', { name: 'Queue' })).toBeVisible();
@@ -118,7 +109,7 @@ test('A11Y-01: every §7 function by keyboard alone; nothing fires while typing'
   // `/` (and Ctrl+K) to search; typing there fires no shortcuts.
   await page.keyboard.press('g');
   await page.keyboard.press('p');
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/listen$/);
   await page.keyboard.press('Control+k');
   const search = page.getByRole('searchbox').first();
   await expect(search).toBeFocused();
@@ -230,7 +221,10 @@ test('A11Y-09: at 200% zoom (1440×900) nothing is lost', async ({ browser }) =>
   }
   // The functions stay reachable: navigation, the transport, the queue.
   await page.goto('/library/album/al-1');
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   await expect(dock(page).getByRole('button', { name: 'Queue' })).toBeVisible();
   await ctx.close();
@@ -268,7 +262,9 @@ test('forced colours: chosen options, switches, the current tab and the seek tra
   expect(await fill('.toggle[aria-checked="false"]', '::after')).not.toBe(
     await bg('.toggle[aria-checked="false"]'),
   );
-  // The current tab's indicator, and the dock's seek fill.
-  expect(await fill('.tabs a[aria-current="page"]', '::after')).not.toBe('rgba(0, 0, 0, 0)');
+  // The current tab, and the player's seek fill.
+  expect(await bg('.tabs a[aria-current="page"]')).not.toBe(
+    await bg('.tabs a:not([aria-current])'),
+  );
   expect(await bg('.dock .slider-fill')).not.toBe(await bg('.dock'));
 });

@@ -1,6 +1,6 @@
 /* The frame and the pages (DESIGN_SYSTEM.md §5), after Spotify's. Every value comes from
    tokens.css; the one exception is the breakpoints, because media queries cannot read custom
-   properties (DS-01 allow-list): compact < 720px, medium 720–1279px, wide ≥ 1280px. */
+   properties (DS-01 allow-list): compact < 720px, medium 720–1399px, wide ≥ 1400px. */
 
 body {
   margin: 0;
@@ -175,9 +175,9 @@ a {
 }
 
 .search-field input:focus-visible {
-  outline: none;
   border-color: var(--text);
-  box-shadow: var(--ring-focus);
+  outline: var(--md-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--md-focus-ring));
 }
 
 .search-field input::placeholder {
@@ -246,12 +246,15 @@ a {
   position: relative;
   overflow: auto;
   padding: 0 var(--gutter) calc(var(--pill-h) + 2 * var(--pill-inset) + var(--sp-6));
+  /* What scrolls into view stops above the floating player. */
+  scroll-padding-bottom: calc(var(--pill-h) + 2 * var(--pill-inset));
   scrollbar-color: var(--raised-3) transparent;
 }
 
 /* A page without a tinted header still starts below the panel's edge. */
 .canvas > h1:first-child,
 .canvas > .home,
+.canvas > .library-grid-page,
 .canvas > .settings-page {
   margin-top: var(--sp-5);
 }
@@ -405,17 +408,18 @@ a {
   background: var(--raised-2);
 }
 
+.lp-search input:focus-visible {
+  outline-offset: 0;
+}
+
 .lp-search input {
   flex: 1;
   min-width: 0;
+  height: 100%;
   border: 0;
   background: transparent;
   color: var(--text);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
-}
-
-.lp-search input:focus-visible {
-  outline: none;
 }
 
 .lp-search input::placeholder {
@@ -445,11 +449,14 @@ a {
 .lp-list {
   flex: 1;
   min-height: 0;
+  overflow: auto;
+  scrollbar-color: var(--raised-3) transparent;
+}
+
+.lp-list ul {
   margin: 0;
   padding: 0;
-  overflow: auto;
   list-style: none;
-  scrollbar-color: var(--raised-3) transparent;
 }
 
 .library-page .lp-list {
@@ -770,13 +777,18 @@ a {
 
 /* A narrow pill (a wide panel beside it) keeps the transport and lets the extras go first. */
 @container pill (max-width: 839.98px) {
-  .volume .slider {
+  .dock-sleep {
     display: none;
   }
 }
 
 @container pill (max-width: 699.98px) {
-  .dock-sleep,
+  .volume .slider {
+    display: none;
+  }
+}
+
+@container pill (max-width: 639.98px) {
   .dock-wide {
     display: none;
   }
@@ -837,6 +849,24 @@ a {
 .spotify-logo img {
   width: var(--spotify-logo);
   height: auto;
+}
+
+/* The transport keeps its 40px targets (A11Y-07) inside the 72px pill. */
+.dock .dock-transport .icon-btn {
+  width: var(--hit-transport);
+  height: var(--hit-transport);
+}
+
+/* The song's links reach a 24px target without growing the line (WCAG 2.5.8). */
+.dock-title a,
+.dock-sub a {
+  display: inline-block;
+  max-width: 100%;
+  padding-block: var(--sp-1);
+  margin-block: calc(-1 * var(--sp-1));
+  overflow: hidden;
+  vertical-align: top;
+  text-overflow: ellipsis;
 }
 
 .dock-transport {
@@ -1442,6 +1472,11 @@ a {
   object-fit: cover;
 }
 
+/* Your Library's page: the album order as chips above the grid. */
+.canvas .album-sort {
+  margin-bottom: var(--sp-4);
+}
+
 /* ---- Settings: tabs and connected choices ---- */
 .tabs {
   display: flex;
@@ -1802,15 +1837,14 @@ a {
   margin-top: var(--sp-6);
 }
 
-/* ---- Medium (720–1279px): no right panel; below 1024 Your Library narrows to covers ---- */
-@media (max-width: 1279.98px) {
+/* ---- Medium (720–1399px): no right panel; below 1024 Your Library narrows to covers ---- */
+@media (max-width: 1399.98px) {
   .shell[data-right] {
     grid-template-columns: var(--library-w) minmax(0, 1fr);
   }
 
   .right-panel,
-  .dock .dock-wide,
-  .dock .volume .slider {
+  .dock .dock-wide {
     display: none;
   }
 

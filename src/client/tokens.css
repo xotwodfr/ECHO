@@ -80,16 +80,16 @@
   /* space */
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px;
   --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
-  --gap: 24px; --gutter: 24px; --sidebar: 300px; --dock: 72px;
+  --gap: 24px; --gutter: 24px; --sidebar: 280px; --dock: 72px;
   --form-w: 420px;
   --prefs-w: 600px;
 
   /* frame (§5) */
   --topbar: 64px;
   --panel-gap: 8px;
-  --library-w: 300px;
+  --library-w: 280px;
   --library-w-min: 72px;
-  --np-w: 320px;
+  --np-w: 300px;
   --pill-h: 72px;
   --pill-inset: 16px;
   --pill-max: 980px;
@@ -120,7 +120,7 @@
 
   /* component sizes */
   --rule: 1px; --focus-ring: 2px; --trace: 2px; --dot: 4px;
-  --icon: 16px; --icon-lg: 24px; --hit-lg: 32px; --play: 32px; --play-xl: 56px; --play-tile: 48px;
+  --icon: 16px; --icon-lg: 24px; --hit-lg: 32px; --hit-transport: 40px; --play: 40px; --play-xl: 56px; --play-tile: 48px;
   --tile-play: 48px; --search-h: 48px; --menu-item-h: 40px; --chip-h: 32px;
   --tile-min: 180px; --art-row: 40px; --art-list: 48px; --art-dock: 56px; --art-detail: 232px;
   --art-cover-max: 560px; --art-np: 100%; --art-shortcut: 64px; --art-shortcut-phone: 56px;

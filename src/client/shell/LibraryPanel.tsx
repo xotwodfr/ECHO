@@ -154,49 +154,52 @@ function LibraryRow({ row }: { row: Row }) {
 
 const OVERSCAN = 6;
 
-/** The rows near the viewport of the list's own scroller; the rest held by padding. */
+/**
+ * The rows near the viewport of the list's own scroller; the rest held by padding on the list
+ * inside it (padding on the scroller itself would make it as tall as the whole list).
+ */
 function Windowed({ rows, label }: { rows: Row[]; label: string }) {
-  const ref = useRef<HTMLUListElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   const [range, setRange] = useState({ from: 0, to: 40, rowH: 0 });
   useLayoutEffect(() => {
-    const ul = ref.current;
-    if (!ul) return;
+    const box = ref.current;
+    if (!box) return;
     const measure = () => {
-      const rowH = ul.querySelector('li')?.getBoundingClientRect().height ?? 0;
+      const rowH = box.querySelector('li')?.getBoundingClientRect().height ?? 0;
       if (!rowH) return;
-      const from = Math.max(0, Math.floor(ul.scrollTop / rowH) - OVERSCAN);
+      const from = Math.max(0, Math.floor(box.scrollTop / rowH) - OVERSCAN);
       const to = Math.min(
         rows.length,
-        Math.ceil((ul.scrollTop + ul.clientHeight) / rowH) + OVERSCAN,
+        Math.ceil((box.scrollTop + box.clientHeight) / rowH) + OVERSCAN,
       );
       setRange((r) => (r.from === from && r.to === to && r.rowH === rowH ? r : { from, to, rowH }));
     };
     measure();
-    ul.addEventListener('scroll', measure, { passive: true });
+    box.addEventListener('scroll', measure, { passive: true });
     const ro = new ResizeObserver(measure);
-    ro.observe(ul);
+    ro.observe(box);
     return () => {
-      ul.removeEventListener('scroll', measure);
+      box.removeEventListener('scroll', measure);
       ro.disconnect();
     };
   }, [rows.length]);
   const { from, to, rowH } = range;
   return (
-    <ul
-      ref={ref}
-      className="lp-list"
-      aria-label={label}
-      style={
-        {
-          paddingTop: from * rowH,
-          paddingBottom: Math.max(0, rows.length - to) * rowH,
-        } as CSSProperties
-      }
-    >
-      {rows.slice(from, to).map((row) => (
-        <LibraryRow key={row.key} row={row} />
-      ))}
-    </ul>
+    <div ref={ref} className="lp-list">
+      <ul
+        aria-label={label}
+        style={
+          {
+            paddingTop: from * rowH,
+            paddingBottom: Math.max(0, rows.length - to) * rowH,
+          } as CSSProperties
+        }
+      >
+        {rows.slice(from, to).map((row) => (
+          <LibraryRow key={row.key} row={row} />
+        ))}
+      </ul>
+    </div>
   );
 }
 

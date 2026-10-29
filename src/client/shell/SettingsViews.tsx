@@ -87,6 +87,12 @@ export function PreferencesSection() {
           onChange={(v) => save('playback', 'scrobble', v)}
         />
         <Toggle
+          label={t.autoplay}
+          checked={p.playback.autoplay}
+          onChange={(v) => save('playback', 'autoplay', v)}
+        />
+        <p className="field-hint">{t.autoplayHint}</p>
+        <Toggle
           label={t.crossfade}
           checked={p.playback.crossfadeSec > 0}
           onChange={() => {}}

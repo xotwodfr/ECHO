@@ -97,10 +97,9 @@ test('switching to a fixture album without audio stops the guide tone', async ({
   await expect.poll(() => mediaTime(page), { timeout: 5000 }).toBeGreaterThan(0.3);
   // In-app navigation: a page load would lose the element under test.
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Library', exact: true })
+    .getByRole('navigation', { name: 'Your Library' })
+    .getByRole('link', { name: /^Harbour Lights/ })
     .click();
-  await page.locator('.tile', { hasText: 'Harbour Lights' }).getByRole('link').first().click();
   await page.getByRole('button', { name: 'Play Ferry at Six' }).click();
   await expect(title(page)).toHaveText('Ferry at Six');
   await expect(dock(page)).toHaveAttribute('data-status', 'playing');

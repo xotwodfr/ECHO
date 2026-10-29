@@ -110,8 +110,8 @@ async function playOnStage(page: Page, vp: { width: number; height: number }) {
   await tile.hover();
   await tile.getByRole('button', { name: 'Play Harbour Lights' }).click();
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
   await expect(page.locator('.stage')).toHaveAttribute('data-renderer', 'webgl', {
     timeout: 15_000,

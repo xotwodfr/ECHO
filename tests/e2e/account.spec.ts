@@ -47,7 +47,10 @@ test('sign in, connect Navidrome, play a track from it', async ({ page }) => {
   await expect(tile).toBeVisible();
   await tile.getByRole('link').first().click();
   await expect(page.getByRole('heading', { level: 1, name: 'Harbour Lights' })).toBeVisible();
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
 
   const dock = page.getByRole('region', { name: 'Player' });
   await expect(dock).toHaveAttribute('data-status', 'playing');
@@ -83,7 +86,10 @@ test('the queue follows you to another device', async ({ page, browser }) => {
   await page.getByRole('button', { name: 'Connect', exact: true }).click();
   await expect(page).toHaveURL(/\/$/);
   await page.goto('/library/album/al-3');
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   const dock = page.getByRole('region', { name: 'Player' });
   await expect(dock).toContainText('Glass Weather 1');
   // Saved a moment after it changed.
@@ -127,7 +133,9 @@ test('the server library: sorts, playlists, starred and search (LIB-01, SRCH-01)
   await expect(page.getByText('Nothing in your library yet')).toHaveCount(0);
 
   await page.goto('/library/playlists');
-  await page.getByRole('button', { name: 'Evening' }).click();
+  await page.getByRole('main').getByRole('link', { name: 'Evening' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Evening' })).toBeVisible();
+  await page.locator('.action-bar').getByRole('button', { name: 'Play Evening' }).click();
   await expect(page.getByRole('region', { name: 'Player' })).toContainText('Harbour Lights 1');
 
   await page.goto('/library/starred');
@@ -147,7 +155,10 @@ test('the server library: sorts, playlists, starred and search (LIB-01, SRCH-01)
 test('album tracks hand over without a gap (PLAY-04, two voices)', async ({ page }) => {
   await signedInWithNavidrome(page);
   await page.goto('/library/album/al-1');
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   const dock = page.getByRole('region', { name: 'Player' });
   await expect(dock).toHaveAttribute('data-status', 'playing');
   // Near the end of the 20 s first track; the second is already buffered (20 s before the end).
@@ -177,16 +188,19 @@ test('artists are links to their page: the Artists tab, an album and the dock (S
   await page.getByRole('main').getByRole('link', { name: 'Lowfield' }).click();
   await expect(page).toHaveURL(/\/library\/artist\/ar-1$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Lowfield' })).toBeVisible();
-  await expect(page.locator('.tile')).toHaveCount(2);
-  await expect(page.locator('.tile', { hasText: 'Harbour Lights' })).toBeVisible();
-  await expect(page.locator('.tile', { hasText: 'Copper Rain' })).toBeVisible();
+  const discography = page.getByRole('region', { name: 'Discography' });
+  await expect(discography.locator('.tile')).toHaveCount(2);
+  await expect(discography.locator('.tile', { hasText: 'Harbour Lights' })).toBeVisible();
+  await expect(discography.locator('.tile', { hasText: 'Copper Rain' })).toBeVisible();
   await expect(page).toHaveTitle(/^Artist · ECHO$/);
-  await expect(
-    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Library' }),
-  ).toHaveAttribute('aria-current', 'page');
+  // Spotify's artist page: Fans also like (Navidrome's similar artists) and About.
+  await expect(page.getByRole('region', { name: 'Fans also like' }).locator('.tile')).toHaveCount(
+    2,
+  );
+  await expect(page.getByRole('region', { name: 'About' })).toContainText('small room by the sea');
   // From an album's header…
   await page.goto('/library/album/al-2');
-  await page.locator('.detail-artist').getByRole('link', { name: 'Lowfield' }).click();
+  await page.locator('.ph-facts').getByRole('link', { name: 'Lowfield' }).click();
   await expect(page).toHaveURL(/\/library\/artist\/ar-1$/);
   // …and from the dock, while it plays.
   await playAlbum(page, 'al-1');

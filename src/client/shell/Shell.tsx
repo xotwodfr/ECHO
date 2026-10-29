@@ -10,11 +10,19 @@ import { buttonClass } from '../ui/controls.tsx';
 import { glass } from '../ui/glass.ts';
 import { Icon } from '../ui/icons.tsx';
 import { Menu, ToastRegion } from '../ui/overlays.tsx';
-import { type Route, SETTINGS_SECTIONS, type SettingsSection, type ViewStore } from '../view.ts';
+import {
+  LIBRARY_TABS,
+  type LibraryTab,
+  type Route,
+  SETTINGS_SECTIONS,
+  type SettingsSection,
+  type ViewStore,
+} from '../view.ts';
 import { InviteView } from './AccountViews.tsx';
 import { AdminSection } from './AdminViews.tsx';
 import { AccountSection, LoginView, SessionExpiredSheet, SetupView } from './AuthViews.tsx';
 import { useChromeIdle } from './chrome.ts';
+import { useCompact } from './compact.ts';
 import { Dock } from './Dock.tsx';
 import { HomeView } from './HomeView.tsx';
 import { LibraryPanel } from './LibraryPanel.tsx';
@@ -22,6 +30,7 @@ import {
   AlbumView,
   ArtistView,
   GenreView,
+  LibraryContent,
   LikedView,
   PlaylistView,
   SearchResults,
@@ -199,6 +208,28 @@ function Tabs<T extends string>(props: {
   );
 }
 
+/**
+ * Your Library as a page: on phones the list (Spotify's app), on wide screens Spotify's expanded
+ * view: chips for the kinds, the album order, and a grid of covers.
+ */
+function LibraryPage({ tab }: { tab: LibraryTab }) {
+  const compact = useCompact();
+  if (compact) return <LibraryPanel page />;
+  return (
+    <div className="library-grid-page">
+      <h1 tabIndex={-1}>{strings.nav.library}</h1>
+      <Tabs
+        label={strings.library.tabsLabel}
+        items={LIBRARY_TABS}
+        names={strings.library.tabs}
+        current={tab}
+        to={(t) => ({ view: 'library', tab: t })}
+      />
+      <LibraryContent tab={tab} />
+    </div>
+  );
+}
+
 /** Settings: Preferences, Account and, for admins, Admin (SETTINGS_AND_SECURITY.md §7.3). */
 function SettingsView({ section }: { section: SettingsSection }) {
   const session = useStore(sessionStore);
@@ -245,9 +276,7 @@ function View({ route }: { route: Route }) {
         </Stage>
       );
     case 'library':
-      // Phones: Your Library is a page. Wide screens have it in the left panel; the page
-      // shows the same list, for a link or a bookmark.
-      return <LibraryPanel page />;
+      return <LibraryPage tab={route.tab} />;
     case 'album':
       return <AlbumView id={route.id} />;
     case 'artist':

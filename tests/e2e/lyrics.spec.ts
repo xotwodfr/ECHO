@@ -10,7 +10,20 @@ import type { LyricLine, LyricsDoc } from '../../src/shared/types.ts';
 // playback of the guide tracks for pause and scrub. The field runs on the CSS room too, so all of
 // this runs in Firefox without WebGL.
 
-const DOCK = 88;
+// The room the floating pill takes at the bottom of the lyrics view (tokens.css --dock-listen).
+const DOCK = 104;
+/** The lyric column lives in the lyrics view's right side: its edges, from the host's box. */
+async function column(page: Page) {
+  const host = await page.evaluate(() => {
+    const r = (document.querySelector('.ly-host') as HTMLElement).getBoundingClientRect();
+    return { x: r.left, w: r.width };
+  });
+  return {
+    left: host.x + ((1 - LYRICS.maxWidth) / 2) * host.w,
+    right: host.x + ((1 + LYRICS.maxWidth) / 2) * host.w,
+    width: host.w,
+  };
+}
 const doc = (name: string) => lyricFixtures[name] as LyricsDoc;
 const timeline = (name: string) => buildTimeline(doc(name));
 
@@ -76,10 +89,11 @@ test.describe('deterministic frames', () => {
     expect(ls.filter((l) => l.cy < (a?.cy ?? 0)).length).toBeGreaterThanOrEqual(2); // sung lines
     expect(ls.filter((l) => l.cy > (a?.cy ?? 0)).length).toBeGreaterThanOrEqual(3);
     const ai = ls.indexOf(a as LineInfo);
+    const col = await column(page);
     for (let k = 0; k < ls.length; k++) {
       const l = ls[k] as LineInfo;
       // One column: every line starts at its left edge, one gap below the line before.
-      expect(Math.abs(l.left - 0.18 * vp.width)).toBeLessThanOrEqual(2);
+      expect(Math.abs(l.left - col.left)).toBeLessThanOrEqual(2);
       if (k > 0)
         expect(Math.abs(l.top - (ls[k - 1] as LineInfo).bottom - gap)).toBeLessThanOrEqual(2);
       // Dimmer and blurrier with distance, both ways.
@@ -175,12 +189,13 @@ test.describe('deterministic frames', () => {
         const r = el?.getBoundingClientRect();
         return { left: r?.left ?? -1, right: r?.right ?? -1, side: el?.dataset.side };
       }, l.text);
+      const col = await column(page);
       if (l.oppositeAligned) {
         expect(box.side).toBe('right');
-        expect(Math.abs(box.right - 0.82 * vp.width)).toBeLessThanOrEqual(2);
+        expect(Math.abs(box.right - col.right)).toBeLessThanOrEqual(2);
       } else {
         expect(box.side).toBe('left');
-        expect(Math.abs(box.left - 0.18 * vp.width)).toBeLessThanOrEqual(2);
+        expect(Math.abs(box.left - col.left)).toBeLessThanOrEqual(2);
       }
     }
     const withBg = tl.lines.findIndex((l) => l.background?.length);
@@ -312,13 +327,15 @@ test.describe('layout on real measurements', () => {
     await page.setViewportSize({ width: 2560, height: 1440 });
     const log = () =>
       page.evaluate(() => (window as unknown as { __log: [string, number][] }).__log);
-    await expect.poll(async () => (await log()).some(([e]) => e === 'laid 2560')).toBe(true);
+    // The field is as wide as the lyrics view's right side.
+    const final = `laid ${(await column(page)).width}`;
+    await expect.poll(async () => (await log()).some(([e]) => e === final)).toBe(true);
     await page.waitForTimeout(300);
     const events = await log();
     // Every layout waits 120 ms after the resize before it (a slow resize step may let 1024 lay
     // out too), and the last one is at the final size.
     const laids = events.filter(([e]) => e.startsWith('laid'));
-    expect(laids.at(-1)?.[0]).toBe('laid 2560');
+    expect(laids.at(-1)?.[0]).toBe(final);
     for (const [, at] of laids) {
       const before = Math.max(
         ...events.filter(([e, t]) => e === 'resize' && t < at).map(([, t]) => t),
@@ -379,8 +396,8 @@ async function playGuide(page: Page, name: string, atS: number) {
   await page.goto('/library/album/al-guide');
   await page.getByRole('button', { name: `Play ${name}`, exact: true }).click();
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
   await expect(page.locator('.ly-field')).toBeAttached();
   await seekTo(page, atS);

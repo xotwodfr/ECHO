@@ -59,13 +59,13 @@ export async function signedIn(page: Page, prefix = 'u', role: 'user' | 'admin' 
   return user;
 }
 
-/** Plays an album from its page, then opens the Stage. */
+/** Plays an album from its page, then opens the lyrics view (the player's Lyrics button). */
 export async function playAlbum(page: Page, albumId: string, track = 0) {
   await page.goto(`/library/album/${albumId}`);
   if (track === 0)
     await page
-      .locator('.detail-actions')
-      .getByRole('button', { name: 'Play', exact: true })
+      .locator('.action-bar')
+      .getByRole('button', { name: /^Play / })
       .click();
   else await page.locator('.track-row').nth(track).getByRole('button').first().click();
   await expect(page.getByRole('region', { name: 'Player' })).toHaveAttribute(
@@ -73,8 +73,8 @@ export async function playAlbum(page: Page, albumId: string, track = 0) {
     'playing',
   );
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
 }
 

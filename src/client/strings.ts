@@ -206,6 +206,8 @@ export const strings = {
     },
     defaultProvider: 'Default service',
     scrobble: 'Scrobble plays to Navidrome',
+    autoplay: 'Autoplay',
+    autoplayHint: 'When your music ends, similar songs play. This device only.',
     crossfade: 'Crossfade between tracks',
     lyrics: 'Lyrics',
     size: 'Lyric size',

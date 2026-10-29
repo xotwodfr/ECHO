@@ -12,8 +12,8 @@ test('Reverb on the stress fixture stays under the flash limit', async ({ page }
   await page.goto('/library/album/al-guide');
   await page.getByRole('button', { name: 'Play rap-word', exact: true }).click();
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
   const stage = page.locator('.stage');
   await expect(stage).toHaveAttribute('data-renderer', 'webgl', { timeout: 15_000 });

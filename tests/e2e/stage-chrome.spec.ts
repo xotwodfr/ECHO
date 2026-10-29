@@ -1,8 +1,9 @@
 import { expect, type Page, test } from '@playwright/test';
 import sharp from 'sharp';
 
-// M2 task 5: chrome auto-hide on the Stage (PRODUCT_SPEC.md §6.1) and the view modes. Real time:
-// the idle timeout is 3 s, and fast-forwarding a fake clock would render every Stage frame.
+// The lyrics view's chrome (PRODUCT_SPEC.md §6.1): the close chevron and the floating pill hide
+// after idle; the song on the left, the lyrics on the right, or the cover alone. Real time: the idle
+// timeout is 3 s, and fast-forwarding a fake clock would render every Stage frame.
 
 // Reduced motion: the Stage draws one Still frame instead of a continuous SwiftShader loop, which
 // keeps parallel runs fast. Chrome fades and the Cover crossfade are opacity, so they still run;
@@ -23,8 +24,8 @@ async function playOnStage(page: Page, album = 'Harbour Lights') {
   await tile.hover();
   await tile.getByRole('button', { name: `Play ${album}` }).click();
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
   await expect(page.locator('.stage')).not.toHaveAttribute('data-renderer', 'pending', {
     timeout: 15_000,
@@ -34,33 +35,28 @@ async function playOnStage(page: Page, album = 'Harbour Lights') {
 }
 
 test.describe('chrome auto-hide', () => {
-  test('hides after 3 s idle while playing; progress stays at 40%; input restores it', async ({
-    page,
-  }) => {
+  test('hides after 3 s idle while playing; input restores it', async ({ page }) => {
     await playOnStage(page);
     await page.waitForTimeout(2500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome', 'hidden');
     await expect(shell(page)).toHaveAttribute('data-chrome', 'hidden', { timeout: 2000 });
-    // The top chrome fades per glass item (a fading row would cut the glass off from the room).
+    // The top chrome fades per glass item (a fading row would cut the glass off from the room),
+    // and the pill as a whole.
     await expect.poll(() => opacity(page, '.stage-chrome .glass')).toBe(0);
-    await expect.poll(() => opacity(page, '.dock-transport')).toBe(0);
-    await expect.poll(() => opacity(page, '.dock-meta')).toBe(0);
-    await expect.poll(() => opacity(page, '.dock-scrub')).toBeCloseTo(0.4, 2);
+    await expect.poll(() => opacity(page, '.dock')).toBe(0);
     expect(await page.locator('.stage').evaluate((el) => getComputedStyle(el).cursor)).toBe('none');
     // Hidden controls take no pointer input.
-    expect(
-      await page.locator('.dock-transport').evaluate((el) => getComputedStyle(el).pointerEvents),
-    ).toBe('none');
+    expect(await page.locator('.dock').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe(
+      'none',
+    );
     await page.mouse.move(610, 320);
     await expect(shell(page)).not.toHaveAttribute('data-chrome');
     // Restores over 160 ms (asserted as the transition itself: wall-clock timing under parallel
     // SwiftShader rendering is not a measure of the CSS).
     expect(
-      await page
-        .locator('.dock-transport')
-        .evaluate((el) => getComputedStyle(el).transitionDuration),
+      await page.locator('.dock').evaluate((el) => getComputedStyle(el).transitionDuration),
     ).toBe('0.16s');
-    await expect.poll(() => opacity(page, '.dock-transport')).toBe(1);
+    await expect.poll(() => opacity(page, '.dock')).toBe(1);
   });
 
   test('a key press restores it too', async ({ page }) => {
@@ -86,7 +82,7 @@ test.describe('chrome auto-hide', () => {
     await page.waitForTimeout(3500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome');
     await page.keyboard.press('Escape');
-    await page.getByRole('link', { name: 'Library', exact: true }).first().click();
+    await page.getByRole('button', { name: 'Close Now playing' }).click();
     await page.waitForTimeout(3500);
     await expect(shell(page)).not.toHaveAttribute('data-chrome');
   });
@@ -130,171 +126,70 @@ test.describe('chrome auto-hide', () => {
 });
 
 test.describe('background', () => {
-  test('the room is drawn on the blurred cover; its brightness button widens into a slider', async ({
-    page,
-    browserName,
-  }) => {
+  test('the room is drawn on the blurred cover', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'WebGL here is Chromium’s (playwright.config.ts)');
     await playOnStage(page);
     await expect(page.locator('.stage')).toHaveAttribute('data-cover', 'shown', {
       timeout: 10_000,
     });
-    const button = page.getByRole('button', { name: 'Background brightness' });
-    await button.click();
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
-    const slider = page.getByRole('slider', { name: 'Background brightness' });
-    await expect(slider).toHaveAttribute('aria-valuenow', '0.5');
-    await slider.focus();
-    await page.keyboard.press('ArrowRight');
-    await expect(slider).toHaveAttribute('aria-valuenow', '0.55');
-    // Per device, like the volume: kept in this browser, never sent to the server.
-    expect(await page.evaluate(() => localStorage.getItem('echo.visuals.backdrop'))).toBe('0.55');
-    // Escape, or a click elsewhere, narrows it back to the round button; the slider is out of reach.
-    await page.keyboard.press('Escape');
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
-    await expect(button).toBeFocused();
-    await expect(page.locator('.stage-brightness-track')).toHaveJSProperty('inert', true);
-    await button.click();
-    await expect(button).toHaveAttribute('aria-expanded', 'true');
-    await page.mouse.click(600, 500);
-    await expect(button).toHaveAttribute('aria-expanded', 'false');
   });
 });
 
-test.describe('view modes', () => {
-  test('Lyrics (placeholder) and Visual from the switch, Cover from C', async ({ page }) => {
-    await playOnStage(page);
-    const sw = page.getByRole('group', { name: 'Stage view' });
-    await expect(sw.getByRole('button', { name: 'Lyrics' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    await expect(page.locator('.stage-lyrics')).toHaveText('Lyrics will appear here.');
-    const box = await page.locator('.stage-lyrics').boundingBox();
-    const vp = page.viewportSize() as { width: number; height: number };
-    expect(Math.abs((box?.y ?? 0) + (box?.height ?? 0) / 2 - 0.4 * vp.height)).toBeLessThan(2); // 40% H
-
-    // Cover has no button (owner, 2026-10-28): C reaches it, and no view button shows pressed.
-    await expect(sw.getByRole('button', { name: 'Cover' })).toHaveCount(0);
-    await page.locator('h1').first().focus();
-    await page.keyboard.press('c');
-    await expect(sw.locator('[aria-pressed="true"]')).toHaveCount(0);
-    const art = page.locator('.stage-cover .art');
-    // Small SVG covers are inlined as data: URIs; their <title> names them.
-    await expect(art.locator('img')).toHaveAttribute('src', /Harbour%20Lights/);
-    const a = await art.boundingBox();
-    expect(a?.width).toBeCloseTo(Math.min(0.6 * vp.height, 640), 0); // min(60vh, 640px)
-    expect(await art.locator('img').evaluate((el) => getComputedStyle(el).objectFit)).toBe(
-      'contain',
-    );
-    expect(await art.evaluate((el) => getComputedStyle(el).borderRadius)).toBe('8px');
-    await expect(page.locator('.stage-lyrics')).toHaveCount(0);
-
-    await sw.getByRole('button', { name: 'Visual' }).click();
-    await expect(page.locator('.stage-cover, .stage-lyrics')).toHaveCount(0);
-  });
-
-  test('keys: V cycles, C toggles Cover, L toggles Lyrics/Visual; only on the Stage', async ({
+test.describe('the song and the lyrics', () => {
+  test('the song on the left, the lyrics on the right; C shows the cover alone, centred', async ({
     page,
   }) => {
     await playOnStage(page);
-    const pressed = page
-      .getByRole('group', { name: 'Stage view' })
-      .locator('[aria-pressed="true"]');
+    const view = page.locator('.np-view');
+    await expect(view).toHaveAttribute('data-mode', 'lyrics');
+    const side = page.locator('.np-side');
+    await expect(side.locator('.np-title')).toHaveText('Ferry at Six');
+    await expect(side.locator('.np-artist')).toHaveText('Lowfield');
+    // Small SVG covers are inlined as data: URIs; their <title> names them.
+    await expect(side.locator('.art img')).toHaveAttribute('src', /Harbour%20Lights/);
+    expect(await side.locator('.art img').evaluate((el) => getComputedStyle(el).objectFit)).toBe(
+      'cover',
+    );
+    const vp = page.viewportSize() as { width: number; height: number };
+    const lyrics = await page.locator('.ly-area').boundingBox();
+    const art = await side.locator('.art').boundingBox();
+    expect((art?.x ?? 0) + (art?.width ?? 0)).toBeLessThan(lyrics?.x ?? 0); // left of the lyrics
+    expect(lyrics?.x ?? 0).toBeGreaterThan(0.4 * vp.width);
+
     await page.locator('h1').first().focus();
-    const cover = page.locator('.stage-cover');
-    await page.keyboard.press('v');
-    await expect(cover).toBeVisible(); // Cover, which has no button
-    await expect(pressed).toHaveCount(0);
-    await page.keyboard.press('v');
-    await expect(pressed).toHaveAccessibleName('Visual');
-    await page.keyboard.press('v');
-    await expect(pressed).toHaveAccessibleName('Lyrics');
     await page.keyboard.press('c');
-    await expect(cover).toBeVisible();
-    await page.keyboard.press('c');
-    await expect(pressed).toHaveAccessibleName('Lyrics');
-    await page.keyboard.press('l');
-    await expect(pressed).toHaveAccessibleName('Visual');
-    await page.keyboard.press('l');
-    await expect(pressed).toHaveAccessibleName('Lyrics');
-    await page.getByRole('link', { name: 'Library', exact: true }).first().click();
-    await page.keyboard.press('v');
-    await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Listen' })
-      .click();
-    await expect(pressed).toHaveAccessibleName('Lyrics'); // V did nothing in the Library
+    await expect(view).toHaveAttribute('data-mode', 'cover');
+    await expect(page.locator('.ly-area')).toHaveCount(0);
+    await expect
+      .poll(async () => {
+        const b = await side.locator('.art').boundingBox();
+        return Math.abs((b?.x ?? 0) + (b?.width ?? 0) / 2 - vp.width / 2);
+      })
+      .toBeLessThan(2);
   });
 
-  test('Cover crossfades on a cover change, by opacity only', async ({ page }) => {
-    // Signal / Noise playing, Glass Weather queued next: Next changes the cover on the Stage.
-    await playOnStage(page, 'Signal / Noise');
-    // In-app navigation (a page load would reset playback).
-    await page.getByRole('link', { name: 'Library', exact: true }).first().click();
-    await page.locator('.tile', { hasText: 'Glass Weather' }).getByRole('link').click();
-    await page.getByRole('button', { name: 'Add to queue' }).click();
-    await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Listen' })
-      .click();
+  test('keys: V cycles, C toggles the cover, L the lyrics; only on the lyrics view', async ({
+    page,
+  }) => {
+    await playOnStage(page);
+    const view = page.locator('.np-view');
+    await page.locator('h1').first().focus();
+    await page.keyboard.press('v');
+    await expect(view).toHaveAttribute('data-mode', 'cover');
+    await page.keyboard.press('v'); // the old Visual mode: the cover alone too
+    await expect(view).toHaveAttribute('data-mode', 'cover');
+    await page.keyboard.press('v');
+    await expect(view).toHaveAttribute('data-mode', 'lyrics');
     await page.keyboard.press('c');
-    const items = page.locator('.stage-cover-item');
-    await expect(items).toHaveCount(1);
-    // The first cover shown appears without an entrance.
-    expect(await items.evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
-
-    // Record the crossfade from inside the page as it starts: 420 ms is short next to a busy
-    // test machine's round trips.
-    await page.evaluate(() => {
-      const w = window as unknown as { __fade: Promise<string[][]> };
-      w.__fade = new Promise((resolve) => {
-        const root = document.querySelector('.stage-cover') as HTMLElement;
-        new MutationObserver((_, obs) => {
-          const els = [...root.querySelectorAll<HTMLElement>('.stage-cover-item')];
-          if (els.length < 2) return;
-          obs.disconnect();
-          resolve(
-            els.map((el) => {
-              const cs = getComputedStyle(el);
-              const title =
-                decodeURIComponent(el.querySelector('img')?.src ?? '').match(
-                  /<title>([^<(]+)/,
-                )?.[1] ?? '';
-              const role =
-                el.dataset.leaving !== undefined
-                  ? 'leaving'
-                  : el.dataset.enter !== undefined
-                    ? 'entering'
-                    : 'shown';
-              return [
-                role,
-                title.trim(),
-                cs.animationName,
-                cs.animationDuration,
-                cs.animationDelay,
-                cs.transform,
-              ];
-            }),
-          );
-        }).observe(root, { childList: true, subtree: true, attributes: true });
-      });
-    });
-    await dock(page).getByRole('button', { name: 'Next' }).click();
-    await expect(dock(page).locator('.dock-title')).toHaveText('Prism');
-    const fade = await page.evaluate(
-      () => (window as unknown as { __fade: Promise<string[][]> }).__fade,
-    );
-    expect(fade).toEqual([
-      ['leaving', 'Signal / Noise', 'cover-out', '0.42s', '0s', 'none'],
-      ['entering', 'Glass Weather', 'cover-in', '0.64s', '0.22s', 'none'],
-    ]);
-    await expect(items).toHaveCount(1); // the old one is gone once faded
-    await expect(items.locator('img')).toHaveAttribute('src', /Glass%20Weather/);
-
-    // The next track is from the same album: same cover, no crossfade.
-    await dock(page).getByRole('button', { name: 'Next' }).click();
-    await expect(dock(page).locator('.dock-title')).toHaveText('Heat Haze');
-    await expect(page.locator('.stage-cover-item[data-leaving]')).toHaveCount(0);
+    await expect(view).toHaveAttribute('data-mode', 'cover');
+    await page.keyboard.press('c');
+    await expect(view).toHaveAttribute('data-mode', 'lyrics');
+    await page.getByRole('button', { name: 'Close Now playing' }).click();
+    await page.keyboard.press('v');
+    await page
+      .getByRole('region', { name: 'Player' })
+      .getByRole('button', { name: 'Lyrics', exact: true })
+      .click();
+    await expect(view).toHaveAttribute('data-mode', 'lyrics'); // V did nothing off the lyrics view
   });
 });

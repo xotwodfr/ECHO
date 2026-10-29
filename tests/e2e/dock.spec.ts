@@ -1,7 +1,8 @@
 import { expect, type Page, test } from '@playwright/test';
 
-// M2 task 3: the dock driven by the FakeProvider on a virtual clock, over the fixture library
-// (Chromium and Firefox). page.clock drives the provider's time, so positions are exact.
+// The player (the floating pill; the phone's mini player) driven by the FakeProvider on a virtual
+// clock, over the fixture library (Chromium and Firefox). page.clock drives the provider's time, so
+// positions are exact. The queue is the right panel on wide screens and a sheet elsewhere.
 
 const VIEWPORTS = [
   { width: 1440, height: 900 },
@@ -14,6 +15,11 @@ const LOAD_MS = 150; // FakeProvider's simulated load time
 const dock = (page: Page) => page.getByRole('region', { name: 'Player' });
 const seek = (page: Page) => dock(page).getByRole('slider', { name: 'Seek' });
 const title = (page: Page) => dock(page).locator('.dock-title');
+/** The queue: the right panel at 1400px and wider, a sheet below. */
+const queue = (page: Page) =>
+  page
+    .getByRole('complementary', { name: 'Queue' })
+    .or(page.getByRole('dialog', { name: 'Queue' }));
 
 async function start(page: Page, url = '/library') {
   await page.clock.install();
@@ -22,9 +28,18 @@ async function start(page: Page, url = '/library') {
 }
 
 async function playAlbum(page: Page, album: string) {
-  const tile = page.locator('.tile', { hasText: album });
-  await tile.hover();
-  await tile.getByRole('button', { name: `Play ${album}` }).click();
+  if ((page.viewportSize()?.width ?? 1280) < 720) {
+    // Phones: Your Library is a list; play from the album's page.
+    await page.getByRole('link', { name: new RegExp(`^${album.replace(/[/]/g, '.')}`) }).click();
+    await page
+      .locator('.action-bar')
+      .getByRole('button', { name: `Play ${album}` })
+      .click();
+  } else {
+    const tile = page.locator('.tile', { hasText: album });
+    await tile.hover();
+    await tile.getByRole('button', { name: `Play ${album}` }).click();
+  }
   await page.clock.runFor(LOAD_MS);
   await expect(dock(page).getByRole('button', { name: 'Pause' })).toBeVisible();
 }
@@ -43,7 +58,7 @@ test('idle: nothing playing, transport disabled and saying why', async ({ page }
   await expect(dock(page).locator('.scrubber-time')).toHaveText(['—', '—']);
   await expect(dock(page).locator('.scrubber-time').first()).toHaveAttribute('aria-hidden', 'true');
   await dock(page).getByRole('button', { name: 'Queue' }).click();
-  await expect(page.getByRole('dialog', { name: 'Queue' })).toContainText('Nothing queued.');
+  await expect(queue(page)).toContainText('Nothing queued.');
 });
 
 test('the library shows the fixture albums', async ({ page }) => {
@@ -74,8 +89,7 @@ test('play an album: loading, then time moves on the clock; pause freezes it', a
   await page.clock.runFor(LOAD_MS);
   await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   await expect(title(page)).toHaveText('Ferry at Six');
-  await expect(dock(page).locator('.dock-sub')).toHaveText('Lowfield — Harbour Lights');
-  await expect(dock(page).locator('.provider-mark')).toHaveText('Fixtures');
+  await expect(dock(page).locator('.dock-sub')).toHaveText('Lowfield');
   await page.clock.runFor(10_000);
   await expect(seek(page)).toHaveAttribute('aria-valuetext', '10 seconds of 3 minutes 41 seconds');
   await expect(dock(page).locator('.scrubber-time')).toHaveText(['0:10', '3:41']);
@@ -154,6 +168,7 @@ test('repeat one replays at the end; Next still advances', async ({ page }) => {
 });
 
 test('end of the queue stops on the last track and clears the playing marks', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('echo.playback.autoplay', 'false'));
   await start(page, '/library/album/al-signal');
   await page.getByRole('button', { name: 'Play Clean Signal' }).click();
   await page.clock.runFor(LOAD_MS);
@@ -168,10 +183,23 @@ test('end of the queue stops on the last track and clears the playing marks', as
   await expect(row).not.toHaveAttribute('aria-current');
 });
 
+// Autoplay (Spotify's, on by default): when the music runs out, similar songs follow as a radio.
+test('Autoplay: similar songs follow when the queue runs out', async ({ page }) => {
+  await start(page, '/library/album/al-signal');
+  await page.getByRole('button', { name: 'Play Clean Signal' }).click();
+  await page.clock.runFor(LOAD_MS);
+  await seek(page).focus();
+  await page.keyboard.press('End');
+  await page.clock.runFor(100 + LOAD_MS);
+  await expect(page.getByRole('status').filter({ hasText: 'Autoplay' })).toBeVisible();
+  await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+  await expect(title(page)).not.toHaveText('Clean Signal');
+});
+
 test('album detail: header, row play, shuffle, and queue commands', async ({ page }) => {
   await start(page, '/library/album/al-harbour');
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Harbour Lights');
-  await expect(page.locator('.detail-facts')).toHaveText('2019 · 6 tracks · 26:01');
+  await expect(page.locator('.ph-facts')).toHaveText('Lowfield • 2019 • 6 songs, 26:01');
   await page.getByRole('button', { name: 'Play Salt on the Window' }).click();
   await page.clock.runFor(LOAD_MS);
   await expect(title(page)).toHaveText('Salt on the Window');
@@ -185,7 +213,7 @@ test('album detail: header, row play, shuffle, and queue commands', async ({ pag
   await expect(page.getByRole('status')).toHaveText('Playing “Moorings” next');
 
   await dock(page).getByRole('button', { name: 'Queue' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Queue' });
+  const sheet = queue(page);
   await expect(sheet.getByRole('list', { name: 'Next up' })).toContainText('Moorings');
   await expect(
     sheet.getByRole('list', { name: 'Then, from Harbour Lights' }).locator('li'),
@@ -196,20 +224,22 @@ test('album detail: header, row play, shuffle, and queue commands', async ({ pag
   await expect(sheet.getByRole('list', { name: 'Next up' })).toHaveCount(0);
   await page.keyboard.press('Escape');
 
-  await page.getByRole('button', { name: 'Shuffle', exact: true }).first().click();
+  await page.locator('.action-bar').getByRole('button', { name: 'Shuffle Harbour Lights' }).click();
   await page.clock.runFor(LOAD_MS);
   await expect(dock(page).getByRole('button', { name: 'Shuffle' })).toHaveAttribute(
     'aria-pressed',
     'true',
   );
-  await page.getByRole('button', { name: 'Add to queue' }).click();
+  await page.getByRole('button', { name: 'More options for Harbour Lights' }).click();
+  await page.getByRole('menuitem', { name: 'Add to queue' }).click();
   await expect(page.getByRole('status')).toHaveText('Added “Harbour Lights” to the queue');
 });
 
 test('search finds fixture tracks and albums and plays a result', async ({ page }) => {
   await start(page, '/search?q=lowfield');
-  await expect(page.getByRole('heading', { name: 'Tracks' })).toBeVisible();
-  await expect(page.getByRole('list', { name: 'Tracks' }).locator('li')).toHaveCount(6);
+  await expect(page.getByRole('heading', { name: 'Songs' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Tracks' }).locator('li')).toHaveCount(4);
+  await expect(page.getByRole('heading', { name: 'Top result' })).toBeVisible();
   await expect(page.locator('.results .tile')).toHaveCount(2);
   await page.getByRole('button', { name: 'Play Low Tide Radio' }).click();
   await page.clock.runFor(LOAD_MS);
@@ -219,19 +249,19 @@ test('search finds fixture tracks and albums and plays a result', async ({ page 
 test('playback continues across views, onto the Stage', async ({ page }) => {
   await start(page);
   await playAlbum(page, 'Glass Weather');
-  await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Settings' })
-    .click();
+  await page.getByRole('button', { name: 'Profile' }).click();
+  await page.getByRole('menuitem', { name: 'Settings' }).click();
   await page.clock.runFor(3000);
   await expect(title(page)).toHaveText('Prism');
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
   await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   await expect(dock(page).locator('.play-btn')).toHaveClass(/play-btn--stage/);
-  await dock(page).locator('.dock-sub').getByRole('link', { name: 'Glass Weather' }).click();
+  // Closing the lyrics view, then the song's title leads to its album.
+  await page.getByRole('button', { name: 'Close Now playing' }).click();
+  await dock(page).locator('.dock-title').getByRole('link', { name: 'Prism' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Glass Weather');
 });
 
@@ -287,13 +317,15 @@ for (const vp of VIEWPORTS) {
       };
     });
     expect(m.overflowX).toBe(0);
-    expect(m.height).toBe(88);
+    // The pill (72px), or the phone's mini player (56px) with a hairline of progress.
+    expect(m.height).toBe(vp.width >= 720 ? 72 : 56);
     expect(m.outside).toEqual([]);
     expect(m.scrubber).toBe(true);
     expect(m.shuffle).toBe(vp.width >= 720);
     expect(m.volumeSlider).toBe(vp.width >= 1280);
     await expect(dock(page).getByRole('button', { name: 'Pause' })).toBeVisible();
-    await expect(dock(page).getByRole('button', { name: 'Queue' })).toBeVisible();
+    if (vp.width >= 720)
+      await expect(dock(page).getByRole('button', { name: 'Queue' })).toBeVisible();
   });
 }
 
@@ -337,16 +369,16 @@ test.describe('task 3 polish', () => {
       '100%',
     );
     await page.keyboard.press('q');
-    await expect(page.getByRole('dialog', { name: 'Queue' })).toBeVisible();
+    await expect(queue(page)).toBeVisible();
     await page.keyboard.press('q');
-    await expect(page.getByRole('dialog', { name: 'Queue' })).toBeHidden();
+    await expect(queue(page)).toBeHidden();
   });
 
   test('shortcuts never fire while typing, and ↑/↓ volume only on the Stage', async ({ page }) => {
     await start(page);
     await playAlbum(page, 'Harbour Lights');
     const search = page.getByRole('navigation', { name: 'Main' }).getByRole('searchbox');
-    await search.fill('');
+    await search.click();
     await search.pressSequentially('rs m');
     await expect(page).toHaveURL(/\/search\?q=rs\+m$/);
     await expect(dock(page)).toHaveAttribute('data-status', 'playing');
@@ -354,15 +386,16 @@ test.describe('task 3 polish', () => {
       'aria-pressed',
       'false',
     );
-    await page.getByRole('heading', { level: 1 }).click();
+    // Out of the field (Search's heading is visually hidden): the page has the keys now.
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.keyboard.press('ArrowDown');
     await expect(dock(page).getByRole('slider', { name: 'Volume' })).toHaveAttribute(
       'aria-valuetext',
       '100%',
     );
     await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Listen' })
+      .getByRole('region', { name: 'Player' })
+      .getByRole('button', { name: 'Lyrics', exact: true })
       .click();
     await page.locator('.stage').click({ position: { x: 400, y: 300 } });
     await page.keyboard.press('ArrowDown');
@@ -374,7 +407,8 @@ test.describe('task 3 polish', () => {
 
   test('queueing with nothing playing cues the first track, ready to play', async ({ page }) => {
     await start(page, '/library/album/al-paper');
-    await page.getByRole('button', { name: 'Add to queue' }).click();
+    await page.getByRole('button', { name: 'More options for Paper Satellites' }).click();
+    await page.getByRole('menuitem', { name: 'Add to queue' }).click();
     await page.clock.runFor(LOAD_MS);
     await expect(title(page)).toHaveText('Orbit');
     await expect(dock(page)).toHaveAttribute('data-status', 'paused');
@@ -395,12 +429,12 @@ test.describe('task 3 polish', () => {
 
   test("the album's Play button controls the album while it plays", async ({ page }) => {
     await start(page, '/library/album/al-paper');
-    const main = page.getByRole('main');
-    await main.getByRole('button', { name: 'Play', exact: true }).click();
+    const bar = page.locator('.action-bar');
+    await bar.getByRole('button', { name: 'Play Paper Satellites' }).click();
     await page.clock.runFor(LOAD_MS + 4000);
-    await main.getByRole('button', { name: 'Pause', exact: true }).click();
+    await bar.getByRole('button', { name: 'Pause Paper Satellites' }).click();
     await expect(dock(page)).toHaveAttribute('data-status', 'paused');
-    await main.getByRole('button', { name: 'Play', exact: true }).click();
+    await bar.getByRole('button', { name: 'Play Paper Satellites' }).click();
     await expect(dock(page)).toHaveAttribute('data-status', 'playing');
     await expect(seek(page)).toHaveAttribute('aria-valuetext', /^4 seconds of/); // resumed, not restarted
   });
@@ -409,7 +443,7 @@ test.describe('task 3 polish', () => {
     await start(page);
     await playAlbum(page, 'Harbour Lights');
     await dock(page).getByRole('button', { name: 'Queue' }).click();
-    const sheet = page.getByRole('dialog', { name: 'Queue' });
+    const sheet = queue(page);
     await sheet.getByRole('list', { name: 'Now playing' }).getByRole('button').click();
     await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   });
@@ -422,7 +456,7 @@ test('the queue reorders with Alt+arrows and its menu, removes and clears (QUE-0
   await page.getByRole('button', { name: 'Play Ferry at Six' }).click();
   await page.clock.runFor(LOAD_MS);
   await dock(page).getByRole('button', { name: 'Queue' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Queue' });
+  const sheet = queue(page);
   const rest = sheet.getByRole('list', { name: 'Then, from Harbour Lights' });
   const order = () => rest.locator('.track-title').allInnerTexts();
   await expect
@@ -491,10 +525,11 @@ test('the queue reorders with Alt+arrows and its menu, removes and clears (QUE-0
 });
 
 // QA 2026-10-28: an open sheet makes the page behind it inert, but S and R still changed shuffle and
-// repeat behind the queue sheet. Shortcuts wait until it closes.
+// repeat behind the queue sheet. Shortcuts wait until it closes. (Below 1400px the queue is a sheet.)
 test('shortcuts do nothing behind an open sheet, and work again once it closes', async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await start(page);
   await playAlbum(page, 'Harbour Lights');
   const shuffle = dock(page).getByRole('button', { name: 'Shuffle' });
@@ -511,6 +546,7 @@ test('shortcuts do nothing behind an open sheet, and work again once it closes',
 
 // QA on a real library, 2026-10-28: the volume came back at 100 % after every reload.
 test('the volume is kept on this device', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
   await start(page);
   await playAlbum(page, 'Harbour Lights');
   const volume = dock(page).getByRole('slider', { name: 'Volume' });

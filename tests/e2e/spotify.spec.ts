@@ -34,7 +34,10 @@ async function ready(page: Page) {
 async function playSpotifyAlbum(page: Page) {
   await page.goto(`/library/album/${encodeURIComponent(`spotify:${SP_ALBUM.id}`)}`);
   await expect(page.getByRole('heading', { name: 'Northern Static' })).toBeVisible();
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   await expect(dock(page)).toHaveAttribute('data-status', 'playing');
 }
 
@@ -117,8 +120,8 @@ test('SP-01, SP-02: art, metadata linking to open.spotify.com, and the logo, eve
   await expect(d.getByText('Spotify', { exact: true })).toBeVisible(); // the provider mark
   // On the Stage with the chrome hidden, the metadata and logo stay (data-attribution).
   await page
-    .getByRole('navigation', { name: 'Main' })
-    .getByRole('link', { name: 'Listen' })
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
     .click();
   await expect(page.locator('.shell')).toHaveAttribute('data-attribution', 'true');
   await page.mouse.move(5, 5);
@@ -135,9 +138,12 @@ test('QUE-03: Spotify music over a Navidrome queue asks first; Cancel keeps it, 
   await ready(page);
   await playAlbum(page, 'al-1');
   // In the app (a reload would start without the queue).
-  await page.getByRole('link', { name: 'Library', exact: true }).click(); // the Stage's own link
-  await page.getByRole('link', { name: /Northern Static/ }).click();
-  const play = page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true });
+  await page.getByRole('button', { name: 'Close Now playing' }).click();
+  await page
+    .getByRole('navigation', { name: 'Your Library' })
+    .getByRole('link', { name: /^Northern Static/ })
+    .click();
+  const play = page.locator('.action-bar').getByRole('button', { name: /^Play / });
   await play.click();
   const dialog = page.getByRole('alertdialog', {
     name: 'Replace the queue with this Spotify music?',
@@ -175,7 +181,7 @@ test('SRCH-02: results grouped by provider, Navidrome first, Spotify at most 10'
 }) => {
   const fake = await ready(page);
   await page.goto('/search');
-  await page.getByRole('searchbox').fill('a');
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('searchbox').fill('a');
   const groups = page.locator('.results-group');
   await expect(groups).toHaveCount(2);
   await expect(groups.first()).toHaveAttribute('data-provider', 'navidrome');
@@ -250,15 +256,15 @@ test('SP-04: G1 and G2 on give art colour and timed lyrics; switched off, the ne
     const first = palette();
     await page.goto(`/library/album/${encodeURIComponent(`spotify:${SP_GLASS.id}`)}`);
     await page
-      .locator('.detail-actions')
-      .getByRole('button', { name: 'Play', exact: true })
+      .locator('.action-bar')
+      .getByRole('button', { name: /^Play / })
       .click();
     const on = await first;
     expect(on.url()).toContain(encodeURIComponent('https://i.scdn.co/image/glass-weather-300'));
     expect((await on.json()).source).toBe('art');
     await page
-      .getByRole('navigation', { name: 'Main' })
-      .getByRole('link', { name: 'Listen' })
+      .getByRole('region', { name: 'Player' })
+      .getByRole('button', { name: 'Lyrics', exact: true })
       .click();
     await expect(page.getByRole('list', { name: 'Lyrics' })).toContainText('Glass Weather 1');
     await expect(page.locator('.ly-sheet')).toHaveCount(0);

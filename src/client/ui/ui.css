@@ -1004,13 +1004,15 @@
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
 }
 
-/* The title's gap plus the bar's own half-leading: the skeleton is the tile's exact height. */
+/* The title's gap and line, then the artist's: the skeleton is the card's exact height. */
 .tile--loading .bar--body {
-  margin-top: calc(var(--sp-2) + (var(--lh-section) - var(--fs-body)) / 2);
+  margin-block: calc(var(--sp-2) + (var(--lh-section) - var(--fs-body)) / 2)
+    calc((var(--lh-section) - var(--fs-body)) / 2);
 }
 
 .tile--loading .bar--small {
-  margin-block: calc((var(--lh-body) - var(--fs-small)) / 2);
+  margin-block: calc(var(--sp-1) + (var(--lh-body) - var(--fs-small)) / 2)
+    calc((var(--lh-body) - var(--fs-small)) / 2);
 }
 
 .tile-play {

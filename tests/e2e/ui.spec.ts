@@ -75,9 +75,9 @@ test.describe('buttons', () => {
     const btn = section(page, 'Buttons').locator('button:disabled', { hasText: 'Shuffle' });
     await expect(btn).toHaveAccessibleDescription('Connect a server first');
     await expect(btn).toBeDisabled();
-    // Disabled is never opacity on the whole (§0): M3's on-surface at 38% on the label.
+    // Disabled is never opacity on the whole (§9.1): the label in --control grey.
     expect(await btn.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
-    expect(await btn.evaluate((el) => getComputedStyle(el).color)).toMatch(/\/ 0\.38\)$/);
+    expect(await btn.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(114, 114, 114)');
   });
 
   test('loading keeps the name and focus, and ignores activation', async ({ page }) => {
@@ -98,21 +98,21 @@ test.describe('buttons', () => {
     const pinned = await hover.evaluate((el) => getComputedStyle(el).backgroundColor);
     const real = s.locator('.btn--primary:not([data-force]):not(:disabled):not([aria-busy])');
     const rest = await real.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(pinned).not.toBe(rest); // the M3 hover state layer
+    expect(pinned).not.toBe(rest); // Spotify's brighter green on hover
     await real.hover();
     await expect
       .poll(() => real.evaluate((el) => getComputedStyle(el).backgroundColor))
       .toBe(pinned);
-    // Expressive: pressed squares the round button off.
+    // Pressed shrinks the pill a little (Spotify's), it never changes shape.
     await expect
       .poll(() =>
         s
           .locator('.btn--primary[data-force="pressed"]')
-          .evaluate((el) => getComputedStyle(el).borderRadius),
+          .evaluate((el) => getComputedStyle(el).scale),
       )
-      .toBe('8px');
+      .toBe('0.97');
     const focus = s.locator('.btn--primary[data-force="focus"]');
-    expect(await focus.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('3px');
+    expect(await focus.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('2px');
   });
 });
 
@@ -490,17 +490,23 @@ test.describe('track rows and tiles', () => {
     await expect(tile.getByRole('link')).toHaveAttribute('href', '/library/album/al-1');
     const play = tile.getByRole('button', { name: 'Play Tide Lines' });
     expect(await play.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
-    await tile.getByRole('link').focus();
-    await page.keyboard.press('Tab');
+    await play.focus();
     await expect(play).toBeFocused();
     await expect.poll(() => play.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
-    // The play button sits below the cover, never on it (§8).
+    // Spotify's green play button rises onto the cover's corner (DESIGN_SYSTEM.md §8).
     const art = await tile.locator('.art').boundingBox();
-    const btn = await play.boundingBox();
-    expect((btn?.y ?? 0) >= (art?.y ?? 0) + (art?.height ?? 0)).toBe(true);
-    expect(await style(page, '.tile .art img', 'object-fit')).toBe('contain');
-    expect(await style(page, '.tile .art', 'border-radius')).toBe('12px'); // M3 corner medium
-    expect(await style(page, '.track-row .art', 'border-radius')).toBe('8px'); // corner small
+    await expect
+      .poll(async () => {
+        const btn = await play.boundingBox();
+        return (
+          (btn?.y ?? 0) + (btn?.height ?? 0) <= (art?.y ?? 0) + (art?.height ?? 0) &&
+          (btn?.x ?? 0) + (btn?.width ?? 0) <= (art?.x ?? 0) + (art?.width ?? 0)
+        );
+      })
+      .toBe(true);
+    expect(await style(page, '.tile .art img', 'object-fit')).toBe('cover');
+    expect(await style(page, '.tile .art', 'border-radius')).toBe('6px'); // a card's cover
+    expect(await style(page, '.track-row .art', 'border-radius')).toBe('4px'); // a row's
     await play.click();
     await expect(page.getByRole('status')).toHaveText('Playing Tide Lines');
   });

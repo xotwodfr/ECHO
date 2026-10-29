@@ -32,7 +32,7 @@ test('no lyrics anywhere: Cover mode, "No lyrics found", the sources tried (LYR-
   await signedInWithNavidrome(page);
   await playAlbum(page, 'al-4'); // Long Exposure: nothing in the mock sources
   await expect(page.getByText('No lyrics found')).toBeVisible({ timeout: 8000 });
-  await expect(page.locator('.stage-cover')).toBeVisible();
+  await expect(page.locator('.np-view')).toHaveAttribute('data-mode', 'cover');
   await expect(page.locator('.stage-missing')).toContainText(/Sources tried: .*LRCLIB: not found/);
   // QA 2026-10-28: the list sat in a mouse-only tooltip; it is a disclosure keyboard and touch reach.
   const info = page.locator('.stage-missing summary');

@@ -104,7 +104,10 @@ test('REL-05: an ended session opens the sign-in sheet over the same screen and 
   await expect(page.getByRole('heading', { name: 'Harbour Lights' })).toBeVisible();
   // The session is revoked elsewhere (cookie cleared here, as a revocation would leave it useless).
   await page.context().clearCookies();
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   const sheet = page.getByRole('dialog', { name: 'Sign in again' });
   await expect(sheet).toBeVisible();
   await sheet.getByLabel('Username').fill(user);
@@ -130,7 +133,10 @@ test('REL-05: someone else signing in on the sheet starts afresh, with nothing o
   await page.goto('/library/album/al-1');
   await expect(page.getByRole('heading', { name: 'Harbour Lights' })).toBeVisible();
   await page.context().clearCookies(); // the first session ends
-  await page.locator('.detail-actions').getByRole('button', { name: 'Play', exact: true }).click();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
   const sheet = page.getByRole('dialog', { name: 'Sign in again' });
   await expect(sheet).toBeVisible();
   await sheet.getByLabel('Username').fill(name);

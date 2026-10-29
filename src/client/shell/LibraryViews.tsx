@@ -8,6 +8,7 @@ import {
 } from 'react';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import {
+  ALBUM_SORTS,
   type Album,
   type ArtistInfo,
   albumDurationMs,
@@ -30,8 +31,15 @@ import {
   WindowedAlbumGrid,
 } from '../ui/media.tsx';
 import { ConfirmDialog, Menu, type MenuItem, Sheet } from '../ui/overlays.tsx';
-import { BlockError, GridLoading, RowsLoading } from '../ui/states.tsx';
-import { refreshPlaylists, setStar, useStarred, useStarredAll } from './collections.ts';
+import { BlockEmpty, BlockError, FreshnessNote, GridLoading, RowsLoading } from '../ui/states.tsx';
+import type { LibraryTab } from '../view.ts';
+import {
+  refreshPlaylists,
+  setStar,
+  usePlaylists,
+  useStarred,
+  useStarredAll,
+} from './collections.ts';
 import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
@@ -268,6 +276,139 @@ export function Albums({ albums, sub }: { albums: Album[]; sub?: (a: Album) => s
   // A large library is windowed (LIB-02); a small one stays a plain grid.
   if (albums.length > WINDOW_FROM) return <WindowedAlbumGrid items={albums} render={tile} />;
   return <AlbumGrid>{albums.map(tile)}</AlbumGrid>;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Your Library as a page (wide screens; phones show the list, LibraryPanel)
+
+export function LibraryContent({ tab }: { tab: LibraryTab }) {
+  const library = useLibrary();
+  const s = strings.library;
+  if (!library)
+    return (
+      <BlockEmpty
+        text={s.empty}
+        action={
+          <Link className={buttonClass('secondary')} to={{ view: 'settings', section: 'account' }}>
+            {strings.states.connectServer}
+          </Link>
+        }
+      />
+    );
+  const status = library.status?.() ?? 'ready';
+  if (tab === 'albums')
+    return (
+      <>
+        {library.setSort && <SortSwitch />}
+        <FreshnessNote loadedAt={library.loadedAt?.()} />
+        {status === 'loading' && !library.albums.length ? (
+          <GridLoading />
+        ) : status === 'error' && !library.albums.length ? (
+          <BlockError what={strings.states.libraryFailed} onRetry={library.retry} />
+        ) : library.albums.length ? (
+          <Albums albums={library.albums} />
+        ) : (
+          <p className="empty">{s.empty}</p>
+        )}
+      </>
+    );
+  if (tab === 'playlists' && library.playlists) return <Playlists />;
+  if (tab === 'starred' && library.starred) return <Starred />;
+  if (tab === 'artists') {
+    // Derived from the album list, so the counts are only true once every page has loaded.
+    if (status === 'loading') return <RowsLoading label={s.tabs.artists} />;
+    // By id where the library has one (each row then links to the artist's page, S6), else by name.
+    const artists = new Map<string, { name: string; id?: string; n: number }>();
+    for (const a of library.albums) {
+      const key = a.artistId ?? `name:${a.artist}`;
+      const known = artists.get(key);
+      if (known) known.n++;
+      else artists.set(key, { name: a.artist.trim(), id: a.artistId, n: 1 });
+    }
+    if (!artists.size) return <p className="empty">{s.noArtists}</p>;
+    return (
+      <ul className="artist-list">
+        {[...artists]
+          .sort(([, a], [, b]) => a.name.localeCompare(b.name))
+          .map(([key, a]) => (
+            <li key={key}>
+              {a.id ? (
+                <Link className={buttonClass('tertiary')} to={{ view: 'artist', id: a.id }}>
+                  {a.name}
+                </Link>
+              ) : (
+                <span>{a.name}</span>
+              )}
+              <span className="artist-count">{s.albumCount(a.n)}</span>
+            </li>
+          ))}
+      </ul>
+    );
+  }
+  return <p className="empty">{tab === 'playlists' ? s.noPlaylists : s.noStarred}</p>;
+}
+
+/** The album order (PRODUCT_SPEC.md §6.3): recently added, A–Z, year, most played. */
+function SortSwitch() {
+  const library = useLibrary();
+  const current = library?.sort?.();
+  return (
+    <fieldset className="view-switch album-sort">
+      <legend className="visually-hidden">{strings.library.sortLabel}</legend>
+      {ALBUM_SORTS.map((sort) => (
+        <button
+          key={sort}
+          type="button"
+          aria-pressed={current === sort}
+          onClick={() => library?.setSort?.(sort)}
+        >
+          {strings.library.sorts[sort]}
+        </button>
+      ))}
+    </fieldset>
+  );
+}
+
+/** A server library's playlists, as cards that open them. */
+function Playlists() {
+  const playlists = usePlaylists();
+  if (playlists === null) return <RowsLoading label={strings.library.tabs.playlists} />;
+  if (playlists === 'error')
+    return <BlockError what={strings.states.playlistsFailed} onRetry={refreshPlaylists} />;
+  if (!playlists.length) return <p className="empty">{strings.library.noPlaylists}</p>;
+  return (
+    <AlbumGrid>
+      {playlists.map((p) => (
+        <AlbumTile
+          key={p.id}
+          id={p.id}
+          title={p.name}
+          artist={p.owner ?? strings.panel.songs(p.tracks)}
+          cover={p.cover}
+          to={{ view: 'playlist', id: p.id }}
+        />
+      ))}
+    </AlbumGrid>
+  );
+}
+
+/** A server library's starred tracks. */
+function Starred() {
+  const library = useLibrary();
+  const [tracks, setTracks] = useState<Track[] | 'error' | null>(null);
+  const load = useCallback(() => {
+    setTracks(null);
+    void library?.starred?.().then(setTracks, () => setTracks('error'));
+  }, [library]);
+  useEffect(load, [load]);
+  if (!tracks) return <RowsLoading label={strings.library.tabs.starred} media />;
+  if (tracks === 'error') return <BlockError what={strings.states.starredFailed} onRetry={load} />;
+  if (!tracks.length) return <p className="empty">{strings.library.noStarred}</p>;
+  return (
+    <TrackList label={strings.library.tabs.starred}>
+      <Rows tracks={tracks} context={{ kind: 'starred', title: strings.library.tabs.starred }} />
+    </TrackList>
+  );
 }
 
 // ---------------------------------------------------------------------------------------------

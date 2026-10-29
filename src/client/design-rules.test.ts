@@ -32,7 +32,10 @@ const RAW = [
 const ALLOW = [
   { re: /^\s*@media\b/, reason: 'media queries cannot read custom properties (breakpoints, §5)' },
   { re: /^\s*@container\b/, reason: 'container queries cannot read custom properties either (§5)' },
-  { re: /'\(max-width: [\d.]+px\)'/, reason: "matchMedia takes CSS's breakpoint as a string (§5)" },
+  {
+    re: /'\((max|min)-width: [\d.]+px\)'/,
+    reason: "matchMedia takes CSS's breakpoint as a string (§5)",
+  },
   {
     re: /`oklch\(\$\{lch\}/,
     reason: 'the palette animator serialises computed colours, not design values (§3.3)',

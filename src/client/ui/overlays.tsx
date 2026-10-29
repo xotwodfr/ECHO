@@ -176,8 +176,11 @@ export function Menu({
     if (el.getBoundingClientRect().left < 0) setAlign('start');
     let limit = window.innerHeight;
     for (let p = el.parentElement; p; p = p.parentElement) {
-      if (/(auto|scroll|hidden)/.test(getComputedStyle(p).overflowY)) {
-        limit = Math.min(limit, p.getBoundingClientRect().bottom);
+      const cs = getComputedStyle(p);
+      if (/(auto|scroll|hidden)/.test(cs.overflowY)) {
+        // The floating player covers the canvas's scroll padding: that is not room either.
+        const covered = Number.parseFloat(cs.scrollPaddingBottom) || 0;
+        limit = Math.min(limit, p.getBoundingClientRect().bottom - covered);
         break;
       }
     }
