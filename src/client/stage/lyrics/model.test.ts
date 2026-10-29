@@ -151,8 +151,9 @@ describe('the column (LYR-03)', () => {
         }
         for (const [i, v] of ls) {
           const b = box(i);
-          if (b.side === 'right') expect(v.x + b.w / 2).toBeCloseTo(0.82 * W, 6);
-          else expect(v.x - b.w / 2).toBeCloseTo(0.18 * W, 6);
+          if (b.side === 'right')
+            expect(v.x + b.w / 2).toBeCloseTo(((1 + LYRICS.maxWidth) / 2) * W, 6);
+          else expect(v.x - b.w / 2).toBeCloseTo(((1 - LYRICS.maxWidth) / 2) * W, 6);
           expect(v.tz).toBeCloseTo(Math.min(1, Math.abs(v.rank) * LYRICS.column.dz), 9);
           expect(v.blur).toBeCloseTo(blurAt(v.z), 9);
           expect(v.opacity).toBeLessThanOrEqual(opacityAt(v.z) + 1e-9); // and fading in when new

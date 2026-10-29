@@ -12,6 +12,8 @@ export interface Prefs {
     crossfadeSec: number;
     replayGain: 'off' | 'track' | 'album' | 'auto';
     scrobble: boolean;
+    /** When the music runs out, similar songs follow (Spotify's Autoplay). */
+    autoplay: boolean;
     quality: 'auto' | 'raw' | '320' | '192' | '128'; // per device
     volume: number; // 0..1, per device (its own speakers)
   };
@@ -39,6 +41,7 @@ export const DEFAULT_PREFS: Prefs = {
     crossfadeSec: 0,
     replayGain: 'auto',
     scrobble: true,
+    autoplay: true,
     quality: 'auto',
     volume: 1,
   },

@@ -3,32 +3,42 @@ import { useStore } from 'zustand';
 import type { Library } from '../library.ts';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
-import { sessionStore } from '../session.ts';
+import { logout, sessionStore } from '../session.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { glass } from '../ui/glass.ts';
-import { ToastRegion } from '../ui/overlays.tsx';
-import {
-  LIBRARY_TABS,
-  type Route,
-  SETTINGS_SECTIONS,
-  type SettingsSection,
-  type ViewStore,
-} from '../view.ts';
+import { Icon } from '../ui/icons.tsx';
+import { Menu, ToastRegion } from '../ui/overlays.tsx';
+import { type Route, SETTINGS_SECTIONS, type SettingsSection, type ViewStore } from '../view.ts';
 import { InviteView } from './AccountViews.tsx';
 import { AdminSection } from './AdminViews.tsx';
 import { AccountSection, LoginView, SessionExpiredSheet, SetupView } from './AuthViews.tsx';
 import { useChromeIdle } from './chrome.ts';
 import { Dock } from './Dock.tsx';
-import { AlbumView, ArtistView, LibraryContent, SearchResults } from './LibraryViews.tsx';
+import { HomeView } from './HomeView.tsx';
+import { LibraryPanel } from './LibraryPanel.tsx';
+import {
+  AlbumView,
+  ArtistView,
+  GenreView,
+  LikedView,
+  PlaylistView,
+  SearchResults,
+} from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
+import { PlaylistPicker } from './PlaylistPicker.tsx';
+import { panels } from './panels.ts';
 import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
+import { RightPanel } from './RightPanel.tsx';
 import { PreferencesSection } from './SettingsViews.tsx';
 import { Stage } from './Stage.tsx';
 import { StageChrome, StageContent } from './StageViews.tsx';
 
-// The shell frame (DESIGN_SYSTEM.md §5): sidebar + canvas + dock, or the full-bleed Stage on Listen.
+// The frame (DESIGN_SYSTEM.md §5), after Spotify's: a top bar, Your Library on the left, the page
+// in the middle, Now Playing or the queue on the right, and the player floating over the page as
+// a glass pill. Phones: the page, a glass mini player and a glass tab bar. The lyrics view (Listen)
+// fills the window, the pill floating over it.
 
 // The component gallery (DESIGN_SYSTEM.md §9, DS-06) is a development page:
 // compiled out of the production image (ECHO_DEV_PAGES=0), where /__ui is "Page not found".
@@ -45,11 +55,14 @@ function SearchField({ className }: { className: string }) {
   const q = route.view === 'search' ? route.q : '';
   return (
     <label className={`search-field ${className}`}>
+      <Icon name="search" />
       <span className="visually-hidden">{strings.nav.search}</span>
       <input
         type="search"
         value={q}
         placeholder={strings.search.placeholder}
+        // Spotify opens Browse on the first click into the box.
+        onFocus={() => route.view !== 'search' && navigate({ view: 'search', q: '' })}
         // Typing refines one history entry instead of adding one per keystroke.
         onChange={(e) =>
           navigate({ view: 'search', q: e.target.value }, { replace: route.view === 'search' })
@@ -62,44 +75,103 @@ function SearchField({ className }: { className: string }) {
   );
 }
 
-function Sidebar({ route }: { route: Route }) {
-  const current = (view: Route['view'][]) =>
-    view.includes(route.view) ? ('page' as const) : undefined;
+/** Top bar (§5): the wordmark, Home, the search pill, and the account menu. */
+function TopBar({ route }: { route: Route }) {
+  const home = route.view === 'home';
   return (
-    <nav className="sidebar glass" ref={glass} aria-label={strings.nav.label}>
-      <p className="wordmark">{strings.app}</p>
+    <header className="topbar">
+      <Link className="wordmark" to={{ view: 'home' }}>
+        {strings.app}
+      </Link>
+      <nav className="topbar-nav" aria-label={strings.nav.label}>
+        <Link
+          className="round-btn round-btn--lg"
+          to={{ view: 'home' }}
+          aria-label={strings.nav.home}
+          title={strings.nav.home}
+          aria-current={home ? 'page' : undefined}
+        >
+          <Icon name="home" className={home ? 'icon--solid' : undefined} />
+        </Link>
+        <SearchField className="topbar-search" />
+      </nav>
+      <AccountMenu />
+    </header>
+  );
+}
+
+function AccountMenu() {
+  const session = useStore(sessionStore);
+  const navigate = useView((s) => s.navigate);
+  const signedIn = session.status === 'signedIn';
+  const admin = signedIn && session.role === 'admin';
+  const initial = signedIn ? session.username.slice(0, 1).toUpperCase() : '';
+  return (
+    <Menu
+      label={strings.nav.profile}
+      trigger={{
+        className: 'avatar-btn',
+        content: initial ? <span className="avatar">{initial}</span> : <Icon name="user" />,
+      }}
+      items={[
+        {
+          label: strings.nav.account,
+          onSelect: () => navigate({ view: 'settings', section: 'account' }),
+        },
+        {
+          label: strings.nav.settings,
+          onSelect: () => navigate({ view: 'settings', section: 'preferences' }),
+        },
+        ...(admin
+          ? [
+              {
+                label: strings.nav.admin,
+                onSelect: () => navigate({ view: 'settings', section: 'admin' }),
+              },
+            ]
+          : []),
+        ...(signedIn
+          ? [
+              {
+                label: strings.nav.signOut,
+                onSelect: () => void logout().finally(() => window.location.assign('/login')),
+              },
+            ]
+          : []),
+      ]}
+    />
+  );
+}
+
+/** Phones (§5): Home, Search and Your Library as a glass tab bar at the bottom. */
+function TabBar({ route }: { route: Route }) {
+  const tab = (
+    to: Route,
+    views: Route['view'][],
+    icon: 'home' | 'search' | 'library',
+    label: string,
+  ) => {
+    const on = views.includes(route.view);
+    return (
+      <li>
+        <Link to={to} aria-current={on ? 'page' : undefined}>
+          <Icon name={icon} className={on && icon === 'home' ? 'icon--solid' : undefined} />
+          <span>{label}</span>
+        </Link>
+      </li>
+    );
+  };
+  return (
+    <nav className="tabbar glass" ref={glass} aria-label={strings.nav.label}>
       <ul>
-        <li>
-          <Link to={{ view: 'listen' }} aria-current={current(['listen'])}>
-            {strings.nav.listen}
-          </Link>
-        </li>
-        <li>
-          <Link
-            to={{ view: 'library', tab: 'albums' }}
-            aria-current={current(['library', 'album', 'artist'])}
-          >
-            {strings.nav.library}
-          </Link>
-        </li>
-        <li>
-          <SearchField className="search-wide" />
-          <Link
-            className="search-compact"
-            to={{ view: 'search', q: '' }}
-            aria-current={current(['search'])}
-          >
-            {strings.nav.search}
-          </Link>
-        </li>
-        <li>
-          <Link
-            to={{ view: 'settings', section: 'preferences' }}
-            aria-current={current(['settings'])}
-          >
-            {strings.nav.settings}
-          </Link>
-        </li>
+        {tab({ view: 'home' }, ['home'], 'home', strings.nav.home)}
+        {tab({ view: 'search', q: '' }, ['search', 'genre'], 'search', strings.nav.search)}
+        {tab(
+          { view: 'library', tab: 'albums' },
+          ['library', 'album', 'artist', 'playlist', 'liked'],
+          'library',
+          strings.nav.library,
+        )}
       </ul>
     </nav>
   );
@@ -160,6 +232,8 @@ function SettingsView({ section }: { section: SettingsSection }) {
 
 function View({ route }: { route: Route }) {
   switch (route.view) {
+    case 'home':
+      return <HomeView />;
     case 'listen':
       return (
         <Stage frame={route.frame}>
@@ -171,27 +245,25 @@ function View({ route }: { route: Route }) {
         </Stage>
       );
     case 'library':
-      return (
-        <>
-          <h1 tabIndex={-1}>{strings.nav.library}</h1>
-          <Tabs
-            label={strings.library.tabsLabel}
-            items={LIBRARY_TABS}
-            names={strings.library.tabs}
-            current={route.tab}
-            to={(tab) => ({ view: 'library', tab })}
-          />
-          <LibraryContent tab={route.tab} />
-        </>
-      );
+      // Phones: Your Library is a page. Wide screens have it in the left panel; the page
+      // shows the same list, for a link or a bookmark.
+      return <LibraryPanel page />;
     case 'album':
       return <AlbumView id={route.id} />;
     case 'artist':
       return <ArtistView id={route.id} />;
+    case 'playlist':
+      return <PlaylistView id={route.id} />;
+    case 'liked':
+      return <LikedView />;
+    case 'genre':
+      return <GenreView name={route.name} />;
     case 'search':
       return (
         <>
-          <h1 tabIndex={-1}>{strings.nav.search}</h1>
+          <h1 className="visually-hidden" tabIndex={-1}>
+            {strings.nav.search}
+          </h1>
           <SearchField className="search-compact" />
           <SearchResults q={route.q} />
         </>
@@ -217,8 +289,8 @@ function View({ route }: { route: Route }) {
         <>
           <h1 tabIndex={-1}>{strings.notFound.title}</h1>
           <p className="empty">{strings.notFound.body}</p>
-          <Link className={buttonClass('tertiary')} to={{ view: 'library', tab: 'albums' }}>
-            {strings.nav.library}
+          <Link className={buttonClass('secondary')} to={{ view: 'home' }}>
+            {strings.nav.home}
           </Link>
         </>
       );
@@ -226,10 +298,14 @@ function View({ route }: { route: Route }) {
 }
 
 const TITLES: Record<Route['view'], string> = {
+  home: strings.nav.home,
   listen: strings.nav.listen,
   library: strings.nav.library,
   album: strings.album.title,
   artist: strings.artist.title,
+  playlist: strings.playlist.title,
+  liked: strings.liked.title,
+  genre: strings.genre.title,
   search: strings.nav.search,
   settings: strings.nav.settings,
   ui: strings.gallery.title,
@@ -246,6 +322,7 @@ function Frame() {
   // Spotify's artwork and metadata must stay visible while it plays (DESIGN_SYSTEM.md §8).
   const attribution = usePlayer((p) => p.capabilities.requiresAttribution === 'spotify');
   const chromeHidden = useStore(stageChrome, (s) => s.hidden);
+  const right = useStore(panels, (s) => s.right);
   useChromeIdle(route.view === 'listen' && playing);
   const main = useRef<HTMLElement>(null);
   const first = useRef(true);
@@ -264,14 +341,14 @@ function Frame() {
 
   useEffect(() => {
     // `/` or Ctrl/⌘+K focuses the visible search field (the hint shown in it); where none is
-    // visible (the Stage), it opens Search.
+    // visible (the lyrics view), it opens Search.
     const onKey = (e: KeyboardEvent) => {
       const slash = e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey;
       const k = e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey) && !e.altKey;
       if (!(slash || k) || (slash && isTextField(e.target as Element))) return;
       e.preventDefault();
       const visible = () =>
-        [...document.querySelectorAll<HTMLInputElement>('input[type="search"]')].find(
+        [...document.querySelectorAll<HTMLInputElement>('.search-field input[type="search"]')].find(
           (el) => el.offsetParent !== null,
         );
       const field = visible();
@@ -283,7 +360,7 @@ function Frame() {
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate]);
 
-  // Signing in and setting up stand alone: no sidebar, no player.
+  // Signing in and setting up stand alone: no panels, no player.
   if (route.view === 'login' || route.view === 'setup' || route.view === 'invite')
     return (
       <main className="auth-page" ref={main}>
@@ -291,19 +368,25 @@ function Frame() {
       </main>
     );
 
+  const listen = route.view === 'listen';
   return (
     <div
       className="shell"
       data-view={route.view}
-      data-chrome={route.view === 'listen' && chromeHidden ? 'hidden' : undefined}
+      data-right={!listen && right ? right : undefined}
+      data-chrome={listen && chromeHidden ? 'hidden' : undefined}
       data-attribution={attribution || undefined}
     >
-      {route.view !== 'listen' && <Sidebar route={route} />}
+      {!listen && <TopBar route={route} />}
+      {!listen && <LibraryPanel />}
       <main className="canvas" ref={main}>
         <View route={route} />
       </main>
-      <Dock stage={route.view === 'listen'} />
+      {!listen && <RightPanel />}
+      <Dock stage={listen} />
+      {!listen && <TabBar route={route} />}
       <ToastRegion />
+      <PlaylistPicker />
       <ReplaceQueueDialog />
       <SessionExpiredSheet />
     </div>

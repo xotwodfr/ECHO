@@ -104,7 +104,12 @@ export function ConfirmDialog(props: {
       role="alertdialog"
       aria-labelledby={titleId}
       aria-describedby={bodyId}
-      onClose={handleClose}
+      // React passes a dialog's close up its own tree: a confirmation inside a sheet must not
+      // close the sheet with it.
+      onClose={(e) => {
+        e.stopPropagation();
+        handleClose();
+      }}
     >
       <h2 id={titleId}>{props.title}</h2>
       <p id={bodyId}>{props.consequence}</p>
@@ -138,18 +143,22 @@ export function Menu({
   label,
   items,
   icon = 'more',
+  trigger,
 }: {
   label: string;
   items: MenuItem[];
   icon?: IconName;
+  /** A trigger of its own (the account avatar) instead of the icon button. */
+  trigger?: { className: string; content: ReactNode };
 }) {
   const [active, setActive] = useState<number | null>(null); // null = closed
   const open = active !== null;
   const menuId = useId();
   const wrap = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   const disabled = items.map((i) => !!i.disabled);
+  const own = trigger;
 
   // Open upward when the menu would run past the bottom of its scroll container (the canvas
   // ends above the dock) or the window; align to the trigger's left edge when, right-aligned, it
@@ -173,13 +182,16 @@ export function Menu({
       }
     }
     const below = el.getBoundingClientRect().bottom <= limit;
-    const room = (trigger.current?.getBoundingClientRect().top ?? 0) > el.offsetHeight;
+    const room = (triggerRef.current?.getBoundingClientRect().top ?? 0) > el.offsetHeight;
     setPlacement(below || !room ? 'bottom' : 'top');
   }, [open]);
 
   useEffect(() => {
     if (active !== null && active >= 0) refs.current[active]?.focus({ preventScroll: true });
   }, [active]);
+
+  // Menus float over content: glass (§7.11).
+  useEffect(() => (open ? attachGlass(menu.current) : undefined), [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -192,8 +204,9 @@ export function Menu({
 
   const close = (refocus: boolean) => {
     setActive(null);
-    if (refocus) trigger.current?.focus();
+    if (refocus) triggerRef.current?.focus();
   };
+  const toggle = () => (open ? close(false) : setActive(menuMove(-1, 'Home', disabled)));
 
   const onTriggerKey = (e: KeyboardEvent) => {
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
@@ -218,20 +231,36 @@ export function Menu({
 
   return (
     <div className="menu-wrap" ref={wrap}>
-      <IconButton
-        ref={trigger}
-        label={label}
-        icon={icon}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        onClick={() => (open ? close(false) : setActive(menuMove(-1, 'Home', disabled)))}
-        onKeyDown={onTriggerKey}
-      />
+      {own ? (
+        <button
+          ref={triggerRef}
+          type="button"
+          className={own.className}
+          aria-label={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          onClick={toggle}
+          onKeyDown={onTriggerKey}
+        >
+          {own.content}
+        </button>
+      ) : (
+        <IconButton
+          ref={triggerRef}
+          label={label}
+          icon={icon}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          onClick={toggle}
+          onKeyDown={onTriggerKey}
+        />
+      )}
       {open && (
         <div
           ref={menu}
-          className="menu"
+          className="menu glass"
           role="menu"
           id={menuId}
           aria-label={label}

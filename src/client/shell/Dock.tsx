@@ -1,12 +1,11 @@
-import type React from 'react';
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import { connectionStore } from '../connection.ts';
 import { lineAt, nudgeLyrics } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
-import { orderedContext, upcoming } from '../playback/queue.ts';
+import { upcoming } from '../playback/queue.ts';
 import { type SpotifyProvider, spotifyStore } from '../playback/spotify.ts';
 import {
   lyricOffset,
@@ -19,21 +18,34 @@ import {
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { glass } from '../ui/glass.ts';
-import { Artwork, TrackList, TrackRow } from '../ui/media.tsx';
-import { ConfirmDialog, Sheet } from '../ui/overlays.tsx';
+import { Artwork } from '../ui/media.tsx';
+import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
+import { HeartButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
+import { panels, toggleRight } from './panels.ts';
+import { QueueSheet } from './Queue.tsx';
 import { toggleFullscreen } from './StageViews.tsx';
 import { keyTarget, type Shortcut, shortcutFor } from './shortcuts.ts';
+import { SLEEP_MINUTES, setSleep, sleepLabel, sleepStore } from './sleep.ts';
 import spotifyLogo from './spotify-logo-white.svg';
 
-// The transport dock (DESIGN_SYSTEM.md §5, §9.2; PRODUCT_SPEC.md §6.1): 88px, full width. Shell
-// in form, Stage in colour (the progress fill and the Stage play glyph take the art palette).
+// The player (DESIGN_SYSTEM.md §5, §9.2; PRODUCT_SPEC.md §6.1), after Spotify's: the song and its
+// heart, the transport over the progress bar, and the view buttons (Now Playing, lyrics, queue,
+// sleep timer, volume). It floats over the page as a liquid-glass pill; on phones it is the glass
+// mini player above the tab bar, opening the Now Playing view.
 
 const ACTIVE = ['playing', 'loading', 'buffering'];
 const SEEK_MS = 5000; // ←/→ (§7)
 const SEEK_FAR_MS = 15000; // Shift+←/→
 const VOLUME_STEP = 0.05; // ↑/↓
+
+const COMPACT = '(max-width: 719.98px)';
+const onCompact = (f: () => void) => {
+  const m = window.matchMedia(COMPACT);
+  m.addEventListener('change', f);
+  return () => m.removeEventListener('change', f);
+};
 
 export function Dock({ stage }: { stage: boolean }) {
   const c = usePlayback();
@@ -44,11 +56,18 @@ export function Dock({ stage }: { stage: boolean }) {
   const repeat = usePlayer((p) => p.repeat);
   const volume = usePlayer((p) => p.volume);
   const hasUpcoming = useQueue((q) => upcoming(q).length > 0);
+  const right = useStore(panels, (s) => s.right);
+  const navigate = useView((s) => s.navigate);
+  const compact = useSyncExternalStore(onCompact, () => window.matchMedia(COMPACT).matches);
   const [queueOpen, setQueueOpen] = useState(false);
   const idleId = useId();
   const endId = useId();
   const active = ACTIVE.includes(status);
-  const toggleQueue = useCallback(() => setQueueOpen((open) => !open), []);
+  // Q: the queue in the right panel on wide screens, a sheet on phones and over the lyrics view.
+  const toggleQueue = useCallback(() => {
+    if (compact || stage) setQueueOpen((open) => !open);
+    else toggleRight('queue');
+  }, [compact, stage]);
   const [helpOpen, setHelpOpen] = useState(false);
   const openHelp = useCallback(() => setHelpOpen(true), []);
   useShortcuts(stage, toggleQueue, openHelp);
@@ -59,6 +78,8 @@ export function Dock({ stage }: { stage: boolean }) {
   // Next with nothing after this track (and repeat off) has nowhere to go.
   const atEnd = !idle && !hasUpcoming && repeat !== 'all';
   const repeatLabel = strings.dock.repeat[repeat];
+  // The lyrics view opens from here, and closes back to where it was opened from.
+  const toggleListen = () => (stage ? history.back() : navigate({ view: 'listen' }));
 
   return (
     <section
@@ -68,6 +89,14 @@ export function Dock({ stage }: { stage: boolean }) {
       data-status={status}
     >
       <div className="dock-meta">
+        {/* Phones: the mini player opens the Now Playing view; the whole strip is its target. */}
+        {compact && !stage && t && (
+          <Link
+            className="dock-open"
+            to={{ view: 'listen' }}
+            aria-label={`${strings.nav.listen}: ${t.title}`}
+          />
+        )}
         {t ? (
           <Artwork size="dock" src={t.artwork[0]?.url} title={t.album.title} />
         ) : (
@@ -78,7 +107,15 @@ export function Dock({ stage }: { stage: boolean }) {
         ) : (
           <div className="dock-text">
             <p className="dock-title" id={idleId}>
-              {t ? t.title : strings.dock.idle}
+              {t ? (
+                t.album.id ? (
+                  <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link>
+                ) : (
+                  t.title
+                )
+              ) : (
+                strings.dock.idle
+              )}
             </p>
             {t && (
               <p className="dock-sub">
@@ -88,17 +125,12 @@ export function Dock({ stage }: { stage: boolean }) {
                     {i > 0 && ', '}
                     {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
                   </span>
-                ))}{' '}
-                —{' '}
-                {t.album.id ? (
-                  <Link to={{ view: 'album', id: t.album.id }}>{t.album.title}</Link>
-                ) : (
-                  t.album.title
-                )}
+                ))}
               </p>
             )}
           </div>
         )}
+        {t && <HeartButton track={t} />}
       </div>
 
       <div className="dock-transport">
@@ -114,7 +146,6 @@ export function Dock({ stage }: { stage: boolean }) {
           className="dock-prev"
           label={strings.ui.previous}
           icon="previous"
-          size="lg"
           onClick={c.previous}
           {...why}
         />
@@ -126,9 +157,9 @@ export function Dock({ stage }: { stage: boolean }) {
           {...why}
         />
         <IconButton
+          className="dock-next"
           label={strings.ui.next}
           icon="next"
-          size="lg"
           onClick={c.next}
           {...why}
           {...(atEnd ? { disabled: true, 'aria-describedby': endId } : {})}
@@ -153,17 +184,41 @@ export function Dock({ stage }: { stage: boolean }) {
       </div>
 
       <div className="dock-right">
-        <Volume value={volume} onChange={c.setVolume} />
-        <IconButton
-          label={strings.dock.queue}
-          icon="queue"
-          aria-haspopup="dialog"
-          aria-expanded={queueOpen}
-          onClick={() => setQueueOpen(true)}
-        />
         <Reachability />
         <SpotifyLine />
         {c.providerLabel && <ProviderMark>{c.providerLabel}</ProviderMark>}
+        {!stage && (
+          <IconButton
+            className="dock-wide"
+            label={strings.panel.nowPlaying}
+            icon="nowPlaying"
+            pressed={right === 'nowPlaying'}
+            onClick={() => toggleRight('nowPlaying')}
+          />
+        )}
+        <IconButton
+          label={strings.nowPlaying.lyrics}
+          icon="mic"
+          pressed={stage}
+          onClick={toggleListen}
+        />
+        <IconButton
+          label={strings.dock.queue}
+          icon="queue"
+          aria-haspopup={compact || stage ? 'dialog' : undefined}
+          pressed={!compact && !stage ? right === 'queue' : undefined}
+          aria-expanded={compact || stage ? queueOpen : undefined}
+          onClick={toggleQueue}
+        />
+        <SleepMenu />
+        <Volume value={volume} onChange={c.setVolume} />
+        {stage && (
+          <IconButton
+            label={strings.stage.fullscreen}
+            icon="fullscreen"
+            onClick={toggleFullscreen}
+          />
+        )}
       </div>
 
       <QueueSheet open={queueOpen} onClose={() => setQueueOpen(false)} />
@@ -182,6 +237,26 @@ export function Dock({ stage }: { stage: boolean }) {
         )}
       </Sheet>
     </section>
+  );
+}
+
+/** Spotify's sleep timer, from the player (a moon that turns green while it runs). */
+function SleepMenu() {
+  const c = usePlayback();
+  const choice = useStore(sleepStore, (s) => s.choice);
+  const s = strings.sleep;
+  return (
+    <span className="dock-sleep" data-on={choice !== null || undefined}>
+      <Menu
+        label={choice === null ? s.title : `${s.title}: ${sleepLabel(choice)}`}
+        icon="moon"
+        items={[
+          ...SLEEP_MINUTES.map((m) => ({ label: sleepLabel(m), onSelect: () => setSleep(c, m) })),
+          { label: s.endOfTrack, onSelect: () => setSleep(c, 'track') },
+          ...(choice !== null ? [{ label: s.off, onSelect: () => setSleep(c, null) }] : []),
+        ]}
+      />
+    </span>
   );
 }
 
@@ -254,118 +329,6 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [c, stage, toggleQueue, openHelp, navigate]);
-}
-
-/** S4 Queue (PRODUCT_SPEC.md §6.2): Now playing, Next up (user-added), Then (the context). */
-function QueueSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const c = usePlayback();
-  const q = useQueue((x) => x);
-  const status = usePlayer((p) => p.status);
-  const canEdit = usePlayer((p) => p.capabilities.canReorderQueue);
-  const then = orderedContext(q);
-  const total = q.nextUp.length + then.length;
-  const playing = status !== 'ended' && status !== 'idle';
-  const [clearing, setClearing] = useState(false);
-  const s = strings.queue;
-  // Upcoming rows can be moved (Alt+↑/↓, drag, the ⋯ menu) and removed (QUE-01).
-  const edit = (i: number, title: string) =>
-    canEdit
-      ? {
-          menu: [
-            ...(i > 0 ? [{ label: s.moveUp, onSelect: () => c.move(i, i - 1) }] : []),
-            ...(i < total - 1 ? [{ label: s.moveDown, onSelect: () => c.move(i, i + 1) }] : []),
-            { label: s.remove(title), onSelect: () => c.remove(i) },
-          ],
-          rowProps: {
-            draggable: true,
-            onDragStart: (e: React.DragEvent) =>
-              e.dataTransfer.setData('text/x-echo-queue', String(i)),
-            onDragOver: (e: React.DragEvent) => e.preventDefault(),
-            onDrop: (e: React.DragEvent) => {
-              // Only our own rows: anything else dropped here ('' → 0) would move the first track.
-              const raw = e.dataTransfer.getData('text/x-echo-queue');
-              const from = Number(raw);
-              if (raw !== '' && Number.isInteger(from)) c.move(from, i);
-            },
-            onKeyDown: (e: React.KeyboardEvent) => {
-              if (!e.altKey || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
-              e.preventDefault();
-              const to = e.key === 'ArrowUp' ? i - 1 : i + 1;
-              if (to < 0 || to >= total) return;
-              c.move(i, to);
-              // Focus follows the moved row once it has re-rendered.
-              requestAnimationFrame(() =>
-                document
-                  .querySelectorAll<HTMLElement>('.sheet .queue-upcoming .track-main')
-                  [to]?.focus(),
-              );
-            },
-          },
-        }
-      : {};
-  const row = (t: (typeof then)[number], i: number | null) => (
-    <TrackRow
-      key={`${t.key}-${i ?? 'now'}`}
-      title={t.title}
-      artist={t.artists.map((a) => a.name).join(', ')}
-      durationMs={t.durationMs}
-      artwork={{ src: t.artwork[0]?.url, album: t.album.title }}
-      nowPlaying={i === null && playing}
-      onPlay={i === null ? c.resume : () => c.jump(i)}
-      {...(i === null ? {} : edit(i, t.title))}
-    />
-  );
-  return (
-    <>
-      <Sheet open={open} onClose={onClose} title={s.title}>
-        {/* Rows only while open: nothing to render (or re-render) behind a closed sheet. */}
-        {open && !q.now && <p className="empty">{s.empty}</p>}
-        {open && q.now && (
-          <>
-            <h3 className="sheet-section">{s.now}</h3>
-            <TrackList label={s.now}>{row(q.now, null)}</TrackList>
-          </>
-        )}
-        <div className="queue-upcoming">
-          {open && q.nextUp.length > 0 && (
-            <>
-              <h3 className="sheet-section">{s.nextUp}</h3>
-              <TrackList label={s.nextUp}>{q.nextUp.map((t, i) => row(t, i))}</TrackList>
-            </>
-          )}
-          {open && then.length > 0 && (
-            <>
-              <h3 className="sheet-section">{s.rest(q.contextSource?.title)}</h3>
-              <TrackList label={s.rest(q.contextSource?.title)}>
-                {then.map((t, i) => row(t, q.nextUp.length + i))}
-              </TrackList>
-            </>
-          )}
-        </div>
-        {open && q.provider === 'spotify' && (
-          <p className="queue-note">{strings.spotify.queueNote}</p>
-        )}
-        {/* Destructive, with confirmation (DESIGN_SYSTEM.md §9). */}
-        {open && canEdit && total > 0 && (
-          <Button variant="destructive" onClick={() => setClearing(true)}>
-            {s.clear}
-          </Button>
-        )}
-      </Sheet>
-      {/* Beside the sheet, not inside it: the sheet's own <dialog> must not see this one close. */}
-      <ConfirmDialog
-        open={clearing}
-        title={s.clearTitle}
-        consequence={s.clearConsequence(total)}
-        confirmLabel={s.clear}
-        onConfirm={() => {
-          setClearing(false);
-          c.clear();
-        }}
-        onCancel={() => setClearing(false)}
-      />
-    </>
-  );
 }
 
 /** "Navidrome unreachable — retrying in 4 s" (PRODUCT_SPEC.md J6), while something is down. */

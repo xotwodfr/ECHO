@@ -1,12 +1,9 @@
-/* Components (DESIGN_SYSTEM.md §9): Material 3 Expressive in the shell. Every value comes from
-   tokens.css. `[data-force]` pins hover, pressed and focus for the /__ui page and its snapshots,
-   with the same rules as the real state.
+/* Components (DESIGN_SYSTEM.md §9), after Spotify's: pill buttons (green, white, outlined),
+   round icon buttons that brighten on hover, a white play disc, rows that light on hover, cards on
+   a surround. Every value comes from tokens.css. `[data-force]` pins hover, pressed and focus for
+   the /__ui page and its snapshots, with the same rules as the real state. */
 
-   State layers (§10) are the content colour mixed over the container at the M3 state opacity:
-   color-mix(in srgb, <content> calc(var(--md-sys-state-hover) * 100%), <container>). Inside the
-   player view (tokens.css) the roles map back to Reverb Chamber, so the transport keeps its look. */
-
-/* ---- Buttons (§9.1): M3 filled, outlined, text; Expressive round shape that squares on press ---- */
+/* ---- Buttons (§9.1): green primary, outlined secondary, text tertiary; a small grow on hover ---- */
 .btn {
   position: relative;
   display: inline-flex;
@@ -16,147 +13,89 @@
   box-sizing: border-box;
   height: var(--md-button-h);
   padding: 0 var(--md-button-pad);
-  border: var(--md-outline) solid transparent;
-  border-radius: var(--md-sys-shape-corner-full);
+  border: var(--rule) solid transparent;
+  border-radius: var(--r-pill);
   --btn-bg: transparent;
-  --btn-ink: var(--md-sys-color-primary);
+  --btn-ink: var(--text);
   background: var(--btn-bg);
   color: var(--btn-ink);
   font: var(--md-sys-typescale-label-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
   transition:
-    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
-    var(--md-sys-motion-spring-fast-spatial),
-    background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects),
-    color var(--md-sys-motion-spring-fast-effects-duration) var(--md-sys-motion-spring-fast-effects);
+    background-color var(--dur-hover) ease,
+    border-color var(--dur-hover) ease,
+    color var(--dur-hover) ease,
+    scale var(--dur-press) ease;
 }
 
 .btn--primary {
-  --btn-bg: var(--md-sys-color-primary);
-  --btn-ink: var(--md-sys-color-on-primary);
+  --btn-bg: var(--green);
+  --btn-ink: var(--on-green);
 }
 
 .btn--secondary {
-  border-color: var(--md-sys-color-outline-variant);
-  --btn-ink: var(--md-sys-color-on-surface-variant);
+  border-color: var(--control);
 }
 
 .btn--destructive {
-  border-color: var(--md-sys-color-outline-variant);
-  --btn-ink: var(--md-sys-color-error);
+  border-color: var(--control);
+  --btn-ink: var(--negative);
 }
 
 .btn--tertiary {
   padding: 0 var(--sp-3);
+  --btn-ink: var(--muted);
 }
 
 .btn:hover:not(:disabled, [aria-disabled="true"]),
 .btn[data-force="hover"] {
-  background: color-mix(
-    in srgb,
-    var(--btn-ink) calc(var(--md-sys-state-hover) * 100%),
-    var(--btn-bg)
-  );
+  scale: 1.04;
 }
 
-.btn:focus-visible {
-  background: color-mix(
-    in srgb,
-    var(--btn-ink) calc(var(--md-sys-state-focus) * 100%),
-    var(--btn-bg)
-  );
+.btn--primary:hover:not(:disabled, [aria-disabled="true"]),
+.btn--primary[data-force="hover"] {
+  background: var(--green-hover);
+}
+
+.btn--secondary:hover:not(:disabled, [aria-disabled="true"]),
+.btn--secondary[data-force="hover"],
+.btn--destructive:hover:not(:disabled, [aria-disabled="true"]),
+.btn--destructive[data-force="hover"] {
+  border-color: var(--text);
+}
+
+.btn--tertiary:hover:not(:disabled, [aria-disabled="true"]),
+.btn--tertiary[data-force="hover"] {
+  color: var(--text);
+  scale: none;
 }
 
 .btn:active:not(:disabled, [aria-disabled="true"]),
 .btn[data-force="pressed"] {
-  border-radius: var(--md-sys-shape-corner-small);
-  background: color-mix(
-    in srgb,
-    var(--btn-ink) calc(var(--md-sys-state-pressed) * 100%),
-    var(--btn-bg)
-  );
+  scale: 0.97;
 }
 
-/* Disabled (M3): content at 38% and container at 12% of on-surface, never opacity on the whole. */
+.btn--primary:active:not(:disabled, [aria-disabled="true"]),
+.btn--primary[data-force="pressed"] {
+  background: var(--green-press);
+}
+
 .btn:disabled {
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
-    transparent
-  );
+  border-color: var(--raised-3);
   background: transparent;
-  color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
+  color: var(--control);
   cursor: not-allowed;
 }
 
 .btn--primary:disabled {
   border-color: transparent;
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
-    transparent
-  );
+  background: var(--raised-2);
 }
 
 .btn--tertiary:disabled {
   border-color: transparent;
-}
-
-/* The player view keeps Reverb Chamber's buttons (§1, §9.1): 36px pills in Mona Sans, an outlined
-   secondary on --control, compact text links, a small press instead of the shape morph. */
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn {
-  height: var(--control-h);
-  border-radius: var(--r-pill);
-  --btn-ink: var(--text);
-  font: inherit;
-  font-weight: 500;
-  letter-spacing: normal;
-  transition:
-    background-color var(--dur-hover) ease,
-    scale var(--dur-press) var(--ease-out);
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--primary {
-  --btn-bg: var(--text);
-  --btn-ink: var(--ground);
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--secondary {
-  border-color: var(--control);
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn:hover:not(:disabled) {
-  background: var(--surface-2);
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn:active:not(:disabled) {
-  border-radius: var(--r-pill);
-  background: var(--btn-bg);
-  scale: 0.97;
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--tertiary {
-  height: auto;
-  min-height: var(--target-min); /* WCAG 2.5.8 (A11Y-07) */
-  padding: 0;
-  border: 0;
-  border-radius: var(--r-art);
-  background: transparent;
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-right) .btn--tertiary:hover:not(:disabled) {
-  background: transparent;
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.18em;
 }
 
 .btn[aria-busy="true"] {
@@ -183,9 +122,8 @@
 
 .control-reason {
   align-self: center;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 /* ---- Icon buttons and transport (§9.1, §9.2) ---- */
@@ -208,17 +146,13 @@
   height: var(--md-icon-button);
   padding: 0;
   border: 0;
-  border-radius: var(--md-sys-shape-corner-full);
+  border-radius: var(--r-pill);
   background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   cursor: pointer;
   transition:
-    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
-    var(--md-sys-motion-spring-fast-spatial),
-    background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects),
     color var(--dur-hover) ease,
-    scale var(--dur-press) var(--ease-out);
+    scale var(--dur-press) ease;
 }
 
 .icon-btn--lg {
@@ -229,68 +163,36 @@
 .icon-btn:hover:not(:disabled),
 .icon-btn[data-force="hover"],
 .icon-btn[aria-expanded="true"] {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
-  color: var(--md-sys-color-on-surface);
+  color: var(--text);
+  scale: 1.06;
 }
 
 .icon-btn:active:not(:disabled),
 .icon-btn[data-force="pressed"] {
-  border-radius: var(--md-sys-shape-corner-small);
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-pressed) * 100%),
-    transparent
-  );
-  color: var(--md-sys-color-on-surface);
+  color: var(--text);
+  scale: 0.94;
 }
 
 .icon-btn:disabled {
-  color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
+  color: var(--control);
   cursor: not-allowed;
 }
 
-/* The player's transport (§9.2) keeps Reverb Chamber: 36px, no container, a small press. */
-:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
-.icon-btn {
-  width: var(--control-h);
-  height: var(--control-h);
-  background: transparent;
-  border-radius: var(--r-pill);
+/* The transport's previous and next are filled (Spotify's). */
+.dock-transport .icon-btn:not(.dock-secondary) .icon {
+  fill: currentColor;
 }
 
-:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
-  .icon-btn--lg {
-  width: var(--hit-lg);
-  height: var(--hit-lg);
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
-  .icon-btn:active:not(:disabled) {
-  scale: 0.97;
-}
-
-:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
-  .icon-btn:disabled {
-  color: var(--faint);
-}
-
-/* Shuffle/repeat on: accent glyph plus a dot beneath, never colour alone (§9.2). */
+/* A toggle on (shuffle, repeat, lyrics, the panels): green glyph plus a dot beneath, never colour
+   alone (§9.2). */
 .icon-btn[aria-pressed="true"]:not(.icon-btn--plain) {
-  color: var(--art-accent);
+  color: var(--green);
 }
 
 .icon-btn[aria-pressed="true"]:not(.icon-btn--plain)::after {
   content: "";
   position: absolute;
-  bottom: 0;
+  bottom: calc(-1 * var(--sp-1));
   left: 50%;
   width: var(--dot);
   height: var(--dot);
@@ -299,6 +201,7 @@
   background: currentColor;
 }
 
+/* Spotify's play disc: white, a black glyph; it grows a little on hover. */
 .play-btn {
   display: inline-grid;
   place-items: center;
@@ -309,43 +212,36 @@
   border: 0;
   border-radius: 50%;
   background: var(--text);
-  color: var(--ground);
+  color: var(--on-green);
   cursor: pointer;
   transition:
     background-color var(--dur-hover) ease,
     scale var(--dur-press) var(--ease-out);
 }
 
-.play-btn--stage {
-  color: var(--art-room);
-}
-
 .play-btn:hover:not(:disabled),
 .play-btn[data-force="hover"] {
-  background: var(--primary-hover);
+  scale: 1.06;
 }
 
 .play-btn:active:not(:disabled),
 .play-btn[data-force="pressed"] {
-  scale: 0.97;
+  scale: 0.94;
 }
 
 .play-btn:disabled {
-  background: var(--surface-2);
-  color: var(--faint);
+  background: var(--raised-3);
+  color: var(--control);
   cursor: not-allowed;
 }
 
 /* Glyph morph play ↔ pause, 180 ms (§9.2). */
 .play-btn .icon {
   grid-area: 1 / 1;
+  fill: currentColor;
   transition:
     opacity var(--dur-hover) var(--ease-out),
     scale var(--dur-hover) var(--ease-out);
-}
-
-.play-btn-pause {
-  stroke-width: 3;
 }
 
 .play-btn[data-playing="true"] .play-btn-play,
@@ -355,13 +251,13 @@
 }
 
 .provider-mark {
-  color: var(--faint);
+  color: var(--muted);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   white-space: nowrap;
 }
 
-/* ---- Slider: scrubber and volume (§9.2) ---- */
+/* ---- Slider: scrubber and volume (§9.2): white on grey, green with a thumb on hover ---- */
 .slider {
   position: relative;
   display: flex;
@@ -385,15 +281,7 @@
   height: var(--scrub-track);
   overflow: hidden;
   border-radius: var(--r-pill);
-  background: var(--md-sys-color-secondary-container);
-  transition: scale var(--dur-scrub) var(--ease-out);
-}
-
-/* Hover: the 4px track grows to 6px (a transform, not a layout change). */
-.slider[data-dragging] .slider-rail,
-.slider[data-force="hover"] .slider-rail,
-.slider:hover:not([aria-disabled="true"]) .slider-rail {
-  scale: 1 1.5;
+  background: var(--control);
 }
 
 .slider-fill,
@@ -404,18 +292,21 @@
 }
 
 .slider-buffered {
-  background: color-mix(in srgb, var(--md-sys-color-outline) 40%, transparent);
+  background: var(--follow-edge);
   scale: var(--buffered) 1;
 }
 
 .slider-fill {
-  background: var(--md-sys-color-primary);
+  background: var(--text);
   scale: var(--value) 1;
+  border-radius: var(--r-pill);
 }
 
-/* The dock's progress and volume take the album's accent (§1: the dock's colour is the Stage's). */
-:is(.dock-scrub, .dock-right) .slider-fill {
-  background: var(--art-accent);
+.slider[data-dragging] .slider-fill,
+.slider[data-force="hover"] .slider-fill,
+.slider:hover:not([aria-disabled="true"]) .slider-fill,
+.slider:focus-visible .slider-fill {
+  background: var(--green);
 }
 
 .slider-thumb {
@@ -426,7 +317,8 @@
   height: var(--scrub-thumb);
   translate: -50% -50%;
   border-radius: 50%;
-  background: var(--md-sys-color-primary);
+  background: var(--text);
+  box-shadow: var(--md-sys-elevation-level1);
   opacity: 0;
   transition: opacity var(--dur-scrub) ease;
 }
@@ -443,11 +335,7 @@
 }
 
 .slider[aria-disabled="true"] .slider-fill {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
+  background: var(--raised-3);
 }
 
 .slider-bubble {
@@ -460,8 +348,8 @@
   gap: var(--sp-1);
   max-width: var(--form-w);
   padding: var(--sp-1) var(--sp-2);
-  border-radius: var(--md-sys-shape-corner-small);
-  background: var(--md-sys-color-surface-container-high);
+  border-radius: var(--r-control);
+  background: var(--raised-2);
   box-shadow: var(--md-sys-elevation-level2);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
@@ -472,15 +360,17 @@
 .scrubber {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   width: 100%;
   min-width: 0;
 }
 
 .scrubber-time {
-  color: var(--faint);
+  min-width: 4ch;
+  color: var(--muted);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
+  text-align: center;
 }
 
 /* No track: the dash keeps the width of "0:00", so the track does not jump when a track loads. */
@@ -505,160 +395,124 @@
   gap: var(--sp-1);
 }
 
-/* ---- Status labels (§3.1): M3 tonal containers, the status colours harmonised to the seed ---- */
+/* ---- Status labels (§3.1): tinted pills, always with text ---- */
 .pill {
   display: inline-flex;
   align-items: center;
   padding: var(--sp-1) var(--sp-3);
-  border-radius: var(--md-sys-shape-corner-small);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
+  border-radius: var(--r-pill);
+  font: var(--md-sys-typescale-label-medium) var(--font-ui);
   white-space: nowrap;
 }
 
 .pill--pos {
-  background: var(--md-sys-color-success-container);
-  color: var(--md-sys-color-on-success-container);
+  background: var(--pill-pos-bg);
+  color: var(--pill-pos-ink);
 }
 
 .pill--warn {
-  background: var(--md-sys-color-warning-container);
-  color: var(--md-sys-color-on-warning-container);
+  background: var(--pill-warn-bg);
+  color: var(--pill-warn-ink);
 }
 
 .pill--neg {
-  background: var(--md-sys-color-error-container);
-  color: var(--md-sys-color-on-error-container);
+  background: var(--pill-neg-bg);
+  color: var(--pill-neg-ink);
 }
 
 .pill--neutral {
-  background: var(--md-sys-color-surface-container-highest);
-  color: var(--md-sys-color-on-surface-variant);
+  background: var(--pill-neutral-bg);
+  color: var(--pill-neutral-ink);
 }
 
-/* ---- Switch (§9.5): M3, 52×32; the handle grows 16 → 24 when on, 28 while pressed ---- */
+/* ---- Switch (§9.5): Spotify's, 40×24, a white knob that slides onto green ---- */
 .toggle-row {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-4);
   min-height: var(--md-switch-h);
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-large);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
   cursor: pointer;
 }
 
 .toggle {
-  --knob: var(--md-switch-handle-off);
   --knob-x: calc(var(--md-switch-h) / 2);
-  --knob-ink: var(--md-sys-color-outline);
   position: relative;
   flex: none;
   box-sizing: border-box;
   width: var(--md-switch-w);
   height: var(--md-switch-h);
   padding: 0;
-  border: var(--md-switch-outline) solid var(--md-sys-color-outline);
-  border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-surface-container-highest);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--control);
   cursor: pointer;
-  transition:
-    background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects),
-    border-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects);
+  transition: background-color var(--dur-hover) ease;
 }
 
 .toggle::after {
   content: "";
   position: absolute;
   top: 50%;
-  left: calc(var(--knob-x) - var(--md-switch-outline));
-  width: var(--knob);
-  height: var(--knob);
+  left: var(--knob-x);
+  width: var(--md-switch-handle-off);
+  height: var(--md-switch-handle-off);
   translate: -50% -50%;
   border-radius: 50%;
-  background: var(--knob-ink);
+  background: var(--text);
   transition:
-    left var(--md-sys-motion-spring-fast-spatial-duration) var(--md-sys-motion-spring-fast-spatial),
-    width var(--md-sys-motion-spring-fast-spatial-duration) var(--md-sys-motion-spring-fast-spatial),
-    height var(--md-sys-motion-spring-fast-spatial-duration)
-    var(--md-sys-motion-spring-fast-spatial),
-    background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects);
+    left var(--dur-hover) var(--ease-out),
+    width var(--dur-press) ease,
+    height var(--dur-press) ease;
 }
 
 .toggle[aria-checked="true"] {
-  --knob: var(--md-switch-handle-on);
   --knob-x: calc(var(--md-switch-w) - var(--md-switch-h) / 2);
-  --knob-ink: var(--md-sys-color-on-primary);
-  border-color: var(--md-sys-color-primary);
-  background: var(--md-sys-color-primary);
+  background: var(--green);
 }
 
-.toggle-row:hover .toggle:not(:disabled),
-.toggle[data-force="hover"] {
-  --knob-ink: var(--md-sys-color-on-surface-variant);
+.toggle-row:hover .toggle:not(:disabled):not([aria-checked="true"]),
+.toggle[data-force="hover"]:not([aria-checked="true"]) {
+  background: var(--muted);
 }
 
 .toggle-row:hover .toggle[aria-checked="true"]:not(:disabled),
 .toggle[data-force="hover"][aria-checked="true"] {
-  --knob-ink: var(--md-sys-color-primary-container);
+  background: var(--green-hover);
 }
 
-.toggle:active:not(:disabled),
-.toggle[data-force="pressed"] {
-  --knob: var(--md-switch-handle-pressed);
+.toggle:active:not(:disabled)::after,
+.toggle[data-force="pressed"]::after {
+  width: var(--md-switch-handle-pressed);
+  height: var(--md-switch-handle-pressed);
 }
 
-/* Its label stays readable (on-surface-variant, not M3's 38%): it says what is unavailable, and the
-   reason beside it is read with it. */
+/* Its label stays readable: it says what is unavailable, and the reason beside it is read with it. */
 .toggle-row[data-disabled] {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   cursor: not-allowed;
 }
 
 .toggle:disabled {
-  --knob-ink: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
-    transparent
-  );
-  background: transparent;
+  background: var(--raised-3);
   cursor: not-allowed;
 }
 
-.toggle[aria-checked="true"]:disabled {
-  --knob-ink: var(--md-sys-color-surface);
-  border-color: transparent;
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
-    transparent
-  );
+.toggle:disabled::after {
+  background: var(--control);
 }
 
-/* ---- Fields (§9.5): M3 outlined text field, 56px, with its label above (see §9.5) ---- */
+/* ---- Fields (§9.5): Spotify's, 48px, label above, a white ring on focus ---- */
 .field {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
+  gap: var(--sp-2);
   min-width: 0;
 }
 
 .field-label {
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-medium);
-}
-
-.field:focus-within .field-label {
-  color: var(--md-sys-color-primary);
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
 }
 
 .field-control {
@@ -671,53 +525,40 @@
   min-width: 0;
   box-sizing: border-box;
   height: var(--md-field-h);
-  padding: 0 var(--sp-4);
-  border: var(--md-outline) solid var(--md-sys-color-outline);
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  background: transparent;
-  color: var(--md-sys-color-on-surface);
-  caret-color: var(--md-sys-color-primary);
+  padding: 0 var(--sp-3);
+  border: var(--rule) solid var(--control);
+  border-radius: var(--r-control);
+  background: var(--panel);
+  color: var(--text);
+  caret-color: var(--text);
   font: var(--md-sys-typescale-body-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-large);
   transition: border-color var(--dur-hover) ease;
 }
 
 .field-input::placeholder {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
 }
 
 .field-input:hover:not(:disabled) {
-  border-color: var(--md-sys-color-on-surface);
+  border-color: var(--text);
 }
 
-/* Focus: the outline thickens to 2px in primary; that is the field's focus indicator. */
+/* Focus: a 2px white ring inside the edge; that is the field's focus indicator. */
 .field-input:focus-visible,
 .field-input[data-force="focus"] {
-  border-color: var(--md-sys-color-primary);
-  outline: var(--md-outline) solid var(--md-sys-color-primary);
-  outline-offset: calc(-1 * var(--md-field-focus));
+  border-color: var(--text);
+  outline: none;
+  box-shadow: var(--ring-focus);
 }
 
 .field[data-invalid] .field-input {
-  border-color: var(--md-sys-color-error);
-  outline-color: var(--md-sys-color-error);
-}
-
-.field[data-invalid] .field-label {
-  color: var(--md-sys-color-error);
+  border-color: var(--negative);
+  box-shadow: var(--ring-error);
 }
 
 .field-input:disabled {
-  border-color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-container),
-    transparent
-  );
-  color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
+  border-color: var(--raised-3);
+  color: var(--control);
   cursor: not-allowed;
 }
 
@@ -729,32 +570,23 @@
   position: absolute;
   top: 50%;
   right: var(--sp-2);
-  height: var(--md-button-h);
+  height: var(--hit-lg);
   translate: 0 -50%;
   padding: 0 var(--sp-3);
   border: 0;
-  border-radius: var(--md-sys-shape-corner-full);
+  border-radius: var(--r-pill);
   background: transparent;
-  color: var(--md-sys-color-primary);
+  color: var(--muted);
   font: var(--md-sys-typescale-label-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
   cursor: pointer;
 }
 
 .field-reveal:hover:not(:disabled) {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-primary) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
+  color: var(--text);
 }
 
 .field-reveal:disabled {
-  color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
+  color: var(--control);
   cursor: not-allowed;
 }
 
@@ -762,16 +594,10 @@
 .field-error {
   margin: 0;
   font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .field-hint {
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-/* Supporting text under a text field lines up with its input text (M3). */
-.field > :is(.field-hint, .field-error) {
-  padding: 0 var(--sp-4);
+  color: var(--muted);
 }
 
 .field-error,
@@ -779,7 +605,7 @@
   display: flex;
   align-items: flex-start;
   gap: var(--sp-1);
-  color: var(--md-sys-color-error);
+  color: var(--negative);
 }
 
 .field-error .icon {
@@ -791,48 +617,54 @@
   margin: 0;
 }
 
-/* ---- Artwork (§8): never cropped; 4px radius up to 64px, 8px above ---- */
+/* ---- Artwork (§8): never cropped; 4px radius, 6px on cards ---- */
 .art {
   position: relative;
   display: block;
   flex: none;
   aspect-ratio: 1;
   overflow: hidden;
-  border-radius: var(--md-sys-shape-corner-medium);
-  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--r-art);
+  background: var(--raised-2);
   container-type: inline-size;
 }
 
 .art--row {
   width: var(--art-row);
-  border-radius: var(--md-sys-shape-corner-small);
 }
 
-/* The player view's artwork keeps Reverb Chamber's radii and well (§8). */
-:is(.shell[data-view="listen"] .canvas, .dock-meta) .art {
-  border-radius: var(--r-art-lg);
-  background: var(--surface-2);
+.art--list {
+  width: var(--art-list);
 }
 
 .art--dock {
   width: var(--art-dock);
-  border-radius: var(--r-art);
 }
 
 .art--grid {
   width: 100%;
+  border-radius: var(--r-art-lg);
+  box-shadow: var(--card-shadow);
 }
 
 .art--detail {
   width: var(--art-detail);
-  border-radius: var(--md-sys-shape-corner-extra-large);
+}
+
+.art--np {
+  width: var(--art-np);
+  border-radius: var(--r-panel);
+}
+
+.art--shortcut {
+  width: var(--art-shortcut);
 }
 
 .art img {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
 }
 
 /* Missing art: the title at 18% of the square, 8% inset (§8). */
@@ -842,15 +674,13 @@
   inset: 8cqi 8cqi auto;
   max-height: 4.4em; /* exactly 4 lines of 1.1: the clamp alone still paints part of a 5th */
   overflow: hidden;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   font-family: var(--font-ui);
   font-size: 18cqi;
   line-height: 1.1;
-  font-weight: 600;
+  font-weight: 700;
   hyphens: auto;
   overflow-wrap: break-word;
-  /* Whole lines only: 4 lines of 18% fit inside the 8% insets. Very long words still break
-     without a hyphen where the browser has no hyphenation dictionary (Chromium on Linux). */
   display: -webkit-box;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 4;
@@ -861,17 +691,19 @@
   content: attr(data-title);
 }
 
-/* At 40 and 64px, 18% would be under the 12px type floor (§4.2); the title is beside them anyway. */
+/* Small squares: 18% would be under the 12px type floor (§4.2); the title is beside them anyway. */
 .art--row .art-fallback,
-.art--dock .art-fallback {
+.art--list .art-fallback,
+.art--dock .art-fallback,
+.art--shortcut .art-fallback {
   display: none;
 }
 
 /* ---- Loading bars (§10): flat, at the real size of the value, no shimmer ---- */
 .bar {
   display: block;
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  background: var(--md-sys-color-surface-container-highest);
+  border-radius: var(--r-control);
+  background: var(--raised-2);
 }
 
 .bar--body {
@@ -886,7 +718,13 @@
   margin-block: calc((var(--lh-small) - var(--fs-small)) / 2);
 }
 
-/* ---- Track rows (§9.3): M3 list items, 56px (72px with art), rounded state layer ---- */
+.bar--title {
+  width: 60%;
+  height: var(--sp-8);
+  margin-block: var(--sp-2) var(--sp-3);
+}
+
+/* ---- Track rows (§9.3): Spotify's table, 56px rows that light on hover ---- */
 .track-list ol {
   margin: 0;
   padding: 0;
@@ -903,35 +741,24 @@
 
 .track-row {
   position: relative;
-  height: var(--md-list-1);
-  border-radius: var(--md-sys-shape-corner-medium);
+  height: var(--row-h);
+  border-radius: var(--r-control);
+  color: var(--muted);
   font: var(--md-sys-typescale-body-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-large);
-  transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects);
-}
-
-.track-row[data-media] {
-  height: var(--md-list-2);
 }
 
 .track-row:hover:not(.track-row--loading),
 .track-row[data-force="hover"] {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
+  background: var(--hover-row);
 }
 
 .track-row[data-selected] {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--selected-row);
 }
 
 .track-row:has(.track-main:focus-visible),
 .track-row[data-force="focus"] {
-  outline: var(--md-focus-ring) solid var(--md-sys-color-secondary);
+  outline: var(--md-focus-ring) solid var(--focus);
   outline-offset: calc(-1 * var(--md-focus-ring));
 }
 
@@ -951,7 +778,7 @@
   cursor: pointer;
 }
 
-/* The whole row is the play target; the menu sits above it. */
+/* The whole row is the play target; the heart and the menu sit above it. */
 .track-main::after {
   content: "";
   position: absolute;
@@ -969,44 +796,93 @@
   text-overflow: ellipsis;
 }
 
+.track-title {
+  color: var(--text);
+}
+
 .track-sub {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-medium);
 }
 
 .track-row[data-now-playing] .track-title {
-  color: var(--md-sys-color-primary);
+  color: var(--green);
 }
 
 .track-num,
 .track-dur {
   flex: none;
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-label-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-label);
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
   text-align: right;
 }
 
 .track-num {
+  display: grid;
+  justify-items: end;
   min-width: 2ch;
 }
 
-.track-list[data-ruled] .track-row {
-  border-radius: 0;
+.track-num > * {
+  grid-area: 1 / 1;
 }
 
-.track-list[data-ruled] .track-row + .track-row {
-  border-top: var(--rule) solid var(--md-sys-color-outline-variant);
+.track-num-play {
+  color: var(--text);
+  opacity: 0;
+}
+
+.track-row:hover .track-num-play,
+.track-row[data-force="hover"] .track-num-play {
+  opacity: 1;
+}
+
+.track-row:hover .track-num-n,
+.track-row[data-force="hover"] .track-num-n,
+.track-row:hover .track-num .np-bars {
+  opacity: 0;
+}
+
+.track-row[data-now-playing] .track-num {
+  color: var(--green);
+}
+
+.track-row[data-media] .art {
+  flex: none;
+}
+
+/* The heart shows on hover, and always once saved (Spotify's). */
+.track-heart {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  opacity: 0;
+}
+
+.track-row:hover .track-heart,
+.track-row:focus-within .track-heart,
+.track-heart:has([aria-pressed="true"]) {
+  opacity: 1;
+}
+
+.track-row .menu-wrap {
+  opacity: 0;
+}
+
+.track-row:hover .menu-wrap,
+.track-row:focus-within .menu-wrap,
+.track-row[data-force] .menu-wrap,
+.track-row .menu-wrap:has([aria-expanded="true"]) {
+  opacity: 1;
 }
 
 .track-head {
+  height: var(--hit-lg);
+  margin-bottom: var(--sp-4);
   padding-right: calc(var(--sp-4) * 2 + var(--md-icon-button));
-  padding-bottom: var(--sp-2);
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-label-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-label);
+  border-bottom: var(--rule) solid var(--rule-soft);
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
 }
 
 .track-head span:nth-child(2) {
@@ -1024,7 +900,7 @@
   bottom: 0;
   left: var(--sp-3);
   height: var(--trace);
-  background: var(--md-sys-color-primary);
+  background: var(--green);
   pointer-events: none;
   animation: fade-out var(--trace-ms) linear var(--trace-at) forwards;
 }
@@ -1041,6 +917,11 @@
   gap: 0.12em;
   height: 0.75em;
   margin-right: var(--sp-2);
+  color: var(--green);
+}
+
+.track-num .np-bars {
+  margin: 0;
 }
 
 .np-bars span {
@@ -1059,114 +940,127 @@
   animation-delay: calc(var(--dur-loop) / -1.5);
 }
 
-/* ---- Album tile (§9.4): cover and text on a state-layer surround (an M3 card without fill) ---- */
+/* ---- Cards (§9.4): Spotify's; the surround lights on hover, the green play rises onto the cover ---- */
 .tile {
   position: relative;
-  isolation: isolate;
   display: flex;
   flex-direction: column;
   min-width: 0;
+  padding: var(--sp-3);
+  border-radius: var(--r-card);
+  transition: background-color var(--dur-hover) ease;
 }
 
-.tile::before {
-  content: "";
-  position: absolute;
-  inset: calc(-1 * var(--sp-2));
-  z-index: -1;
-  border-radius: var(--md-sys-shape-corner-large-increased);
-  transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects);
+.tile:not(.tile--loading):hover,
+.tile:focus-within,
+.tile[data-force] {
+  background: var(--raised);
 }
 
-.tile:not(.tile--loading):hover::before,
-.tile:focus-within::before,
-.tile[data-force]::before {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
+.tile-cover {
+  position: relative;
+  display: block;
 }
 
 .tile-link {
-  display: flex;
-  flex-direction: column;
+  display: block;
   min-width: 0;
-  border-radius: var(--md-sys-shape-corner-medium);
-  color: inherit;
-  text-decoration: none;
+  margin-top: var(--sp-2);
+  border-radius: var(--r-control);
+  color: var(--text);
+}
+
+/* The whole card opens its page; the play button sits above the link. */
+.tile-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.tile-link:focus-visible {
+  outline: none;
+}
+
+.tile:has(.tile-link:focus-visible) {
+  outline: var(--md-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--md-focus-ring));
 }
 
 .tile-title,
 .tile-artist {
-  padding-right: calc(var(--md-icon-button) + var(--sp-2));
+  display: block;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
 .tile-title {
-  margin-top: var(--sp-2);
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+}
+
+.tile-artist {
+  margin-top: var(--sp-1);
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
 }
 
 /* The title's gap plus the bar's own half-leading: the skeleton is the tile's exact height. */
 .tile--loading .bar--body {
-  margin-top: calc(var(--sp-2) + (var(--lh-body) - var(--fs-body)) / 2);
+  margin-top: calc(var(--sp-2) + (var(--lh-section) - var(--fs-body)) / 2);
 }
 
-/* The artist line is body-medium (20px line) since the M3 shell, not the 16px small line. */
 .tile--loading .bar--small {
   margin-block: calc((var(--lh-body) - var(--fs-small)) / 2);
 }
 
-.tile-artist {
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-medium);
-}
-
-/* At the end of the text, below the cover, never on it (§8): an M3 small FAB, square-ish (Expressive). */
 .tile-play {
   position: absolute;
-  right: 0;
-  bottom: calc((var(--lh-body) + var(--lh-body) - var(--md-icon-button)) / 2);
+  right: var(--sp-2);
+  bottom: var(--sp-2);
+  z-index: 1;
   display: grid;
   place-items: center;
-  width: var(--md-icon-button);
-  height: var(--md-icon-button);
+  width: var(--tile-play);
+  height: var(--tile-play);
   padding: 0;
   border: 0;
-  border-radius: var(--md-sys-shape-corner-medium);
-  background: var(--md-sys-color-primary-container);
-  color: var(--md-sys-color-on-primary-container);
-  box-shadow: var(--md-sys-elevation-level1);
+  border-radius: var(--r-pill);
+  background: var(--green);
+  color: var(--on-green);
+  box-shadow: var(--shadow-play);
   opacity: 0;
+  translate: 0 var(--sp-2);
   cursor: pointer;
   transition:
     opacity var(--dur-hover) ease,
-    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
-    var(--md-sys-motion-spring-fast-spatial),
+    translate var(--dur-ui) var(--ease-out),
+    scale var(--dur-press) ease,
     background-color var(--dur-hover) ease;
+}
+
+.tile-play .icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
 }
 
 .tile:hover .tile-play,
 .tile:focus-within .tile-play,
 .tile[data-force] .tile-play {
   opacity: 1;
+  translate: 0 0;
+}
+
+.tile[data-provider="spotify"] .tile-play {
+  display: none;
 }
 
 .tile-play:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-primary-container) calc(var(--md-sys-state-hover) * 100%),
-    var(--md-sys-color-primary-container)
-  );
+  scale: 1.04;
+  background: var(--green-hover);
 }
 
 .tile-play:active {
-  border-radius: var(--md-sys-shape-corner-full);
+  scale: 0.96;
 }
 
 /* ---- Connection status row (§9.7) ---- */
@@ -1177,7 +1071,7 @@
   align-items: center;
   gap: var(--sp-1) var(--sp-4);
   padding: var(--sp-4) 0;
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  border-bottom: var(--rule) solid var(--rule-soft);
 }
 
 .conn-head {
@@ -1191,13 +1085,12 @@
 .conn-name {
   margin: 0;
   font: var(--md-sys-typescale-title-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-title-medium);
 }
 
 .conn-detail {
   grid-area: detail;
   margin: 0;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   overflow-wrap: anywhere;
 }
 
@@ -1210,7 +1103,7 @@
   gap: var(--sp-2);
 }
 
-/* ---- Sign in (S8): a 360px column on the surface ---- */
+/* ---- Sign in (S8): Spotify's, a centred column, the wordmark over a big title ---- */
 .signin {
   display: flex;
   flex-direction: column;
@@ -1221,20 +1114,23 @@
 
 .signin-mark {
   margin: 0;
-  color: var(--md-sys-color-primary);
-  font: var(--md-sys-typescale-title-large-emphasized) var(--font-ui);
+  color: var(--text);
+  font: var(--title-s) var(--font-ui);
+  letter-spacing: var(--tracking-title);
+  text-align: center;
 }
 
 .signin-title {
-  margin: 0;
-  font: var(--md-sys-typescale-headline-small) var(--font-ui);
+  margin: 0 0 var(--sp-4);
+  font: var(--md-sys-typescale-headline-large) var(--font-ui);
+  text-align: center;
 }
 
 .signin-submit {
   width: 100%;
 }
 
-/* ---- Menu (§9.6) ---- */
+/* ---- Menu (§9.6): glass, Spotify's compact items ---- */
 /* Above a track row's full-row play target. */
 .menu-wrap {
   position: relative;
@@ -1247,17 +1143,17 @@
   top: calc(100% + var(--sp-1));
   right: 0;
   z-index: 10;
-  min-width: 12em;
+  min-width: 14em;
   padding: var(--sp-1);
-  border-radius: var(--md-sys-shape-corner-large);
-  background: var(--md-sys-color-surface-container);
+  border: var(--rule) solid var(--glass-edge);
+  border-radius: var(--r-control);
+  background: color-mix(in oklab, var(--raised-2) var(--glass-fill), transparent);
   box-shadow: var(--md-sys-elevation-level2);
   transform-origin: top right;
-  animation: menu-in var(--md-sys-motion-spring-default-spatial-duration)
-    var(--md-sys-motion-spring-default-spatial);
+  animation: menu-in var(--dur-ui) var(--ease-out);
 }
 
-/* Not enough room below inside the scroll container (e.g. above the dock): open upward. */
+/* Not enough room below inside the scroll container (e.g. above the player): open upward. */
 .menu[data-placement="top"] {
   top: auto;
   bottom: calc(100% + var(--sp-1));
@@ -1282,11 +1178,10 @@
   height: var(--md-menu-item-h);
   padding: 0 var(--sp-3);
   border: 0;
-  border-radius: var(--md-sys-shape-corner-medium);
+  border-radius: var(--r-art);
   background: transparent;
-  color: var(--md-sys-color-on-surface);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
+  color: var(--text);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
@@ -1294,11 +1189,7 @@
 
 .menu-item:hover:not([aria-disabled="true"]),
 .menu-item:focus {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
+  background: var(--hover-row);
 }
 
 .menu-item:focus-visible {
@@ -1306,25 +1197,21 @@
 }
 
 .menu-item--destructive {
-  color: var(--md-sys-color-error);
+  color: var(--negative);
 }
 
 .menu-item[aria-disabled="true"] {
-  color: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) var(--md-sys-disabled-content),
-    transparent
-  );
+  color: var(--control);
   cursor: not-allowed;
 }
 
-/* ---- Sheet and dialog (§9.6): M3 modal side sheet and basic dialog ---- */
+/* ---- Sheet and dialog (§9.6): glass panels ---- */
 .sheet,
 .dialog {
   box-sizing: border-box;
   padding: 0;
   border: 0;
-  color: var(--md-sys-color-on-surface);
+  color: var(--text);
 }
 
 /* ---- Liquid glass (DESIGN_SYSTEM.md §7.11): ui/glass.ts points --glass-filter at the element's
@@ -1342,26 +1229,22 @@
 
 .sheet {
   position: fixed;
-  inset: 0 0 var(--dock) auto;
+  inset: var(--panel-gap) var(--panel-gap) var(--panel-gap) auto;
   width: var(--sheet-w);
   max-width: 100%;
   height: auto;
   max-height: none;
   margin: 0;
   overflow: auto;
-  border-left: var(--rule) solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-large) 0 0 var(--md-sys-shape-corner-large);
-  background: color-mix(
-    in oklab,
-    var(--md-sys-color-surface-container-low) var(--glass-fill),
-    transparent
-  );
-  box-shadow: var(--md-sys-elevation-level1);
+  border: var(--rule) solid var(--glass-edge);
+  border-radius: var(--r-panel);
+  background: color-mix(in oklab, var(--raised) var(--glass-fill), transparent);
+  box-shadow: var(--md-sys-elevation-level3);
 }
 
-/* Over the Stage a sheet stays opaque: no smeared motion through it (DESIGN_SYSTEM.md §6). */
+/* Over the lyrics view a sheet stays opaque: no smeared motion through it (DESIGN_SYSTEM.md §6). */
 .shell[data-view="listen"] .sheet {
-  background: var(--md-sys-color-surface-container-low);
+  background: var(--raised);
   backdrop-filter: none;
 }
 
@@ -1386,39 +1269,34 @@
 
 .sheet-head h2 {
   margin: 0;
-  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
 }
 
 .sheet-body {
   padding: 0 var(--md-dialog-pad) var(--md-dialog-pad);
 }
 
-.sheet-section {
+.sheet-section,
+.right-panel .sheet-section {
   margin: var(--sp-4) 0 var(--sp-2);
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
 }
 
 .dialog {
   width: min(var(--sheet-w), 100% - 2 * var(--sp-4));
   padding: var(--md-dialog-pad);
-  border-radius: var(--md-sys-shape-corner-extra-large);
-  background: color-mix(
-    in oklab,
-    var(--md-sys-color-surface-container-high) var(--glass-fill),
-    transparent
-  );
+  border: var(--rule) solid var(--glass-edge);
+  border-radius: var(--r-panel);
+  background: color-mix(in oklab, var(--raised-2) var(--glass-fill), transparent);
   box-shadow: var(--md-sys-elevation-level3);
 }
 
 .dialog[open] {
-  animation: dialog-in var(--md-sys-motion-spring-default-spatial-duration)
-    var(--md-sys-motion-spring-default-spatial);
+  animation: dialog-in var(--dur-ui) var(--ease-out);
 }
 
 .dialog::backdrop {
-  background: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+  background: var(--backdrop-dim);
 }
 
 .dialog h2 {
@@ -1428,9 +1306,8 @@
 
 .dialog p {
   margin: 0 0 var(--md-dialog-pad);
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-medium);
 }
 
 .dialog-actions {
@@ -1440,10 +1317,10 @@
   gap: var(--sp-2);
 }
 
-/* ---- Toast (§9.6): an M3 snackbar, bottom-centre above the dock, max 1 ---- */
+/* ---- Toast (§9.6): Spotify's, a blue pill bottom-centre above the player, max 1 ---- */
 .toast-region {
   position: fixed;
-  bottom: calc(var(--dock) + var(--sp-4));
+  bottom: calc(var(--pill-h) + 2 * var(--pill-inset) + var(--sp-4));
   left: 50%;
   z-index: 20;
   translate: -50% 0;
@@ -1455,14 +1332,13 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  min-height: var(--md-snackbar-h);
-  padding: var(--sp-3) var(--sp-4);
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  background: var(--md-sys-color-inverse-surface);
-  color: var(--md-sys-color-inverse-on-surface);
-  box-shadow: var(--md-sys-elevation-level3);
+  min-height: var(--hit-lg);
+  padding: var(--sp-2) var(--sp-4);
+  border-radius: var(--r-control);
+  background: var(--text);
+  color: var(--on-green);
+  box-shadow: var(--md-sys-elevation-level2);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-medium);
   transition: opacity var(--dur-toast) var(--ease-out);
 
   @starting-style {
@@ -1476,10 +1352,14 @@
 }
 
 /* ---- Pinned focus (for /__ui) and motion ---- */
-[data-force="focus"]:not(.track-row, .tile, .field-input),
-.tile[data-force="focus"] .tile-link {
-  outline: var(--md-focus-ring) solid var(--md-sys-color-secondary);
+[data-force="focus"]:not(.track-row, .tile, .field-input) {
+  outline: var(--md-focus-ring) solid var(--focus);
   outline-offset: var(--md-focus-offset);
+}
+
+.tile[data-force="focus"] {
+  outline: var(--md-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--md-focus-ring));
 }
 
 @keyframes spin {
@@ -1515,14 +1395,14 @@
 
 @keyframes menu-in {
   from {
-    scale: 0.92;
+    scale: 0.96;
     opacity: 0;
   }
 }
 
 @keyframes dialog-in {
   from {
-    scale: 0.9;
+    scale: 0.94;
     opacity: 0;
   }
 }
@@ -1537,18 +1417,26 @@
 
   .btn,
   .icon-btn,
+  .play-btn,
   .toggle::after,
   .tile-play {
     transition-property: background-color, color, opacity;
   }
 
+  .btn:hover,
   .btn:active,
-  .btn[data-force="pressed"],
+  .btn[data-force],
+  .icon-btn:hover,
   .icon-btn:active,
-  .icon-btn[data-force="pressed"],
+  .icon-btn[data-force],
+  .play-btn:hover,
   .play-btn:active,
-  .play-btn[data-force="pressed"] {
+  .play-btn[data-force] {
     scale: none;
+  }
+
+  .tile-play {
+    translate: none;
   }
 
   .spinner,
@@ -1569,9 +1457,7 @@
     scale: 1 0.4;
   }
 
-  .play-btn .icon,
-  .slider-rail,
-  .toggle::after {
+  .play-btn .icon {
     transition-property: opacity;
   }
 }
@@ -1585,9 +1471,9 @@
     border-radius: 0;
   }
 
-  /* Above the dock and the bottom bar (its row plus padding and rule). */
+  /* Above the mini player and the tab bar. */
   .toast-region {
-    bottom: calc(var(--dock) + var(--md-nav-item-h) + 2 * var(--sp-3) + var(--sp-4));
+    bottom: calc(var(--tabbar) + var(--mini-h) + 4 * var(--sp-2));
   }
 
   .conn-row {
@@ -1599,11 +1485,17 @@
     justify-content: flex-start;
     margin-top: var(--sp-2);
   }
+
+  /* Touch: no hover to reveal them, so the heart and the menu stay. */
+  .track-row .menu-wrap,
+  .track-heart {
+    opacity: 1;
+  }
 }
 
 /* The lyric line at the pointed time (PLAY-10). */
 .slider-preview {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1621,7 +1513,6 @@
 
   .toggle[aria-checked="true"] {
     forced-color-adjust: none;
-    border-color: Highlight;
     background: Highlight;
   }
 
@@ -1634,7 +1525,6 @@
   }
 
   .slider-fill,
-  :is(.dock-scrub, .dock-right) .slider-fill,
   .slider-thumb {
     forced-color-adjust: none;
     background: Highlight;
@@ -1643,5 +1533,12 @@
   .icon-btn[aria-pressed="true"]:not(.icon-btn--plain)::after {
     forced-color-adjust: none;
     background: Highlight;
+  }
+
+  .tabs a[aria-current="page"],
+  .chip[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
   }
 }

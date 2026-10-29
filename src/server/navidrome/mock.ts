@@ -41,8 +41,17 @@ const ALBUMS = [
     year: 2019,
     cover: 'night-sun',
     tracks: 4,
+    genre: 'Ambient',
   },
-  { id: 'al-2', name: 'Copper Rain', artistId: 'ar-1', year: 2015, cover: 'fire', tracks: 3 },
+  {
+    id: 'al-2',
+    name: 'Copper Rain',
+    artistId: 'ar-1',
+    year: 2015,
+    cover: 'fire',
+    tracks: 3,
+    genre: 'Folk',
+  },
   {
     id: 'al-3',
     name: 'Glass Weather',
@@ -50,6 +59,7 @@ const ALBUMS = [
     year: 2023,
     cover: 'neon-magenta',
     tracks: 5,
+    genre: 'Electronic',
   },
   {
     id: 'al-4',
@@ -58,6 +68,7 @@ const ALBUMS = [
     year: 2017,
     cover: 'grey-gradient',
     tracks: 3,
+    genre: 'Ambient',
   },
 ];
 
@@ -73,6 +84,7 @@ function songsOf(a: (typeof ALBUMS)[number]) {
     coverArt: a.id,
     track: i + 1,
     year: a.year,
+    genre: a.genre,
     duration: 20 + i * 5,
     suffix: 'wav',
     contentType: 'audio/wav',
@@ -90,6 +102,7 @@ const albumJson = (a: (typeof ALBUMS)[number]) => ({
   songCount: a.tracks,
   duration: songsOf(a).reduce((s, x) => s + x.duration, 0),
   year: a.year,
+  genre: a.genre,
 });
 
 /** A mono 16-bit WAV: a soft tone whose pitch identifies the track. */
@@ -130,6 +143,25 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     bigLibrary: 0,
   };
   const starred = new Set<string>(['al-1-t2']);
+  const starredAlbums = new Set<string>();
+  const starredArtists = new Set<string>();
+  // Playlists the tests can create, edit and delete (the Spotify-style pages).
+  const playlists = new Map([
+    [
+      'pl-1',
+      { id: 'pl-1', name: 'Evening', comment: '', songIds: SONGS.slice(0, 3).map((x) => x.id) },
+    ],
+  ]);
+  let nextPlaylist = 2;
+  const playlistJson = (p: { id: string; name: string; comment: string; songIds: string[] }) => ({
+    id: p.id,
+    name: p.name,
+    comment: p.comment,
+    owner: username,
+    songCount: p.songIds.length,
+    duration: p.songIds.reduce((t, x) => t + (SONGS.find((y) => y.id === x)?.duration ?? 0), 0),
+    coverArt: p.songIds.length ? `pl-${p.id}` : undefined,
+  });
   const scrobbles: { id: string; submission: boolean }[] = [];
   const requests: URLSearchParams[] = [];
   const audio = new Map<string, Buffer>();
@@ -299,9 +331,17 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
           return json(fail(10, "missing parameter: 'fromYear'"));
         const size = Math.min(500, Number(q.get('size') ?? 10));
         const offset = Number(q.get('offset') ?? 0);
-        const sorted = [...ALBUMS].sort((a, b) =>
-          q.get('type') === 'alphabeticalByName' ? a.name.localeCompare(b.name) : b.year - a.year,
-        );
+        const type = q.get('type');
+        const sorted = [...ALBUMS]
+          .filter((a) => type !== 'byGenre' || a.genre === q.get('genre'))
+          .filter((a) => type !== 'starred' || starredAlbums.has(a.id))
+          .sort((a, b) =>
+            type === 'alphabeticalByName'
+              ? a.name.localeCompare(b.name)
+              : type === 'recent' || type === 'frequent'
+                ? a.id.localeCompare(b.id)
+                : b.year - a.year,
+          );
         const list = [
           ...sorted.map(albumJson),
           ...Array.from({ length: faults.bigLibrary }, (_, i) => ({
@@ -316,6 +356,86 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
         ];
         return json(ok({ albumList2: { album: list.slice(offset, offset + size) } }));
       }
+      case 'getGenres': {
+        const names = [...new Set(ALBUMS.map((a) => a.genre))];
+        return json(
+          ok({
+            genres: {
+              genre: names.map((value) => ({
+                value,
+                albumCount: ALBUMS.filter((a) => a.genre === value).length,
+                songCount: SONGS.filter((x) => x.genre === value).length,
+              })),
+            },
+          }),
+        );
+      }
+      case 'getArtistInfo2': {
+        const a = ARTISTS.find((x) => x.id === id);
+        if (!a) return json(fail(70, 'not found'));
+        return json(
+          ok({
+            artistInfo2: {
+              biography: `${a.name} make records in a small room by the sea.`,
+              similarArtist: ARTISTS.filter((x) => x.id !== id).map((x) => ({
+                ...x,
+                coverArt: `ar-${x.id}`,
+              })),
+            },
+          }),
+        );
+      }
+      case 'getTopSongs': {
+        const name = q.get('artist') ?? '';
+        const count = Number(q.get('count') ?? 50);
+        return json(
+          ok({ topSongs: { song: SONGS.filter((x) => x.artist === name).slice(0, count) } }),
+        );
+      }
+      case 'getSimilarSongs2': {
+        const count = Number(q.get('count') ?? 50);
+        const s0 = SONGS.find((x) => x.id === id);
+        if (!s0) return json(fail(70, 'not found'));
+        return json(
+          ok({
+            similarSongs2: { song: SONGS.filter((x) => x.albumId !== s0.albumId).slice(0, count) },
+          }),
+        );
+      }
+      case 'getRandomSongs':
+      case 'getSongsByGenre': {
+        const genre = q.get('genre');
+        const count = Number(q.get('size') ?? q.get('count') ?? 10);
+        const list = SONGS.filter((x) => !genre || x.genre === genre).slice(0, count);
+        return json(
+          ok(
+            method === 'getRandomSongs'
+              ? { randomSongs: { song: list } }
+              : { songsByGenre: { song: list } },
+          ),
+        );
+      }
+      case 'createPlaylist': {
+        const p = {
+          id: `pl-${nextPlaylist++}`,
+          name: q.get('name') ?? 'New playlist',
+          comment: '',
+          songIds: q.getAll('songId'),
+        };
+        playlists.set(p.id, p);
+        return json(ok({ playlist: { ...playlistJson(p), entry: [] } }));
+      }
+      case 'updatePlaylist': {
+        const p = playlists.get(q.get('playlistId') ?? '');
+        if (!p) return json(fail(70, 'not found'));
+        if (q.has('name')) p.name = q.get('name') ?? p.name;
+        if (q.has('comment')) p.comment = q.get('comment') ?? '';
+        const drop = new Set(q.getAll('songIndexToRemove').map(Number));
+        p.songIds = [...p.songIds.filter((_, i) => !drop.has(i)), ...q.getAll('songIdToAdd')];
+        return json(ok());
+      }
+      case 'deletePlaylist':
+        return playlists.delete(id) ? json(ok()) : json(fail(70, 'not found'));
       case 'getAlbum': {
         const a = ALBUMS.find((x) => x.id === id);
         return a
@@ -353,15 +473,30 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
           : json(fail(70, 'not found'));
       }
       case 'getPlaylists':
-        return json(
-          ok({ playlists: { playlist: [{ id: 'pl-1', name: 'Evening', songCount: 3 }] } }),
-        );
-      case 'getPlaylist':
-        return id === 'pl-1'
-          ? json(ok({ playlist: { id: 'pl-1', name: 'Evening', entry: SONGS.slice(0, 3) } }))
+        return json(ok({ playlists: { playlist: [...playlists.values()].map(playlistJson) } }));
+      case 'getPlaylist': {
+        const p = playlists.get(id);
+        return p
+          ? json(
+              ok({
+                playlist: {
+                  ...playlistJson(p),
+                  entry: p.songIds.map((x) => SONGS.find((y) => y.id === x)).filter(Boolean),
+                },
+              }),
+            )
           : json(fail(70, 'not found'));
+      }
       case 'getStarred2':
-        return json(ok({ starred2: { song: SONGS.filter((s) => starred.has(s.id)) } }));
+        return json(
+          ok({
+            starred2: {
+              song: SONGS.filter((s) => starred.has(s.id)),
+              album: ALBUMS.filter((a) => starredAlbums.has(a.id)).map(albumJson),
+              artist: ARTISTS.filter((a) => starredArtists.has(a.id)),
+            },
+          }),
+        );
       case 'search3': {
         const term = (q.get('query') ?? '').toLowerCase().replace(/"/g, '');
         const has = (s: string) => s.toLowerCase().includes(term);
@@ -434,16 +569,27 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
           }),
         );
       case 'star':
-        starred.add(id);
+      case 'unstar': {
+        const on = method === 'star';
+        for (const [key, set] of [
+          ['id', starred],
+          ['albumId', starredAlbums],
+          ['artistId', starredArtists],
+        ] as const)
+          for (const x of q.getAll(key)) on ? set.add(x) : set.delete(x);
         return json(ok());
-      case 'unstar':
-        starred.delete(id);
-        return json(ok());
+      }
       case 'scrobble':
         scrobbles.push({ id, submission: q.get('submission') !== 'false' });
         return json(ok());
       case 'getCoverArt': {
-        const a = ALBUMS.find((x) => x.id === id);
+        // Artist pictures (`ar-…`) and playlist covers (`pl-…`) show their first album's art.
+        const ref = id.startsWith('ar-ar-')
+          ? ALBUMS.find((x) => `ar-${x.artistId}` === id)?.id
+          : id.startsWith('pl-pl-')
+            ? SONGS.find((x) => x.id === playlists.get(id.slice(3))?.songIds[0])?.albumId
+            : id;
+        const a = ALBUMS.find((x) => x.id === ref);
         const png = a ? await fixtureCover(a.cover) : null;
         if (!png) return json(fail(70, 'not found'));
         res.writeHead(200, { 'content-type': state.coverType, 'content-length': png.length });
@@ -511,6 +657,9 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     faults,
     scrobbles,
     starred,
+    starredAlbums,
+    starredArtists,
+    playlists,
     requests,
     songs: SONGS,
     albums: ALBUMS,

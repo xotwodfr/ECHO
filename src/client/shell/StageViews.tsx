@@ -1,32 +1,27 @@
-import { type ReactNode, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react';
+import { type CSSProperties, type ReactNode, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import type { LyricsDoc } from '../../shared/types.ts';
 import { isInstrumental, pinLyricsSource } from '../lyrics/loader.ts';
-import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
-import { prefsStore, setPref } from '../prefs.ts';
+import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
+import { positionNow } from '../playback/controller.ts';
+import { prefsStore } from '../prefs.ts';
 import { sessionStore } from '../session.ts';
-import { lyricHost, lyricOffset, lyricsStore, type StageView, stageView } from '../stage/status.ts';
+import { lyricHost, lyricOffset, lyricsStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
-import { attachGlass, glass } from '../ui/glass.ts';
-import { Icon, type IconName } from '../ui/icons.tsx';
+import { glass } from '../ui/glass.ts';
+import { Icon } from '../ui/icons.tsx';
+import { formatTime } from '../ui/logic.ts';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
-import { Slider } from '../ui/slider.tsx';
 import { Link, useView } from './link.tsx';
 import { fixTrackStore } from './SpotifyViews.tsx';
 
-// What sits on the Stage above the room (PRODUCT_SPEC.md §6.1): the top chrome, and the view mode's
-// content. The lyric field itself is drawn by the Stage engine into the host element below.
+// What sits on the lyrics view above the room (the cover, blurred and drifting): the top chrome,
+// the song on the left and the lyric column on the right. The lyric field itself is drawn by the
+// Stage engine into the host element below.
 
-// Cover mode has no button (owner, 2026-10-28): C and V still reach it, and it stands in for
-// missing lyrics.
-const VIEW_BUTTONS: [StageView, IconName][] = [
-  ['lyrics', 'lyrics'],
-  ['visual', 'visual'],
-];
-
-/** F, and the chrome's full screen button. */
+/** F, and the player's full screen button over the lyrics view. */
 export const toggleFullscreen = () =>
   void (
     document.fullscreenElement
@@ -34,143 +29,104 @@ export const toggleFullscreen = () =>
       : document.documentElement.requestFullscreen()
   ).catch(() => undefined);
 
-const onFullscreen = (f: () => void) => {
-  document.addEventListener('fullscreenchange', f);
-  return () => document.removeEventListener('fullscreenchange', f);
-};
-
 /**
- * Top chrome, one row of round buttons: the view modes (V cycles them from the keyboard), full
- * screen, the backdrop's brightness, and back to the Library.
+ * The lyrics view's top: Spotify's chevron that closes it, and where the music is playing from.
+ * Closing goes back to the page it was opened from (Home when it was opened directly).
  */
 export function StageChrome() {
-  const view = useStore(stageView, (s) => s.view);
-  const full = useSyncExternalStore(onFullscreen, () => !!document.fullscreenElement);
+  const navigate = useView((s) => s.navigate);
+  const source = useQueue((q) => q.contextSource);
+  const close = () =>
+    history.length > 1 && document.referrer !== '' ? history.back() : navigate({ view: 'home' });
   return (
     <div className="stage-chrome">
-      <fieldset className="view-switch">
-        <legend className="visually-hidden">{strings.stage.viewLabel}</legend>
-        {VIEW_BUTTONS.map(([v, icon]) => (
-          <button
-            key={v}
-            type="button"
-            className="stage-btn glass"
-            ref={glass}
-            aria-label={strings.stage.views[v]}
-            title={strings.stage.views[v]}
-            aria-pressed={view === v}
-            onClick={() => stageView.getState().set(v)}
-          >
-            <Icon name={icon} />
-          </button>
-        ))}
-      </fieldset>
       <button
         type="button"
         className="stage-btn glass"
         ref={glass}
-        aria-label={strings.stage.fullscreen}
-        title={strings.stage.fullscreen}
-        aria-pressed={full}
-        onClick={toggleFullscreen}
+        aria-label={strings.nowPlaying.close}
+        title={strings.nowPlaying.close}
+        onClick={close}
       >
-        <Icon name="fullscreen" />
+        <Icon name="chevronDown" />
       </button>
-      <Brightness />
-      <Link
-        className="stage-btn glass"
-        ref={glass}
-        to={{ view: 'library', tab: 'albums' }}
-        aria-label={strings.nav.library}
-        title={strings.nav.library}
-      >
-        <Icon name="close" />
-      </Link>
+      {source && (
+        <p className="stage-from">
+          <span>
+            {strings.nowPlaying.playingFrom} {strings.nowPlaying.from[source.kind] ?? ''}
+          </span>
+          <b>{source.title}</b>
+        </p>
+      )}
+      <span className="stage-chrome-end" />
     </div>
   );
 }
 
 /**
- * The blurred cover's brightness (per device): the round button widens into a Control Center style
- * slider, the pill itself filling white with the level, and shrinks back on Escape or a click
- * elsewhere.
+ * The lyrics view after the owner's reference: the cover, the progress, the title and the artist
+ * on the left, the lyric column on the right; with no lyrics, the cover and title alone, centred.
+ * On phones the cover shrinks to a header above the lyrics.
  */
-function Brightness() {
-  const value = useStore(prefsStore, (p) => p.visuals.backdrop);
-  const [open, setOpen] = useState(false);
-  const wrap = useRef<HTMLDivElement>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const id = useId();
-  useEffect(() => {
-    if (!open) return;
-    const outside = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    const onEscape = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      setOpen(false);
-      trigger.current?.focus();
-    };
-    document.addEventListener('pointerdown', outside);
-    document.addEventListener('keydown', onEscape);
-    return () => {
-      document.removeEventListener('pointerdown', outside);
-      document.removeEventListener('keydown', onEscape);
-    };
-  }, [open]);
-  useEffect(() => attachGlass(wrap.current), []);
-  const set = (v: number) => void setPref('visuals', 'backdrop', v);
-  return (
-    <div className="stage-brightness glass" ref={wrap} data-open={open || undefined}>
-      <button
-        ref={trigger}
-        type="button"
-        className="stage-btn"
-        aria-label={strings.stage.brightness}
-        title={strings.stage.brightness}
-        aria-expanded={open}
-        aria-controls={id}
-        onClick={() => setOpen(!open)}
-      >
-        <Icon name="brightness" />
-      </button>
-      {/* Always mounted, so it can widen and narrow; out of reach while narrow. */}
-      <div className="stage-brightness-track" id={id} inert={!open}>
-        <div>
-          <Slider
-            variant="brightness"
-            label={strings.stage.brightness}
-            value={value}
-            max={1}
-            step={0.05}
-            bigStep={0.2}
-            wheel
-            valueText={(v) => `${Math.round(v * 100)}%`}
-            onInput={set}
-            onChange={set}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function StageContent() {
   const view = useStore(stageView, (s) => s.view);
   const track = usePlayer((p) => p.track);
+  const { doc, state, tried } = useStore(lyricsStore);
+  const showUnsynced = useStore(prefsStore, (p) => p.lyrics.showUnsynced);
   // Nothing playing: one sentence and one action (DESIGN_SYSTEM.md §10; M9 critique).
   if (!track)
     return (
       <div className="stage-idle">
         <p>{strings.stage.idle}</p>
-        <Link className={buttonClass('secondary')} to={{ view: 'library', tab: 'albums' }}>
+        <Link className={buttonClass('secondary')} to={{ view: 'home' }}>
           {strings.stage.idleAction}
         </Link>
       </div>
     );
-  if (view === 'visual') return null; // Visual: the environment only
-  if (view === 'cover') return <CoverView />;
-  return <LyricsView />;
+  const missing = state === 'missing';
+  // No lyrics, or the user's Cover view, or an untimed sheet with "Show unsynced lyrics" off:
+  // the cover and title alone, with "No lyrics found" under them unless it is an instrumental.
+  const cover =
+    view !== 'lyrics' || missing || (state === 'ready' && doc?.sync === 'none' && !showUnsynced);
+  return (
+    <div className="np-view" data-mode={cover ? 'cover' : 'lyrics'}>
+      <NowPlayingSide />
+      {!cover && (
+        <div className="ly-area">
+          <LyricsView />
+        </div>
+      )}
+      {missing && view === 'lyrics' && !isInstrumental(track.title, tried) && (
+        <MissingLyrics tried={tried} />
+      )}
+    </div>
+  );
+}
+
+/** The left side: the cover, a slim progress bar with its times, the title and the artist. */
+function NowPlayingSide() {
+  const t = usePlayer((p) => p.track);
+  const s = usePlayer((p) => p);
+  useTicker(s.status === 'playing', 250);
+  if (!t) return null;
+  const at = positionNow(s, performance.now());
+  const value = t.durationMs ? Math.min(1, at / t.durationMs) : 0;
+  return (
+    <div className="np-side">
+      <Artwork size="cover" src={t.artwork[0]?.url} title={t.album.title} />
+      <div className="np-progress" aria-hidden="true">
+        <span className="num">{formatTime(at)}</span>
+        <span className="np-progress-track" style={{ '--value': value } as CSSProperties}>
+          <span />
+        </span>
+        <span className="num">{formatTime(t.durationMs)}</span>
+      </div>
+      <div className="np-titles">
+        <p className="np-title">{t.title}</p>
+        <p className="np-artist">{t.artists.map((a) => a.name).join(', ')}</p>
+      </div>
+    </div>
+  );
 }
 
 /**
@@ -180,11 +136,9 @@ export function StageContent() {
  * are none (§9.4). A late answer replaces Cover mode as soon as it arrives.
  */
 function LyricsView() {
-  const { doc, state, since, tried } = useStore(lyricsStore);
-  const showUnsynced = useStore(prefsStore, (p) => p.lyrics.showUnsynced);
+  const { doc, state, since } = useStore(lyricsStore);
   const motionOff = useStore(prefsStore, (p) => p.visuals.motion === 'off');
   useTicker(state === 'waiting', 100);
-  if (state === 'missing') return <MissingLyrics tried={tried} />;
   if (state === 'waiting') {
     const waited = performance.now() - since;
     if (waited < WAIT_DOTS_MS) return null;
@@ -207,8 +161,6 @@ function LyricsView() {
         <p>{strings.stage.lyricsPlaceholder}</p>
       </div>
     );
-  // Settings → Lyrics → "Show unsynced lyrics" off: an untimed sheet gives way to the cover.
-  if (doc.sync === 'none' && !showUnsynced) return <CoverView />;
   // Motion = Off (§10, WCAG 2.2.2): a static sheet, the active line marked, nothing moving.
   if (motionOff && doc.sync !== 'none')
     return (
@@ -299,8 +251,6 @@ function SourceMenu() {
 
 /** §9.4: Cover mode, "No lyrics found" beneath, and the sources tried behind ⓘ. */
 function MissingLyrics({ tried }: { tried: { source: string; outcome: string }[] }) {
-  const title = usePlayer((p) => p.track?.title);
-  if (isInstrumental(title, tried)) return <CoverView />;
   const list = tried.length
     ? tried
         .map(
@@ -312,20 +262,17 @@ function MissingLyrics({ tried }: { tried: { source: string; outcome: string }[]
   // ⓘ is a disclosure (a native <details>): keyboard and touch reach it, and a screen reader hears
   // "Sources tried, collapsed" rather than the glyph's name.
   return (
-    <>
-      <CoverView />
-      <div className="stage-missing">
-        {strings.stage.noLyrics}
-        <details className="stage-missing-info">
-          <summary aria-label={strings.stage.tried} title={list}>
-            ⓘ
-          </summary>
-          <p>
-            {strings.stage.tried} {list}
-          </p>
-        </details>
-      </div>
-    </>
+    <div className="stage-missing">
+      {strings.stage.noLyrics}
+      <details className="stage-missing-info">
+        <summary aria-label={strings.stage.tried} title={list}>
+          ⓘ
+        </summary>
+        <p>
+          {strings.stage.tried} {list}
+        </p>
+      </details>
+    </div>
   );
 }
 
@@ -336,7 +283,7 @@ function LyricHost() {
     lyricHost.setState({ el: ref.current });
     return () => lyricHost.setState({ el: null });
   }, []);
-  return <div ref={ref} />;
+  return <div className="ly-host" ref={ref} />;
 }
 
 /**
@@ -387,61 +334,6 @@ function LyricSheet({ doc, active }: { doc: LyricsDoc; active?: number }) {
           </p>
         ))}
       </div>
-    </div>
-  );
-}
-
-/** The Cover crossfade's exit (§8, --dur-art-out); a fallback if no animationend arrives. */
-export const COVER_OUT_MS = 420;
-
-interface Shown {
-  id: string;
-  src?: string;
-  title: string;
-  leaving: boolean;
-}
-
-/**
- * Cover mode (DESIGN_SYSTEM.md §8): the artwork up to min(60vh, 640px), never cropped or moved.
- * On a cover change, opacity only: the old one out over 420 ms, the new one in over 640 ms,
- * overlapping by 200 ms.
- */
-function CoverView() {
-  const track = usePlayer((p) => p.track);
-  const src = track?.artwork[0]?.url;
-  const title = track?.album.title ?? '';
-  // One entry per distinct cover: tracks of the same album do not crossfade.
-  const id = src ?? `title:${title}`;
-  const [shown, setShown] = useState<Shown[]>(() => [{ id, src, title, leaving: false }]);
-  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    setShown((prev) => {
-      if (prev.some((c) => c.id === id && !c.leaving)) return prev;
-      return [...prev.map((c) => ({ ...c, leaving: true })), { id, src, title, leaving: false }];
-    });
-    const t = setTimeout(() => setShown((prev) => prev.filter((c) => !c.leaving)), COVER_OUT_MS);
-    timers.current.push(t);
-  }, [id, src, title]);
-
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
-
-  return (
-    <div className="stage-cover">
-      {shown.map((c, i) => (
-        <div
-          key={c.id}
-          className="stage-cover-item"
-          data-leaving={c.leaving || undefined}
-          // The first cover shown appears at once; only changes crossfade.
-          data-enter={i > 0 || undefined}
-          onAnimationEnd={() =>
-            c.leaving && setShown((prev) => prev.filter((x) => x.id !== c.id || !x.leaving))
-          }
-        >
-          <Artwork size="cover" src={c.src} title={c.title} />
-        </div>
-      ))}
     </div>
   );
 }

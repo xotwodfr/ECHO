@@ -41,6 +41,8 @@ export function authParams(c: Credentials, salt = randomBytes(6).toString('hex')
   };
 }
 
+type Params = Record<string, string | string[]>;
+
 /** Query parameters a caller may never set: auth and protocol are ours. */
 const RESERVED = new Set(['u', 'p', 't', 's', 'apiKey', 'c', 'v', 'f']);
 
@@ -52,9 +54,11 @@ export function createClient(target: Target, creds: Credentials) {
   };
   const base = target.url.href.replace(/\/+$/, '');
 
-  function urlFor(method: string, params: Record<string, string>) {
+  function urlFor(method: string, params: Params) {
     const q = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) if (!RESERVED.has(k)) q.set(k, v);
+    // A repeated parameter (createPlaylist's songId) arrives as a list and leaves as one per value.
+    for (const [k, v] of Object.entries(params))
+      if (!RESERVED.has(k)) for (const x of [v].flat()) q.append(k, x);
     for (const [k, v] of Object.entries(authParams(creds))) q.set(k, v);
     q.set('v', API_VERSION);
     q.set('c', 'ECHO');
@@ -63,11 +67,7 @@ export function createClient(target: Target, creds: Credentials) {
   }
 
   /** The raw response; the caller owns (and must consume or destroy) the body. */
-  function request(
-    method: string,
-    params: Record<string, string>,
-    headers: Record<string, string> = {},
-  ) {
+  function request(method: string, params: Params, headers: Record<string, string> = {}) {
     const url = urlFor(method, params);
     const mod = url.startsWith('https:') ? https : http;
     return new Promise<IncomingMessage>((resolve, reject) => {
@@ -80,7 +80,7 @@ export function createClient(target: Target, creds: Credentials) {
   }
 
   /** A JSON method; resolves with `subsonic-response`, rejects with a SubsonicError. */
-  async function call(method: string, params: Record<string, string> = {}) {
+  async function call(method: string, params: Params = {}) {
     const res = await request(method, params, { accept: 'application/json' });
     const chunks: Buffer[] = [];
     let size = 0;

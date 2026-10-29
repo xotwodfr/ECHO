@@ -31,6 +31,7 @@ const SCHEMA = {
     crossfadeSec: { check: intIn(0, 8), default: 0 },
     replayGain: { check: oneOf('off', 'track', 'album', 'auto'), default: 'auto' },
     scrobble: { check: bool, default: true },
+    autoplay: { check: bool, default: true },
   },
   lyrics: {
     sizeScale: { check: oneOf(0.85, 1, 1.15, 1.3), default: 1 },

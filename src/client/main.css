@@ -1,13 +1,13 @@
-/* Shell frame (DESIGN_SYSTEM.md §5). Every value comes from tokens.css; the one exception is the
-   breakpoint, because media queries cannot read custom properties (DS-01 allow-list). */
+/* The frame and the pages (DESIGN_SYSTEM.md §5), after Spotify's. Every value comes from
+   tokens.css; the one exception is the breakpoints, because media queries cannot read custom
+   properties (DS-01 allow-list): compact < 720px, medium 720–1279px, wide ≥ 1280px. */
 
-/* The shell is Material 3 Expressive (DESIGN_SYSTEM.md §1): Roboto Flex on the M3 surface. */
 body {
   margin: 0;
-  background: var(--md-sys-color-surface);
-  color: var(--md-sys-color-on-surface);
+  background: var(--frame);
+  color: var(--text);
   font: var(--md-sys-typescale-body-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-medium);
+  -webkit-font-smoothing: antialiased;
 }
 
 h1 {
@@ -26,21 +26,19 @@ h1:focus {
 
 a,
 input,
-button {
+button,
+select {
   color: inherit;
   font: inherit;
 }
 
-/* M3 focus indicator: 3px in secondary, 2px out (the player view: Reverb Chamber's 2px ring). */
-:focus-visible {
-  outline: var(--md-focus-ring) solid var(--md-sys-color-secondary);
-  outline-offset: var(--md-focus-offset);
+a {
+  text-decoration: none;
 }
 
-:is(.shell[data-view="listen"] .canvas, .dock-meta, .dock-transport, .dock-scrub, .dock-right)
-  :focus-visible {
-  outline: var(--focus-ring) solid var(--focus);
-  outline-offset: var(--focus-ring);
+:focus-visible {
+  outline: var(--md-focus-ring) solid var(--focus);
+  outline-offset: var(--md-focus-offset);
 }
 
 .visually-hidden {
@@ -52,122 +50,148 @@ button {
   white-space: nowrap;
 }
 
-/* Frame: navigation drawer | canvas over a full-width dock. No top bar (§5, recorded redraw). */
+/* ---- Frame: top bar over three rounded panels, the player floating over the middle one ---- */
 .shell {
   display: grid;
-  grid-template-columns: var(--sidebar) minmax(0, 1fr);
-  grid-template-rows: minmax(0, 1fr) var(--dock);
+  grid-template-columns: var(--library-w) minmax(0, 1fr);
+  grid-template-rows: var(--topbar) minmax(0, 1fr);
+  column-gap: var(--panel-gap);
+  box-sizing: border-box;
   height: 100dvh;
+  padding: 0 var(--panel-gap) var(--panel-gap);
+  background: var(--frame);
 }
 
-/* M3 standard navigation drawer: items 56px, the active one on a secondary-container pill. */
-.sidebar {
-  grid-area: 1 / 1;
+.shell[data-right] {
+  grid-template-columns: var(--library-w) minmax(0, 1fr) var(--np-w);
+}
+
+.topbar {
+  grid-area: 1 / 1 / 2 / -1;
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-  padding: var(--sp-4) var(--sp-3);
-  background: color-mix(
-    in oklab,
-    var(--md-sys-color-surface-container-low) var(--glass-fill),
-    transparent
-  );
-  border-radius: 0 var(--md-sys-shape-corner-large) var(--md-sys-shape-corner-large) 0;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
 }
 
 .wordmark {
-  margin: 0;
-  padding: var(--sp-3) var(--sp-4);
-  color: var(--md-sys-color-primary);
-  font: var(--md-sys-typescale-title-large-emphasized) var(--font-ui);
+  flex: none;
+  padding: 0 var(--sp-4) 0 var(--sp-3);
+  color: var(--text);
+  font: var(--title-s) var(--font-ui);
+  letter-spacing: var(--tracking-title);
 }
 
-.sidebar ul {
+.topbar-nav {
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.sidebar li {
-  display: flex;
-  align-items: center;
-  min-height: var(--md-nav-item-h);
-}
-
-.sidebar a {
-  display: flex;
-  align-items: center;
   flex: 1;
-  height: var(--md-nav-item-h);
-  padding: 0 var(--sp-4);
-  border-radius: var(--md-sys-shape-corner-full);
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
-  text-decoration: none;
-  transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects);
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-2);
+  min-width: 0;
 }
 
-.sidebar a:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
-  color: var(--md-sys-color-on-surface);
+/* Round icon buttons: Home in the top bar, + in Your Library. */
+.round-btn {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--hit-lg);
+  height: var(--hit-lg);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color var(--dur-hover) ease,
+    background-color var(--dur-hover) ease,
+    scale var(--dur-press) ease;
 }
 
-.sidebar a[aria-current="page"] {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
-  font: var(--md-sys-typescale-label-large-emphasized) var(--font-ui);
+.round-btn:hover {
+  background: var(--raised);
+  color: var(--text);
 }
 
-/* M3 search bar in the drawer: 56px, full corner, a `/` hint at its end. */
+.round-btn--lg {
+  width: var(--md-button-h);
+  height: var(--md-button-h);
+  background: var(--raised);
+}
+
+.round-btn--lg .icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.round-btn--lg:hover {
+  scale: 1.04;
+  background: var(--raised-2);
+}
+
+.round-btn[aria-current="page"] {
+  color: var(--text);
+}
+
+/* The search pill: "What do you want to play?", a `/` hint at its end. */
 .search-field {
   position: relative;
   display: flex;
-  flex: 1;
+  align-items: center;
+  flex: 0 1 var(--form-w);
   min-width: 0;
+  color: var(--muted);
+}
+
+.search-field > .icon {
+  position: absolute;
+  left: var(--sp-3);
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  pointer-events: none;
 }
 
 .search-field input {
   flex: 1;
   min-width: 0;
-  height: var(--md-search-h);
+  height: var(--search-h);
   box-sizing: border-box;
-  padding: 0 var(--sp-7) 0 var(--sp-5);
-  border: 0;
-  border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-surface-container-high);
-  color: var(--md-sys-color-on-surface);
+  padding: 0 var(--sp-7) 0 var(--sp-7);
+  border: var(--rule) solid transparent;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--text);
   font: var(--md-sys-typescale-body-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-large);
-  transition: background-color var(--dur-hover) ease;
+  transition:
+    background-color var(--dur-hover) ease,
+    border-color var(--dur-hover) ease;
 }
 
 .search-field input:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-    var(--md-sys-color-surface-container-high)
-  );
+  border-color: var(--raised-3);
+  background: var(--raised-2);
+}
+
+.search-field input:focus-visible {
+  outline: none;
+  border-color: var(--text);
+  box-shadow: var(--ring-focus);
 }
 
 .search-field input::placeholder {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
+}
+
+.search-field input::-webkit-search-cancel-button {
+  display: none;
 }
 
 .search-field .hint {
   position: absolute;
   right: var(--sp-5);
-  top: 50%;
-  translate: 0 -50%;
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   font: var(--md-sys-typescale-label-large) var(--font-ui);
 }
 
@@ -175,102 +199,71 @@ button {
   display: none;
 }
 
-.canvas {
-  grid-area: 1 / 2;
-  overflow: auto;
-  padding: var(--gutter);
-}
-
-/* M3 secondary tabs: 48px, a 3px primary indicator under the current one, a divider below. */
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-5);
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
-}
-
-.tabs a {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: var(--md-tab-h);
-  padding: 0 var(--sp-4);
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
-  text-decoration: none;
-  transition: background-color var(--dur-hover) ease;
-}
-
-.tabs a:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-    transparent
-  );
-  color: var(--md-sys-color-on-surface);
-}
-
-.tabs a[aria-current="page"] {
-  color: var(--md-sys-color-on-surface);
-}
-
-.tabs a[aria-current="page"]::after {
-  content: "";
-  position: absolute;
-  right: var(--sp-2);
-  bottom: 0;
-  left: var(--sp-2);
-  height: var(--md-tab-indicator);
-  border-radius: var(--md-tab-indicator) var(--md-tab-indicator) 0 0;
-  background: var(--md-sys-color-primary);
-}
-
-/* Choices outside the player (Settings, album order): an M3 Expressive connected button group;
-   the chosen one rounds fully and fills. The Stage's own switch is in stage.css. */
-.shell:not([data-view="listen"]) .canvas .view-switch {
-  flex-wrap: wrap;
-  gap: var(--md-button-group-gap);
-}
-
-.shell:not([data-view="listen"]) .canvas .view-switch button {
+.avatar-btn {
+  display: grid;
+  place-items: center;
+  width: var(--md-button-h);
   height: var(--md-button-h);
-  padding: 0 var(--md-button-pad);
-  border-radius: var(--md-sys-shape-corner-small);
-  background: var(--md-sys-color-surface-container-highest);
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
-  transition:
-    border-radius var(--md-sys-motion-spring-fast-spatial-duration)
-    var(--md-sys-motion-spring-fast-spatial),
-    background-color var(--md-sys-motion-spring-fast-effects-duration)
-    var(--md-sys-motion-spring-fast-effects);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  color: var(--muted);
+  cursor: pointer;
+  transition: scale var(--dur-press) ease;
 }
 
-.shell:not([data-view="listen"]) .canvas .view-switch button:first-of-type {
-  border-radius: var(--md-sys-shape-corner-full) var(--md-sys-shape-corner-small)
-    var(--md-sys-shape-corner-small) var(--md-sys-shape-corner-full);
+.avatar-btn:hover {
+  scale: 1.04;
 }
 
-.shell:not([data-view="listen"]) .canvas .view-switch button:last-of-type {
-  border-radius: var(--md-sys-shape-corner-small) var(--md-sys-shape-corner-full)
-    var(--md-sys-shape-corner-full) var(--md-sys-shape-corner-small);
+.avatar {
+  display: grid;
+  place-items: center;
+  width: var(--hit-lg);
+  height: var(--hit-lg);
+  border-radius: var(--r-pill);
+  background: var(--avatar);
+  color: var(--on-green);
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
 }
 
-.shell:not([data-view="listen"]) .canvas .view-switch button:hover {
-  background: color-mix(
-    in srgb,
-    var(--md-sys-color-on-surface-variant) calc(var(--md-sys-state-hover) * 100%),
-    var(--md-sys-color-surface-container-highest)
-  );
-  color: var(--md-sys-color-on-surface);
+.topbar .menu-wrap {
+  margin-left: auto;
 }
 
-.shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
-  border-radius: var(--md-sys-shape-corner-full);
-  background: var(--md-sys-color-primary);
-  color: var(--md-sys-color-on-primary);
+/* The panels: #121212, rounded, each scrolling on its own. */
+.library-panel,
+.canvas,
+.right-panel {
+  min-height: 0;
+  border-radius: var(--r-panel);
+  background: var(--panel);
+}
+
+.canvas {
+  grid-area: 2 / 2;
+  position: relative;
+  overflow: auto;
+  padding: 0 var(--gutter) calc(var(--pill-h) + 2 * var(--pill-inset) + var(--sp-6));
+  scrollbar-color: var(--raised-3) transparent;
+}
+
+/* A page without a tinted header still starts below the panel's edge. */
+.canvas > h1:first-child,
+.canvas > .home,
+.canvas > .settings-page {
+  margin-top: var(--sp-5);
+}
+
+.right-panel {
+  grid-area: 2 / 3;
+  overflow: auto;
+}
+
+.empty {
+  color: var(--muted);
+  margin: 0 0 var(--sp-4);
 }
 
 .notice {
@@ -279,12 +272,7 @@ button {
   align-items: center;
   gap: var(--sp-3);
   margin: 0 0 var(--sp-4);
-  color: var(--md-sys-color-on-surface-variant);
-}
-
-.empty {
-  color: var(--md-sys-color-on-surface-variant);
-  margin: 0 0 var(--sp-4);
+  color: var(--muted);
 }
 
 /* Block states (DESIGN_SYSTEM.md §10): inside the block, one sentence, one action. */
@@ -305,53 +293,513 @@ button {
 
 .block-error p {
   margin: 0;
-  color: var(--md-sys-color-on-surface);
 }
 
 .freshness {
   margin: 0 0 var(--sp-4);
-  color: var(--md-sys-color-warning);
+  color: var(--warning);
   font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
-/* See AlbumGrid in ui/media.tsx for the column arithmetic. */
-.album-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
-  gap: var(--gap);
+/* ---- Your Library (the left panel, and the page on phones) ---- */
+.library-panel,
+.library-page {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.library-panel {
+  grid-area: 2 / 1;
+  padding: var(--sp-2) var(--sp-2) 0;
+  overflow: hidden;
+}
+
+.lp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-2) var(--sp-2) var(--sp-3);
+}
+
+.lp-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: 0;
+  color: var(--text);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+}
+
+.lp-title .icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+  color: var(--muted);
+}
+
+.library-page .lp-title {
+  font: var(--md-sys-typescale-headline-small) var(--font-ui);
+}
+
+/* Filter chips (Spotify's): pills, the chosen one white. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-1) var(--sp-2) var(--sp-2);
+  border: 0;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: var(--chip-h);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--chip);
+  color: var(--text);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  cursor: pointer;
+  transition: background-color var(--dur-hover) ease;
+}
+
+.chip:hover {
+  background: var(--chip-hover);
+}
+
+.chip[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--on-green);
+}
+
+.chip--clear {
+  justify-content: center;
+  width: var(--chip-h);
+  padding: 0;
+}
+
+.lp-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: 0 var(--sp-2) var(--sp-1);
+}
+
+.lp-search {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex: 1;
+  min-width: 0;
+  height: var(--hit-lg);
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-control);
+  color: var(--muted);
+}
+
+.lp-search:focus-within {
+  background: var(--raised-2);
+}
+
+.lp-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+}
+
+.lp-search input:focus-visible {
+  outline: none;
+}
+
+.lp-search input::placeholder {
+  color: var(--muted);
+}
+
+.lp-sort select {
+  height: var(--hit-lg);
+  padding: 0 var(--sp-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  cursor: pointer;
+}
+
+.lp-sort select:hover {
+  color: var(--text);
+}
+
+.lp-sort option {
+  background: var(--raised-2);
+  color: var(--text);
+}
+
+.lp-list {
+  flex: 1;
+  min-height: 0;
   margin: 0;
   padding: 0;
+  overflow: auto;
   list-style: none;
+  scrollbar-color: var(--raised-3) transparent;
 }
 
-/* Dock (§5, §9.2): meta | transport over the scrubber | volume, queue, provider. Its own layer:
-   on Listen it overlaps the full-bleed Stage, which is positioned. */
+.library-page .lp-list {
+  overflow: visible;
+}
+
+.lp-row a,
+.lp-row > span {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2);
+  border-radius: var(--r-control);
+  transition: background-color var(--dur-hover) ease;
+}
+
+.lp-row a:hover {
+  background: var(--hover-row);
+}
+
+.lp-row a[aria-current="page"] {
+  background: var(--selected-row);
+}
+
+.lp-text {
+  display: grid;
+  flex: 1;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.lp-name,
+.lp-sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lp-name {
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+}
+
+.lp-name[data-playing],
+.shortcut-title[data-playing] {
+  color: var(--green);
+}
+
+.lp-sub {
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+}
+
+.lp-speaker,
+.shortcut-speaker {
+  flex: none;
+  color: var(--green);
+}
+
+.lp-empty {
+  padding: var(--sp-4) var(--sp-3);
+  color: var(--muted);
+}
+
+.round .art,
+.round .art img,
+[data-round] .art,
+[data-round] .art img {
+  border-radius: var(--r-pill);
+}
+
+/* Liked Songs' cover: Spotify's violet to mint, a white heart. */
+.liked-art,
+.art.liked-art {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--art-list);
+  height: var(--art-list);
+  border-radius: var(--r-art);
+  background: linear-gradient(135deg, var(--liked-from), var(--liked-to));
+  color: var(--text);
+}
+
+.liked-art--xl {
+  width: var(--art-detail);
+  height: var(--art-detail);
+  box-shadow: var(--shadow-art);
+}
+
+.liked-art--xl .icon {
+  width: var(--sp-9);
+  height: var(--sp-9);
+}
+
+.art--empty {
+  display: grid;
+  place-items: center;
+  background: var(--raised-2);
+  color: var(--muted);
+}
+
+.art--detail.art--empty .icon {
+  width: var(--sp-8);
+  height: var(--sp-8);
+}
+
+/* ---- The right panel: Now Playing or the queue ---- */
+.rp-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-4) var(--sp-3) var(--sp-3) var(--sp-4);
+  background: var(--panel);
+}
+
+.rp-head h2 {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+}
+
+.rp-body {
+  padding: 0 var(--sp-4) var(--sp-4);
+}
+
+.rp-body .art--np {
+  width: 100%;
+}
+
+.rp-song {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  margin: var(--sp-4) 0;
+}
+
+.rp-song-text {
+  min-width: 0;
+}
+
+.rp-title,
+.rp-artist {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rp-title {
+  font: var(--md-sys-typescale-title-large) var(--font-ui);
+}
+
+.rp-artist {
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+}
+
+.rp-title a:hover,
+.rp-artist a:hover,
+.rp-about-name a:hover,
+.dock-title a:hover,
+.dock-sub a:hover,
+.ph-facts a:hover {
+  text-decoration: underline;
+}
+
+.rp-artist a:hover,
+.dock-sub a:hover {
+  color: var(--text);
+}
+
+.rp-card {
+  margin-top: var(--sp-4);
+  padding: var(--sp-4);
+  border-radius: var(--r-panel);
+  background: var(--raised);
+}
+
+.rp-card h3 {
+  margin: 0;
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+}
+
+.rp-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--sp-3);
+}
+
+.text-btn {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  cursor: pointer;
+}
+
+.text-btn:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+.rp-next {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.rp-next > span:last-child {
+  display: grid;
+  min-width: 0;
+}
+
+.rp-next-title,
+.rp-next-sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rp-next-sub {
+  color: var(--muted);
+}
+
+.rp-about {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.rp-about-label {
+  padding: var(--sp-4) var(--sp-4) 0;
+}
+
+.rp-about:has(.rp-about-img) .rp-about-label {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+.rp-about-img {
+  display: block;
+  aspect-ratio: 4 / 3;
+}
+
+.rp-about-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.rp-about-body {
+  padding: var(--sp-4);
+}
+
+.rp-about-name {
+  margin: 0 0 var(--sp-2);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+}
+
+.rp-about-bio {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.rp-empty {
+  padding-top: var(--sp-6);
+}
+
+.rp-empty-title {
+  margin: 0 0 var(--sp-2);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+}
+
+/* ---- The player: a liquid-glass pill floating over the bottom of the page ---- */
 .dock {
   position: relative;
-  z-index: 1;
-  grid-area: 2 / 1 / 3 / -1;
+  z-index: 5;
+  grid-area: 2 / 2;
+  align-self: end;
+  justify-self: center;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);
   grid-template-areas: "meta transport right" "meta scrub right";
   align-content: center;
   align-items: center;
-  column-gap: var(--sp-5);
-  padding: 0 var(--gutter);
-  background: color-mix(
-    in oklab,
-    var(--md-sys-color-surface-container) var(--glass-fill),
-    transparent
-  );
-  border-top: var(--rule) solid transparent; /* no divider under M3; the row keeps its 1px */
+  column-gap: var(--sp-4);
+  box-sizing: border-box;
+  width: min(100% - 2 * var(--pill-inset), var(--pill-max));
+  height: var(--pill-h);
+  margin-bottom: var(--pill-inset);
+  padding: 0 var(--sp-5) 0 var(--sp-2);
+  border: var(--rule) solid var(--glass-edge);
+  border-radius: var(--r-pill);
+  background: color-mix(in oklab, var(--raised) var(--glass-fill), transparent);
+  box-shadow: var(--md-sys-elevation-level3);
+  container: pill / inline-size;
+}
+
+/* The provider's name only matters next to Spotify's attribution. */
+.shell:not([data-attribution]) .dock .provider-mark {
+  display: none;
+}
+
+/* A narrow pill (a wide panel beside it) keeps the transport and lets the extras go first. */
+@container pill (max-width: 839.98px) {
+  .volume .slider {
+    display: none;
+  }
+}
+
+@container pill (max-width: 699.98px) {
+  .dock-sleep,
+  .dock-wide {
+    display: none;
+  }
 }
 
 .dock-meta {
   grid-area: meta;
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--sp-3);
   min-width: 0;
+}
+
+.dock .art--dock,
+.dock .art--dock img {
+  border-radius: var(--r-pill);
+}
+
+.dock-open {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
 
 .dock-text {
@@ -367,33 +815,19 @@ button {
 }
 
 .dock-title {
-  font-weight: 500;
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
 }
 
 .dock[data-status="idle"] .dock-title {
-  color: var(--faint);
-  font-weight: 400;
+  color: var(--muted);
 }
 
 .dock-sub {
   color: var(--muted);
-  font-size: var(--fs-small);
-  line-height: var(--lh-small);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
 }
 
-.dock-sub a,
-.dock-title a {
-  color: inherit;
-  text-decoration: none;
-}
-
-.dock-title a:hover {
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.18em;
-}
-
-/* Spotify's full logo: at least 70px wide, white on the dark dock (Design Guidelines). */
+/* Spotify's full logo: at least 70px wide, white on the dark player (Design Guidelines). */
 .spotify-logo {
   display: inline-block;
   margin-top: var(--sp-1);
@@ -405,19 +839,12 @@ button {
   height: auto;
 }
 
-.dock-sub a:hover {
-  color: var(--text);
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.18em;
-}
-
 .dock-transport {
   grid-area: transport;
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
 }
 
 .dock-scrub {
@@ -430,157 +857,647 @@ button {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: var(--sp-3);
+  gap: var(--sp-1);
   min-width: 0;
 }
 
-/* Stage (Listen): full-bleed, no sidebar; the dock sits over it, transparent. */
+.dock-sleep[data-on] .icon-btn {
+  color: var(--green);
+}
+
+.dock-reach {
+  margin: 0;
+  color: var(--warning);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  white-space: nowrap;
+}
+
+.queue-note {
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-small) var(--font-ui);
+}
+
+/* "Clear queue" under the upcoming rows (QUE-01). */
+.queue-upcoming + .btn,
+.queue-upcoming ~ .btn {
+  margin-top: var(--sp-4);
+}
+
+.tabbar {
+  display: none;
+}
+
+/* ---- The lyrics view (Listen): the whole window, the pill floating over it ---- */
+.shell[data-view="listen"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0;
+}
+
 .shell[data-view="listen"] .canvas {
-  grid-area: 1 / 1 / -1 / -1;
+  grid-area: 1 / 1;
   padding: 0;
   overflow: hidden;
+  border-radius: 0;
+  background: var(--frame);
 }
 
 .shell[data-view="listen"] .dock {
-  background: transparent;
-  backdrop-filter: none;
-}
-
-/* On the Stage the dock's glass (§7.11) is a layer under its controls, so it can fade with the
-   chrome while the progress and Spotify's attribution stay. */
-.shell[data-view="listen"] .dock::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
+  grid-area: 1 / 1;
   background: color-mix(in oklab, var(--art-room) var(--glass-fill-stage), transparent);
-  backdrop-filter: var(--glass-filter, blur(var(--glass-blur)) saturate(var(--glass-saturate)));
+}
+
+/* Auto-hide (PRODUCT_SPEC.md §6.1): the pill fades out after idle and returns at once on movement;
+   hidden controls take no pointer input. Spotify's artwork and metadata never hide
+   (data-attribution, DESIGN_SYSTEM.md §8). */
+.dock,
+.stage-chrome .glass {
   transition: opacity var(--dur-pop) var(--ease-out);
 }
 
-@media (prefers-reduced-transparency: reduce) {
-  .shell[data-view="listen"] .dock::before {
-    backdrop-filter: none;
-  }
-}
-
-.stage-chrome {
-  position: relative;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--sp-3);
-  padding: var(--sp-5) var(--gutter);
-}
-
-/* Stage chrome auto-hide (PRODUCT_SPEC.md §6.1): top bar and dock controls fade out over 640 ms
-   after idle and return in 160 ms; progress stays at 40%. Hidden chrome takes no pointer input,
-   so a blind click never hits an invisible control (moving the pointer brings it back first).
-   Spotify's artwork and metadata never hide (data-attribution, DESIGN_SYSTEM.md §8).
-   The top chrome fades per glass item, not as a row: a fading ancestor would cut the glass off
-   from the room behind it mid-fade (its transitions are in stage.css). */
-.dock-meta,
-.dock-transport,
-.dock-scrub,
-.dock-right {
-  transition: opacity var(--dur-pop) var(--ease-out);
-}
-
-.shell[data-chrome="hidden"] .stage-chrome {
-  pointer-events: none;
-}
-
-.shell[data-chrome="hidden"] :is(.dock-transport, .dock-right, .dock-scrub),
-.shell[data-chrome="hidden"] .stage-chrome .glass,
-.shell[data-chrome="hidden"] .dock::before,
-.shell[data-chrome="hidden"]:not([data-attribution]) .dock-meta {
+.shell[data-chrome="hidden"]:not([data-attribution]) .dock,
+.shell[data-chrome="hidden"] .stage-chrome .glass {
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-art) var(--ease-in-out);
-}
-
-.shell[data-chrome="hidden"] .dock-scrub {
-  opacity: 0.4;
 }
 
 .shell[data-chrome="hidden"] .stage {
   cursor: none;
 }
 
-/* While WebGL draws the room, its glass pass draws the Stage's glass (§7.11, stage/engine.ts)
-   and the controls keep only their tint. With the CSS room (no WebGL 2, a lost context) the SVG or
-   blur glass comes back. */
+/* While WebGL draws the room, its glass pass draws the lyrics view's glass (§7.11,
+   stage/engine.ts): the controls keep only their tint. Without WebGL the SVG or blur glass comes
+   back. */
 .shell:has(.stage[data-renderer="webgl"]) .stage-chrome .glass,
-.shell:has(.stage[data-renderer="webgl"]) .dock::before {
+.shell:has(.stage[data-renderer="webgl"]) .dock {
   backdrop-filter: none;
 }
 
-/* S6 Album detail header (§8: cover 240px) */
-.detail-head {
+.stage-chrome {
+  position: relative;
+  z-index: 2;
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: var(--sp-5);
-  margin-bottom: var(--sp-6);
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--gutter);
 }
 
-.detail-meta {
-  /* Wraps under the cover when there is no room for a readable title beside it. */
-  flex: 1 1 16em;
+/* ---- Pages: a header tinted by the cover, the body fading from it ---- */
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-5);
+  margin: 0 calc(-1 * var(--gutter));
+  padding: var(--header-pad-top) var(--gutter) var(--sp-5);
+  background: linear-gradient(transparent, var(--header-shade)), var(--head-colour);
+  transition: background-color var(--dur-palette) var(--ease-in-out);
+}
+
+.page-head .art--detail {
+  flex: none;
+  box-shadow: var(--shadow-art);
+}
+
+.ph-text {
   min-width: 0;
 }
 
-.detail-meta h1 {
-  margin: 0 0 var(--sp-1);
-  font: var(--md-sys-typescale-headline-large-emphasized) var(--font-ui);
-  overflow-wrap: break-word;
-}
-
-.detail-artist,
-.detail-facts {
+.ph-kind {
   margin: 0;
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
 }
 
-.detail-artist {
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-title-medium);
+.ph-title {
+  margin: var(--sp-2) 0 var(--sp-3);
+  overflow-wrap: break-word;
+  font: var(--title-xl) var(--font-ui);
+  letter-spacing: var(--tracking-title);
 }
 
-.detail-facts {
-  margin-top: var(--sp-1);
-  color: var(--md-sys-color-on-surface-variant);
+.ph-title[data-len="l"] {
+  font: var(--title-l) var(--font-ui);
 }
 
-.detail-actions {
+.ph-title[data-len="m"] {
+  font: var(--title-m) var(--font-ui);
+}
+
+.ph-title[data-len="s"] {
+  font: var(--title-s) var(--font-ui);
+}
+
+.ph-facts {
+  margin: 0;
+  color: var(--text-on-tint);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+}
+
+.ph-strong {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.ph-desc {
+  display: block;
+  margin-bottom: var(--sp-2);
+}
+
+/* The artist page: the picture fills the header, the name over it. */
+.page-head--hero {
+  position: relative;
+  min-height: calc(3 * var(--sp-9));
+  overflow: hidden;
+}
+
+.ph-hero-img {
+  position: absolute;
+  inset: 0;
+}
+
+.ph-hero-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 25%;
+}
+
+.ph-hero-img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(var(--header-shade-2), var(--header-shade));
+}
+
+.page-head--hero .ph-text {
+  position: relative;
+}
+
+.page-head--plain {
+  padding-top: var(--sp-9);
+}
+
+.genre-head {
+  background: linear-gradient(transparent, var(--header-shade)), var(--hue);
+}
+
+.page-body {
+  margin: 0 calc(-1 * var(--gutter));
+  padding: 0 var(--gutter);
+  background:
+    linear-gradient(var(--header-shade), var(--panel) var(--body-fade)), var(--head-colour);
+}
+
+.page-body--liked {
+  background:
+    linear-gradient(var(--header-shade), var(--panel) var(--body-fade)), var(--liked-from);
+}
+
+.page-head:has(.liked-art--xl) {
+  background: linear-gradient(transparent, var(--header-shade)), var(--liked-from);
+}
+
+.action-bar {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-5);
+  padding: var(--sp-5) 0;
+}
+
+.action-bar .icon-btn--lg .icon {
+  width: var(--hit-lg);
+  height: var(--hit-lg);
+}
+
+/* Spotify's big green play button. */
+.play-xl {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--play-xl);
+  height: var(--play-xl);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--green);
+  color: var(--on-green);
+  cursor: pointer;
+  transition:
+    scale var(--dur-press) ease,
+    background-color var(--dur-hover) ease;
+}
+
+.play-xl .icon {
+  width: var(--icon-lg);
+  height: var(--icon-lg);
+}
+
+.play-xl:hover {
+  scale: 1.04;
+  background: var(--green-hover);
+}
+
+.play-xl:active {
+  scale: 0.96;
+  background: var(--green-press);
+}
+
+.play-xl--md {
+  width: var(--play-tile);
+  height: var(--play-tile);
+}
+
+.follow-btn {
+  height: var(--hit-lg);
+  padding: 0 var(--sp-4);
+  border: var(--rule) solid var(--follow-edge);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--text);
+  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-hover) ease,
+    scale var(--dur-press) ease;
+}
+
+.follow-btn:hover {
+  border-color: var(--text);
+  scale: 1.04;
+}
+
+/* Hearts and the save check: outline, filled green when saved. */
+.heart {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: var(--hit-lg);
+  height: var(--hit-lg);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color var(--dur-hover) ease,
+    scale var(--dur-press) ease;
+}
+
+.heart:hover {
+  color: var(--text);
+  scale: 1.06;
+}
+
+.heart[aria-pressed="true"] {
+  color: var(--green);
+}
+
+.heart--lg .icon {
+  width: var(--hit-lg);
+  height: var(--hit-lg);
+}
+
+/* The glass bar that slides in at the top once a page's header has scrolled away. */
+.sticky-head {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  height: 0;
+  margin: 0 calc(-1 * var(--gutter));
+}
+
+.sticky-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
   align-items: center;
   gap: var(--sp-3);
-  margin-top: var(--sp-5);
+  height: var(--sticky-h);
+  padding: 0 var(--gutter);
+  border-bottom: var(--rule) solid var(--glass-edge);
+  background: color-mix(in oklab, var(--head-colour) var(--glass-fill), transparent);
+  opacity: 0;
+  transition: opacity var(--dur-ui) var(--ease-out);
 }
 
-.artist-list {
+.sticky-head[data-shown] .sticky-bar {
+  opacity: 1;
+}
+
+.sticky-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: var(--md-sys-typescale-title-large) var(--font-ui);
+}
+
+/* ---- Home ---- */
+.home-greeting {
+  margin: 0 0 var(--sp-4);
+}
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-2);
+  margin: 0 0 var(--sp-4);
+  padding: 0;
+  list-style: none;
+}
+
+.shortcut a {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--art-shortcut);
+  padding-right: var(--sp-3);
+  overflow: hidden;
+  border-radius: var(--r-control);
+  background: var(--shortcut);
+  transition: background-color var(--dur-hover) ease;
+}
+
+.shortcut a:hover {
+  background: var(--shortcut-hover);
+}
+
+.shortcut .art,
+.shortcut .liked-art {
+  width: var(--art-shortcut);
+  height: var(--art-shortcut);
+  border-radius: 0;
+}
+
+.shortcut .art img {
+  border-radius: 0;
+}
+
+.shortcut-title {
+  display: -webkit-box;
+  flex: 1;
+  overflow: hidden;
+  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.shelf h2 {
+  margin: var(--sp-6) 0 var(--sp-2);
+}
+
+.shelf > .text-btn {
+  margin-top: var(--sp-2);
+}
+
+/* ---- Cards: a grid, or one row of them (shelves) ---- */
+.album-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
+  margin: 0 calc(-1 * var(--sp-3));
+  padding: 0;
+  list-style: none;
+}
+
+.card-row {
+  grid-template-rows: auto;
+  grid-auto-rows: 0;
+  overflow: hidden;
+}
+
+.about-card p {
+  max-width: 72ch;
+  color: var(--muted);
+  font: var(--md-sys-typescale-body-large) var(--font-ui);
+}
+
+/* ---- Search: the top result, songs beside it; Browse all's coloured cards ---- */
+.results-top {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--sp-5);
+}
+
+.results-top > .results:only-child {
+  grid-column: 1 / -1;
+}
+
+.top-card-wrap {
+  position: relative;
+}
+
+.top-card {
+  display: grid;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+  border-radius: var(--r-panel);
+  background: var(--raised);
+  transition: background-color var(--dur-hover) ease;
+}
+
+.top-card:hover {
+  background: var(--raised-2);
+}
+
+.top-card .art {
+  width: var(--sp-9);
+  box-shadow: var(--card-shadow);
+}
+
+.top-name {
+  margin-top: var(--sp-3);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: var(--title-s) var(--font-ui);
+  letter-spacing: var(--tracking-title);
+}
+
+.top-kind {
+  color: var(--muted);
+}
+
+.top-play {
+  position: absolute;
+  right: var(--sp-5);
+  bottom: var(--sp-5);
+  box-shadow: var(--shadow-play);
+}
+
+.results h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.genre-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
+  gap: var(--sp-5);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.artist-list li {
+.genre-card a {
+  position: relative;
   display: flex;
+  flex-direction: column;
   justify-content: space-between;
+  box-sizing: border-box;
+  aspect-ratio: 16 / 10;
+  padding: var(--sp-4);
+  overflow: hidden;
+  border-radius: var(--r-panel);
+  background: var(--hue);
+  transition: scale var(--dur-press) ease;
+}
+
+.genre-card a:hover {
+  scale: 1.02;
+}
+
+.genre-name {
+  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  overflow-wrap: anywhere;
+}
+
+.genre-count {
+  color: var(--text-on-tint);
+}
+
+.page-empty {
+  display: grid;
+  justify-items: center;
   gap: var(--sp-3);
-  height: var(--md-list-1);
+  padding: var(--sp-8) 0;
+  text-align: center;
+}
+
+.page-empty > .icon {
+  width: var(--sp-8);
+  height: var(--sp-8);
+}
+
+.page-empty h2 {
+  margin: 0;
+}
+
+/* Add to playlist, and the playlist's details. */
+.picker {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.picker button {
+  display: flex;
   align-items: center;
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 
-.artist-count {
-  color: var(--md-sys-color-on-surface-variant);
+.picker button:hover {
+  background: var(--hover-row);
 }
 
-.results + .results {
-  margin-top: var(--sp-6);
+.picker-icon {
+  display: grid;
+  place-items: center;
+  width: var(--art-list);
+  height: var(--art-list);
+  border-radius: var(--r-art);
+  background: var(--raised-2);
+  color: var(--muted);
+}
+
+.edit-form {
+  display: grid;
+  gap: var(--sp-4);
+}
+
+.edit-form .btn {
+  justify-self: end;
+}
+
+.mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+}
+
+.mosaic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- Settings: tabs and connected choices ---- */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-5);
+}
+
+.tabs a {
+  display: flex;
+  align-items: center;
+  height: var(--chip-h);
+  padding: 0 var(--sp-3);
+  border-radius: var(--r-pill);
+  background: var(--chip);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  transition: background-color var(--dur-hover) ease;
+}
+
+.tabs a:hover {
+  background: var(--chip-hover);
+}
+
+.tabs a[aria-current="page"] {
+  background: var(--text);
+  color: var(--on-green);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button {
+  height: var(--chip-h);
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--chip);
+  color: var(--text);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  cursor: pointer;
+  transition: background-color var(--dur-hover) ease;
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button:hover {
+  background: var(--chip-hover);
+}
+
+.shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
+  background: var(--text);
+  color: var(--on-green);
 }
 
 /* /__ui component gallery (development page) */
@@ -591,7 +1508,7 @@ button {
 .ui-section > h2 {
   margin: 0 0 var(--sp-5);
   padding-bottom: var(--sp-2);
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  border-bottom: var(--rule) solid var(--rule-soft);
 }
 
 .ui-row,
@@ -633,9 +1550,8 @@ button {
 }
 
 .ui-cell figcaption {
-  color: var(--md-sys-color-on-surface-variant);
+  color: var(--muted);
   font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .ui-cell-body > .field {
@@ -647,8 +1563,8 @@ button {
   width: calc(var(--signin-w) + 2 * var(--sp-5));
   max-width: 100%;
   padding: var(--sp-5);
-  border: var(--rule) solid var(--md-sys-color-outline-variant);
-  border-radius: var(--md-sys-shape-corner-large);
+  border-radius: var(--r-panel);
+  background: var(--raised);
 }
 
 .ui-cell-body > .track-list,
@@ -668,163 +1584,28 @@ button {
   margin-bottom: var(--sp-6);
 }
 
-/* compact < 720px: the drawer becomes an M3 navigation bar of 4 destinations. Breakpoint: see the
-   top. */
-@media (max-width: 719.98px) {
-  /* A connected group that wrapped read as two broken groups (Streaming quality, album order):
-     on a phone it stays one row and scrolls. The padding keeps focus rings inside the clip. */
-  .shell:not([data-view="listen"]) .canvas .view-switch {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    scrollbar-width: none;
-    padding: var(--sp-2) var(--gutter) var(--sp-2) var(--sp-2);
-    margin: calc(-1 * var(--sp-2)) calc(-1 * var(--gutter)) calc(-1 * var(--sp-2))
-      calc(-1 * var(--sp-2)); /* runs to the screen edge, so the cut reads as "more" */
-  }
-
-  .shell:not([data-view="listen"]) .canvas .album-sort {
-    margin-bottom: calc(var(--sp-6) - var(--sp-2));
-  }
-
-  .shell:not([data-view="listen"]) .canvas .view-switch button {
-    flex: none;
-  }
-
-  /* Two columns of covers on a phone, not one cover per screen (M9 critique). */
-  .album-grid {
-    grid-template-columns: repeat(auto-fill, minmax(var(--tile-min-compact), 1fr));
-  }
-
-  .shell {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) var(--dock) auto;
-  }
-
-  .canvas {
-    grid-area: 1 / 1;
-  }
-
-  .sidebar {
-    grid-area: 3 / 1;
-    padding: var(--sp-3) var(--sp-2);
-    border-radius: 0;
-    background: color-mix(
-      in oklab,
-      var(--md-sys-color-surface-container) var(--glass-fill),
-      transparent
-    );
-  }
-
-  .shell .wordmark,
-  .shell .search-wide {
-    display: none;
-  }
-
-  .shell .search-compact {
-    display: flex;
-  }
-
-  .sidebar ul {
-    flex-direction: row;
-    gap: var(--sp-1);
-  }
-
-  .sidebar li {
-    flex: 1;
-    min-height: var(--md-nav-item-h);
-  }
-
-  /* Navigation bar items: the active indicator is a 64×32 pill behind the label, not the cell. */
-  .sidebar a {
-    position: relative;
-    isolation: isolate; /* the indicator sits behind the label, in front of the bar */
-    justify-content: center;
-    padding: 0 var(--sp-2);
-    height: var(--md-nav-item-h);
-    border-radius: var(--md-sys-shape-corner-small);
-  }
-
-  .sidebar a::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: -1;
-    width: var(--md-nav-indicator-w);
-    height: var(--md-nav-indicator-h);
-    translate: -50% -50%;
-    border-radius: var(--md-sys-shape-corner-full);
-    transition: background-color var(--md-sys-motion-spring-fast-effects-duration)
-      var(--md-sys-motion-spring-fast-effects);
-  }
-
-  .sidebar a,
-  .sidebar a:hover,
-  .sidebar a[aria-current="page"] {
-    background: transparent;
-  }
-
-  .sidebar a:hover::before {
-    background: color-mix(
-      in srgb,
-      var(--md-sys-color-on-surface) calc(var(--md-sys-state-hover) * 100%),
-      transparent
-    );
-  }
-
-  .sidebar a[aria-current="page"]::before {
-    background: var(--md-sys-color-secondary-container);
-  }
-
-  .canvas > .search-field {
-    margin-bottom: var(--sp-4);
-  }
-
-  /* Compact dock: the scrubber across the top; art, title, play, next and the queue below.
-     Shuffle, repeat and volume live with the device (and return on wider screens). */
-  .dock {
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    grid-template-areas: "scrub scrub scrub" "meta transport right";
-    column-gap: var(--sp-3);
-    padding: 0 var(--sp-4);
-  }
-
-  .dock .art--dock {
-    width: var(--art-row);
-  }
-
-  .dock .dock-secondary,
-  .dock .dock-prev,
-  .dock .volume,
-  .dock .provider-mark {
-    display: none;
-  }
-}
-
-/* Medium (720–1279px): the volume slider gives way; mute stays. */
-@media (min-width: 720px) and (max-width: 1279.98px) {
-  .dock .volume .slider {
-    display: none;
-  }
-}
-
-/* Sign-in and first-start setup (SETTINGS_AND_SECURITY.md §4): one centred column, no shell. */
+/* ---- Sign-in and first-start setup: Spotify's centred card on a gradient ---- */
 .auth-page {
   display: grid;
+  box-sizing: border-box;
   min-height: 100vh;
   place-items: center;
   padding: var(--gutter);
-  background: var(--md-sys-color-surface);
+  background: linear-gradient(var(--raised-2), var(--frame));
 }
 
 .auth {
   display: grid;
   gap: var(--sp-5);
-  width: min(100%, var(--form-w));
+  box-sizing: border-box;
+  width: min(100%, calc(var(--form-w) + 2 * var(--sp-8)));
+  padding: var(--sp-7) var(--sp-8);
+  border-radius: var(--r-panel);
+  background: var(--panel);
 }
 
 .auth .btn {
-  justify-self: start;
+  justify-self: stretch;
 }
 
 .recovery-codes {
@@ -857,7 +1638,7 @@ button {
 .prefs {
   display: grid;
   gap: var(--sp-6);
-  max-width: var(--prefs-w); /* wide enough for a connected button group on one line */
+  max-width: var(--prefs-w);
 }
 
 .pref-group {
@@ -867,15 +1648,13 @@ button {
 
 .pref-group h3 {
   margin: 0;
-  color: var(--md-sys-color-primary);
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
+  font: var(--md-sys-typescale-title-medium) var(--font-ui);
 }
 
 .pref-choice {
   display: grid;
   gap: var(--sp-2);
-  min-width: 0; /* a fieldset is min-content wide by default; its choices scroll on phones */
+  min-width: 0;
   margin: 0;
   padding: 0;
   border: 0;
@@ -883,9 +1662,7 @@ button {
 
 .pref-label {
   padding: 0;
-  color: var(--md-sys-color-on-surface);
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-small);
+  font: var(--md-sys-typescale-body-medium) var(--font-ui);
 }
 
 .pref-slider {
@@ -897,7 +1674,6 @@ button {
   margin: 0;
 }
 
-/* The offset slider spans the column (the volume variant's width is the dock's). */
 .pref-slider .slider--volume {
   width: 100%;
 }
@@ -921,7 +1697,6 @@ button {
 
 .keymap kbd {
   font: inherit;
-  color: var(--md-sys-color-on-surface);
 }
 
 /* Account and Admin lists: a name with its facts, actions on the right. */
@@ -943,7 +1718,7 @@ button {
   align-items: flex-start;
   gap: var(--sp-3);
   padding-bottom: var(--sp-3);
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  border-bottom: var(--rule) solid var(--rule-soft);
 }
 
 .sessions .field-hint,
@@ -951,10 +1726,9 @@ button {
   margin: var(--sp-1) 0 0;
 }
 
-/* Admin → Spotify matching: each unmatched track with a field for its link. */
 .match-misses li {
   padding-bottom: var(--sp-3);
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  border-bottom: var(--rule) solid var(--rule-soft);
 }
 
 .match-misses form {
@@ -970,20 +1744,18 @@ button {
 }
 
 .admin-user-name {
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .invite-link code {
   font: inherit;
   word-break: break-all;
-  color: var(--md-sys-color-on-surface);
 }
 
 .audit {
   width: 100%;
   border-collapse: collapse;
   font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
 }
 
 .audit th,
@@ -991,59 +1763,349 @@ button {
   padding: var(--sp-2) var(--sp-3) var(--sp-2) 0;
   text-align: left;
   vertical-align: top;
-  border-bottom: var(--rule) solid var(--md-sys-color-outline-variant);
+  border-bottom: var(--rule) solid var(--rule-soft);
 }
 
 .audit th {
-  color: var(--md-sys-color-on-surface-variant);
-  font-weight: 500;
+  color: var(--muted);
+  font-weight: 600;
 }
 
-/* Keys and codes in the shell's own face: no monospace in the shell (DS-02). */
+/* Keys and codes in the app's own face: no monospace (DS-02). */
 .recovery-codes code,
 .totp-key code {
   font: inherit;
   font-variant-numeric: tabular-nums;
 }
 
-/* "Navidrome unreachable — retrying in 4 s" (PRODUCT_SPEC.md J6). */
-.queue-note {
-  color: var(--md-sys-color-on-surface-variant);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
-}
-
-.dock-reach {
+.artist-list {
   margin: 0;
-  color: var(--md-sys-color-warning);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
-  letter-spacing: var(--md-sys-tracking-body-small);
-  white-space: nowrap;
+  padding: 0;
+  list-style: none;
 }
 
-/* Album order above the grid (PRODUCT_SPEC.md §6.3). */
-/* Outranks stage.css's `.view-switch { margin: 0 }`, which loads later. */
-.canvas .album-sort {
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-6); /* clear of the first row's hover surround */
+.artist-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--md-list-1);
+  border-bottom: var(--rule) solid var(--rule-soft);
 }
 
-/* "Clear queue" under the upcoming rows (QUE-01). */
-.queue-upcoming + .btn {
-  margin-top: var(--sp-4);
+.artist-count {
+  color: var(--muted);
 }
 
-/* Forced colours: the current tab's indicator and the chosen option of a button group were fills,
-   which the browser repaints away; they take the system highlight instead (WCAG 1.4.11). */
-@media (forced-colors: active) {
-  .tabs a[aria-current="page"]::after {
-    forced-color-adjust: none;
-    background: Highlight;
+.results + .results,
+.results-group + .results-group {
+  margin-top: var(--sp-6);
+}
+
+/* ---- Medium (720–1279px): no right panel; below 1024 Your Library narrows to covers ---- */
+@media (max-width: 1279.98px) {
+  .shell[data-right] {
+    grid-template-columns: var(--library-w) minmax(0, 1fr);
   }
 
-  .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
-    forced-color-adjust: none;
-    background: Highlight;
-    color: HighlightText;
+  .right-panel,
+  .dock .dock-wide,
+  .dock .volume .slider {
+    display: none;
+  }
+
+  .shortcuts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 720px) and (max-width: 1023.98px) {
+  .shell,
+  .shell[data-right] {
+    grid-template-columns: var(--library-w-min) minmax(0, 1fr);
+  }
+
+  .library-panel :is(.lp-title, .chips, .lp-tools, .lp-text, .lp-speaker, .lp-empty) {
+    display: none;
+  }
+
+  .library-panel .lp-head {
+    justify-content: center;
+    padding: var(--sp-2) 0;
+  }
+
+  .library-panel .lp-row a {
+    justify-content: center;
+  }
+
+  .dock {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "meta transport right" "scrub scrub scrub";
+  }
+
+  .dock .dock-scrub {
+    display: none;
+  }
+}
+
+/* ---- Compact (< 720px): the page full width, the glass mini player and tab bar ---- */
+@media (max-width: 719.98px) {
+  .shell,
+  .shell[data-right] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    padding: 0;
+  }
+
+  .topbar,
+  .library-panel,
+  .right-panel {
+    display: none;
+  }
+
+  .canvas {
+    grid-area: 1 / 1;
+    border-radius: 0;
+    padding: 0 var(--sp-4) calc(var(--tabbar) + var(--mini-h) + 4 * var(--sp-2) + var(--sp-6));
+    --gutter: var(--sp-4);
+  }
+
+  .shell .search-compact {
+    display: flex;
+    margin: var(--sp-5) 0 var(--sp-4);
+  }
+
+  .shell .search-compact input {
+    border-radius: var(--r-control);
+    background: var(--text);
+    color: var(--on-green);
+  }
+
+  .shell .search-compact input::placeholder {
+    color: var(--raised-2);
+  }
+
+  .shell .search-compact > .icon {
+    color: var(--on-green);
+  }
+
+  .shell .search-compact .hint {
+    display: none;
+  }
+
+  /* The mini player: the playing album's colour under glass, a hairline of progress. */
+  .dock {
+    position: fixed;
+    right: var(--sp-2);
+    bottom: calc(var(--tabbar) + 2 * var(--sp-2));
+    left: var(--sp-2);
+    justify-self: stretch;
+    align-self: stretch;
+    width: auto;
+    height: var(--mini-h);
+    margin: 0;
+    padding: 0 var(--sp-2) 0 var(--sp-2);
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-areas: "meta transport right";
+    column-gap: var(--sp-2);
+    border-radius: var(--r-panel);
+    background: color-mix(in oklab, var(--playing-tint) var(--glass-tint-mini), transparent);
+  }
+
+  /* Nothing has played yet: no mini player (Spotify's). */
+  .shell:not([data-view="listen"]) .dock[data-status="idle"] {
+    display: none;
+  }
+
+  /* Rows as the app's: title and artist, the menu; no numbers, no durations. */
+  .track-list .track-head,
+  .track-row .track-num,
+  .track-row .track-dur,
+  .track-heart:not(:has([aria-pressed="true"])) {
+    display: none;
+  }
+
+  .track-row {
+    padding: 0 0 0 var(--sp-1);
+  }
+
+  .dock .art--dock,
+  .dock .art--dock img {
+    width: var(--art-row);
+    height: var(--art-row);
+    border-radius: var(--r-control);
+  }
+
+  .dock :is(.dock-secondary, .dock-prev, .dock-next, .volume, .provider-mark, .dock-sleep),
+  .dock-right .icon-btn {
+    display: none;
+  }
+
+  .dock .dock-scrub {
+    position: absolute;
+    right: var(--sp-3);
+    bottom: 0;
+    left: var(--sp-3);
+    pointer-events: none;
+  }
+
+  .dock .dock-scrub .scrubber-time {
+    display: none;
+  }
+
+  .dock .play-btn {
+    width: var(--hit-lg);
+    height: var(--hit-lg);
+    background: transparent;
+    color: var(--text);
+  }
+
+  .dock-meta .heart {
+    position: relative;
+    z-index: 2;
+  }
+
+  .tabbar {
+    position: fixed;
+    right: var(--sp-2);
+    bottom: var(--sp-2);
+    left: var(--sp-2);
+    z-index: 5;
+    display: block;
+    height: var(--tabbar);
+    border: var(--rule) solid var(--glass-edge);
+    border-radius: var(--r-pill);
+    background: color-mix(in oklab, var(--raised) var(--glass-fill), transparent);
+    box-shadow: var(--md-sys-elevation-level3);
+  }
+
+  .tabbar ul {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .tabbar a {
+    display: grid;
+    justify-items: center;
+    gap: var(--sp-1);
+    padding: var(--sp-1) var(--sp-4);
+    color: var(--muted);
+    font: var(--md-sys-typescale-label-small) var(--font-ui);
+  }
+
+  .tabbar a .icon {
+    width: var(--icon-lg);
+    height: var(--icon-lg);
+  }
+
+  .tabbar a[aria-current="page"] {
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  /* The lyrics view on a phone: the pill holds the transport. */
+  .shell[data-view="listen"] .dock {
+    bottom: var(--sp-4);
+    height: var(--pill-h);
+    border-radius: var(--r-pill);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas: "transport scrub right";
+  }
+
+  .shell[data-view="listen"] .dock .dock-meta {
+    display: none;
+  }
+
+  .shell[data-view="listen"] .dock :is(.dock-prev, .dock-next) {
+    display: grid;
+  }
+
+  .shell[data-view="listen"] .dock .dock-scrub {
+    position: static;
+    pointer-events: auto;
+  }
+
+  .shell[data-view="listen"] .dock-right .icon-btn[aria-pressed] {
+    display: grid;
+  }
+
+  /* Pages: the cover above the title, centred, as Spotify's app. */
+  .page-head {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-top: var(--sp-8);
+  }
+
+  .page-head .art--detail {
+    align-self: center;
+    width: min(70vw, var(--art-detail));
+  }
+
+  .ph-title,
+  .ph-title[data-len] {
+    font: var(--md-sys-typescale-headline-small) var(--font-ui);
+    letter-spacing: normal;
+  }
+
+  .ph-kind {
+    display: none;
+  }
+
+  .page-head--hero {
+    min-height: calc(3 * var(--sp-8));
+  }
+
+  .page-head--hero .ph-title {
+    font: var(--title-m) var(--font-ui);
+  }
+
+  .album-grid {
+    grid-template-columns: repeat(auto-fill, minmax(var(--tile-min-compact), 1fr));
+  }
+
+  .card-row {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: var(--tile-min-compact);
+    grid-auto-rows: auto;
+    overflow-x: auto;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+  }
+
+  .card-row > li {
+    scroll-snap-align: start;
+  }
+
+  .shortcuts .art,
+  .shortcuts .liked-art {
+    width: var(--art-shortcut-phone);
+    height: var(--art-shortcut-phone);
+  }
+
+  .shortcut a {
+    height: var(--art-shortcut-phone);
+  }
+
+  .results-top {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .genre-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-3);
+  }
+
+  .library-page {
+    padding-top: var(--sp-4);
+  }
+
+  .auth {
+    padding: var(--sp-6) var(--sp-5);
   }
 }

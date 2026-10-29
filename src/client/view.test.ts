@@ -39,7 +39,11 @@ function fakeHost(start: string) {
 }
 
 const CANONICAL: [string, Route][] = [
-  ['/', { view: 'listen' }],
+  ['/', { view: 'home' }],
+  ['/listen', { view: 'listen' }],
+  ['/playlist/pl-3', { view: 'playlist', id: 'pl-3' }],
+  ['/collection/tracks', { view: 'liked' }],
+  ['/genre/Dream%20Pop', { view: 'genre', name: 'Dream Pop' }],
   ['/library', { view: 'library', tab: 'albums' }],
   ['/library/artists', { view: 'library', tab: 'artists' }],
   ['/library/playlists', { view: 'library', tab: 'playlists' }],
@@ -124,9 +128,9 @@ describe('deterministic mode (?frame&seed&track&fixture&tier)', () => {
 
   it('ignores a malformed frame; drops a malformed seed or tier and an empty track or fixture', () => {
     for (const q of ['?frame=', '?frame=-5', '?frame=1.5', '?frame=abc', '?frame=1e3', '?seed=3'])
-      expect(parseRoute('/', q)).toEqual({ view: 'listen' });
+      expect(parseRoute('/', q)).toEqual({ view: 'home' });
     for (const q of ['?track=al-harbour-2', '?fixture=ballad'])
-      expect(parseRoute('/', q)).toEqual({ view: 'listen' }); // no frame, no mode
+      expect(parseRoute('/', q)).toEqual({ view: 'home' }); // no frame, no mode
     const route = parseRoute('/', '?frame=10&seed=x&tier=T9&track=&fixture=');
     expect(route).toEqual({ view: 'listen', frame: { ms: 10, seed: 0 } });
     expect(routePath(route)).toBe('/?frame=10');
@@ -170,7 +174,7 @@ describe('createViewStore', () => {
     f.back();
     expect(store.getState().route).toEqual({ view: 'library', tab: 'albums' });
     f.back();
-    expect(store.getState().route).toEqual({ view: 'listen' });
+    expect(store.getState().route).toEqual({ view: 'home' });
     f.forward();
     expect(store.getState().route).toEqual({ view: 'library', tab: 'albums' });
   });

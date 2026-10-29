@@ -1,12 +1,13 @@
-// Outline icons (DESIGN_SYSTEM.md §9.1): drawn on a 24-unit grid at 1.5 stroke, rendered at --icon.
+// Icons (DESIGN_SYSTEM.md §9.1): drawn on a 24-unit grid at 1.5 stroke, rendered at --icon; the
+// transport glyphs, the hearts and the active tab's icon are filled (`icon--solid`), as Spotify's.
 // Decorative: the control that holds an icon carries the accessible name.
 
 const PATHS = {
   play: <path d="M7 4.5v15l12.5-7.5z" />,
   pause: (
     <>
-      <path d="M8 5v14" />
-      <path d="M16 5v14" />
+      <rect x="6.5" y="4.5" width="3.5" height="15" rx="1" />
+      <rect x="14" y="4.5" width="3.5" height="15" rx="1" />
     </>
   ),
   previous: (
@@ -117,6 +118,73 @@ const PATHS = {
       <circle cx="12" cy="12" r="4" />
       <path d="M12 8v8a4 4 0 0 0 0-8z" fill="currentColor" />
       <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4" />
+    </>
+  ),
+  home: <path d="M4 10.5 12 4l8 6.5V20h-5.5v-6h-5v6H4z" />,
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m15.5 15.5 5 5" />
+    </>
+  ),
+  // Your Library: three spines on a shelf, the last one leaning.
+  library: <path d="M4.5 4v16M9.5 4v16M14 4.6l5.5 15" />,
+  plus: <path d="M12 5v14M5 12h14" />,
+  heart: (
+    <path d="M12 19.5s-7.5-4.4-7.5-10A4.2 4.2 0 0 1 12 7a4.2 4.2 0 0 1 7.5 2.5c0 5.6-7.5 10-7.5 10z" />
+  ),
+  check: <path d="m5 12.5 4.5 4.5L19 7.5" />,
+  chevronDown: <path d="m6 9 6 6 6-6" />,
+  chevronLeft: <path d="m15 6-6 6 6 6" />,
+  chevronRight: <path d="m9 6 6 6-6 6" />,
+  mic: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+    </>
+  ),
+  // The Now Playing panel: a window with a pane at its right.
+  nowPlaying: (
+    <>
+      <rect x="3" y="4.5" width="18" height="15" rx="2" />
+      <path d="M14 4.5v15" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 7.5V12l3 2" />
+    </>
+  ),
+  list: <path d="M8 6h12M8 12h12M8 18h12M4 6h.5M4 12h.5M4 18h.5" />,
+  grid: (
+    <>
+      <rect x="4" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="4" width="6.5" height="6.5" rx="1" />
+      <rect x="4" y="13.5" width="6.5" height="6.5" rx="1" />
+      <rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1" />
+    </>
+  ),
+  radio: (
+    <>
+      <circle cx="12" cy="12" r="2" />
+      <path d="M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 15.8a5.4 5.4 0 0 0 0-7.6M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 18.7a9.5 9.5 0 0 0 0-13.4" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8.5" r="4" />
+      <path d="M4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5" />
+    </>
+  ),
+  moon: <path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10z" />,
+  edit: <path d="M4.5 19.5h4l10-10-4-4-10 10zM13 7l4 4" />,
+  trash: <path d="M5 7h14M10 4h4M7 7l1 13h8l1-13M10.5 10.5v6M13.5 10.5v6" />,
+  music: (
+    <>
+      <path d="M9 17.5V6l10-2v11.5" />
+      <circle cx="6.5" cy="17.5" r="2.5" />
+      <circle cx="16.5" cy="15.5" r="2.5" />
     </>
   ),
   fullscreen: (

@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
+import type { Route } from '../view.ts';
 import type { Force } from './controls.tsx';
 import { Icon } from './icons.tsx';
 import { formatTime } from './logic.ts';
@@ -15,12 +16,11 @@ import { Menu, type MenuItem } from './overlays.tsx';
 
 // Artwork, track rows and album tiles (DESIGN_SYSTEM.md §8, §9.3, §9.4).
 
-type ArtSize = 'row' | 'dock' | 'grid' | 'detail' | 'cover';
+type ArtSize = 'row' | 'list' | 'dock' | 'grid' | 'detail' | 'cover' | 'np' | 'shortcut';
 
 /**
- * Cover art (§8): never cropped, overlaid or animated; 4px radius up to 64px, 8px above. Missing
- * art is a `--surface-2` square with the album title, no icon. Decorative: the title is always
- * next to it.
+ * Cover art (§8): never cropped or animated; 4px radius, 6px on cards. Missing art is a raised
+ * square with the album title, no icon. Decorative: the title is always next to it.
  */
 export function Artwork({ src, title, size }: { src?: string; title: string; size: ArtSize }) {
   const [failed, setFailed] = useState(false);
@@ -61,6 +61,8 @@ export interface TrackRowProps {
   decay?: { durationMs: number; elapsedMs: number; paused?: boolean };
   onPlay: () => void;
   menu?: MenuItem[];
+  /** The heart (hearts.tsx), before the duration. */
+  heart?: ReactNode;
   force?: Force;
   /** Extra attributes on the row: keyboard and drag handling where a list can be reordered. */
   rowProps?: HTMLAttributes<HTMLLIElement>;
@@ -78,7 +80,13 @@ export function TrackRow(p: TrackRowProps) {
       aria-current={p.nowPlaying || undefined}
       {...p.rowProps}
     >
-      {p.number !== undefined && <span className="track-num num">{p.number}</span>}
+      {p.number !== undefined && (
+        <span className="track-num num">
+          {/* Spotify's row: the number gives way to a play glyph on hover, bars while playing. */}
+          {p.nowPlaying ? <NowPlayingBars /> : <span className="track-num-n">{p.number}</span>}
+          <Icon name="play" className="icon--solid track-num-play" />
+        </span>
+      )}
       {p.artwork && <Artwork size="row" src={p.artwork.src} title={p.artwork.album} />}
       <button
         type="button"
@@ -87,12 +95,13 @@ export function TrackRow(p: TrackRowProps) {
         onClick={p.onPlay}
       >
         <span className="track-title">
-          {p.nowPlaying && <NowPlayingBars />}
+          {p.nowPlaying && p.number === undefined && <NowPlayingBars />}
           {p.title}
         </span>
         {p.artwork && <span className="track-sub">{p.artist}</span>}
       </button>
       {p.nowPlaying && <span className="visually-hidden">{strings.ui.nowPlaying}</span>}
+      {p.heart && <span className="track-heart">{p.heart}</span>}
       <span className="track-dur num">{formatTime(p.durationMs)}</span>
       {p.menu && <Menu label={strings.ui.moreFor(p.title)} items={p.menu} />}
       {p.decay && (
@@ -155,32 +164,46 @@ export function TrackList({
 }
 
 /**
- * Album tile (§9.4). The tile opens the album; a 32px play button sits at the end of the title
- * row, never on the cover, shown on hover and on keyboard focus. No lift or zoom.
+ * Card (§9.4), Spotify's: the cover, the title and a subtitle on a surround that lights on hover;
+ * the whole card opens its page. The green play button rises onto the cover's corner on hover and
+ * on keyboard focus. Artists' pictures are round.
  */
 export function AlbumTile(p: {
   id: string;
   title: string;
   artist: string;
   cover?: string;
-  onPlay: () => void;
+  onPlay?: () => void;
+  /** Where the card leads; an album by default. */
+  to?: Route;
+  round?: boolean;
   force?: Force;
 }) {
   return (
-    <li className="tile" data-force={p.force}>
-      <Link className="tile-link" to={{ view: 'album', id: p.id }}>
+    <li
+      className="tile"
+      data-force={p.force}
+      data-round={p.round || undefined}
+      // Spotify's own covers carry nothing over them (DESIGN_SYSTEM.md §8).
+      data-provider={p.id.startsWith('spotify:') ? 'spotify' : undefined}
+    >
+      <span className="tile-cover">
         <Artwork size="grid" src={p.cover} title={p.title} />
+        {p.onPlay && (
+          <button
+            type="button"
+            className="tile-play"
+            aria-label={strings.ui.playItem(p.title)}
+            onClick={p.onPlay}
+          >
+            <Icon name="play" className="icon--solid" />
+          </button>
+        )}
+      </span>
+      <Link className="tile-link" to={p.to ?? { view: 'album', id: p.id }}>
         <span className="tile-title">{p.title}</span>
-        <span className="tile-artist">{p.artist}</span>
       </Link>
-      <button
-        type="button"
-        className="tile-play"
-        aria-label={strings.ui.playItem(p.title)}
-        onClick={p.onPlay}
-      >
-        <Icon name="play" className="icon--solid" />
-      </button>
+      <span className="tile-artist">{p.artist}</span>
     </li>
   );
 }

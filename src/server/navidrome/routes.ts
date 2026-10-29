@@ -40,12 +40,27 @@ const READ = new Set([
   'search3',
   'getLyrics',
   'getLyricsBySongId',
+  // The Spotify-style pages: Home's shelves, artist pages, song radio, genres.
+  'getArtistInfo2',
+  'getAlbumInfo2',
+  'getTopSongs',
+  'getSimilarSongs2',
+  'getGenres',
+  'getRandomSongs',
+  'getSongsByGenre',
 ]);
 /**
  * Subsonic changes state over GET. ECHO's proxy takes these as POST only, so the Origin check
  * applies and a link on another site cannot star or scrobble for a signed-in user.
  */
-const WRITE = new Set(['star', 'unstar', 'scrobble']);
+const WRITE = new Set([
+  'star',
+  'unstar',
+  'scrobble',
+  'createPlaylist',
+  'updatePlaylist',
+  'deletePlaylist',
+]);
 const STREAM_PARAMS = ['format', 'maxBitRate', 'timeOffset', 'estimateContentLength'];
 const STREAM_HEADERS = [
   'content-type',
@@ -356,7 +371,7 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
     if (!s) return c.json({ code: 'navidrome.not_connected' }, 409);
     try {
       const client = await clientFor(s.cfg.url, s.creds);
-      return c.json({ 'subsonic-response': await client.call(method, c.req.query()) });
+      return c.json({ 'subsonic-response': await client.call(method, c.req.queries()) });
     } catch (err) {
       if (err instanceof SubsonicError && err.status === 200 && !err.auth && err.code !== null)
         return c.json({

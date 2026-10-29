@@ -221,6 +221,20 @@ async function eitherOf<T>(a: Promise<T> | T, b: Promise<T> | T, none: T): Promi
  * Both libraries as one (SRCH-02): Navidrome's albums and results first, then Spotify's. Ids never
  * collide (Spotify's are prefixed), so each call goes to the library that owns the id.
  */
+const NAV_ONLY = [
+  'albumList',
+  'artistInfo',
+  'topSongs',
+  'similarSongs',
+  'genres',
+  'genreAlbums',
+  'createPlaylist',
+  'updatePlaylist',
+  'deletePlaylist',
+  'setStar',
+  'starredAll',
+] as const satisfies readonly (keyof Library)[];
+
 export function combineLibraries(nav: Library | null, sp: Library): Library {
   if (!nav) return sp;
   const owner = (id: string) => (id.startsWith(PREFIX) ? sp : nav);
@@ -252,6 +266,11 @@ export function combineLibraries(nav: Library | null, sp: Library): Library {
     },
     playlistTracks: (id) => owner(id).playlistTracks?.(id) ?? Promise.resolve([]),
     ...(nav.starred && { starred: nav.starred }),
+    // Home, hearts, playlists, radio and genres are Navidrome's (Spotify's library is read-only).
+    ...Object.fromEntries(NAV_ONLY.filter((k) => nav[k]).map((k) => [k, nav[k]])),
+    ...(nav.playlist && {
+      playlist: async (id: string) => (id.startsWith(PREFIX) ? undefined : nav.playlist?.(id)),
+    }),
     async searchRemote(q) {
       const none = { tracks: [], albums: [] };
       const [a, b] = await eitherOf(

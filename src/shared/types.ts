@@ -79,7 +79,7 @@ export interface FeatureSource {
 }
 
 export interface PlayContext {
-  kind: 'album' | 'playlist' | 'artist' | 'search' | 'starred';
+  kind: 'album' | 'playlist' | 'artist' | 'search' | 'starred' | 'radio';
   id?: string;
   title: string;
 }

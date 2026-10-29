@@ -630,3 +630,189 @@
 .stage-missing-info[open] p {
   margin: var(--sp-2) 0 0;
 }
+
+/* ---- The lyrics view after the owner's reference (2026-10-29): the song on the left (cover,
+   progress, title, artist), the lyric column on the right; centred alone without lyrics. ---- */
+.np-view {
+  position: absolute;
+  inset: 0;
+  --dock: var(--dock-listen);
+}
+
+.np-side {
+  position: absolute;
+  top: var(--sp-8);
+  bottom: var(--dock-listen);
+  left: 0;
+  width: var(--np-side);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--sp-4);
+  transition: width var(--dur-art) var(--ease-in-out);
+}
+
+.np-view[data-mode="cover"] .np-side {
+  width: 100%;
+}
+
+.np-side .art--cover {
+  width: var(--np-art);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow-art);
+}
+
+.np-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: var(--np-art);
+  color: var(--text-on-tint);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+}
+
+.np-progress-track {
+  flex: 1;
+  box-sizing: border-box;
+  height: var(--np-track);
+  padding: var(--rule);
+  border: var(--rule) solid var(--text-on-tint);
+  border-radius: var(--r-pill);
+}
+
+.np-progress-track span {
+  display: block;
+  width: calc(var(--value) * 100%);
+  min-width: var(--dot);
+  height: 100%;
+  border-radius: var(--r-pill);
+  background: var(--text);
+}
+
+.np-titles {
+  width: var(--np-art);
+  text-align: center;
+}
+
+.np-title,
+.np-artist {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.np-title {
+  font: var(--md-sys-typescale-headline-small) var(--font);
+  font-weight: 800;
+}
+
+.np-artist {
+  margin-top: var(--sp-1);
+  color: var(--text-on-tint);
+  font: var(--md-sys-typescale-body-large) var(--font);
+}
+
+.ly-area {
+  position: absolute;
+  inset: 0 0 0 var(--np-side);
+}
+
+.ly-host {
+  position: absolute;
+  inset: 0;
+}
+
+.stage-chrome {
+  --glass-frost: var(--glass-frost-clear);
+}
+
+.stage-from {
+  display: grid;
+  margin: 0;
+  color: var(--text-on-tint);
+  font-size: var(--fs-small);
+  line-height: var(--lh-small);
+  letter-spacing: var(--tracking-caps);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.stage-from b {
+  color: var(--text);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.stage-chrome-end {
+  width: var(--sp-7);
+}
+
+.stage-idle {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: var(--sp-4);
+}
+
+.stage-idle p {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 719.98px) {
+  /* Phones: the song as a header, the lyrics under it. */
+  .np-view[data-mode="lyrics"] .np-side {
+    top: var(--sp-9);
+    bottom: auto;
+    right: var(--sp-4);
+    left: var(--sp-4);
+    width: auto;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: var(--sp-3);
+  }
+
+  .np-view[data-mode="lyrics"] .np-side .art--cover {
+    width: var(--art-list);
+    border-radius: var(--r-control);
+  }
+
+  .np-view[data-mode="lyrics"] .np-progress {
+    display: none;
+  }
+
+  .np-view[data-mode="lyrics"] .np-titles {
+    width: auto;
+    min-width: 0;
+    text-align: start;
+  }
+
+  .np-view[data-mode="lyrics"] .np-title {
+    font: var(--md-sys-typescale-title-medium) var(--font);
+  }
+
+  .np-view[data-mode="lyrics"] .np-artist {
+    font: var(--md-sys-typescale-body-medium) var(--font);
+  }
+
+  .np-side .art--cover,
+  .np-progress,
+  .np-titles {
+    --np-art: min(80vw, 46vh);
+  }
+
+  .ly-area {
+    inset: var(--np-head) 0 0;
+  }
+
+  .ly-field {
+    font-size: calc(var(--ly-phone) * var(--ly-scale, 1));
+  }
+}

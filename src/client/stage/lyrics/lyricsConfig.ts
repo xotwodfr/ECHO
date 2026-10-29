@@ -4,7 +4,7 @@
 export const LYRICS = {
   anchorY: 0.4, // §3.2
   unlitMix: 0.22, // §5.1: unsung ink at the anchor, 22% toward the room (M3 design review)
-  maxWidth: 0.64, // §3.3
+  maxWidth: 0.84, // §3.3: of the lyrics view's right side (2026-10-29)
   maxRows: 2,
   shrinkMax: 0.12,
   // §4: one column. The active line (or the dots) sits at the anchor, every other line one gap

@@ -22,20 +22,24 @@ describe('fitLine (§3.3, DESIGN_SYSTEM.md §4.3)', () => {
     expect(seen).toEqual([[100, 1]]); // one measurement
   });
 
-  it('condenses first: stops at the first width that fits', () => {
-    expect(fitLine((w) => (w <= 92 ? 2 : 3))).toEqual({ wdth: 92, size: 1, rows: 2 });
+  it('never condenses: Figtree has no width axis', () => {
+    const seen: number[] = [];
+    fitLine((w) => {
+      seen.push(w);
+      return 3;
+    });
+    expect(new Set(seen)).toEqual(new Set([100]));
   });
 
-  it('then shrinks by at most 12%, then allows 3 rows', () => {
-    expect(fitLine((_w, s) => (s <= 0.94 ? 2 : 3))).toEqual({ wdth: 82, size: 0.94, rows: 2 });
+  it('shrinks by at most 12%, then allows 3 rows', () => {
+    expect(fitLine((_w, s) => (s <= 0.94 ? 2 : 3))).toEqual({ wdth: 100, size: 0.94, rows: 2 });
     const seen: [number, number][] = [];
     const fit = fitLine((w, s) => {
       seen.push([w, s]);
       return 3;
     });
-    expect(fit).toEqual({ wdth: 82, size: 0.88, rows: 3 });
+    expect(fit).toEqual({ wdth: 100, size: 0.88, rows: 3 });
     expect(Math.min(...seen.map(([, s]) => s))).toBeCloseTo(0.88);
-    expect(Math.min(...seen.map(([w]) => w))).toBe(82);
   });
 });
 

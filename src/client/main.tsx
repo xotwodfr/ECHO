@@ -15,7 +15,9 @@ import { startQueueSync } from './playback/queueSync.ts';
 import { SpotifyProvider } from './playback/spotify.ts';
 import { loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
+import { startCollections } from './shell/collections.ts';
 import { confirmReplace } from './shell/ReplaceQueue.tsx';
+import { startAutoplay } from './shell/radio.ts';
 import { Shell } from './shell/Shell.tsx';
 import { spotifyStatus } from './shell/SpotifyViews.tsx';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
@@ -130,6 +132,11 @@ if ('mediaSession' in navigator) {
 
 // The queue follows a signed-in user across sessions and devices (M5).
 if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().show(m));
+
+// Playlists and hearts for every page (one fetch, refreshed after changes), and Autoplay: similar
+// songs when the music runs out.
+startCollections(library);
+startAutoplay(controller, library, () => prefs().playback.autoplay);
 
 // The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
 startPalette(controller, { instant: !!frame, ...(frame?.palette && { albumKey: frame.palette }) });

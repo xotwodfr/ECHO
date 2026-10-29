@@ -2,7 +2,6 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DUR_PALETTE_MS } from './palette/animator.ts';
-import { COVER_OUT_MS } from './shell/StageViews.tsx';
 import { CHROME_IN_MS, CHROME_OUT_MS } from './stage/loop.ts';
 import { TOAST_EXIT_MS } from './ui/logic.ts';
 
@@ -32,6 +31,8 @@ const RAW = [
 // Each allowed raw value needs a technical reason.
 const ALLOW = [
   { re: /^\s*@media\b/, reason: 'media queries cannot read custom properties (breakpoints, §5)' },
+  { re: /^\s*@container\b/, reason: 'container queries cannot read custom properties either (§5)' },
+  { re: /'\(max-width: [\d.]+px\)'/, reason: "matchMedia takes CSS's breakpoint as a string (§5)" },
   {
     re: /`oklch\(\$\{lch\}/,
     reason: 'the palette animator serialises computed colours, not design values (§3.3)',
@@ -66,7 +67,6 @@ describe('DS-01: no raw design values outside tokens.css', () => {
     expect(tokens).toContain(`--dur-toast: ${TOAST_EXIT_MS}ms`);
     expect(tokens).toContain(`--dur-pop: ${CHROME_IN_MS}ms`);
     expect(tokens).toContain(`--dur-art: ${CHROME_OUT_MS}ms`);
-    expect(tokens).toContain(`--dur-art-out: ${COVER_OUT_MS}ms`);
     expect(tokens).toContain(`--dur-palette: ${DUR_PALETTE_MS}ms`);
   });
 });
@@ -112,24 +112,26 @@ describe('DS-01: liquid glass tokens', () => {
   });
 });
 
-// DS-02 (inspection part): the shell has no gradients, glows, monospace or transformed capitals.
-// Under Material 3 (DESIGN_SYSTEM.md §1) letter-spacing comes only from the type scale's tracking
-// tokens, and shadows only from the elevation tokens, on floating surfaces. Backdrop filters and
-// blur are allowed since 2026-10-28: liquid glass (§7.11) is approved in both zones.
+// DS-02 (inspection part), after the Spotify redesign (DESIGN_SYSTEM.md §1): no glows or
+// monospace; shadows only from the elevation, shadow and ring tokens; letter-spacing only from the
+// tracking tokens. Gradients are Spotify's own (page headers, Liked Songs) and allowed, built from
+// tokens like everything else (DS-01).
 describe('DS-02: shell light effects', () => {
-  // The Stage is the other zone (DESIGN_SYSTEM.md §1): its light effects are §7's to define, so its
-  // stylesheet is the one exemption. DS-01 still applies to it.
+  // The lyrics view (stage/) defines its own light (§7); DS-01 still applies to it.
   const css = files.filter((f) => f.name.endsWith('.css') && !f.name.startsWith('stage/'));
-  const BANNED = [/gradient\(/, /text-shadow/, /monospace/, /text-transform/];
+  const BANNED = [/text-shadow/, /monospace/];
   for (const f of css) {
     it(f.name, () => {
       const text = uncomment(f.text);
       for (const re of BANNED) expect(text, String(re)).not.toMatch(re);
       const shadows = [...text.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1]?.trim());
       for (const s of shadows)
-        expect(s).toMatch(/^var\(--(md-sys-elevation-level[1-3]|shadow-float)\)$/);
+        expect(s).toMatch(
+          /^var\(--(md-sys-elevation-level[1-3]|shadow-[a-z]+|card-shadow|ring-[a-z]+)\)$/,
+        );
       const tracking = [...text.matchAll(/letter-spacing:\s*([^;]+);/g)].map((m) => m[1]?.trim());
-      for (const t of tracking) expect(t).toMatch(/^(var\(--md-sys-tracking-[a-z-]+\)|normal)$/);
+      for (const t of tracking)
+        expect(t).toMatch(/^(var\(--(md-sys-tracking|tracking)-[a-z-]+\)|normal)$/);
     });
   }
 
@@ -137,6 +139,6 @@ describe('DS-02: shell light effects', () => {
   // such as ↔ are not emoji.
   it('no emoji in component code or copy', () => {
     for (const f of files)
-      expect(uncomment(f.text), f.name).not.toMatch(/\p{Emoji_Presentation}|️/u);
+      expect(uncomment(f.text), f.name).not.toMatch(/\p{Emoji_Presentation}|\uFE0F/u);
   });
 });

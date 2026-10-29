@@ -32,10 +32,14 @@ export interface FrameParams {
 }
 
 export type Route =
+  | { view: 'home' }
   | { view: 'listen'; frame?: FrameParams }
   | { view: 'library'; tab: LibraryTab }
   | { view: 'album'; id: string }
   | { view: 'artist'; id: string }
+  | { view: 'playlist'; id: string }
+  | { view: 'liked' }
+  | { view: 'genre'; name: string }
   | { view: 'search'; q: string }
   | { view: 'settings'; section: SettingsSection }
   | { view: 'ui' }
@@ -87,9 +91,14 @@ export function parseRoute(pathname: string, search = ''): Route {
   }
   const [head, a, b, ...rest] = decoded;
   if (!head) {
+    // Deterministic mode keeps its `/?frame=…` address (tests and design screenshots).
     const frame = parseFrame(search);
-    return frame ? { view: 'listen', frame } : { view: 'listen' };
+    return frame ? { view: 'listen', frame } : { view: 'home' };
   }
+  if (head === 'listen' && a === undefined) return { view: 'listen' };
+  if (head === 'playlist' && a && b === undefined) return { view: 'playlist', id: a };
+  if (head === 'collection' && a === 'tracks' && b === undefined) return { view: 'liked' };
+  if (head === 'genre' && a && b === undefined) return { view: 'genre', name: a };
   if (head === '__ui' && a === undefined) return { view: 'ui' };
   if (head === 'login' && a === undefined) return { view: 'login' };
   if (head === 'setup' && a === undefined) return { view: 'setup' };
@@ -113,9 +122,11 @@ export function parseRoute(pathname: string, search = ''): Route {
 /** The canonical URL (path + query) of a route. Defaults are left out: `/library`, `/settings`. */
 export function routePath(route: Route): string {
   switch (route.view) {
+    case 'home':
+      return '/';
     case 'listen': {
       const f = route.frame;
-      if (!f) return '/';
+      if (!f) return '/listen';
       const q = new URLSearchParams({ frame: String(f.ms) });
       if (f.seed) q.set('seed', String(f.seed));
       if (f.track) q.set('track', f.track);
@@ -130,6 +141,12 @@ export function routePath(route: Route): string {
       return `/library/album/${encodeURIComponent(route.id)}`;
     case 'artist':
       return `/library/artist/${encodeURIComponent(route.id)}`;
+    case 'playlist':
+      return `/playlist/${encodeURIComponent(route.id)}`;
+    case 'liked':
+      return '/collection/tracks';
+    case 'genre':
+      return `/genre/${encodeURIComponent(route.name)}`;
     case 'search':
       return route.q ? `/search?${new URLSearchParams({ q: route.q })}` : '/search';
     case 'settings':
