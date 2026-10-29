@@ -21,3 +21,4 @@ Android/build/
 Android/app/build/
 Android/local.properties
 Android/*.apk
+.superpowers/
