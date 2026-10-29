@@ -4,7 +4,7 @@ import { sessionExpired } from '../session.ts';
 import { ManualClock } from './clock.ts';
 import { createPlaybackController } from './controller.ts';
 import { FakeProvider } from './fake.ts';
-import { startQueueSync, trimQueue } from './queueSync.ts';
+import { savedQueue, startQueueSync, trimQueue } from './queueSync.ts';
 
 const track = (i: number): Track => ({
   key: `navidrome:t${i}`,
@@ -137,5 +137,26 @@ describe('queue sync start', () => {
     } finally {
       sessionExpired.setState({ expired: false });
     }
+  });
+});
+
+describe('a queue saved by another client', () => {
+  it('the Android app’s, which leaves out empty lists and the default provider, plays here', () => {
+    const t = {
+      key: 'navidrome:a',
+      id: 'a',
+      title: 'A',
+      artists: [{ name: 'X' }],
+      album: { title: 'B', key: 'navidrome:b' },
+      durationMs: 1000,
+    };
+    const q = savedQueue({ now: t, context: [t] } as unknown as QueueState);
+    expect(q.provider).toBe('navidrome');
+    expect(q.nextUp).toEqual([]);
+    expect(q.history).toEqual([]);
+    expect(q.now?.provider).toBe('navidrome');
+    expect(q.now?.artwork).toEqual([]);
+    expect(q.context[0]?.provider).toBe('navidrome');
+    expect(savedQueue({ ...q, provider: null }).provider).toBeNull();
   });
 });

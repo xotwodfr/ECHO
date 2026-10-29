@@ -17,4 +17,11 @@ class QueueTest {
     assertEquals(0L, savedPositionMs(saved("""{"positionMs":null}""")))
     assertEquals(0L, savedPositionMs(saved("""{}""")))
   }
+
+  @Test
+  fun `a saved queue writes its empty lists and provider, which the web reads`() {
+    val q = com.folk3s.echo.api.EchoJsonFull.encodeToJsonElement(com.folk3s.echo.api.QueueState.serializer(), com.folk3s.echo.api.QueueState()).jsonObject
+    assertEquals("[]", q["nextUp"].toString())
+    assertEquals("\"navidrome\"", q["provider"].toString())
+  }
 }

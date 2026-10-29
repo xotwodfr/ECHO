@@ -14,6 +14,7 @@ import androidx.media3.session.SessionToken
 import com.folk3s.echo.EchoApp
 import com.folk3s.echo.api.ApiError
 import com.folk3s.echo.api.EchoJson
+import com.folk3s.echo.api.EchoJsonFull
 import com.folk3s.echo.api.PlayContext
 import com.folk3s.echo.api.QueueState
 import com.folk3s.echo.api.Track
@@ -422,7 +423,7 @@ class Playback(private val app: EchoApp) {
         put(
           "queue",
           if (q.now == null) kotlinx.serialization.json.JsonNull
-          else EchoJson.encodeToJsonElement(QueueState("navidrome", q.now, q.nextUp, q.context, q.source, q.history.takeLast(20))),
+          else EchoJsonFull.encodeToJsonElement(QueueState("navidrome", q.now, q.nextUp, q.context, q.source, q.history.takeLast(20))),
         )
         put("positionMs", s.positionNow())
         put("baseUpdatedAt", queueBase)

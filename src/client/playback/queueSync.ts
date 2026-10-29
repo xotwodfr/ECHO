@@ -1,4 +1,4 @@
-import type { QueueState } from '../../shared/types.ts';
+import type { QueueState, Track } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
 import { sessionExpired } from '../session.ts';
 import type { PlaybackController } from './controller.ts';
@@ -12,6 +12,31 @@ const SAVE_DEBOUNCE_MS = 2000;
 const SAVE_EVERY_MS = 15_000;
 /** Request bodies are capped at 64 KB (SETTINGS_AND_SECURITY.md §5.6). */
 const MAX_BYTES = 60_000;
+
+/**
+ * A saved queue as this player needs it. Another client may leave out what is empty or default
+ * (the Android app omits `nextUp: []` and `provider: 'navidrome'`), which crashed the web on load.
+ */
+export function savedQueue(q: QueueState): QueueState {
+  const track = <T extends Track | null | undefined>(t: T): T =>
+    t
+      ? ({
+          ...t,
+          provider: t.provider ?? 'navidrome',
+          artists: t.artists ?? [],
+          artwork: t.artwork ?? [],
+        } as T)
+      : t;
+  const list = (l: Track[] | undefined) => (Array.isArray(l) ? l.map(track) : []);
+  return {
+    ...q,
+    provider: q.provider === undefined ? 'navidrome' : q.provider,
+    now: track(q.now),
+    nextUp: list(q.nextUp),
+    context: list(q.context),
+    history: list(q.history),
+  };
+}
 
 /** The queue, trimmed until it fits: history first, then the far end of the context. */
 export function trimQueue(q: QueueState): QueueState {
@@ -37,7 +62,8 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
         '/me/queue',
       );
       base = saved.updatedAt;
-      if (saved.queue?.now && !c.player.getState().track) c.restore(saved.queue, saved.positionMs);
+      if (saved.queue?.now && !c.player.getState().track)
+        c.restore(savedQueue(saved.queue), saved.positionMs);
       break;
     } catch (err) {
       if (err instanceof ApiError && err.status < 500) return;
@@ -69,7 +95,8 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
       );
       base = newer.updatedAt;
       // The device that is playing keeps its queue (and wins on its next save).
-      if (p.status !== 'playing' && newer.queue) c.restore(newer.queue, newer.positionMs);
+      if (p.status !== 'playing' && newer.queue)
+        c.restore(savedQueue(newer.queue), newer.positionMs);
     }
   }
   const later = () => {

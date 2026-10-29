@@ -26,6 +26,9 @@ val EchoJson = Json {
   coerceInputValues = true
 }
 
+/** For what other clients read back (the saved queue): every field, defaults and empty lists too. */
+val EchoJsonFull = Json(EchoJson) { encodeDefaults = true }
+
 /** An answer other than 2xx: the HTTP status and ECHO's error code (`{ error }`), when it sent one. */
 class ApiError(val status: Int, val code: String?) : Exception("HTTP $status${code?.let { " $it" } ?: ""}")
 
