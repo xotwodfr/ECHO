@@ -119,6 +119,9 @@ export const strings = {
     title: (t: string) => `${t} Radio`,
     failed: "Couldn't start the radio.",
     autoplay: 'Autoplay: playing similar songs',
+    smart: (t: string) => `Smart Shuffle ${t}`,
+    smartAdded: (n: number) =>
+      n ? `Smart Shuffle: ${n} recommendation${n === 1 ? '' : 's'} mixed in` : 'Shuffling',
   },
   sleep: {
     title: 'Sleep timer',

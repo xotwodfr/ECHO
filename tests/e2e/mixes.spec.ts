@@ -123,3 +123,46 @@ test('A11Y-03: axe finds nothing serious on Home with mixes, a mix and Wrapped',
     expect(found, s).toEqual([]);
   }
 });
+
+test('Smart Shuffle: a playlist shuffled with recommendations mixed in', async ({ page }) => {
+  await signedInWithNavidrome(page, 'smart');
+  const name = `Smart ${Date.now().toString(36)}`;
+  // The mock Navidrome outlives runs and is shared: a playlist of this test's own, deleted after.
+  const id = await page.evaluate(async (n) => {
+    const q = new URLSearchParams([
+      ['name', n],
+      ...['1', '2', '3', '4'].map((i) => ['songId', `al-1-t${i}`]),
+    ]);
+    const r = await fetch(`/api/v1/navidrome/rest/createPlaylist?${q}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: '{}',
+    });
+    return (await r.json())['subsonic-response'].playlist.id as string;
+  }, name);
+  try {
+    await page.goto(`/playlist/${id}`);
+    await page.getByRole('button', { name: `Smart Shuffle ${name}` }).click();
+    await expect(
+      page.locator('.toast-region').getByText(/^Smart Shuffle: \d+ recommendations? mixed in$/),
+    ).toBeVisible();
+    await expect(dock(page)).toHaveAttribute('data-status', 'playing');
+    await page.setViewportSize({ width: 1280, height: 800 }); // the queue as a sheet
+    await dock(page).getByRole('button', { name: 'Queue' }).click();
+    // The mock's similar songs are the other albums' songs: one of them is in the queue now.
+    const queue = page.getByRole('dialog', { name: 'Queue' });
+    await expect(
+      queue.getByText(/^(Copper Rain|Glass Weather|Long Exposure) \d$/).first(),
+    ).toBeVisible();
+  } finally {
+    await page.evaluate(
+      (pl) =>
+        fetch(`/api/v1/navidrome/rest/deletePlaylist?id=${pl}`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: '{}',
+        }),
+      id,
+    );
+  }
+});

@@ -43,7 +43,7 @@ import {
 import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
-import { startRadio } from './radio.ts';
+import { startRadio, startSmartShuffle } from './radio.ts';
 import { useTint } from './tint.ts';
 
 // The pages after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md): Album,
@@ -824,6 +824,12 @@ export function PlaylistView({ id }: { id: string }) {
                 icon="shuffle"
                 onClick={() => c.playList(p.entries, 'shuffle', ctx)}
               />
+              <IconButton
+                size="lg"
+                label={strings.radio.smart(p.name)}
+                icon="smartShuffle"
+                onClick={() => void startSmartShuffle(c, library, p.entries, ctx)}
+              />
             </>
           )}
           {editable && (
@@ -959,6 +965,7 @@ function EditPlaylist(props: {
 
 export function LikedView() {
   const c = usePlayback();
+  const library = useLibrary();
   const starred = useStarredAll();
   const s = strings.liked;
   const ctx: PlayContext = { kind: 'starred', title: s.title };
@@ -994,6 +1001,12 @@ export function LikedView() {
               label={strings.album.shuffleName(s.title)}
               icon="shuffle"
               onClick={() => c.playList(tracks, 'shuffle', ctx)}
+            />
+            <IconButton
+              size="lg"
+              label={strings.radio.smart(s.title)}
+              icon="smartShuffle"
+              onClick={() => void startSmartShuffle(c, library, tracks, ctx)}
             />
           </div>
         )}
