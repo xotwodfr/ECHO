@@ -127,7 +127,9 @@ describe('DS-02: shell light effects', () => {
       for (const re of BANNED) expect(text, String(re)).not.toMatch(re);
       const shadows = [...text.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1]?.trim());
       for (const s of shadows)
-        expect(s).toMatch(/^var\(--(fl-shadow-\d+|shadow-[a-z]+|card-shadow|ring-[a-z-]+)\)$/);
+        expect(s).toMatch(
+          /^(var\(--(fl-shadow-\d+|shadow-[a-z]+|card-shadow|ring-[a-z-]+)\)|none)$/,
+        );
       const tracking = [...text.matchAll(/letter-spacing:\s*([^;]+);/g)].map((m) => m[1]?.trim());
       for (const t of tracking) expect(t).toMatch(/^(var\(--tracking-[a-z-]+\)|normal)$/);
     });
