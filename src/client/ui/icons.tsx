@@ -1,4 +1,5 @@
-// Icons (DESIGN_SYSTEM.md §9.1): Fluent UI System Icons (MIT, github.com/microsoft/fluentui-system-icons),
+// Icons (DESIGN_SYSTEM.md §9.1): Fluent UI System Icons (MIT, github.com/microsoft/fluentui-system-icons;
+// the licence ships as /licenses/fluentui-system-icons.txt),
 // 24-unit grid, regular, and filled for what is on: the transport glyphs, saved hearts, the
 // current destination (`solid`). Each key names the Fluent icon it was copied from. Rendered at
 // --icon; decorative: the control that holds an icon carries the accessible name.

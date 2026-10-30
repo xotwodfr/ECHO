@@ -24,7 +24,7 @@
   --liked-from: #450AF5;
   --liked-to: #C4EFD9;
   --text-on-tint: rgba(255, 255, 255, 0.72);
-  --head-fallback: var(--fl-card-hover);
+  --head-fallback: var(--fl-layer-solid);
   --avatar: var(--fl-accent-subtle);
   --card-shadow: var(--fl-shadow-4);
   --chip: var(--fl-control);
@@ -163,6 +163,8 @@
   --mica-opacity: 0.55; --mica-scale: 8; --mica-blur: 15px; --mica-saturate: 1.3;
   --fl-solid-base: #202020;
   --fl-layer: rgb(44 44 44 / 0.55);
+  /* the layer composited over the bare Mica base, opaque: for what content scrolls under */
+  --fl-layer-solid: #252525;
   --fl-layer-alt: rgb(58 58 58 / 0.6);
   --fl-card: rgb(255 255 255 / 0.05);
   --fl-card-hover: rgb(255 255 255 / 0.08);

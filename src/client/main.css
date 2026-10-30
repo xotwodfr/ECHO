@@ -614,7 +614,7 @@ a {
   align-items: center;
   gap: var(--sp-2);
   padding: var(--sp-4) var(--sp-3) var(--sp-3) var(--sp-4);
-  background: var(--panel);
+  background: var(--fl-layer-solid); /* opaque: the queue scrolls under it */
 }
 
 .rp-head h2 {
