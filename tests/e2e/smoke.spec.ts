@@ -35,8 +35,9 @@ test('the client loads with tokens and no console errors', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-// DS-03 / DS-10: the whole app, lyrics included, is set in Figtree (DESIGN_SYSTEM.md §4.1).
-test('everything uses Figtree, and nothing else', async ({ page }) => {
+// DS-03 / DS-10: the whole app, lyrics included, is set in Segoe UI where it is installed and in
+// Selawik, Microsoft's open Segoe fallback, everywhere else (DESIGN_SYSTEM.md §4.1).
+test('the type is Segoe UI, falling back to Selawik', async ({ page }) => {
   await page.goto('/library');
   await expect(page.getByRole('heading', { name: 'Your Library', level: 1 })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
@@ -47,12 +48,13 @@ test('everything uses Figtree, and nothing else', async ({ page }) => {
       computed: getComputedStyle(document.querySelector('h1') as HTMLElement).fontFamily,
       dock: getComputedStyle(document.querySelector('.dock-meta') as HTMLElement).fontFamily,
       families: [...new Set(families)].sort(),
-      check: document.fonts.check('700 16px "Figtree"', 'ECHO'),
+      check: document.fonts.check('600 16px "Selawik"', 'ECHO'),
     };
   });
-  expect(r.token.replaceAll('"', '')).toMatch(/^Figtree,/);
-  expect(r.computed.replaceAll('"', '')).toMatch(/^Figtree/);
-  expect(r.dock.replaceAll('"', '')).toMatch(/^Figtree/);
-  expect(r.families).toEqual(['Figtree']);
+  const stack = r.token.replaceAll('"', '');
+  expect(stack).toMatch(/^Segoe UI Variable Text, Segoe UI, Selawik,/);
+  expect(r.computed.replaceAll('"', '')).toBe(stack);
+  expect(r.dock.replaceAll('"', '')).toBe(stack);
+  expect(r.families).toEqual(['Selawik']); // the test box has no Segoe UI
   expect(r.check).toBe(true);
 });

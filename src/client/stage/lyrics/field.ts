@@ -385,7 +385,7 @@ export function createLyricField(
     const gen = ++build;
     if (!next || next.sync === 'none') return;
     const text = next.lines.map((l) => l.text).join(' ');
-    await document.fonts?.load(`700 1rem "Figtree"`, text).catch(() => undefined);
+    await document.fonts?.load(`700 1rem "Selawik"`, text).catch(() => undefined);
     if (gen !== build) return;
     lay();
     opts.onReady?.();

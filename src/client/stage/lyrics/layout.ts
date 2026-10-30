@@ -7,7 +7,7 @@ import { LYRICS } from './lyricsConfig.ts';
 
 export const LINE_HEIGHT = 1.12;
 export const LINE_HEIGHT_CJK = 1.2;
-const WDTH_MIN = 100; // Figtree has no width axis: a long line shrinks, then wraps
+const WDTH_MIN = 100; // Segoe UI and Selawik have no width axis: a long line shrinks, then wraps
 const WDTH_STEP = 2;
 const SIZE_STEP = 0.02;
 export const BG_SIZE = 0.62; // backing vocals under their lead line (§5.6)
@@ -30,7 +30,7 @@ const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 export const graphemes = (text: string) => [...segmenter.segment(text)].map((s) => s.segment);
 
 export interface Fit {
-  wdth: number; // width axis, 100 = normal (Figtree has none: always 100)
+  wdth: number; // width axis, 100 = normal (the face has none: always 100)
   size: number; // shrink multiplier, 0.88–1
   rows: number;
 }

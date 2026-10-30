@@ -22,7 +22,7 @@ describe('fitLine (§3.3, DESIGN_SYSTEM.md §4.3)', () => {
     expect(seen).toEqual([[100, 1]]); // one measurement
   });
 
-  it('never condenses: Figtree has no width axis', () => {
+  it('never condenses: the face has no width axis', () => {
     const seen: number[] = [];
     fitLine((w) => {
       seen.push(w);

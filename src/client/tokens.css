@@ -64,9 +64,9 @@
   --head-colour: var(--head-fallback);
   --body-fade: 232px;
 
-  /* type: Figtree everywhere (a free face close to Spotify's Circular, §4) */
-  --font: "Figtree", system-ui, sans-serif;
-  --font-ui: "Figtree", system-ui, sans-serif;
+  /* type: Segoe UI where installed, Selawik (shipped, fonts.css) everywhere else (§4) */
+  --font: "Segoe UI Variable Text", "Segoe UI", "Selawik", system-ui, sans-serif;
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", "Selawik", system-ui, sans-serif;
   --fs-title: 20px; --fs-section: 16px; --fs-figure: 24px; --fs-body: 14px; --fs-small: 12px;
   --lh-title: 28px; --lh-section: 24px; --lh-figure: 30px; --lh-body: 20px; --lh-small: 16px;
   --ly-active: clamp(24px, min(3.7vh, 2.3vw), 44px);

@@ -103,7 +103,7 @@ test.describe('with WebGL 2', () => {
     // Most tests here navigate again. A `goto` while the first page's font is still downloading
     // aborts it, and Firefox logs that as a console error, which tests counting errors would see.
     // `fonts.ready` is not enough: it resolves at once if the load has not started yet.
-    await page.evaluate(() => document.fonts.load('16px "Figtree"').then(() => undefined));
+    await page.evaluate(() => document.fonts.load('16px "Selawik"').then(() => undefined));
   });
 
   test('renders the room in Ambient mode, without errors', async ({ page }) => {
