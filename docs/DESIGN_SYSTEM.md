@@ -1,35 +1,40 @@
 # ECHO — Design System
 
-Status: **Draft 5** · 2026-10-29: ECHO redesigned after Spotify, web and Android (owner decision;
-`docs/superpowers/specs/2026-10-29-spotify-redesign-design.md`) · later that day liquid glass
-dropped for performance, the surfaces Material 3's (owner decision, §7.11)
-Related: [Redesign spec](superpowers/specs/2026-10-29-spotify-redesign-design.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
+Status: **Draft 6** · 2026-10-30: the web client in Fluent 2 with Mica (owner decision;
+`docs/superpowers/specs/2026-10-29-fluent-web-design.md`). Draft 5 (2026-10-29): ECHO redesigned
+after Spotify, web and Android, liquid glass dropped for performance (§7.11). The Android app keeps
+Draft 5's Material 3 surfaces (`ANDROID_CLIENT.md`); this document describes the web client.
+Related: [Fluent spec](superpowers/specs/2026-10-29-fluent-web-design.md) · [Redesign spec](superpowers/specs/2026-10-29-spotify-redesign-design.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
-This is the visual language of the whole application: tokens, component rules and the reason each
+This is the visual language of the web application: tokens, component rules and the reason each
 effect exists. Implementation takes every colour, size, duration and easing from the tokens in
 `src/client/tokens.css` (§13). A raw value in a component counts as a defect
 (`ACCEPTANCE_CRITERIA.md` DS-01, checked by `src/client/design-rules.test.ts`).
 
-**2026-10-29: Spotify's layout, Material 3's surfaces.** The owner asked for the app to look "very
-much like Spotify", then for liquid glass to go ("it worsens the performance so much") in favour
-of a Material 3 design. The frame, pages and features are Spotify's; colour, surfaces, shape,
-type and states are M3's, the scheme following the playing album as in Draft 3. The name and the wordmark stay ECHO's; none of Spotify's brand marks are
-used, except Spotify's own logo where its attribution rules require it (§8).
+**2026-10-30: Spotify's layout, Fluent 2's surfaces, Mica from the album.** The owner already
+runs a Material 3 Navidrome app, so ECHO's web client should not be a second one. The frame, pages
+and features stay Spotify's; colour, surfaces, shape, type, icons, controls and states are
+Microsoft's Fluent 2, dark only, and the playing album's colour glows through the frame the way
+Windows 11's Mica takes the wallpaper's. Spotify's own touches stay: the genre colours, Liked
+Songs' gradient, the big page titles, Made For You's lettering, the round play disc and the
+floating player pill. The name and the wordmark stay ECHO's.
 
 ---
 
 ## 1. Principles
 
-1. **Spotify's frame, the album's scheme.** The frame is the lowest M3 surface container, the
-   panels one tone up, what floats higher still. The dark M3 content scheme comes from the playing
-   album's accent (`palette/m3.ts`), so the whole app takes the music's colour, as Material You
-   takes the wallpaper's.
-2. **Primary means play.** `--green` is an alias of `--md-sys-color-primary`: play buttons, the
-   song or context playing now, toggles that are on, saved hearts. Nothing else is primary.
-3. **Opaque surfaces.** Depth is tone and, for what floats, an M3 elevation shadow. Nothing reads
-   its backdrop (§7.11).
+1. **Spotify's frame over the album's Mica.** Behind the frame, the playing album's palette
+   (`--art-*`) is painted as a soft glow, blurred once per album into a still image
+   (`palette/mica.ts`, §6). The panels are Fluent's translucent layer over it; what floats is
+   opaque.
+2. **Primary means play.** `--green` is an alias of `--fl-accent`, the album's accent as a Fluent
+   ramp (`palette/fluent.ts`): play buttons, the song or context playing now, toggles that are on,
+   saved hearts, selection markers. Nothing else is the accent.
+3. **Fills, not filters.** Depth is a translucent fill, a hairline stroke and, for what floats, a
+   Fluent shadow. Nothing reads its backdrop, and nothing is blurred while the app runs (§7.11).
 4. **The lyrics view is the one immersive screen.** It fills the window with the cover, blurred
-   (the room, `VISUALIZER_SPEC.md`), and keeps ECHO's word-timed lyric column (§4.3).
+   (the room, `VISUALIZER_SPEC.md`), and keeps ECHO's word-timed lyric column (§4.3); only its
+   chrome is Fluent.
 
 Zones: **the app** (every page, the panels, the player) follows §3–§10. **The lyrics view**
 (`/listen`) adds the light effects of §7 to the same tokens; its stylesheet (`stage/stage.css`) is
@@ -58,13 +63,13 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
 - **The page**: `--panel`, `--r-panel` corners, its own scroll.
 - **Right panel** (`--np-w`, wide only): Spotify's Now Playing view (cover, song and heart, About
   the artist, Next in queue) or the queue, toggled from the player.
-- **The player** floats over the bottom of the page as an M3 floating toolbar: a
-  `surface-container` pill at elevation 3 (`--pill-h`, `--pill-max`, `--pill-inset`); the page
-  keeps room under its content for it.
+- **The player** floats over the bottom of the page as a round pill: a `--fl-flyout` surface with
+  a hairline edge and shadow 16 (`--pill-h`, `--pill-max`, `--pill-inset`); the page keeps room
+  under its content for it.
 - **Compact**: no top bar or panels; the mini player (`--mini-h`, tinted by the playing album)
-  over the M3 navigation bar (`--tabbar`, 80px, docked, `surface-container`, a
-  `secondary-container` pill behind the current destination's icon: Home, Search, Your Library). The mini player opens the
-  lyrics view.
+  over the tab bar (`--tabbar`, 80px, docked, `--fl-flyout`, the current destination's icon
+  filled over a short accent bar: Home, Search, Your Library). The mini player opens the lyrics
+  view.
 - **Lyrics view** (`/listen`): the whole window; the pill floats over it and fades when the pointer
   rests (PRODUCT_SPEC.md §6.1).
 
@@ -72,21 +77,24 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
 
 ### 3.1 Neutrals and the accent
 
-The `--md-sys-color-*` roles are the dark `SchemeContent` (spec 2025) of the playing album's
-accent, written on `:root` and animated with the artwork palette by `palette/live.ts`;
-`tokens.css` holds the scheme of the fallback accent. The frame's names alias the roles:
+Neutrals are Fluent 2's dark ones (WinUI 3 and `@fluentui/tokens` `webDarkTheme`), fixed.
+The accent is the playing album's: `palette/fluent.ts` turns `--art-accent` into an HCT tonal
+ramp (accent 80, hover 85, pressed 75, on-accent 10, accent text 82, subtle 30) published as
+`--fl-accent*` and animated with the artwork palette by `palette/live.ts`; a grey seed stays grey.
+`tokens.css` holds the fallback accent's ramp. The frame's names alias the tokens:
 
-| Token | Role | Use |
+| Token | Fluent token | Use |
 |---|---|---|
-| `--frame` | `surface-container-lowest` | The frame around the panels |
-| `--panel` | `surface-container-low` | Panels, pages |
-| `--raised` / `--raised-2` / `--raised-3` | `surface-container-high` / `-highest` / `surface-bright` | Search bar, cards on hover, chips |
-| `--text` / `--muted` | `on-surface` / `on-surface-variant` | Primary and secondary text |
-| `--green` (`--green-hover`, `--green-press`) | `primary` (with `on-primary` at 8% / 10%) | Play, playing, on, saved |
-| `--hover-row`, `--press-row` | `on-surface` at 8% / 10% | M3 state layers |
-| `--selected-row` | `secondary-container` | The current row or destination |
-| `--negative`, `--warning`, `--positive` | `error`, `warning`, `success` (custom colours harmonised to the seed) | Errors, the offline note |
-| `--focus` | `secondary` | The focus ring |
+| `--frame` | transparent | The frame: Mica shows through (§6) |
+| `--panel` | `--fl-layer` (#2C2C2C at 55%) | Panels, pages |
+| `--raised` / `--raised-2` / `--raised-3` | `--fl-card` / `--fl-card-hover` / `--fl-control-hover` | Cards, the playing row, chips |
+| `--text` / `--muted` / `--faint` | `--fl-fg1` / `--fl-fg2` / `--fl-fg3` | Primary, secondary, tertiary text |
+| `--green` (`--green-hover`, `--green-press`, `--on-green`) | `--fl-accent` ramp | Play, playing, on, saved, markers |
+| `--hover-row`, `--press-row`, `--selected-row` | `--fl-subtle-hover`, `--fl-subtle-press`, `--fl-card` | Hover, press and selected fills |
+| `--line`, `--control` | `--fl-stroke`, `--fl-stroke-strong` | Hairlines, control edges |
+| `--negative`, `--warning`, `--positive` | `--fl-danger`, `--fl-warning`, `--fl-success` | Errors, the offline note |
+| `--focus` | `--fl-focus-outer` | The focus ring (§12) |
+| (floating surfaces) | `--fl-flyout`, `--fl-dialog` | Menus, the player, toasts; dialogs, sheets |
 
 ### 3.2 Tints from the cover
 
@@ -112,20 +120,20 @@ is `--text-on-tint` (white at 72%). Lyric contrast guarantees are `LYRICS_EXPERI
 
 ### 4.1 Family
 
-**Figtree** (OFL, self-hosted, weights 300–900), a free face close to Spotify's Circular,
-everywhere, lyrics included. Figtree has no width axis: a long lyric line shrinks, then wraps
-(`stage/lyrics/layout.ts`).
+**Segoe UI** (`"Segoe UI Variable Text"`, `"Segoe UI"`), Fluent's face, where Windows has it
+installed; it is never shipped (its licence does not allow it). Everywhere else **Selawik**,
+Microsoft's open Segoe UI fallback (OFL, self-hosted, 400/600/700, `fonts.css`). Lyrics included.
+Neither has a width axis: a long lyric line shrinks, then wraps (`stage/lyrics/layout.ts`).
 
 ### 4.2 Scale
 
 | Role | Token | Use |
 |---|---|---|
-| Page title | `--title-xl/l/m/s` (800, 96/72/48/32px, tracking `--tracking-title`) | Album, artist, playlist headers, stepping down with the title's length |
-| Headline | `--md-sys-typescale-headline-medium` (400 28px) | Page headings, Good morning |
-| Section | `--md-sys-typescale-title-large` (400 22px) | Shelves, sections |
-| Title | `--md-sys-typescale-title-medium` / `-small` (600 16/14px) | Panel heads, card titles in shortcuts |
-| Body | `--md-sys-typescale-body-large` / `-medium` (400 16/14px) | Rows, cards, text |
-| Small | `--md-sys-typescale-body-small` (400 12px) | Times, notes |
+| Page title | `--title-xl/l/m/s` (700, 96/72/48/32px, tracking `--tracking-title`) | Album, artist, playlist headers, stepping down with the title's length (Spotify's) |
+| Title 1–3 | `--fl-type-title1/2/3` (600 32/28/24px) | Page headings, Good morning |
+| Subtitle | `--fl-type-subtitle1` / `-subtitle2` (600 20/16px) | Sections, dialog titles; panel heads |
+| Body | `--fl-type-body-large` / `-body` / `-body-strong` (16/24, 14/20, 600 14/20) | Rows, cards, text, buttons |
+| Caption | `--fl-type-caption` / `-caption-strong` (12/16) | Times, notes, tab labels |
 
 ### 4.3 Lyrics
 
@@ -140,14 +148,22 @@ wide (`--tile-min-compact` on phones) and fill the row; a shelf shows one row of
 scroll on phones). Breakpoints are the one raw value in CSS: compact < 720px, medium 720–1279px,
 wide ≥ 1280px; container queries narrow the pill.
 
-## 6. Surfaces and elevation
+## 6. Surfaces, Mica and elevation
 
-Panels are flat (`--panel`). In the dark scheme a surface's tone carries its elevation; shadows,
-M3's (`--md-sys-elevation-level1…3`), are only on what floats: the player (3), menus (2), the
-sticky header (2), sheets (1), dialogs and snackbars (3), cards' covers (`--card-shadow`) and the
-play buttons (`--shadow-play`). Shapes are M3's corner scale (`--md-sys-shape-corner-*`): panels
-large (16px), cards medium (12px), menus and snackbars extra-small (4px), dialogs extra-large
-(28px), buttons and the player full.
+**Mica.** `.mica`, fixed behind the shell, is `--fl-mica-base` with two image layers. When the
+playing album changes, `palette/mica.ts` paints the album's highlight, accent and room
+(`micaStops`: OKLCH lightness held to 0.25–0.6, chroma to 0.15, so text on the layer keeps AA) as
+a gradient on a canvas at 1/`--mica-scale` of the window, blurs and saturates it once
+(`--mica-blur`, `--mica-saturate`), and shows the image on the hidden layer at `--mica-opacity`;
+the layers crossfade over `--dur-palette`. It bakes again only when the window crosses a
+breakpoint, never on scroll or resize steps. Palette colours only, never the cover (§8). Nothing
+playing, or a failed bake: the plain base.
+
+**Surfaces.** Panels are `--fl-layer` over Mica. Floating surfaces are opaque with a hairline
+`--fl-stroke` and a Fluent shadow (`--fl-shadow-4…64`): cards 4, menus, the player and toasts 16,
+dialogs and the side sheet 64. Corners are Fluent's: `--fl-corner-s` 4px for controls, rows and
+art in lists; `--fl-corner-m` 8px for cards, panels, menus, dialogs and toasts; circles for the
+play disc, avatars, artists and the player pill.
 
 ## 7. Light, gradients and atmosphere
 
@@ -166,10 +182,11 @@ Under the lyrics view's chrome, a top scrim (0 → `--scrim-top`) and one above 
 Liquid glass (Draft 4: an SVG displacement filter as each floating surface's `backdrop-filter`,
 and a second composite pass over the lyrics view) was dropped on 2026-10-29: a backdrop filter
 re-renders what is under its element whenever that changes, so scrolling, the palette animating
-and the lyrics view's moving room all re-filtered every glass surface each frame. Every surface is
-now an opaque M3 role (§3.1, §6); `design-rules.test.ts` fails on any `backdrop-filter`.
-Translucency without a backdrop filter (a scrim, a colour mixed with transparent) costs nothing
-and stays allowed.
+and the lyrics view's moving room all re-filtered every glass surface each frame.
+`design-rules.test.ts` fails on any `backdrop-filter`, and on CSS `filter: blur()` outside the
+lyrics view. The one blur in the app is Mica's, baked once per album into an image (§6); the
+browser then only composites it. Translucency without a filter (Fluent's layers, a scrim) costs
+nothing and stays allowed.
 
 **Spotify artwork.** Spotify forbids overlaying or distorting its artwork (§8): the card's play
 button does not sit on a Spotify cover.
@@ -181,48 +198,57 @@ button does not sit on a Spotify cover.
 - Sizes: `--art-row` 40, `--art-list` 48, `--art-dock` 56, `--art-shortcut` 64, cards fill their
   column, `--art-detail` 232, the lyrics view `--np-art`.
 - Spotify content keeps Spotify's logo and links in the player (PLAYBACK_ARCHITECTURE.md §4.6).
-- The green play button rises onto a card's cover corner on hover and focus (Spotify's), except on
+- The accent play button rises onto a card's cover corner on hover and focus (Spotify's), except on
   Spotify's own covers.
 
 ## 9. Components
 
 ### 9.1 Buttons
 
-Pills (`--r-pill`), 48px: **primary** green with black text, **secondary** outlined, **tertiary**
-text only, **destructive** outlined in `--negative`. Hover grows 4%; press shrinks 3%. Icon buttons
-are bare glyphs in `--muted` that turn white and grow on hover; a toggle that is on is green with a
-dot beneath (colour is never alone).
+Fluent's, 32px (`--fl-button-h`), `--r-control` corners: **primary** the accent with on-accent
+text, **secondary** `--fl-control` with a `--fl-stroke-control` edge, **tertiary** transparent,
+**destructive** transparent with `--negative` text. Hover and press change the fill, never the
+size. Icon buttons are subtle: a bare glyph in `--muted` with a `--fl-subtle-hover` fill on hover.
+A toggle that is on is the accent with a dot beneath (colour is never alone). The play disc is
+round (Spotify's shape) in the accent.
 
 ### 9.2 Player
 
-The pill: song (cover, title, artists, heart) | shuffle, previous, the white play disc, next,
-repeat over the progress bar | Now Playing view, lyrics, queue, sleep timer, volume (full screen on
-the lyrics view). The progress and volume are white on grey and turn green with a thumb on hover.
-Phones: the mini player shows the song, its heart and play/pause over a hairline of progress.
+The floating pill (`--fl-flyout`, `--fl-stroke`, shadow 16, round): song (cover, title, artists,
+heart) | shuffle, previous, the play disc, next, repeat over the progress bar | Now Playing view,
+lyrics, queue, sleep timer, volume. Sliders are Fluent's: a 4px `--fl-stroke-strong` rail, the
+accent fill, a 20px thumb with an accent centre that grows on hover. Phones: the mini player shows
+the song, its heart and play/pause over a hairline of progress (no thumb).
 
 ### 9.3 Track rows
 
-Spotify's table: number (a play glyph on hover, bars while playing), title (green when playing)
-with the artist under it where the list mixes albums, the heart (on hover; always once saved), the
-duration, the ⋯ menu (Add to playlist, Go to song radio, Play next, Add to queue, Go to artist,
-Go to album, and Remove from this playlist in a playlist). Phones drop the numbers and durations.
+Spotify's table: number (a play glyph on hover, bars while playing), title, the heart (on hover;
+always once saved), the duration, the ⋯ menu (Add to playlist, Go to song radio, Play next, Add to
+queue, Go to artist, Go to album, and Remove from this playlist in a playlist). Rows have 4px
+corners and a subtle hover fill; the row playing is a card (`--raised`, a `--fl-stroke` edge) with
+its title in `--fl-accent-text`. Phones drop the numbers and durations.
 
 ### 9.4 Cards and shortcuts
 
 Cards: cover, title, subtitle on a surround that lights `--raised` on hover; the whole card is the
 link. Home's shortcuts: a strip with a 64px cover and a bold title.
 
-### 9.5 Inputs, toggles, chips
+### 9.5 Inputs, toggles, chips, tabs, navigation
 
-Fields are 48px with a 1px `--control` edge that turns white on hover and gets a second white pixel
-inside on focus. Toggles are Spotify's: 40×24, a white knob sliding onto green. Chips are pills,
-the chosen one white with black text.
+Fields and the search box are Fluent's: `--fl-control` fill, a `--fl-stroke-control` edge over a
+`--fl-stroke-strong` bottom edge that turns accent and 2px on focus (`--ring-input-focus`), under
+the focus ring. Switches are Fluent's: a 40×20 track in a 24px target, off an outline with a
+matching knob, on the accent with an on-accent knob. Chips and view switches are toggle buttons
+(4px, edged; selected is the accent). Tabs are text with a 3px rounded accent bar under the
+current one. The current Your Library row and phone tab carry a short accent bar (leading edge,
+or under the icon) over a subtle fill.
 
 ### 9.6 Sheets, menus, dialogs, toasts
 
-M3's: menus `surface-container` (40px items, 8px top and bottom), the modal side sheet
-`surface-container-low` over the scrim, dialogs `surface-container-high` with `headline-small`
-titles, and the toast an M3 snackbar (`inverse-surface`) above the player.
+Fluent's: menus `--fl-flyout` with a 4px inset, 32px items with 4px hover fills, 8px corners,
+shadow 16; the side sheet a drawer (`--fl-dialog`, shadow 64) over the scrim; dialogs
+`--fl-dialog`, 8px, shadow 64, `--fl-type-subtitle1` titles and buttons at the end; the toast a
+`--fl-flyout` surface with an info glyph, bottom-centre above the player.
 
 ### 9.7 Connection status row (Settings)
 
@@ -241,15 +267,18 @@ Unchanged from Draft 3: name, status pill and detail, actions on the right.
 
 ### 11.1 Tokens
 
+Fluent 2's durations and curves for the app; the lyrics view's and the palette's own stay.
+
 | Token | Value | Use |
 |---|---|---|
-| `--dur-press` | 140ms | Press and hover scale |
-| `--dur-hover` | 180ms | Colour change on hover |
-| `--dur-ui` | 240ms | Menus, the sticky header, the card's play button |
-| `--dur-toast` | 320ms | Toast in/out |
+| `--dur-press` | 100ms | Press fills |
+| `--dur-hover` | 150ms | Colour change on hover |
+| `--dur-ui` | 200ms | Menus, the sticky header, the card's play button |
+| `--dur-toast` | 250ms | Toast in/out |
+| `--dur-page` / `--dur-page-out` | 250 / 100ms | Page changes |
 | `--dur-art` | 640ms | The pill fading out, the lyrics view's side settling |
-| `--dur-palette` | 1200ms | Palette interpolation between tracks |
-| `--ease-out` / `--ease-in-out` / `--ease-exit` | | Entrances / travels / exits |
+| `--dur-palette` | 1200ms | Palette interpolation and Mica's crossfade |
+| `--ease-out` / `--ease-in-out` / `--ease-exit` | Fluent's decelerate max / easy ease / accelerate max | Entrances / travels / exits |
 
 The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 
@@ -257,10 +286,12 @@ The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 
 - Animate `transform`, `scale`, `opacity` and colour; never layout.
 - No bounce on UI elements.
-- **Reduced motion:** no scale, travel or loops; opacity and colour stay.
+- **Reduced motion:** no scale, travel or loops; opacity and colour stay (Mica's crossfade too).
 
 ## 12. Accessibility baseline
 
+- Focus is Fluent's double ring: a 2px `--fl-focus-outer` outline over a 1px `--fl-focus-inner`
+  hairline inside it (`--ring-focus-inner`), so it reads on any surface, the accent included.
 - WCAG 2.2 AA. Targets ≥ 24×24px (2.5.8); focus visible on every control and never hidden by the
   pill or a sheet (2.4.11).
 - Colour is never the only signal (toggle dots, status pills with text, hearts with labels).

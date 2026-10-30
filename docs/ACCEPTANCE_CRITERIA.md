@@ -150,13 +150,13 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 |---|---|---|---|
 | DS-01 | No raw colour, size, duration or easing values in component code. Everything references tokens (`grep` script for hex/px/ms literals outside `tokens.css` and `lyricsConfig.ts`, with an allow-list) | I | M2, M9 |
 | DS-02 | Shell screens: no gradients, glows, monospace, transformed capitals, emoji or icon-in-tinted-square; letter-spacing only from the M3 tracking tokens, shadows only from the M3 elevation tokens on floating surfaces. *(2026-10-25: the ≤ 3% coloured-pixel budget is retired with Material 3, whose surfaces take the album's tone by design; DESIGN_SYSTEM.md §3.2. 2026-10-28: backdrop blur is no longer banned; liquid glass is an approved effect in both zones, DESIGN_SYSTEM.md §7.11)* | I + script on the stylesheets | M2, M9 |
-| DS-03 | Mona Sans (the M1 typeface decision) actually renders, verified via `document.fonts` and computed style. `tnum` changes digit widths (or the `system-ui` numeral fallback of `DESIGN_SYSTEM.md` §4.1 is applied). *Wording aligned with the decision in M1: it previously named the pending candidate and Noto fallbacks, which §4.1 excludes* | E | M1 |
+| DS-03 | The typeface actually renders, verified via `document.fonts` and computed style: Selawik on a machine without Segoe UI (`tests/e2e/smoke.spec.ts`). `tnum` changes digit widths (or the `system-ui` numeral fallback of `DESIGN_SYSTEM.md` §4.1 is applied). *Wording aligned with Draft 6 (2026-10-30, Fluent 2): it previously named Mona Sans, then Figtree* | E | M1 |
 | DS-04 | Squint test: a 16 px Gaussian-blurred 1440×900 Listen screenshot shows exactly three dominant masses (active line, dock, room) | V + M review | M2, M9 |
 | DS-05 | Five-second test: 3 of 3 people (or 3 independent model reviews of the screenshot) can say "a music player showing the song's lyrics" | M | M9 |
 | DS-06 | Every component in `DESIGN_SYSTEM.md` §9 has default/hover/pressed/focus-visible/disabled states (plus loading where relevant), shown on an internal `/__ui` page and snapshotted | V | M2 |
 | DS-07 | Every block has designed loading/empty/error/offline states (`DESIGN_SYSTEM.md` §10) with no layout shift between loading and ready | V | M8 |
 | DS-08 | Artwork is never cropped, overlaid, scaled or animated. Radii are 4 or 8 px only | I + V | M2, M7 |
-| DS-10 | Typeface decision recorded in `docs/reviews/M1-type.md`. `DESIGN_SYSTEM.md` §4 and `--font` name exactly one family. The unused face is not shipped | I | M1 |
+| DS-10 | Typeface decision recorded in `DESIGN_SYSTEM.md` §4.1 (Draft 6: Segoe UI where installed, Selawik shipped). `--font` names that one face and its fallbacks; no unused face is shipped. *Wording aligned with Draft 6: it previously required exactly one family* | I | M1 |
 | DS-09 | Critique record: a written design critique (design-critique format + taste-skill app-screen questions) for Listen, Library and Settings, with its top 3 fixes applied | M | M9 |
 
 ## 8. Performance

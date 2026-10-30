@@ -13,8 +13,9 @@ lyric field in an audio-reactive room lit by the album cover.
 - **Lyrics:** the best synchronised source wins (your Navidrome files, Spicy Lyrics, NetEase,
   LRCLIB), word-timed where available, with a shared cache, credits on the Stage, per-track timing
   offsets and a static sheet when untimed.
-- **Colour:** the palette is extracted on the server from each cover and drives the Stage and the
-  Material 3 shell; a contrast solver keeps every lyric line readable.
+- **Colour:** the palette is extracted on the server from each cover and drives the Stage, the
+  web client's Fluent 2 accent and its Mica glow (the Android app keeps Material 3); a contrast
+  solver keeps every lyric line readable.
 - **Accounts:** an admin and invited users, Argon2id + TOTP (mandatory for admins), sessions and
   device tokens, and per-user preferences that follow you across devices.
 
