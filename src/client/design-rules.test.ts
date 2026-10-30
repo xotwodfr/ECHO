@@ -97,6 +97,15 @@ describe('DS-01: scrims, and no backdrop filters', () => {
     expect([...defined.keys()].filter((t) => !light.includes(`\`${t}\``))).toEqual([]);
   });
 
+  it('no stylesheet outside stage/ uses filter: blur', () => {
+    const css = files.filter((f) => f.name.endsWith('.css') && !f.name.startsWith('stage/'));
+    expect(
+      css
+        .filter((f) => /(^|[^-])filter\s*:[^;]*blur\(/m.test(uncomment(f.text)))
+        .map((f) => f.name),
+    ).toEqual([]);
+  });
+
   it('no stylesheet uses backdrop-filter', () => {
     const css = files.filter((f) => f.name.endsWith('.css'));
     expect(css.length).toBeGreaterThan(2);

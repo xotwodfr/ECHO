@@ -62,6 +62,27 @@ a {
   background: var(--frame);
 }
 
+/* Mica (§6): the album's glow, baked once per album (palette/mica.ts), crossfading by opacity. */
+.mica {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--fl-mica-base);
+  pointer-events: none;
+}
+
+.mica-layer {
+  position: absolute;
+  inset: 0;
+  background-size: 100% 100%;
+  opacity: 0;
+  transition: opacity var(--dur-palette) var(--ease-in-out);
+}
+
+.mica-layer[data-on] {
+  opacity: var(--mica-opacity);
+}
+
 .shell[data-right] {
   grid-template-columns: var(--library-w) minmax(0, 1fr) var(--np-w);
 }

@@ -36,6 +36,7 @@ import {
   SearchResults,
 } from './LibraryViews.tsx';
 import { Link, useView, ViewContext } from './link.tsx';
+import { Mica } from './Mica.tsx';
 import { MixView, WrappedView } from './MixViews.tsx';
 import { PlaylistPicker } from './PlaylistPicker.tsx';
 import { panels } from './panels.ts';
@@ -443,6 +444,7 @@ function Frame() {
       data-chrome={listen && chromeHidden ? 'hidden' : undefined}
       data-attribution={attribution || undefined}
     >
+      <Mica />
       {!listen && <TopBar route={route} />}
       {!listen && <LibraryPanel />}
       <main className="canvas" ref={main} onScroll={onScroll}>

@@ -13,9 +13,15 @@ import { FLUENT_ROLES, type FluentRole, fluentAccent, flVar } from './fluent.ts'
 // them. Frames are requested only while a transition runs.
 
 /** Bumped whenever the properties change, so the Stage can re-upload its uniforms. */
-export const paletteStore = createStore<{ version: number; albumKey: string | null }>()(() => ({
+/** `target` is the album's palette once fetched (null: nothing plays, or none came), for Mica. */
+export const paletteStore = createStore<{
+  version: number;
+  albumKey: string | null;
+  target: Roles | null;
+}>()(() => ({
   version: 0,
   albumKey: null,
+  target: null,
 }));
 
 type Fetch = (albumKey: string, art?: string) => Promise<Roles | null>;
@@ -96,6 +102,7 @@ export function startPalette(
     const key = JSON.stringify(KEYS.map((r) => roles[r]));
     if (key === target) return;
     target = key;
+    paletteStore.setState({ target: fetched });
     if (opts.instant) {
       anim.set(roles);
       write();
