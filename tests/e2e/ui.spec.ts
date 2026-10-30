@@ -456,10 +456,10 @@ test.describe('track rows and tiles', () => {
     const np = s.locator('li[aria-current="true"]');
     await expect(np).toContainText('Night Turns Over');
     await expect(np).toContainText('Now playing');
-    // Now playing takes the M3 primary (DESIGN_SYSTEM.md §0), which the album's colour seeds.
+    // Now playing takes the Fluent accent (DESIGN_SYSTEM.md §1), which the album's colour seeds.
     const [title, primary] = await np.locator('.track-title').evaluate((el) => {
       const probe = document.createElement('span');
-      probe.style.color = 'var(--md-sys-color-primary)';
+      probe.style.color = 'var(--fl-accent)';
       el.append(probe);
       const out = [getComputedStyle(el).color, getComputedStyle(probe).color];
       probe.remove();

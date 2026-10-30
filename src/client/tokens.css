@@ -1,55 +1,54 @@
 :root {
   color-scheme: dark;
 
-  /* ---------- The frame's colours, as Material 3 roles (DESIGN_SYSTEM.md §3) ----------
-     Spotify's layout in M3 tonal surfaces: the frame is the lowest container, the panels sit one
-     tone up, floating surfaces higher still. No translucency: depth is tone and shadow. The roles
-     follow the playing album (palette/m3.ts), so every one of these does too. */
-  --frame: var(--md-sys-color-surface-container-lowest);
-  --panel: var(--md-sys-color-surface-container-low);
-  --raised: var(--md-sys-color-surface-container-high);
-  --raised-2: var(--md-sys-color-surface-container-highest);
-  --raised-3: var(--md-sys-color-surface-bright);
-  /* state layers: on-surface at the M3 opacities */
-  --hover-row: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
-  --press-row: color-mix(in srgb, var(--md-sys-color-on-surface) 10%, transparent);
-  --selected-row: var(--md-sys-color-secondary-container);
-  --green: var(--md-sys-color-primary);
-  --green-hover: color-mix(in srgb, var(--md-sys-color-primary), var(--md-sys-color-on-primary) 8%);
-  --green-press: color-mix(in srgb, var(--md-sys-color-primary), var(--md-sys-color-on-primary) 10%);
-  --on-green: var(--md-sys-color-on-primary);
-  --white-hover: color-mix(in srgb, var(--md-sys-color-inverse-surface), var(--md-sys-color-inverse-on-surface) 8%);
-  --backdrop-dim: color-mix(in srgb, var(--md-sys-color-scrim) 32%, transparent);
+  /* ---------- The frame's colours, as Fluent 2 tokens (DESIGN_SYSTEM.md §3) ----------
+     Spotify's layout in Fluent 2 surfaces over Mica: the frame is transparent so the album's glow
+     (palette/mica.ts) shows through, the panels are Fluent's translucent layer, what floats is
+     opaque. The accent ramp follows the playing album (palette/fluent.ts). */
+  --frame: transparent;
+  --panel: var(--fl-layer);
+  --raised: var(--fl-card);
+  --raised-2: var(--fl-card-hover);
+  --raised-3: var(--fl-control-hover);
+  --hover-row: var(--fl-subtle-hover);
+  --press-row: var(--fl-subtle-press);
+  --selected-row: var(--fl-card);
+  --green: var(--fl-accent);
+  --green-hover: var(--fl-accent-hover);
+  --green-press: var(--fl-accent-press);
+  --on-green: var(--fl-on-accent);
+  --white-hover: var(--fl-fg2);
+  --backdrop-dim: rgb(0 0 0 / 0.4);
   --header-shade: rgba(0, 0, 0, 0.5);
   --header-shade-2: rgba(0, 0, 0, 0.25);
   --liked-from: #450AF5;
   --liked-to: #C4EFD9;
   --text-on-tint: rgba(255, 255, 255, 0.72);
-  --head-fallback: var(--md-sys-color-surface-container-highest);
-  --avatar: var(--md-sys-color-tertiary-container);
-  --card-shadow: var(--md-sys-elevation-level2);
-  --chip: var(--md-sys-color-surface-container-high);
-  --chip-hover: var(--md-sys-color-surface-container-highest);
-  --shortcut: var(--md-sys-color-surface-container);
-  --shortcut-hover: var(--md-sys-color-surface-container-highest);
-  --rule-soft: var(--md-sys-color-outline-variant);
-  --follow-edge: var(--md-sys-color-outline);
+  --head-fallback: var(--fl-card-hover);
+  --avatar: var(--fl-accent-subtle);
+  --card-shadow: var(--fl-shadow-4);
+  --chip: var(--fl-control);
+  --chip-hover: var(--fl-control-hover);
+  --shortcut: var(--fl-card);
+  --shortcut-hover: var(--fl-card-hover);
+  --rule-soft: var(--fl-stroke);
+  --follow-edge: var(--fl-stroke-strong);
   /* Browse all: Spotify's category colours, one per genre by name */
   --genre-0: #E8115B; --genre-1: #1E3264; --genre-2: #8D67AB; --genre-3: #E91429;
   --genre-4: #148A08; --genre-5: #BA5D07; --genre-6: #503750; --genre-7: #0D73EC;
   --genre-8: #DC148C; --genre-9: #27856A; --genre-10: #477D95; --genre-11: #AF2896;
 
-  /* the names the components were written against, as M3 roles */
+  /* the names the components were written against, as Fluent tokens */
   --ground: var(--frame);  --surface-1: var(--panel);  --surface-2: var(--raised);  --surface-3: var(--raised-2);
-  --line: var(--md-sys-color-outline-variant);    --control: var(--md-sys-color-outline);
-  --text: var(--md-sys-color-on-surface);    --muted: var(--md-sys-color-on-surface-variant);
-  --faint: var(--md-sys-color-on-surface-variant);      --focus: var(--md-sys-color-secondary);
-  --positive: var(--md-sys-color-success); --warning: var(--md-sys-color-warning);   --negative: var(--md-sys-color-error);
-  --pill-pos-bg: var(--md-sys-color-success-container);  --pill-pos-ink: var(--md-sys-color-on-success-container);
-  --pill-warn-bg: var(--md-sys-color-warning-container); --pill-warn-ink: var(--md-sys-color-on-warning-container);
-  --pill-neg-bg: var(--md-sys-color-error-container);  --pill-neg-ink: var(--md-sys-color-on-error-container);
-  --pill-neutral-bg: var(--md-sys-color-surface-container-highest); --pill-neutral-ink: var(--md-sys-color-on-surface);
-  --fallback-accent: var(--md-sys-color-primary);
+  --line: var(--fl-stroke);    --control: var(--fl-stroke-strong);
+  --text: var(--fl-fg1);    --muted: var(--fl-fg2);
+  --faint: var(--fl-fg3);      --focus: var(--fl-focus-outer);
+  --positive: var(--fl-success); --warning: var(--fl-warning);   --negative: var(--fl-danger);
+  --pill-pos-bg: var(--fl-success-bg);  --pill-pos-ink: var(--fl-success);
+  --pill-warn-bg: var(--fl-warning-bg); --pill-warn-ink: var(--fl-warning);
+  --pill-neg-bg: var(--fl-danger-bg);  --pill-neg-ink: var(--fl-danger);
+  --pill-neutral-bg: var(--fl-control-hover); --pill-neutral-ink: var(--fl-fg1);
+  --fallback-accent: var(--fl-accent);
 
   /* dynamic artwork palette (runtime-overwritten; these are the achromatic fallback) */
   --art-room:      oklch(0.16 0.006 250);
@@ -73,10 +72,10 @@
   --ly-active: clamp(24px, min(3.7vh, 2.3vw), 44px);
   --ly-phone: 26px;
   /* a page header's title steps down with its length (Spotify's 96/72/48/32) */
-  --title-xl: 800 96px/1.04;
-  --title-l: 800 72px/1.04;
-  --title-m: 800 48px/1.08;
-  --title-s: 800 32px/1.12;
+  --title-xl: 700 96px/1.04;
+  --title-l: 700 72px/1.04;
+  --title-m: 700 48px/1.08;
+  --title-s: 700 32px/1.12;
   --tracking-title: -0.04em;
   --tracking-caps: 0.1em;
 
@@ -109,12 +108,12 @@
   --np-head: 136px;
 
   /* shape */
-  --r-pill: var(--md-sys-shape-corner-full); --r-control: var(--md-sys-shape-corner-small);
-  --r-panel: var(--md-sys-shape-corner-large); --r-art: var(--md-sys-shape-corner-extra-small);
-  --r-art-lg: var(--md-sys-shape-corner-small); --r-card: var(--md-sys-shape-corner-medium);
-  --shadow-float: var(--md-sys-elevation-level3);
+  --r-pill: var(--fl-corner-circle); --r-control: var(--fl-corner-s);
+  --r-panel: var(--fl-corner-m); --r-art: var(--fl-corner-s);
+  --r-art-lg: var(--fl-corner-m); --r-card: var(--fl-corner-m);
+  --shadow-float: var(--fl-shadow-16);
   --shadow-art: 0 4px 60px rgba(0,0,0,.5);
-  --shadow-play: var(--md-sys-elevation-level2);
+  --shadow-play: var(--fl-shadow-8);
   /* a field's focus: a second pixel of its edge, inside */
   --ring-focus: inset 0 0 0 var(--rule) var(--text);
   --ring-error: inset 0 0 0 var(--rule) var(--negative);
@@ -140,117 +139,93 @@
   --mix-title: 800 14cqi/1.02; --mix-pad: 7cqi; --mix-photo: 0.6;
 
   /* motion */
-  --dur-press: 140ms; --dur-hover: 180ms; --dur-ui: 240ms; --dur-toast: 320ms;
+  --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;
   --dur-art: 640ms; --dur-palette: 1200ms;
-  --dur-pop: 160ms; --dur-scrub: 150ms; --dur-loop: 1000ms;
+  --dur-pop: 160ms; --dur-scrub: 100ms; --dur-loop: 1000ms;
   --dur-art-out: 420ms; --dur-art-overlap: 200ms;
-  --dur-page: 260ms; --dur-page-out: 120ms; --dur-morph: 420ms;   /* page changes (main.tsx) */
+  --dur-page: 250ms; --dur-page-out: 100ms; --dur-morph: 420ms;   /* page changes (main.tsx) */
   --page-rise: 10px;
   --np-cover-from: 0.3; --np-cover-rise: 40%;   /* the lyrics view's cover grows from the player's corner */
-  --ease-out: cubic-bezier(.16,1,.3,1);
-  --ease-in-out: cubic-bezier(.65,0,.35,1);
-  --ease-exit: cubic-bezier(.4,0,1,1);
+  /* Fluent 2's curves: decelerate max, easy ease, accelerate max */
+  --ease-out: cubic-bezier(0.1,0.9,0.2,1);
+  --ease-in-out: cubic-bezier(0.33,0,0.67,1);
+  --ease-exit: cubic-bezier(0.9,0.1,1,0.2);
 
-  /* ---------- Material 3 colour roles (§3.1): the dark content scheme of the playing album's
-     accent (palette/m3.ts). These are the scheme of the fallback accent, before anything plays. */
-  --md-sys-color-primary: #C8C6C6;
-  --md-sys-color-on-primary: #303030;
-  --md-sys-color-primary-container: #535353;
-  --md-sys-color-on-primary-container: #C8C7C6;
-  --md-sys-color-secondary: #C8C6C5;
-  --md-sys-color-on-secondary: #313030;
-  --md-sys-color-secondary-container: #474746;
-  --md-sys-color-on-secondary-container: #B7B4B4;
-  --md-sys-color-tertiary: #CAC5C7;
-  --md-sys-color-on-tertiary: #323032;
-  --md-sys-color-tertiary-container: #555254;
-  --md-sys-color-on-tertiary-container: #CBC5C8;
-  --md-sys-color-error: #FFB4AB;
-  --md-sys-color-on-error: #690005;
-  --md-sys-color-error-container: #93000A;
-  --md-sys-color-on-error-container: #FFDAD6;
-  --md-sys-color-surface: #141313;
-  --md-sys-color-surface-dim: #141313;
-  --md-sys-color-surface-bright: #3A3939;
-  --md-sys-color-surface-container-lowest: #0E0E0E;
-  --md-sys-color-surface-container-low: #1C1B1B;
-  --md-sys-color-surface-container: #201F1F;
-  --md-sys-color-surface-container-high: #2A2A2A;
-  --md-sys-color-surface-container-highest: #353434;
-  --md-sys-color-on-surface: #E5E2E1;
-  --md-sys-color-on-surface-variant: #C4C7C7;
-  --md-sys-color-outline: #8E9192;
-  --md-sys-color-outline-variant: #444748;
-  --md-sys-color-inverse-surface: #E5E2E1;
-  --md-sys-color-inverse-on-surface: #313030;
-  --md-sys-color-inverse-primary: #5E5E5E;
-  --md-sys-color-scrim: #000000;
-  --md-sys-color-shadow: #000000;
-  --md-sys-color-success: #6FD9B8;
-  --md-sys-color-on-success: #00382B;
-  --md-sys-color-success-container: #00513F;
-  --md-sys-color-on-success-container: #8BF6D4;
-  --md-sys-color-warning: #E6C44B;
-  --md-sys-color-on-warning: #3B2F00;
-  --md-sys-color-warning-container: #564500;
-  --md-sys-color-on-warning-container: #FFE07E;
+  /* ---------- Fluent 2, dark (§3): neutrals from WinUI 3 and @fluentui/tokens webDarkTheme ---------- */
+  --fl-mica-base: #1C1C1C;
+  --fl-solid-base: #202020;
+  --fl-layer: rgb(44 44 44 / 0.55);
+  --fl-layer-alt: rgb(58 58 58 / 0.6);
+  --fl-card: rgb(255 255 255 / 0.05);
+  --fl-card-hover: rgb(255 255 255 / 0.08);
+  --fl-subtle-hover: rgb(255 255 255 / 0.06);
+  --fl-subtle-press: rgb(255 255 255 / 0.04);
+  --fl-control: rgb(255 255 255 / 0.06);
+  --fl-control-hover: rgb(255 255 255 / 0.084);
+  --fl-control-press: rgb(255 255 255 / 0.033);
+  --fl-flyout: #2C2C2C;
+  --fl-flyout-hover: #383838;
+  --fl-dialog: #2B2B2B;
+  --fl-stroke: rgb(255 255 255 / 0.08);
+  --fl-stroke-control: rgb(255 255 255 / 0.07);
+  --fl-stroke-strong: rgb(255 255 255 / 0.544);
+  --fl-fg1: #FFFFFF;
+  --fl-fg2: rgb(255 255 255 / 0.786);
+  --fl-fg3: rgb(255 255 255 / 0.544);
+  --fl-fg-disabled: rgb(255 255 255 / 0.363);
+  --fl-focus-outer: #FFFFFF;
+  --fl-focus-inner: #000000;
+  /* status (colorStatus*Foreground1 / Background1) */
+  --fl-danger: #DC626D;  --fl-danger-bg: #3B0509;
+  --fl-success: #54B054; --fl-success-bg: #052505;
+  --fl-warning: #FAA06B; --fl-warning-bg: #4A1E04;
 
-  /* type: the M3 type scale (weight size/line) in Figtree */
-  --md-sys-typescale-display-small: 400 36px/44px;
-  --md-sys-typescale-headline-large: 400 32px/40px;
-  --md-sys-typescale-headline-large-emphasized: 700 32px/40px;
-  --md-sys-typescale-headline-medium: 400 28px/36px;
-  --md-sys-typescale-headline-small: 400 24px/32px;
-  --md-sys-typescale-title-large: 400 22px/28px;
-  --md-sys-typescale-title-large-emphasized: 700 22px/28px;
-  --md-sys-typescale-title-medium: 600 16px/24px;
-  --md-sys-typescale-title-small: 600 14px/20px;
-  --md-sys-typescale-body-large: 400 16px/24px;
-  --md-sys-typescale-body-medium: 400 14px/20px;
-  --md-sys-typescale-body-small: 400 12px/16px;
-  --md-sys-typescale-label-large: 600 14px/20px;
-  --md-sys-typescale-label-large-emphasized: 700 14px/20px;
-  --md-sys-typescale-label-medium: 600 12px/16px;
-  --md-sys-typescale-label-small: 600 11px/16px;
-  --md-sys-tracking-title-medium: 0.15px; --md-sys-tracking-small: 0.1px;
-  --md-sys-tracking-body-large: 0.5px; --md-sys-tracking-body-medium: 0.25px;
-  --md-sys-tracking-body-small: 0.4px; --md-sys-tracking-label: 0.5px;
+  /* the accent ramp (palette/fluent.ts): the fallback accent's, before anything plays */
+  --fl-accent: #C8C6C6;
+  --fl-accent-hover: #D6D4D4;
+  --fl-accent-press: #BAB8B8;
+  --fl-on-accent: #1B1C1C;
+  --fl-accent-text: #CDCCCB;
+  --fl-accent-subtle: #474747;
+
+  /* type: Fluent 2's ramp (weight size/line) */
+  --fl-type-caption: 400 12px/16px;
+  --fl-type-caption-strong: 600 12px/16px;
+  --fl-type-body: 400 14px/20px;
+  --fl-type-body-strong: 600 14px/20px;
+  --fl-type-body-large: 400 16px/22px;
+  --fl-type-subtitle2: 600 16px/22px;
+  --fl-type-subtitle1: 600 20px/28px;
+  --fl-type-title3: 600 24px/32px;
+  --fl-type-title2: 600 28px/36px;
+  --fl-type-title1: 600 32px/40px;
 
   /* shape */
-  --md-sys-shape-corner-extra-small: 4px; --md-sys-shape-corner-small: 8px;
-  --md-sys-shape-corner-medium: 12px; --md-sys-shape-corner-large: 16px;
-  --md-sys-shape-corner-large-increased: 20px; --md-sys-shape-corner-extra-large: 28px;
-  --md-sys-shape-corner-extra-large-increased: 32px; --md-sys-shape-corner-full: 999px;
+  --fl-corner-s: 4px; --fl-corner-m: 8px; --fl-corner-circle: 999px;
 
-  /* elevation: in the dark scheme a surface's tone carries it; shadows only on what floats */
-  --md-sys-elevation-level1: 0 1px 2px rgba(0,0,0,.3), 0 1px 3px 1px rgba(0,0,0,.15);
-  --md-sys-elevation-level2: 0 1px 2px rgba(0,0,0,.3), 0 2px 6px 2px rgba(0,0,0,.15);
-  --md-sys-elevation-level3: 0 1px 3px rgba(0,0,0,.3), 0 4px 8px 3px rgba(0,0,0,.15);
+  /* shadows: Fluent's ramp, ambient + key */
+  --fl-shadow-4: 0 0 2px rgb(0 0 0 / .24), 0 2px 4px rgb(0 0 0 / .28);
+  --fl-shadow-8: 0 0 2px rgb(0 0 0 / .24), 0 4px 8px rgb(0 0 0 / .28);
+  --fl-shadow-16: 0 0 2px rgb(0 0 0 / .24), 0 8px 16px rgb(0 0 0 / .28);
+  --fl-shadow-28: 0 0 8px rgb(0 0 0 / .24), 0 14px 28px rgb(0 0 0 / .28);
+  --fl-shadow-64: 0 0 8px rgb(0 0 0 / .24), 0 32px 64px rgb(0 0 0 / .28);
 
-  /* state layers */
-  --md-sys-state-hover: 0.08; --md-sys-state-focus: 0.1; --md-sys-state-pressed: 0.1;
-  --md-sys-state-dragged: 0.16;
-  --md-sys-disabled-content: 38%; --md-sys-disabled-container: 12%;
-  --md-focus-ring: 2px; --md-focus-offset: 2px;
+  /* state */
+  --fl-disabled-content: 38%; --fl-disabled-container: 12%;
+  --fl-focus-ring: 2px; --fl-focus-offset: 2px;
 
-  /* motion: springs as linear() easings, spatial (position, size, shape) and effects */
-  --md-sys-motion-spring-fast-spatial: linear(0, 0.042, 0.147, 0.287, 0.44, 0.59, 0.726, 0.842, 0.934, 1.003, 1.05, 1.079, 1.092, 1.094, 1.088, 1.077, 1.063, 1.049, 1.035, 1.022, 1.012, 1.004, 0.998, 0.994, 0.992, 0.991, 0.991, 0.992, 0.993, 0.994, 0.996, 0.997, 1);
-  --md-sys-motion-spring-fast-spatial-duration: 350ms;
-  --md-sys-motion-spring-default-spatial: linear(0, 0.029, 0.099, 0.195, 0.301, 0.409, 0.512, 0.607, 0.69, 0.763, 0.823, 0.873, 0.913, 0.944, 0.968, 0.985, 0.997, 1.006, 1.011, 1.014, 1.015, 1.015, 1.014, 1.013, 1.011, 1.01, 1.008, 1.007, 1.005, 1.004, 1.003, 1.002, 1);
-  --md-sys-motion-spring-default-spatial-duration: 420ms;
-  --md-sys-motion-spring-fast-effects: linear(0, 0.051, 0.162, 0.293, 0.421, 0.537, 0.635, 0.716, 0.782, 0.833, 0.874, 0.905, 0.929, 0.947, 0.961, 0.971, 0.979, 0.984, 0.988, 0.992, 0.994, 0.996, 0.997, 0.998, 1);
-  --md-sys-motion-spring-fast-effects-duration: 140ms;
-  --md-sys-motion-spring-default-effects: linear(0, 0.053, 0.167, 0.301, 0.431, 0.547, 0.645, 0.726, 0.791, 0.841, 0.881, 0.911, 0.934, 0.951, 0.964, 0.973, 0.981, 0.986, 0.99, 0.992, 0.995, 0.996, 0.997, 0.998, 1);
-  --md-sys-motion-spring-default-effects-duration: 220ms;
+  /* motion: one decelerating curve for things that move */
+  --fl-motion-move: var(--ease-out);
+  --fl-motion-move-duration: 250ms;
 
   /* component sizes */
-  --md-button-h: 48px; --md-button-pad: 32px; --md-icon-button: 32px;
-  --md-field-h: 48px; --md-search-h: 48px; --md-list-1: 56px; --md-list-2: 64px;
-  --md-nav-item-h: 40px; --md-nav-indicator-h: 32px; --md-nav-indicator-w: 64px; --md-menu-item-h: 40px;
-  --md-switch-w: 40px; --md-switch-h: 24px; --md-switch-handle-off: 16px;
-  --md-switch-handle-on: 16px; --md-switch-handle-pressed: 18px; --md-switch-outline: 0px;
-  --md-chip-h: 32px; --md-snackbar-h: 48px; --md-tab-h: 48px; --md-tab-indicator: 3px;
-  --md-dialog-pad: 24px; --md-outline: 1px; --md-field-focus: 2px; --md-button-group-gap: 8px;
+  --fl-button-h: 32px; --fl-button-pad: 12px; --fl-icon-button: 32px;
+  --fl-field-h: 40px; --fl-search-h: 36px; --fl-list-1: 56px; --fl-list-2: 64px;
+  --fl-nav-item-h: 40px; --fl-nav-indicator-h: 32px; --fl-nav-indicator-w: 64px; --fl-menu-item-h: 32px;
+  --fl-switch-w: 40px; --fl-switch-h: 20px; --fl-switch-handle-off: 12px;
+  --fl-switch-handle-on: 12px; --fl-switch-handle-pressed: 14px; --fl-switch-outline: 1px;
+  --fl-chip-h: 32px; --fl-snackbar-h: 48px; --fl-tab-h: 44px; --fl-tab-indicator: 3px;
+  --fl-dialog-pad: 24px; --fl-outline: 1px; --fl-field-focus: 2px; --fl-button-group-gap: 8px;
 
   /* scrims under the lyrics view's chrome (§7.7) */
   --scrim-top: 0.25; --scrim-dock: 0.4;

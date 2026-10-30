@@ -12,8 +12,8 @@ test('the client loads with tokens and no console errors', async ({ page }) => {
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto('/library');
   await expect(page.getByRole('heading', { name: 'Your Library', level: 1 })).toBeVisible();
-  // M3 tonal surfaces (DESIGN_SYSTEM.md §3.1, §7.11): the frame the lowest surface container, the
-  // page one tone up and opaque, as the scheme's roles resolve.
+  // Fluent surfaces (DESIGN_SYSTEM.md §3.1, §6): the frame is transparent over Mica, the page is
+  // Fluent's translucent layer, so the album's glow shows through without a backdrop filter.
   const [frame, panel, canvas] = await page.evaluate(() => {
     const role = (v: string) => {
       const probe = document.createElement('div');
@@ -24,18 +24,14 @@ test('the client loads with tokens and no console errors', async ({ page }) => {
       return c;
     };
     const canvas = document.querySelector('.canvas') as HTMLElement;
-    return [
-      role('--md-sys-color-surface-container-lowest'),
-      role('--md-sys-color-surface-container-low'),
-      getComputedStyle(canvas).backgroundColor,
-    ];
+    return [role('--frame'), role('--fl-layer'), getComputedStyle(canvas).backgroundColor];
   });
   expect(await page.locator('.shell').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
     frame,
   );
   expect(canvas).toBe(panel);
-  expect(canvas).not.toMatch(/\/|rgba/); // opaque
-  expect(panel).not.toBe(frame);
+  expect(frame).toBe('rgba(0, 0, 0, 0)');
+  expect(panel).toMatch(/^rgba\(\d+, \d+, \d+, 0\.55\)$/); // translucent, no filter
   expect(errors).toEqual([]);
 });
 

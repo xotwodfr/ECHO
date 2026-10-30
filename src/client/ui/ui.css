@@ -11,15 +11,15 @@
   justify-content: center;
   flex: none;
   box-sizing: border-box;
-  height: var(--md-button-h);
-  padding: 0 var(--md-button-pad);
+  height: var(--fl-button-h);
+  padding: 0 var(--fl-button-pad);
   border: var(--rule) solid transparent;
   border-radius: var(--r-pill);
   --btn-bg: transparent;
   --btn-ink: var(--text);
   background: var(--btn-bg);
   color: var(--btn-ink);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
@@ -123,7 +123,7 @@
 .control-reason {
   align-self: center;
   color: var(--muted);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 /* ---- Icon buttons and transport (§9.1, §9.2) ---- */
@@ -142,8 +142,8 @@
   display: inline-grid;
   place-items: center;
   flex: none;
-  width: var(--md-icon-button);
-  height: var(--md-icon-button);
+  width: var(--fl-icon-button);
+  height: var(--fl-icon-button);
   padding: 0;
   border: 0;
   border-radius: var(--r-pill);
@@ -318,7 +318,7 @@
   translate: -50% -50%;
   border-radius: 50%;
   background: var(--text);
-  box-shadow: var(--md-sys-elevation-level1);
+  box-shadow: var(--fl-shadow-4);
   opacity: 0;
   transition: opacity var(--dur-scrub) ease;
 }
@@ -350,7 +350,7 @@
   padding: var(--sp-1) var(--sp-2);
   border-radius: var(--r-control);
   background: var(--raised-2);
-  box-shadow: var(--md-sys-elevation-level2);
+  box-shadow: var(--fl-shadow-16);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
   white-space: nowrap;
@@ -401,7 +401,7 @@
   align-items: center;
   padding: var(--sp-1) var(--sp-3);
   border-radius: var(--r-pill);
-  font: var(--md-sys-typescale-label-medium) var(--font-ui);
+  font: var(--fl-type-caption-strong) var(--font-ui);
   white-space: nowrap;
 }
 
@@ -431,18 +431,18 @@
   align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-4);
-  min-height: var(--md-switch-h);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  min-height: var(--fl-switch-h);
+  font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
 }
 
 .toggle {
-  --knob-x: calc(var(--md-switch-h) / 2);
+  --knob-x: calc(var(--fl-switch-h) / 2);
   position: relative;
   flex: none;
   box-sizing: border-box;
-  width: var(--md-switch-w);
-  height: var(--md-switch-h);
+  width: var(--fl-switch-w);
+  height: var(--fl-switch-h);
   padding: 0;
   border: 0;
   border-radius: var(--r-pill);
@@ -456,8 +456,8 @@
   position: absolute;
   top: 50%;
   left: var(--knob-x);
-  width: var(--md-switch-handle-off);
-  height: var(--md-switch-handle-off);
+  width: var(--fl-switch-handle-off);
+  height: var(--fl-switch-handle-off);
   translate: -50% -50%;
   border-radius: 50%;
   background: var(--text);
@@ -468,7 +468,7 @@
 }
 
 .toggle[aria-checked="true"] {
-  --knob-x: calc(var(--md-switch-w) - var(--md-switch-h) / 2);
+  --knob-x: calc(var(--fl-switch-w) - var(--fl-switch-h) / 2);
   background: var(--green);
 }
 
@@ -484,8 +484,8 @@
 
 .toggle:active:not(:disabled)::after,
 .toggle[data-force="pressed"]::after {
-  width: var(--md-switch-handle-pressed);
-  height: var(--md-switch-handle-pressed);
+  width: var(--fl-switch-handle-pressed);
+  height: var(--fl-switch-handle-pressed);
 }
 
 /* Its label stays readable: it says what is unavailable, and the reason beside it is read with it. */
@@ -512,7 +512,7 @@
 }
 
 .field-label {
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
 }
 
 .field-control {
@@ -524,14 +524,14 @@
   flex: 1;
   min-width: 0;
   box-sizing: border-box;
-  height: var(--md-field-h);
+  height: var(--fl-field-h);
   padding: 0 var(--sp-3);
   border: var(--rule) solid var(--control);
   border-radius: var(--r-control);
   background: var(--panel);
   color: var(--text);
   caret-color: var(--text);
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
   transition: border-color var(--dur-hover) ease;
 }
 
@@ -577,7 +577,7 @@
   border-radius: var(--r-pill);
   background: transparent;
   color: var(--muted);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
   cursor: pointer;
 }
 
@@ -593,7 +593,7 @@
 .field-hint,
 .field-error {
   margin: 0;
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 .field-hint {
@@ -744,7 +744,7 @@
   height: var(--row-h);
   border-radius: var(--r-control);
   color: var(--muted);
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
 }
 
 .track-row:hover:not(.track-row--loading),
@@ -758,8 +758,8 @@
 
 .track-row:has(.track-main:focus-visible),
 .track-row[data-force="focus"] {
-  outline: var(--md-focus-ring) solid var(--focus);
-  outline-offset: calc(-1 * var(--md-focus-ring));
+  outline: var(--fl-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--fl-focus-ring));
 }
 
 .track-main {
@@ -802,7 +802,7 @@
 
 .track-sub {
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .track-row[data-now-playing] .track-title {
@@ -813,7 +813,7 @@
 .track-dur {
   flex: none;
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   text-align: right;
 }
 
@@ -879,10 +879,10 @@
 .track-head {
   height: var(--hit-lg);
   margin-bottom: var(--sp-4);
-  padding-right: calc(var(--sp-4) * 2 + var(--md-icon-button));
+  padding-right: calc(var(--sp-4) * 2 + var(--fl-icon-button));
   border-bottom: var(--rule) solid var(--rule-soft);
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .track-head span:nth-child(2) {
@@ -999,8 +999,8 @@
 }
 
 .tile:has(.tile-link:focus-visible) {
-  outline: var(--md-focus-ring) solid var(--focus);
-  outline-offset: calc(-1 * var(--md-focus-ring));
+  outline: var(--fl-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--fl-focus-ring));
 }
 
 .tile-title,
@@ -1012,13 +1012,13 @@
 }
 
 .tile-title {
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
 }
 
 .tile-artist {
   margin-top: var(--sp-1);
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 /* The title's gap and line, then the artist's: the skeleton is the card's exact height. */
@@ -1103,7 +1103,7 @@
 
 .conn-name {
   margin: 0;
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .conn-detail {
@@ -1141,7 +1141,7 @@
 
 .signin-title {
   margin: 0 0 var(--sp-4);
-  font: var(--md-sys-typescale-headline-large) var(--font-ui);
+  font: var(--fl-type-title1) var(--font-ui);
   text-align: center;
 }
 
@@ -1164,9 +1164,9 @@
   z-index: 10;
   min-width: 14em;
   padding: var(--sp-2) 0;
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  background: var(--md-sys-color-surface-container);
-  box-shadow: var(--md-sys-elevation-level2);
+  border-radius: var(--fl-corner-s);
+  background: var(--fl-flyout);
+  box-shadow: var(--fl-shadow-16);
   transform-origin: top right;
   animation: menu-in var(--dur-ui) var(--ease-out);
 }
@@ -1193,13 +1193,13 @@
   display: flex;
   align-items: center;
   width: 100%;
-  height: var(--md-menu-item-h);
+  height: var(--fl-menu-item-h);
   padding: 0 var(--sp-3);
   border: 0;
   border-radius: var(--r-art);
   background: transparent;
   color: var(--text);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
@@ -1211,7 +1211,7 @@
 }
 
 .menu-item:focus-visible {
-  outline-offset: calc(-1 * var(--md-focus-ring));
+  outline-offset: calc(-1 * var(--fl-focus-ring));
 }
 
 .menu-item--destructive {
@@ -1242,15 +1242,14 @@
   margin: 0;
   overflow: auto;
   border-radius: var(--r-panel);
-  background: var(--md-sys-color-surface-container-low);
-  box-shadow: var(--md-sys-elevation-level1);
+  background: var(--fl-dialog);
+  box-shadow: var(--fl-shadow-4);
 }
 
 .sheet[open] {
   display: flex;
   flex-direction: column;
-  animation: sheet-in var(--md-sys-motion-spring-default-spatial-duration)
-    var(--md-sys-motion-spring-default-spatial);
+  animation: sheet-in var(--fl-motion-move-duration) var(--fl-motion-move);
 }
 
 .sheet::backdrop {
@@ -1262,30 +1261,30 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  padding: var(--sp-4) var(--sp-3) var(--sp-2) var(--md-dialog-pad);
+  padding: var(--sp-4) var(--sp-3) var(--sp-2) var(--fl-dialog-pad);
 }
 
 .sheet-head h2 {
   margin: 0;
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .sheet-body {
-  padding: 0 var(--md-dialog-pad) var(--md-dialog-pad);
+  padding: 0 var(--fl-dialog-pad) var(--fl-dialog-pad);
 }
 
 .sheet-section,
 .right-panel .sheet-section {
   margin: var(--sp-4) 0 var(--sp-2);
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .dialog {
   width: min(var(--sheet-w), 100% - 2 * var(--sp-4));
-  padding: var(--md-dialog-pad);
-  border-radius: var(--md-sys-shape-corner-extra-large);
-  background: var(--md-sys-color-surface-container-high);
-  box-shadow: var(--md-sys-elevation-level3);
+  padding: var(--fl-dialog-pad);
+  border-radius: var(--fl-corner-m);
+  background: var(--fl-dialog);
+  box-shadow: var(--fl-shadow-28);
 }
 
 .dialog[open] {
@@ -1298,13 +1297,13 @@
 
 .dialog h2 {
   margin: 0 0 var(--sp-4);
-  font: var(--md-sys-typescale-headline-small) var(--font-ui);
+  font: var(--fl-type-title3) var(--font-ui);
 }
 
 .dialog p {
-  margin: 0 0 var(--md-dialog-pad);
+  margin: 0 0 var(--fl-dialog-pad);
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .dialog-actions {
@@ -1329,13 +1328,13 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  min-height: var(--md-snackbar-h);
+  min-height: var(--fl-snackbar-h);
   padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--md-sys-shape-corner-extra-small);
-  background: var(--md-sys-color-inverse-surface);
-  color: var(--md-sys-color-inverse-on-surface);
-  box-shadow: var(--md-sys-elevation-level3);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  border-radius: var(--fl-corner-s);
+  background: var(--fl-flyout);
+  color: var(--fl-fg1);
+  box-shadow: var(--fl-shadow-28);
+  font: var(--fl-type-body) var(--font-ui);
   transition: opacity var(--dur-toast) var(--ease-out);
 
   @starting-style {
@@ -1350,13 +1349,13 @@
 
 /* ---- Pinned focus (for /__ui) and motion ---- */
 [data-force="focus"]:not(.track-row, .tile, .field-input) {
-  outline: var(--md-focus-ring) solid var(--focus);
-  outline-offset: var(--md-focus-offset);
+  outline: var(--fl-focus-ring) solid var(--focus);
+  outline-offset: var(--fl-focus-offset);
 }
 
 .tile[data-force="focus"] {
-  outline: var(--md-focus-ring) solid var(--focus);
-  outline-offset: calc(-1 * var(--md-focus-ring));
+  outline: var(--fl-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--fl-focus-ring));
 }
 
 @keyframes spin {
@@ -1543,8 +1542,8 @@
 
 /* A place a dragged song can land, while one is over it (shell/drag.ts). */
 [data-drop] {
-  outline: var(--md-focus-ring) solid var(--green);
-  outline-offset: calc(-1 * var(--md-focus-ring));
+  outline: var(--fl-focus-ring) solid var(--green);
+  outline-offset: calc(-1 * var(--fl-focus-ring));
   background-color: var(--hover-row);
 }
 

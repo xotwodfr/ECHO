@@ -3,13 +3,13 @@ import type { Track } from '../../shared/types.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { upcoming } from '../playback/queue.ts';
 import { createPaletteAnimator, ROLES, type Roles, VARS } from './animator.ts';
-import { M3_ROLES, type M3Role, m3Scheme, m3Var } from './m3.ts';
+import { FLUENT_ROLES, type FluentRole, fluentAccent, flVar } from './fluent.ts';
 
 // The live palette (VISUALIZER_SPEC.md §6.3–§6.4; TECHNICAL_ARCHITECTURE.md §5.4 `paletteStore`):
 // follows the current track's album, fetches its palette from the server (and the next track's in
 // the background), and animates the `--art-*` properties on :root. It runs at shell level, because
-// the dock and the shell use the accent too; the Stage reads the same properties. The shell's M3
-// scheme (--md-sys-color-*, DESIGN_SYSTEM.md §3.1) is derived from the accent and animates with
+// the dock and the shell use the accent too; the Stage reads the same properties. The shell's Fluent
+// accent ramp (--fl-accent*, DESIGN_SYSTEM.md §3.1) is derived from the accent and animates with
 // them. Frames are requested only while a transition runs.
 
 /** Bumped whenever the properties change, so the Stage can re-upload its uniforms. */
@@ -47,14 +47,14 @@ export function startPalette(
   const root = opts.root ?? document.documentElement;
   const load = opts.load ?? fetchPalette;
   const cs = getComputedStyle(root);
-  type All = Roles & Record<M3Role, string>;
-  const KEYS = [...ROLES, ...M3_ROLES] as (keyof All)[];
-  const varOf = (k: keyof All) => (k in VARS ? VARS[k as keyof Roles] : m3Var(k as M3Role));
-  const withScheme = (art: Roles): All => ({ ...art, ...m3Scheme(art.accent) });
+  type All = Roles & Record<FluentRole, string>;
+  const KEYS = [...ROLES, ...FLUENT_ROLES] as (keyof All)[];
+  const varOf = (k: keyof All) => (k in VARS ? VARS[k as keyof Roles] : flVar(k as FluentRole));
+  const withScheme = (art: Roles): All => ({ ...art, ...fluentAccent(art.accent) });
   const initial = Object.fromEntries(
     KEYS.map((r) => [r, cs.getPropertyValue(varOf(r)).trim()]),
   ) as All;
-  const fallback = withScheme(initial); // tokens.css: the achromatic fallback, seeded by Sodium
+  const fallback = withScheme(initial); // tokens.css: the achromatic fallback
   const anim = createPaletteAnimator<keyof All>(initial);
   const cache = new Map<string, Promise<Roles | null>>();
   const get = (key: string, art?: string) => {

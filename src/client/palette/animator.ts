@@ -46,7 +46,7 @@ function cssOf([L, a, b, alpha]: Lab) {
 
 /**
  * Animates any set of colour roles: the artwork roles above, and the shell's M3 scheme derived from
- * them (m3.ts). Every role the initial set names is interpolated.
+ * them (fluent.ts). Every role the initial set names is interpolated.
  */
 export function createPaletteAnimator<K extends string = Role>(initial: Record<K, string>) {
   const keys = Object.keys(initial) as K[];

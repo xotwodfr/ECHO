@@ -91,7 +91,7 @@ export function menuMove(from: number, key: string, disabled: readonly boolean[]
 
 // Toast (§9.6): max 1 visible, 4 s, then out over --dur-toast before it is removed.
 export const TOAST_VISIBLE_MS = 4000;
-export const TOAST_EXIT_MS = 320; // = --dur-toast
+export const TOAST_EXIT_MS = 250; // = --dur-toast
 
 export interface ToastState {
   toast: { id: number; message: string; leaving: boolean } | null;

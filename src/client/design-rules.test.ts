@@ -6,7 +6,7 @@ import { CHROME_IN_MS, CHROME_OUT_MS } from './stage/loop.ts';
 import { TOAST_EXIT_MS } from './ui/logic.ts';
 
 // Automated part of DS-01 and DS-02 (ACCEPTANCE_CRITERIA.md §7) over the client's component code.
-// Out of scope by design: tokens.css (the token source), fonts.css and lyricsConfig.ts (M3, allowed by DS-01).
+// Out of scope by design: tokens.css (the token source), fonts.css and lyricsConfig.ts (allowed by DS-01).
 
 const ROOT = 'src/client';
 const SKIP = [/^tokens\.css$/, /^fonts\.css$/, /^fonts\//, /\.test\.ts$/, /\.svg$/];
@@ -76,7 +76,7 @@ describe('DS-01: no raw design values outside tokens.css', () => {
 
 // DS-01 for the scrims (DESIGN_SYSTEM.md §7): every one the code reads is a token, documented.
 // No surface reads its backdrop (§7.11): backdrop filters re-render what is under them every
-// frame, which is what made liquid glass slow; M3's tonal surfaces are opaque.
+// frame, which is what made liquid glass slow; Fluent's layers are translucent fills, not filters.
 describe('DS-01: scrims, and no backdrop filters', () => {
   const defined = new Map(
     [
@@ -118,12 +118,9 @@ describe('DS-02: shell light effects', () => {
       for (const re of BANNED) expect(text, String(re)).not.toMatch(re);
       const shadows = [...text.matchAll(/box-shadow:\s*([^;]+);/g)].map((m) => m[1]?.trim());
       for (const s of shadows)
-        expect(s).toMatch(
-          /^var\(--(md-sys-elevation-level[1-3]|shadow-[a-z]+|card-shadow|ring-[a-z]+)\)$/,
-        );
+        expect(s).toMatch(/^var\(--(fl-shadow-\d+|shadow-[a-z]+|card-shadow|ring-[a-z-]+)\)$/);
       const tracking = [...text.matchAll(/letter-spacing:\s*([^;]+);/g)].map((m) => m[1]?.trim());
-      for (const t of tracking)
-        expect(t).toMatch(/^(var\(--(md-sys-tracking|tracking)-[a-z-]+\)|normal)$/);
+      for (const t of tracking) expect(t).toMatch(/^(var\(--tracking-[a-z-]+\)|normal)$/);
     });
   }
 

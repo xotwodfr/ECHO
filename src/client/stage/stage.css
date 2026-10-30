@@ -101,7 +101,7 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--md-sys-color-surface-container-high);
+  background: var(--fl-flyout);
   color: var(--text);
   cursor: pointer;
   transition:
@@ -112,12 +112,12 @@
 
 /* M3 tonal icon buttons: a state layer on hover, the secondary container when selected. */
 .stage-chrome .stage-btn:hover {
-  background: var(--md-sys-color-surface-container-highest);
+  background: var(--fl-flyout-hover);
 }
 
 .stage-chrome .stage-btn[aria-pressed="true"] {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--green);
+  color: var(--on-green);
 }
 
 /* The backdrop's brightness, like Control Center's slider lying on its side: the round button
@@ -129,7 +129,7 @@
   align-items: center;
   overflow: hidden; /* clips the fill's straight edges to the pill */
   border-radius: var(--r-pill);
-  background: var(--md-sys-color-surface-container-high);
+  background: var(--fl-flyout);
   transition:
     opacity var(--dur-pop) var(--ease-out),
     background var(--dur-ui) ease;
@@ -137,7 +137,7 @@
 
 .stage-brightness:hover,
 .stage-brightness[data-open] {
-  background: var(--md-sys-color-surface-container-highest);
+  background: var(--fl-flyout-hover);
 }
 
 .stage-chrome .stage-brightness .stage-btn {
@@ -722,14 +722,14 @@
 }
 
 .np-title {
-  font: var(--md-sys-typescale-headline-small) var(--font);
+  font: var(--fl-type-title3) var(--font);
   font-weight: 800;
 }
 
 .np-artist {
   margin-top: var(--sp-1);
   color: var(--text-on-tint);
-  font: var(--md-sys-typescale-body-large) var(--font);
+  font: var(--fl-type-body-large) var(--font);
 }
 
 .ly-area {
@@ -808,11 +808,11 @@
   }
 
   .np-view[data-mode="lyrics"] .np-title {
-    font: var(--md-sys-typescale-title-medium) var(--font);
+    font: var(--fl-type-subtitle2) var(--font);
   }
 
   .np-view[data-mode="lyrics"] .np-artist {
-    font: var(--md-sys-typescale-body-medium) var(--font);
+    font: var(--fl-type-body) var(--font);
   }
 
   .np-side .art--cover,

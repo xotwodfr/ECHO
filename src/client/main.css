@@ -4,19 +4,19 @@
 
 body {
   margin: 0;
-  background: var(--frame);
+  background: var(--fl-solid-base);
   color: var(--text);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   -webkit-font-smoothing: antialiased;
 }
 
 h1 {
-  font: var(--md-sys-typescale-headline-medium) var(--font-ui);
+  font: var(--fl-type-title2) var(--font-ui);
   margin: 0 0 var(--sp-5);
 }
 
 h2 {
-  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  font: var(--fl-type-subtitle1) var(--font-ui);
   margin: var(--sp-6) 0 var(--sp-3);
 }
 
@@ -37,8 +37,8 @@ a {
 }
 
 :focus-visible {
-  outline: var(--md-focus-ring) solid var(--focus);
-  outline-offset: var(--md-focus-offset);
+  outline: var(--fl-focus-ring) solid var(--focus);
+  outline-offset: var(--fl-focus-offset);
 }
 
 .visually-hidden {
@@ -116,8 +116,8 @@ a {
 }
 
 .round-btn--lg {
-  width: var(--md-button-h);
-  height: var(--md-button-h);
+  width: var(--fl-button-h);
+  height: var(--fl-button-h);
   background: var(--raised);
 }
 
@@ -163,7 +163,7 @@ a {
   border-radius: var(--r-pill);
   background: var(--raised);
   color: var(--text);
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
   transition:
     background-color var(--dur-hover) ease,
     border-color var(--dur-hover) ease;
@@ -176,8 +176,8 @@ a {
 
 .search-field input:focus-visible {
   border-color: var(--text);
-  outline: var(--md-focus-ring) solid var(--focus);
-  outline-offset: calc(-1 * var(--md-focus-ring));
+  outline: var(--fl-focus-ring) solid var(--focus);
+  outline-offset: calc(-1 * var(--fl-focus-ring));
 }
 
 .search-field input::placeholder {
@@ -192,7 +192,7 @@ a {
   position: absolute;
   right: var(--sp-5);
   color: var(--muted);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
 }
 
 .shell .search-compact {
@@ -202,8 +202,8 @@ a {
 .avatar-btn {
   display: grid;
   place-items: center;
-  width: var(--md-button-h);
-  height: var(--md-button-h);
+  width: var(--fl-button-h);
+  height: var(--fl-button-h);
   padding: 0;
   border: 0;
   border-radius: var(--r-pill);
@@ -225,7 +225,7 @@ a {
   border-radius: var(--r-pill);
   background: var(--avatar);
   color: var(--on-green);
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
 }
 
 .topbar .menu-wrap {
@@ -301,7 +301,7 @@ a {
 .freshness {
   margin: 0 0 var(--sp-4);
   color: var(--warning);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 /* ---- Your Library (the left panel, and the page on phones) ---- */
@@ -332,7 +332,7 @@ a {
   gap: var(--sp-3);
   margin: 0;
   color: var(--text);
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .lp-title .icon {
@@ -342,7 +342,7 @@ a {
 }
 
 .library-page .lp-title {
-  font: var(--md-sys-typescale-headline-small) var(--font-ui);
+  font: var(--fl-type-title3) var(--font-ui);
 }
 
 /* Filter chips (Spotify's): pills, the chosen one white. */
@@ -364,7 +364,7 @@ a {
   border-radius: var(--r-pill);
   background: var(--chip);
   color: var(--text);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
   transition: background-color var(--dur-hover) ease;
 }
@@ -374,8 +374,8 @@ a {
 }
 
 .chip[aria-pressed="true"] {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--green);
+  color: var(--on-green);
 }
 
 .chip--clear {
@@ -419,7 +419,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--text);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .lp-search input::placeholder {
@@ -433,7 +433,7 @@ a {
   border-radius: var(--r-control);
   background: transparent;
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
 }
 
@@ -496,7 +496,7 @@ a {
 }
 
 .lp-name {
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
 }
 
 .lp-name[data-playing],
@@ -506,7 +506,7 @@ a {
 
 .lp-sub {
   color: var(--muted);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .lp-speaker,
@@ -581,7 +581,7 @@ a {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .rp-body {
@@ -613,12 +613,12 @@ a {
 }
 
 .rp-title {
-  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  font: var(--fl-type-subtitle1) var(--font-ui);
 }
 
 .rp-artist {
   color: var(--muted);
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
 }
 
 .rp-title a:hover,
@@ -644,7 +644,7 @@ a {
 
 .rp-card h3 {
   margin: 0;
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .rp-card-head {
@@ -659,7 +659,7 @@ a {
   border: 0;
   background: transparent;
   color: var(--muted);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
   cursor: pointer;
 }
 
@@ -724,7 +724,7 @@ a {
 
 .rp-about-name {
   margin: 0 0 var(--sp-2);
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .rp-about-bio {
@@ -742,7 +742,7 @@ a {
 
 .rp-empty-title {
   margin: 0 0 var(--sp-2);
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 /* ---- The player: an M3 floating toolbar, a pill over the bottom of the page ---- */
@@ -764,8 +764,8 @@ a {
   margin-bottom: var(--pill-inset);
   padding: 0 var(--sp-5) 0 var(--sp-2);
   border-radius: var(--r-pill);
-  background: var(--md-sys-color-surface-container);
-  box-shadow: var(--md-sys-elevation-level3);
+  background: var(--fl-flyout);
+  box-shadow: var(--fl-shadow-28);
   container: pill / inline-size;
 }
 
@@ -826,7 +826,7 @@ a {
 }
 
 .dock-title {
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .dock[data-status="idle"] .dock-title {
@@ -835,7 +835,7 @@ a {
 
 .dock-sub {
   color: var(--muted);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 /* Spotify's full logo: at least 70px wide, white on the dark player (Design Guidelines). */
@@ -897,13 +897,13 @@ a {
 .dock-reach {
   margin: 0;
   color: var(--warning);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
   white-space: nowrap;
 }
 
 .queue-note {
   color: var(--muted);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 /* "Clear queue" under the upcoming rows (QUE-01). */
@@ -986,7 +986,7 @@ a {
 
 .ph-kind {
   margin: 0;
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .ph-title {
@@ -1011,7 +1011,7 @@ a {
 .ph-facts {
   margin: 0;
   color: var(--text-on-tint);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .ph-strong {
@@ -1135,7 +1135,7 @@ a {
   border-radius: var(--r-pill);
   background: transparent;
   color: var(--text);
-  font: var(--md-sys-typescale-label-large) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
   cursor: pointer;
   transition:
     border-color var(--dur-hover) ease,
@@ -1200,7 +1200,7 @@ a {
   height: var(--sticky-h);
   padding: 0 var(--gutter);
   background: var(--head-colour);
-  box-shadow: var(--md-sys-elevation-level2);
+  box-shadow: var(--fl-shadow-16);
   opacity: 0;
   transition: opacity var(--dur-ui) var(--ease-out);
 }
@@ -1213,7 +1213,7 @@ a {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  font: var(--fl-type-subtitle1) var(--font-ui);
 }
 
 /* ---- Home ---- */
@@ -1261,7 +1261,7 @@ a {
   display: -webkit-box;
   flex: 1;
   overflow: hidden;
-  font: var(--md-sys-typescale-title-small) var(--font-ui);
+  font: var(--fl-type-body-strong) var(--font-ui);
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1292,7 +1292,7 @@ a {
 .about-card p {
   max-width: 72ch;
   color: var(--muted);
-  font: var(--md-sys-typescale-body-large) var(--font-ui);
+  font: var(--fl-type-body-large) var(--font-ui);
 }
 
 /* ---- Search: the top result, songs beside it; Browse all's coloured cards ---- */
@@ -1382,7 +1382,7 @@ a {
 }
 
 .genre-name {
-  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  font: var(--fl-type-subtitle1) var(--font-ui);
   overflow-wrap: anywhere;
 }
 
@@ -1510,7 +1510,7 @@ a {
 
 .wrapped-rank {
   min-width: var(--sp-4);
-  font: var(--md-sys-typescale-title-large) var(--font-ui);
+  font: var(--fl-type-subtitle1) var(--font-ui);
 }
 
 .wrapped-song {
@@ -1603,7 +1603,7 @@ a {
   padding: 0 var(--sp-3);
   border-radius: var(--r-pill);
   background: var(--chip);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   transition: background-color var(--dur-hover) ease;
 }
 
@@ -1632,7 +1632,7 @@ a {
   border-radius: var(--r-pill);
   background: var(--chip);
   color: var(--text);
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
   transition: background-color var(--dur-hover) ease;
 }
@@ -1642,8 +1642,8 @@ a {
 }
 
 .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
-  background: var(--md-sys-color-secondary-container);
-  color: var(--md-sys-color-on-secondary-container);
+  background: var(--green);
+  color: var(--on-green);
 }
 
 /* /__ui component gallery (development page) */
@@ -1697,7 +1697,7 @@ a {
 
 .ui-cell figcaption {
   color: var(--muted);
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 .ui-cell-body > .field {
@@ -1800,7 +1800,7 @@ a {
 
 .pref-group h3 {
   margin: 0;
-  font: var(--md-sys-typescale-title-medium) var(--font-ui);
+  font: var(--fl-type-subtitle2) var(--font-ui);
 }
 
 .pref-choice {
@@ -1814,7 +1814,7 @@ a {
 
 .pref-label {
   padding: 0;
-  font: var(--md-sys-typescale-body-medium) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
 }
 
 .pref-slider {
@@ -1907,7 +1907,7 @@ a {
 .audit {
   width: 100%;
   border-collapse: collapse;
-  font: var(--md-sys-typescale-body-small) var(--font-ui);
+  font: var(--fl-type-caption) var(--font-ui);
 }
 
 .audit th,
@@ -1941,7 +1941,7 @@ a {
   justify-content: space-between;
   align-items: center;
   gap: var(--sp-3);
-  height: var(--md-list-1);
+  height: var(--fl-list-1);
   border-bottom: var(--rule) solid var(--rule-soft);
 }
 
@@ -2061,7 +2061,7 @@ a {
     column-gap: var(--sp-2);
     border-radius: var(--r-panel);
     background: var(--playing-tint);
-    box-shadow: var(--md-sys-elevation-level2);
+    box-shadow: var(--fl-shadow-16);
   }
 
   /* Nothing has played yet: no mini player (Spotify's). */
@@ -2125,7 +2125,7 @@ a {
     z-index: 5;
     display: block;
     height: var(--tabbar);
-    background: var(--md-sys-color-surface-container);
+    background: var(--fl-flyout);
   }
 
   .tabbar ul {
@@ -2144,15 +2144,15 @@ a {
     gap: var(--sp-1);
     padding: var(--sp-1) 0;
     color: var(--muted);
-    font: var(--md-sys-typescale-label-medium) var(--font-ui);
-    letter-spacing: var(--md-sys-tracking-label);
+    font: var(--fl-type-caption-strong) var(--font-ui);
+    letter-spacing: normal;
   }
 
   .tabbar a .icon {
     box-sizing: content-box;
     width: var(--icon-lg);
     height: var(--icon-lg);
-    padding: var(--sp-1) calc((var(--md-nav-indicator-w) - var(--icon-lg)) / 2);
+    padding: var(--sp-1) calc((var(--fl-nav-indicator-w) - var(--icon-lg)) / 2);
     border-radius: var(--r-pill);
     transition: background-color var(--dur-hover) ease;
   }
@@ -2166,8 +2166,8 @@ a {
   }
 
   .tabbar a[aria-current="page"] .icon {
-    background: var(--md-sys-color-secondary-container);
-    color: var(--md-sys-color-on-secondary-container);
+    background: var(--selected-row);
+    color: var(--text);
   }
 
   /* The lyrics view on a phone: the pill holds the transport. */
@@ -2211,7 +2211,7 @@ a {
 
   .ph-title,
   .ph-title[data-len] {
-    font: var(--md-sys-typescale-headline-small) var(--font-ui);
+    font: var(--fl-type-title3) var(--font-ui);
     letter-spacing: normal;
   }
 
