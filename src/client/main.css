@@ -970,7 +970,7 @@ a {
   padding: 0;
   overflow: hidden;
   border-radius: 0;
-  background: var(--frame);
+  background: var(--fl-mica-base); /* opaque: Mica never shows through the room */
 }
 
 .shell[data-view="listen"] .dock {
