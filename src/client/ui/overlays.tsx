@@ -11,7 +11,7 @@ import {
 import { useStore } from 'zustand';
 import { strings } from '../strings.ts';
 import { Button, IconButton } from './controls.tsx';
-import type { IconName } from './icons.tsx';
+import { Icon, type IconName } from './icons.tsx';
 import { menuMove, toastStore } from './logic.ts';
 
 // Sheet, menu, dialog and toast (DESIGN_SYSTEM.md §9.6). Sheet and dialog are native modal
@@ -306,6 +306,7 @@ export function ToastRegion() {
     <div className="toast-region" role="status">
       {toast && (
         <div key={toast.id} className="toast" data-leaving={toast.leaving || undefined}>
+          <Icon name="info" />
           {toast.message}
         </div>
       )}

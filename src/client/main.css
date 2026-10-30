@@ -36,9 +36,12 @@ a {
   text-decoration: none;
 }
 
+/* Fluent's double focus ring: a light outline on the edge over a dark hairline inside it, so it
+   reads on any surface, the accent included. */
 :focus-visible {
   outline: var(--fl-focus-ring) solid var(--focus);
   outline-offset: var(--fl-focus-offset);
+  box-shadow: var(--ring-focus-inner);
 }
 
 .visually-hidden {
@@ -180,25 +183,28 @@ a {
   height: var(--search-h);
   box-sizing: border-box;
   padding: 0 var(--sp-7) 0 var(--sp-7);
-  border: var(--rule) solid transparent;
-  border-radius: var(--r-pill);
-  background: var(--raised);
+  border: var(--rule) solid var(--fl-stroke-control);
+  border-bottom-color: var(--fl-stroke-strong);
+  border-radius: var(--r-control);
+  background: var(--fl-control);
   color: var(--text);
-  font: var(--fl-type-body-large) var(--font-ui);
+  font: var(--fl-type-body) var(--font-ui);
   transition:
-    background-color var(--dur-hover) ease,
-    border-color var(--dur-hover) ease;
+    background-color var(--dur-hover) var(--ease-in-out),
+    border-color var(--dur-hover) var(--ease-in-out);
 }
 
 .search-field input:hover {
-  border-color: var(--raised-3);
-  background: var(--raised-2);
+  background: var(--fl-control-hover);
 }
 
+/* Fluent's search box: on focus the bottom edge turns accent and 2px, under the focus ring. */
 .search-field input:focus-visible {
-  border-color: var(--text);
+  border-bottom-color: var(--green);
   outline: var(--fl-focus-ring) solid var(--focus);
-  outline-offset: calc(-1 * var(--fl-focus-ring));
+  outline-offset: 0;
+  background: var(--fl-solid-base);
+  box-shadow: var(--ring-input-focus);
 }
 
 .search-field input::placeholder {
@@ -381,13 +387,13 @@ a {
   align-items: center;
   height: var(--chip-h);
   padding: 0 var(--sp-3);
-  border: 0;
-  border-radius: var(--r-pill);
+  border: var(--rule) solid var(--fl-stroke-control);
+  border-radius: var(--r-control);
   background: var(--chip);
   color: var(--text);
   font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
-  transition: background-color var(--dur-hover) ease;
+  transition: background-color var(--dur-hover) var(--ease-in-out);
 }
 
 .chip:hover {
@@ -498,8 +504,22 @@ a {
   background: var(--hover-row);
 }
 
+/* Fluent's selected navigation item: a subtle fill and a short accent bar on the leading edge. */
 .lp-row a[aria-current="page"] {
+  position: relative;
   background: var(--selected-row);
+}
+
+.lp-row a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: var(--fl-tab-indicator);
+  height: var(--nav-marker);
+  translate: 0 -50%;
+  border-radius: var(--r-pill);
+  background: var(--green);
 }
 
 .lp-text {
@@ -784,9 +804,10 @@ a {
   height: var(--pill-h);
   margin-bottom: var(--pill-inset);
   padding: 0 var(--sp-5) 0 var(--sp-2);
+  border: var(--rule) solid var(--fl-stroke);
   border-radius: var(--r-pill);
   background: var(--fl-flyout);
-  box-shadow: var(--fl-shadow-28);
+  box-shadow: var(--fl-shadow-16);
   container: pill / inline-size;
 }
 
@@ -1617,24 +1638,40 @@ a {
   margin-bottom: var(--sp-5);
 }
 
+/* Fluent's tab list: text tabs, the current one strong over a rounded accent bar */
 .tabs a {
+  position: relative;
   display: flex;
   align-items: center;
-  height: var(--chip-h);
+  height: var(--fl-tab-h);
   padding: 0 var(--sp-3);
-  border-radius: var(--r-pill);
-  background: var(--chip);
+  border-radius: var(--r-control);
+  color: var(--muted);
   font: var(--fl-type-body) var(--font-ui);
-  transition: background-color var(--dur-hover) ease;
+  transition:
+    background-color var(--dur-hover) var(--ease-in-out),
+    color var(--dur-hover) var(--ease-in-out);
 }
 
 .tabs a:hover {
-  background: var(--chip-hover);
+  background: var(--fl-subtle-hover);
+  color: var(--text);
 }
 
 .tabs a[aria-current="page"] {
-  background: var(--text);
-  color: var(--on-green);
+  color: var(--text);
+  font: var(--fl-type-body-strong) var(--font-ui);
+}
+
+.tabs a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  right: var(--sp-3);
+  bottom: 0;
+  left: var(--sp-3);
+  height: var(--fl-tab-indicator);
+  border-radius: var(--r-pill);
+  background: var(--green);
 }
 
 .shell:not([data-view="listen"]) .canvas .view-switch {
@@ -1649,13 +1686,13 @@ a {
 .shell:not([data-view="listen"]) .canvas .view-switch button {
   height: var(--chip-h);
   padding: 0 var(--sp-3);
-  border: 0;
-  border-radius: var(--r-pill);
+  border: var(--rule) solid var(--fl-stroke-control);
+  border-radius: var(--r-control);
   background: var(--chip);
   color: var(--text);
   font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
-  transition: background-color var(--dur-hover) ease;
+  transition: background-color var(--dur-hover) var(--ease-in-out);
 }
 
 .shell:not([data-view="listen"]) .canvas .view-switch button:hover {
@@ -2122,7 +2159,8 @@ a {
     pointer-events: none;
   }
 
-  .dock .dock-scrub .scrubber-time {
+  .dock .dock-scrub .scrubber-time,
+  .dock .dock-scrub .slider-thumb {
     display: none;
   }
 
@@ -2130,6 +2168,7 @@ a {
     width: var(--hit-lg);
     height: var(--hit-lg);
     background: transparent;
+    box-shadow: none;
     color: var(--text);
   }
 
@@ -2169,13 +2208,17 @@ a {
     letter-spacing: normal;
   }
 
+  .tabbar a {
+    position: relative;
+  }
+
   .tabbar a .icon {
     box-sizing: content-box;
     width: var(--icon-lg);
     height: var(--icon-lg);
     padding: var(--sp-1) calc((var(--fl-nav-indicator-w) - var(--icon-lg)) / 2);
-    border-radius: var(--r-pill);
-    transition: background-color var(--dur-hover) ease;
+    border-radius: var(--r-control);
+    transition: background-color var(--dur-hover) var(--ease-in-out);
   }
 
   .tabbar a:hover .icon {
@@ -2187,8 +2230,20 @@ a {
   }
 
   .tabbar a[aria-current="page"] .icon {
-    background: var(--selected-row);
     color: var(--text);
+  }
+
+  /* The current destination: an accent bar under its icon (Fluent's selected tab). */
+  .tabbar a[aria-current="page"]::after {
+    content: "";
+    position: absolute;
+    top: calc(var(--sp-1) + var(--sp-1) + var(--icon-lg) + var(--sp-1));
+    left: 50%;
+    width: var(--nav-marker);
+    height: var(--fl-tab-indicator);
+    translate: -50% 0;
+    border-radius: var(--r-pill);
+    background: var(--green);
   }
 
   /* The lyrics view on a phone: the pill holds the transport. */

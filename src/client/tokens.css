@@ -117,6 +117,12 @@
   /* a field's focus: a second pixel of its edge, inside */
   --ring-focus: inset 0 0 0 var(--rule) var(--text);
   --ring-error: inset 0 0 0 var(--rule) var(--negative);
+  /* the playing row's card edge */
+  --ring-row-current: inset 0 0 0 var(--rule) var(--fl-stroke);
+  /* Fluent's field focus: the bottom edge's second pixel, in the accent */
+  --ring-input-focus: inset 0 calc(-1 * var(--rule)) 0 var(--green);
+  /* Fluent's double focus ring: the dark inner stroke under the light outline */
+  --ring-focus-inner: inset 0 0 0 var(--rule) var(--fl-focus-inner);
 
   /* controls */
   --control-h: 32px; --input-h: 48px; --row-h: 56px; --row-h-media: 56px; --nav-pitch: 34px;
@@ -128,7 +134,7 @@
   --tile-min: 180px; --art-row: 40px; --art-list: 48px; --art-dock: 56px; --art-detail: 232px;
   --art-cover-max: 560px; --art-np: 100%; --art-shortcut: 64px; --art-shortcut-phone: 56px;
   --spotify-logo: 80px; /* Spotify Design Guidelines: the full logo is never under 70px wide */
-  --scrub-track: 4px; --scrub-thumb: 12px; --scrub-hit: 24px; --volume-w: 84px;
+  --scrub-track: 4px; --scrub-thumb: 20px; --scrub-thumb-ring: 5px; --scrub-thumb-ring-hover: 4px; --scrub-hit: 24px; --volume-w: 84px;
   --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
   --tile-min-compact: 140px;
   --target-min: 24px; /* WCAG 2.5.8: the smallest target (A11Y-07) */
@@ -214,7 +220,7 @@
 
   /* state */
   --fl-disabled-content: 38%; --fl-disabled-container: 12%;
-  --fl-focus-ring: 2px; --fl-focus-offset: 2px;
+  --fl-focus-ring: 2px; --fl-focus-offset: 0px;
 
   /* motion: one decelerating curve for things that move */
   --fl-motion-move: var(--ease-out);
@@ -224,9 +230,9 @@
   --fl-button-h: 32px; --fl-button-pad: 12px; --fl-icon-button: 32px;
   --fl-field-h: 40px; --fl-search-h: 36px; --fl-list-1: 56px; --fl-list-2: 64px;
   --fl-nav-item-h: 40px; --fl-nav-indicator-h: 32px; --fl-nav-indicator-w: 64px; --fl-menu-item-h: 32px;
-  --fl-switch-w: 40px; --fl-switch-h: 24px; --fl-switch-handle-off: 12px;
+  --fl-switch-w: 40px; --fl-switch-h: 24px; --fl-switch-track-h: 20px; --fl-switch-handle-off: 12px;
   --fl-switch-handle-on: 12px; --fl-switch-handle-pressed: 14px; --fl-switch-outline: 1px;
-  --fl-chip-h: 32px; --fl-snackbar-h: 48px; --fl-tab-h: 44px; --fl-tab-indicator: 3px;
+  --nav-marker: 16px; --fl-chip-h: 32px; --fl-snackbar-h: 48px; --fl-tab-h: 44px; --fl-tab-indicator: 3px;
   --fl-dialog-pad: 24px; --fl-outline: 1px; --fl-field-focus: 2px; --fl-button-group-gap: 8px;
 
   /* scrims under the lyrics view's chrome (§7.7) */

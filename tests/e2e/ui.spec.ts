@@ -75,11 +75,11 @@ test.describe('buttons', () => {
     const btn = section(page, 'Buttons').locator('button:disabled', { hasText: 'Shuffle' });
     await expect(btn).toHaveAccessibleDescription('Connect a server first');
     await expect(btn).toBeDisabled();
-    // Disabled is never opacity on the whole (§9.1): the label in --control (M3 outline).
+    // Disabled is never opacity on the whole (§9.1): the label in Fluent's disabled ink.
     expect(await btn.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
     const control = await page.evaluate(() => {
       const probe = document.createElement('span');
-      probe.style.color = 'var(--control)';
+      probe.style.color = 'var(--fl-fg-disabled)';
       document.body.append(probe);
       const c = getComputedStyle(probe).color;
       probe.remove();
@@ -106,19 +106,15 @@ test.describe('buttons', () => {
     const pinned = await hover.evaluate((el) => getComputedStyle(el).backgroundColor);
     const real = s.locator('.btn--primary:not([data-force]):not(:disabled):not([aria-busy])');
     const rest = await real.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(pinned).not.toBe(rest); // Spotify's brighter green on hover
+    expect(pinned).not.toBe(rest); // the accent's hover tone
     await real.hover();
     await expect
       .poll(() => real.evaluate((el) => getComputedStyle(el).backgroundColor))
       .toBe(pinned);
-    // Pressed shrinks the pill a little (Spotify's), it never changes shape.
-    await expect
-      .poll(() =>
-        s
-          .locator('.btn--primary[data-force="pressed"]')
-          .evaluate((el) => getComputedStyle(el).scale),
-      )
-      .toBe('0.97');
+    // Pressed changes the fill (Fluent's), never the size or shape.
+    const pressed = s.locator('.btn--primary[data-force="pressed"]');
+    expect(await pressed.evaluate((el) => getComputedStyle(el).scale)).toBe('none');
+    expect(await pressed.evaluate((el) => getComputedStyle(el).backgroundColor)).not.toBe(rest);
     const focus = s.locator('.btn--primary[data-force="focus"]');
     expect(await focus.evaluate((el) => getComputedStyle(el).outlineWidth)).toBe('2px');
   });
@@ -456,10 +452,10 @@ test.describe('track rows and tiles', () => {
     const np = s.locator('li[aria-current="true"]');
     await expect(np).toContainText('Night Turns Over');
     await expect(np).toContainText('Now playing');
-    // Now playing takes the Fluent accent (DESIGN_SYSTEM.md §1), which the album's colour seeds.
+    // Now playing takes the Fluent accent's text tone (DESIGN_SYSTEM.md §1), seeded by the album.
     const [title, primary] = await np.locator('.track-title').evaluate((el) => {
       const probe = document.createElement('span');
-      probe.style.color = 'var(--fl-accent)';
+      probe.style.color = 'var(--fl-accent-text)';
       el.append(probe);
       const out = [getComputedStyle(el).color, getComputedStyle(probe).color];
       probe.remove();
@@ -512,8 +508,12 @@ test.describe('track rows and tiles', () => {
       })
       .toBe(true);
     expect(await style(page, '.tile .art img', 'object-fit')).toBe('cover');
-    expect(await style(page, '.tile .art', 'border-radius')).toBe('8px'); // a card's cover (M3 small)
+    expect(await style(page, '.tile .art', 'border-radius')).toBe('8px'); // a card's cover (Fluent medium)
     expect(await style(page, '.track-row .art', 'border-radius')).toBe('4px'); // a row's
+    // Fluent 2 controls (DESIGN_SYSTEM.md §9): 4px corners and 32px buttons; chips are toggle buttons.
+    expect(await style(page, '.btn--primary', 'border-radius')).toBe('4px');
+    expect(await style(page, '.btn--primary', 'height')).toBe('32px');
+    expect(await style(page, '.btn--secondary', 'border-radius')).toBe('4px');
     await play.click();
     await expect(page.getByRole('status')).toHaveText('Playing Tide Lines');
   });

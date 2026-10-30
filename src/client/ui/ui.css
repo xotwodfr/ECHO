@@ -1,9 +1,9 @@
-/* Components (DESIGN_SYSTEM.md §9), after Spotify's: pill buttons (green, white, outlined),
-   round icon buttons that brighten on hover, a white play disc, rows that light on hover, cards on
-   a surround. Every value comes from tokens.css. `[data-force]` pins hover, pressed and focus for
-   the /__ui page and its snapshots, with the same rules as the real state. */
+/* Components (DESIGN_SYSTEM.md §9) in Fluent 2: 4px controls with a hairline edge, fills that
+   change on hover and press (no scaling), the accent only on play, on and saved, a round play disc
+   (Spotify's), cards on a surround. Every value comes from tokens.css. `[data-force]` pins hover,
+   pressed and focus for the /__ui page and its snapshots, with the same rules as the real state. */
 
-/* ---- Buttons (§9.1): green primary, outlined secondary, text tertiary; a small grow on hover ---- */
+/* ---- Buttons (§9.1): accent primary, subtle-filled secondary, transparent tertiary ---- */
 .btn {
   position: relative;
   display: inline-flex;
@@ -13,9 +13,9 @@
   box-sizing: border-box;
   height: var(--fl-button-h);
   padding: 0 var(--fl-button-pad);
-  border: var(--rule) solid transparent;
-  border-radius: var(--r-pill);
-  --btn-bg: transparent;
+  border: var(--rule) solid var(--fl-stroke-control);
+  border-radius: var(--r-control);
+  --btn-bg: var(--fl-control);
   --btn-ink: var(--text);
   background: var(--btn-bg);
   color: var(--btn-ink);
@@ -24,10 +24,9 @@
   text-decoration: none;
   cursor: pointer;
   transition:
-    background-color var(--dur-hover) ease,
-    border-color var(--dur-hover) ease,
-    color var(--dur-hover) ease,
-    scale var(--dur-press) ease;
+    background-color var(--dur-hover) var(--ease-in-out),
+    border-color var(--dur-hover) var(--ease-in-out),
+    color var(--dur-hover) var(--ease-in-out);
 }
 
 .btn--primary {
@@ -35,23 +34,21 @@
   --btn-ink: var(--on-green);
 }
 
-.btn--secondary {
-  border-color: var(--control);
-}
-
 .btn--destructive {
-  border-color: var(--control);
+  --btn-bg: transparent;
   --btn-ink: var(--negative);
 }
 
 .btn--tertiary {
   padding: 0 var(--sp-3);
+  border-color: transparent;
+  --btn-bg: transparent;
   --btn-ink: var(--muted);
 }
 
 .btn:hover:not(:disabled, [aria-disabled="true"]),
 .btn[data-force="hover"] {
-  scale: 1.04;
+  background: var(--fl-control-hover);
 }
 
 .btn--primary:hover:not(:disabled, [aria-disabled="true"]),
@@ -59,33 +56,28 @@
   background: var(--green-hover);
 }
 
-.btn--secondary:hover:not(:disabled, [aria-disabled="true"]),
-.btn--secondary[data-force="hover"],
-.btn--destructive:hover:not(:disabled, [aria-disabled="true"]),
-.btn--destructive[data-force="hover"] {
-  border-color: var(--text);
-}
-
 .btn--tertiary:hover:not(:disabled, [aria-disabled="true"]),
 .btn--tertiary[data-force="hover"] {
+  background: var(--fl-subtle-hover);
   color: var(--text);
-  scale: none;
 }
 
 .btn:active:not(:disabled, [aria-disabled="true"]),
 .btn[data-force="pressed"] {
-  scale: 0.97;
+  background: var(--fl-control-press);
+  color: var(--muted);
 }
 
 .btn--primary:active:not(:disabled, [aria-disabled="true"]),
 .btn--primary[data-force="pressed"] {
   background: var(--green-press);
+  color: var(--on-green);
 }
 
 .btn:disabled {
-  border-color: var(--raised-3);
-  background: transparent;
-  color: var(--control);
+  border-color: var(--fl-stroke);
+  background: var(--fl-control);
+  color: var(--fl-fg-disabled);
   cursor: not-allowed;
 }
 
@@ -142,13 +134,13 @@
   height: var(--fl-icon-button);
   padding: 0;
   border: 0;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
   transition:
-    color var(--dur-hover) ease,
-    scale var(--dur-press) ease;
+    color var(--dur-hover) var(--ease-in-out),
+    background-color var(--dur-hover) var(--ease-in-out);
 }
 
 .icon-btn--lg {
@@ -159,14 +151,14 @@
 .icon-btn:hover:not(:disabled),
 .icon-btn[data-force="hover"],
 .icon-btn[aria-expanded="true"] {
+  background: var(--fl-subtle-hover);
   color: var(--text);
-  scale: 1.06;
 }
 
 .icon-btn:active:not(:disabled),
 .icon-btn[data-force="pressed"] {
-  color: var(--text);
-  scale: 0.94;
+  background: var(--fl-subtle-press);
+  color: var(--muted);
 }
 
 .icon-btn:disabled {
@@ -174,12 +166,7 @@
   cursor: not-allowed;
 }
 
-/* The transport's previous and next are filled (Spotify's). */
-.dock-transport .icon-btn:not(.dock-secondary) .icon {
-  fill: currentColor;
-}
-
-/* A toggle on (shuffle, repeat, lyrics, the panels): green glyph plus a dot beneath, never colour
+/* A toggle on (shuffle, repeat, lyrics, the panels): accent glyph plus a dot beneath, never colour
    alone (§9.2). */
 .icon-btn[aria-pressed="true"]:not(.icon-btn--plain) {
   color: var(--green);
@@ -197,7 +184,7 @@
   background: currentColor;
 }
 
-/* Spotify's play disc: white, a black glyph; it grows a little on hover. */
+/* The play disc: round (Spotify's shape) in the accent (primary means play); fills change, no scaling. */
 .play-btn {
   display: inline-grid;
   place-items: center;
@@ -207,22 +194,21 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: var(--text);
+  background: var(--green);
   color: var(--on-green);
+  box-shadow: var(--shadow-play);
   cursor: pointer;
-  transition:
-    background-color var(--dur-hover) ease,
-    scale var(--dur-press) var(--ease-out);
+  transition: background-color var(--dur-hover) var(--ease-in-out);
 }
 
 .play-btn:hover:not(:disabled),
 .play-btn[data-force="hover"] {
-  scale: 1.06;
+  background: var(--green-hover);
 }
 
 .play-btn:active:not(:disabled),
 .play-btn[data-force="pressed"] {
-  scale: 0.94;
+  background: var(--green-press);
 }
 
 .play-btn:disabled {
@@ -234,7 +220,6 @@
 /* Glyph morph play ↔ pause, 180 ms (§9.2). */
 .play-btn .icon {
   grid-area: 1 / 1;
-  fill: currentColor;
   transition:
     opacity var(--dur-hover) var(--ease-out),
     scale var(--dur-hover) var(--ease-out);
@@ -253,7 +238,8 @@
   white-space: nowrap;
 }
 
-/* ---- Slider: scrubber and volume (§9.2): white on grey, green with a thumb on hover ---- */
+/* ---- Slider: scrubber and volume (§9.2): Fluent's, an accent fill on a strong rail, the thumb a
+   disc with an accent centre that grows on hover ---- */
 .slider {
   position: relative;
   display: flex;
@@ -277,7 +263,7 @@
   height: var(--scrub-track);
   overflow: hidden;
   border-radius: var(--r-pill);
-  background: var(--control);
+  background: var(--fl-stroke-strong);
 }
 
 .slider-fill,
@@ -293,16 +279,9 @@
 }
 
 .slider-fill {
-  background: var(--text);
+  background: var(--green);
   scale: var(--value) 1;
   border-radius: var(--r-pill);
-}
-
-.slider[data-dragging] .slider-fill,
-.slider[data-force="hover"] .slider-fill,
-.slider:hover:not([aria-disabled="true"]) .slider-fill,
-.slider:focus-visible .slider-fill {
-  background: var(--green);
 }
 
 .slider-thumb {
@@ -313,17 +292,24 @@
   height: var(--scrub-thumb);
   translate: -50% -50%;
   border-radius: 50%;
-  background: var(--text);
+  background: var(--fl-flyout);
   box-shadow: var(--fl-shadow-4);
-  opacity: 0;
-  transition: opacity var(--dur-scrub) ease;
 }
 
-.slider[data-force] .slider-thumb,
-.slider[data-dragging] .slider-thumb,
-.slider:focus-visible .slider-thumb,
-.slider:hover:not([aria-disabled="true"]) .slider-thumb {
-  opacity: 1;
+.slider-thumb::after {
+  content: "";
+  position: absolute;
+  inset: var(--scrub-thumb-ring);
+  border-radius: 50%;
+  background: var(--green);
+  transition: inset var(--dur-scrub) var(--ease-out);
+}
+
+.slider[data-force] .slider-thumb::after,
+.slider[data-dragging] .slider-thumb::after,
+.slider:focus-visible .slider-thumb::after,
+.slider:hover:not([aria-disabled="true"]) .slider-thumb::after {
+  inset: var(--scrub-thumb-ring-hover);
 }
 
 .slider[aria-disabled="true"] {
@@ -344,8 +330,9 @@
   gap: var(--sp-1);
   max-width: var(--form-w);
   padding: var(--sp-1) var(--sp-2);
+  border: var(--rule) solid var(--fl-stroke);
   border-radius: var(--r-control);
-  background: var(--raised-2);
+  background: var(--fl-flyout);
   box-shadow: var(--fl-shadow-16);
   font-size: var(--fs-small);
   line-height: var(--lh-small);
@@ -421,7 +408,8 @@
   color: var(--pill-neutral-ink);
 }
 
-/* ---- Switch (§9.5): Spotify's, 40×24, a white knob that slides onto green ---- */
+/* ---- Switch (§9.5): Fluent's, a 40×20 track inside a 24px target (A11Y-07); off is an outline
+   with a knob of the same ink, on is the accent with an on-accent knob ---- */
 .toggle-row {
   display: inline-flex;
   align-items: center;
@@ -433,7 +421,10 @@
 }
 
 .toggle {
-  --knob-x: calc(var(--fl-switch-h) / 2);
+  --knob-x: calc(var(--fl-switch-track-h) / 2);
+  --track-bg: transparent;
+  --track-edge: var(--fl-stroke-strong);
+  --knob: var(--muted);
   position: relative;
   flex: none;
   box-sizing: border-box;
@@ -441,10 +432,23 @@
   height: var(--fl-switch-h);
   padding: 0;
   border: 0;
-  border-radius: var(--r-pill);
-  background: var(--control);
+  background: transparent;
   cursor: pointer;
-  transition: background-color var(--dur-hover) ease;
+}
+
+.toggle::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  height: var(--fl-switch-track-h);
+  margin: auto 0;
+  border: var(--rule) solid var(--track-edge);
+  border-radius: var(--r-pill);
+  background: var(--track-bg);
+  transition:
+    background-color var(--dur-hover) var(--ease-in-out),
+    border-color var(--dur-hover) var(--ease-in-out);
 }
 
 .toggle::after {
@@ -456,26 +460,29 @@
   height: var(--fl-switch-handle-off);
   translate: -50% -50%;
   border-radius: 50%;
-  background: var(--text);
+  background: var(--knob);
   transition:
     left var(--dur-hover) var(--ease-out),
-    width var(--dur-press) ease,
-    height var(--dur-press) ease;
+    width var(--dur-press) var(--ease-out),
+    height var(--dur-press) var(--ease-out);
 }
 
 .toggle[aria-checked="true"] {
-  --knob-x: calc(var(--fl-switch-w) - var(--fl-switch-h) / 2);
-  background: var(--green);
+  --knob-x: calc(var(--fl-switch-w) - var(--fl-switch-track-h) / 2);
+  --track-bg: var(--green);
+  --track-edge: transparent;
+  --knob: var(--on-green);
 }
 
 .toggle-row:hover .toggle:not(:disabled):not([aria-checked="true"]),
 .toggle[data-force="hover"]:not([aria-checked="true"]) {
-  background: var(--muted);
+  --track-edge: var(--text);
+  --knob: var(--text);
 }
 
 .toggle-row:hover .toggle[aria-checked="true"]:not(:disabled),
 .toggle[data-force="hover"][aria-checked="true"] {
-  background: var(--green-hover);
+  --track-bg: var(--green-hover);
 }
 
 .toggle:active:not(:disabled)::after,
@@ -491,15 +498,18 @@
 }
 
 .toggle:disabled {
-  background: var(--raised-3);
+  --track-edge: var(--fl-fg-disabled);
+  --knob: var(--fl-fg-disabled);
   cursor: not-allowed;
 }
 
-.toggle:disabled::after {
-  background: var(--control);
+.toggle:disabled[aria-checked="true"] {
+  --track-bg: var(--fl-fg-disabled);
+  --knob: var(--fl-solid-base);
 }
 
-/* ---- Fields (§9.5): Spotify's, 48px, label above, a white ring on focus ---- */
+/* ---- Fields (§9.5): Fluent's, a subtle fill and hairline edge over a strong bottom edge that
+   turns accent and 2px on focus; label above ---- */
 .field {
   display: flex;
   flex-direction: column;
@@ -522,13 +532,16 @@
   box-sizing: border-box;
   height: var(--fl-field-h);
   padding: 0 var(--sp-3);
-  border: var(--rule) solid var(--control);
+  border: var(--rule) solid var(--fl-stroke-control);
+  border-bottom-color: var(--fl-stroke-strong);
   border-radius: var(--r-control);
-  background: var(--panel);
+  background: var(--fl-control);
   color: var(--text);
   caret-color: var(--text);
-  font: var(--fl-type-body-large) var(--font-ui);
-  transition: border-color var(--dur-hover) ease;
+  font: var(--fl-type-body) var(--font-ui);
+  transition:
+    background-color var(--dur-hover) var(--ease-in-out),
+    border-color var(--dur-hover) var(--ease-in-out);
 }
 
 .field-input::placeholder {
@@ -536,15 +549,15 @@
 }
 
 .field-input:hover:not(:disabled) {
-  border-color: var(--text);
+  background: var(--fl-control-hover);
 }
 
-/* Focus: a 2px white ring inside the edge; that is the field's focus indicator. */
+/* Focus: the bottom edge turns accent and 2px (Fluent's), under the focus ring every control has. */
 .field-input:focus-visible,
 .field-input[data-force="focus"] {
-  border-color: var(--text);
-  outline: none;
-  box-shadow: var(--ring-focus);
+  border-bottom-color: var(--green);
+  background: var(--fl-solid-base);
+  box-shadow: var(--ring-input-focus);
 }
 
 .field[data-invalid] .field-input {
@@ -553,8 +566,8 @@
 }
 
 .field-input:disabled {
-  border-color: var(--raised-3);
-  color: var(--control);
+  border-color: var(--fl-stroke);
+  color: var(--fl-fg-disabled);
   cursor: not-allowed;
 }
 
@@ -570,7 +583,7 @@
   translate: 0 -50%;
   padding: 0 var(--sp-3);
   border: 0;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--muted);
   font: var(--fl-type-body-strong) var(--font-ui);
@@ -752,6 +765,12 @@
   background: var(--selected-row);
 }
 
+/* The song playing now: a card on the list, its title in the accent (Fluent's selected row). */
+.track-row[data-now-playing] {
+  box-shadow: var(--ring-row-current);
+  background: var(--raised);
+}
+
 .track-row:has(.track-main:focus-visible),
 .track-row[data-force="focus"] {
   outline: var(--fl-focus-ring) solid var(--focus);
@@ -802,7 +821,7 @@
 }
 
 .track-row[data-now-playing] .track-title {
-  color: var(--green);
+  color: var(--fl-accent-text);
 }
 
 .track-num,
@@ -1159,8 +1178,10 @@
   right: 0;
   z-index: 10;
   min-width: 14em;
-  padding: var(--sp-2) 0;
-  border-radius: var(--fl-corner-s);
+  box-sizing: border-box;
+  padding: var(--sp-1);
+  border: var(--rule) solid var(--fl-stroke);
+  border-radius: var(--fl-corner-m);
   background: var(--fl-flyout);
   box-shadow: var(--fl-shadow-16);
   transform-origin: top right;
@@ -1192,7 +1213,7 @@
   height: var(--fl-menu-item-h);
   padding: 0 var(--sp-3);
   border: 0;
-  border-radius: var(--r-art);
+  border-radius: var(--fl-corner-s);
   background: transparent;
   color: var(--text);
   font: var(--fl-type-body) var(--font-ui);
@@ -1219,7 +1240,7 @@
   cursor: not-allowed;
 }
 
-/* ---- Sheet and dialog (§9.6): an M3 modal side sheet and basic dialog ---- */
+/* ---- Sheet and dialog (§9.6): Fluent's drawer and dialog, opaque, edged, the deepest shadow ---- */
 .sheet,
 .dialog {
   box-sizing: border-box;
@@ -1237,9 +1258,10 @@
   max-height: none;
   margin: 0;
   overflow: auto;
+  border: var(--rule) solid var(--fl-stroke);
   border-radius: var(--r-panel);
   background: var(--fl-dialog);
-  box-shadow: var(--fl-shadow-4);
+  box-shadow: var(--fl-shadow-64);
 }
 
 .sheet[open] {
@@ -1278,9 +1300,10 @@
 .dialog {
   width: min(var(--sheet-w), 100% - 2 * var(--sp-4));
   padding: var(--fl-dialog-pad);
+  border: var(--rule) solid var(--fl-stroke);
   border-radius: var(--fl-corner-m);
   background: var(--fl-dialog);
-  box-shadow: var(--fl-shadow-28);
+  box-shadow: var(--fl-shadow-64);
 }
 
 .dialog[open] {
@@ -1292,8 +1315,8 @@
 }
 
 .dialog h2 {
-  margin: 0 0 var(--sp-4);
-  font: var(--fl-type-title3) var(--font-ui);
+  margin: 0 0 var(--sp-3);
+  font: var(--fl-type-subtitle1) var(--font-ui);
 }
 
 .dialog p {
@@ -1309,7 +1332,7 @@
   gap: var(--sp-2);
 }
 
-/* ---- Toast (§9.6): an M3 snackbar, bottom-centre above the player, max 1 ---- */
+/* ---- Toast (§9.6): Fluent's, a flyout surface bottom-centre above the player, max 1 ---- */
 .toast-region {
   position: fixed;
   bottom: calc(var(--pill-h) + 2 * var(--pill-inset) + var(--sp-4));
@@ -1325,17 +1348,23 @@
   display: flex;
   align-items: center;
   min-height: var(--fl-snackbar-h);
+  gap: var(--sp-3);
   padding: var(--sp-2) var(--sp-4);
-  border-radius: var(--fl-corner-s);
+  border: var(--rule) solid var(--fl-stroke);
+  border-radius: var(--fl-corner-m);
   background: var(--fl-flyout);
   color: var(--fl-fg1);
-  box-shadow: var(--fl-shadow-28);
+  box-shadow: var(--fl-shadow-16);
   font: var(--fl-type-body) var(--font-ui);
   transition: opacity var(--dur-toast) var(--ease-out);
 
   @starting-style {
     opacity: 0;
   }
+}
+
+.toast .icon {
+  color: var(--fl-accent-text);
 }
 
 .toast[data-leaving] {
