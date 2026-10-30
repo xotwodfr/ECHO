@@ -102,7 +102,7 @@ function TopBar({ route }: { route: Route }) {
           title={strings.nav.home}
           aria-current={home ? 'page' : undefined}
         >
-          <Icon name="home" className={home ? 'icon--solid' : undefined} />
+          <Icon name="home" solid={home} />
         </Link>
         <SearchField className="topbar-search" />
       </nav>
@@ -166,7 +166,7 @@ function TabBar({ route }: { route: Route }) {
     return (
       <li>
         <Link to={to} aria-current={on ? 'page' : undefined}>
-          <Icon name={icon} className={on && icon === 'home' ? 'icon--solid' : undefined} />
+          <Icon name={icon} solid={on} />
           <span>{label}</span>
         </Link>
       </li>

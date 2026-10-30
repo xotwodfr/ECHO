@@ -123,7 +123,7 @@
 
   /* component sizes */
   --rule: 1px; --focus-ring: 2px; --trace: 2px; --dot: 4px;
-  --icon: 16px; --icon-lg: 24px; --hit-lg: 32px; --hit-transport: 40px; --play: 40px; --play-xl: 56px; --play-tile: 48px;
+  --icon: 20px; --icon-lg: 24px; --hit-lg: 32px; --hit-transport: 40px; --play: 40px; --play-xl: 56px; --play-tile: 48px;
   --tile-play: 48px; --search-h: 48px; --menu-item-h: 40px; --chip-h: 32px;
   --tile-min: 180px; --art-row: 40px; --art-list: 48px; --art-dock: 56px; --art-detail: 232px;
   --art-cover-max: 560px; --art-np: 100%; --art-shortcut: 64px; --art-shortcut-phone: 56px;

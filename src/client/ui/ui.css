@@ -133,10 +133,6 @@
   flex: none;
 }
 
-.icon--solid {
-  fill: currentColor;
-}
-
 .icon-btn {
   position: relative;
   display: inline-grid;

@@ -85,7 +85,7 @@ export function PlayXL(p: {
       aria-label={p.playing ? strings.album.pauseName(p.label) : strings.album.playName(p.label)}
       onClick={p.live ? c.toggle : p.onPlay}
     >
-      <Icon name={p.playing ? 'pause' : 'play'} className="icon--solid" />
+      <Icon name={p.playing ? 'pause' : 'play'} solid />
     </button>
   );
 }
@@ -1017,7 +1017,7 @@ export function LikedView() {
         tint={null}
         art={
           <span className="art art--detail liked-art liked-art--xl" aria-hidden="true">
-            <Icon name="heart" className="icon--solid" />
+            <Icon name="heart" solid />
           </span>
         }
         play={
@@ -1261,7 +1261,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
                       aria-label={strings.album.playName(top.album.title)}
                       onClick={() => void play(top.album as Album)}
                     >
-                      <Icon name="play" className="icon--solid" />
+                      <Icon name="play" solid />
                     </button>
                   </div>
                 ) : null}

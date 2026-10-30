@@ -114,7 +114,7 @@ export function PlayButton({
       data-force={force}
       {...rest}
     >
-      <Icon name="play" className="icon--solid play-btn-play" />
+      <Icon name="play" className="play-btn-play" solid />
       <Icon name="pause" className="play-btn-pause" />
     </button>
   );

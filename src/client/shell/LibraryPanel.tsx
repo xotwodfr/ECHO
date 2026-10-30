@@ -126,7 +126,7 @@ function LibraryRow({ row }: { row: Row }) {
     <>
       {row.kind === 'liked' ? (
         <span className="liked-art" aria-hidden="true">
-          <Icon name="heart" className="icon--solid" />
+          <Icon name="heart" solid />
         </span>
       ) : row.kind === 'playlist' && !art ? (
         <span className="art art--list art--empty" aria-hidden="true">

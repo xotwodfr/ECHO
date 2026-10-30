@@ -84,7 +84,7 @@ export function TrackRow(p: TrackRowProps) {
         <span className="track-num num">
           {/* Spotify's row: the number gives way to a play glyph on hover, bars while playing. */}
           {p.nowPlaying ? <NowPlayingBars /> : <span className="track-num-n">{p.number}</span>}
-          <Icon name="play" className="icon--solid track-num-play" />
+          <Icon name="play" className="track-num-play" solid />
         </span>
       )}
       {p.artwork && <Artwork size="row" src={p.artwork.src} title={p.artwork.album} />}
@@ -200,7 +200,7 @@ export function AlbumTile(p: {
             aria-label={strings.ui.playItem(p.title)}
             onClick={p.onPlay}
           >
-            <Icon name="play" className="icon--solid" />
+            <Icon name="play" solid />
           </button>
         )}
       </span>

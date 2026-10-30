@@ -19,7 +19,7 @@ export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'm
       title={on ? strings.liked.unlike(t.title) : strings.liked.like(t.title)}
       onClick={() => void setStar('track', t, !on)}
     >
-      <Icon name="heart" className={on ? 'icon--solid' : undefined} />
+      <Icon name="heart" solid={on} />
     </button>
   );
 }

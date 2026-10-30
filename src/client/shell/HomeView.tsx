@@ -84,7 +84,7 @@ function Shortcuts({ recent }: { recent: Album[] }) {
           playing={live && source?.kind === 'starred'}
           art={
             <span className="liked-art" aria-hidden="true">
-              <Icon name="heart" className="icon--solid" />
+              <Icon name="heart" solid />
             </span>
           }
         />
