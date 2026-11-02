@@ -25,6 +25,8 @@ const MB_GAP_MS = 1100; // MusicBrainz asks for at most one request a second
 const MB_GIVE_UP = 20; // refusals in a row that end the MusicBrainz pass
 const RETRIES = 4;
 const SPOTIFY_GAP_MS = 250;
+const SPOTIFY_MAX_WAIT_MS = 120_000; // a longer Retry-After is a penalty, not the 30 s window
+const SPOTIFY_GIVE_UP = 10; // failures in a row that leave Spotify for the next run
 const ON_PLAY_TIMEOUT_MS = 1500; // inside the resolver's 4.5 s
 const SPOTIFY_ID = /^[0-9A-Za-z]{22}$/;
 
@@ -49,6 +51,15 @@ interface Row {
   duration_ms: number | null;
   isrc: string | null;
   mbid: string | null;
+}
+
+/** Spotify's 429: ask again after this long (its Retry-After, else a minute). */
+class SpotifyBusy extends Error {
+  readonly retryAfterMs: number;
+  constructor(retryAfterMs: number) {
+    super('spotify search 429');
+    this.retryAfterMs = retryAfterMs;
+  }
 }
 
 /** Bracketed credits and tags that name the same recording. */
@@ -240,6 +251,8 @@ export function createSpotifyMatcher(deps: MatchDeps) {
       headers: { authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(ON_PLAY_TIMEOUT_MS),
     });
+    if (res.status === 429)
+      throw new SpotifyBusy(Number(res.headers.get('retry-after')) * 1000 || 60_000);
     if (!res.ok) throw new Error(`spotify search ${res.status}`);
     return (
       (
@@ -274,7 +287,9 @@ export function createSpotifyMatcher(deps: MatchDeps) {
     const tried = triedOf(getRow(scope, t.id));
     const token = tried.has('spotify') ? null : await deps.spotifyAppToken();
     if (token) {
-      record(scope, t.id, 'spotify', await spotify(token, t));
+      // A Spotify failure (a 429 while the sweep runs) is not "none": ListenBrainz still answers.
+      const ids = await spotify(token, t).catch(() => null);
+      if (ids) record(scope, t.id, 'spotify', ids);
       if (idsOf(getRow(scope, t.id)).length) return;
     }
     if (!tried.has('lb-meta')) record(scope, t.id, 'lb-meta', (await lbMeta([t]))[0] ?? []);
@@ -293,7 +308,8 @@ export function createSpotifyMatcher(deps: MatchDeps) {
   let stop = false;
 
   async function sweepScope(scope: string, client: SubsonicClient) {
-    const token = await deps.spotifyAppToken();
+    let askSpotify = true;
+    let spotifyFailures = 0;
     // Pass 1: every song, the fast matchers.
     status.phase = 'scan';
     // A user may connect any allowed server: one that pages forever, or repeats itself, ends the
@@ -315,12 +331,28 @@ export function createSpotifyMatcher(deps: MatchDeps) {
       for (const t of metas) saveMeta(scope, t);
       status.scanned += songs.length;
       const pending = metas.filter((t) => getRow(scope, t.id)?.method !== 'manual');
-      if (token)
-        for (const t of pending.filter((t) => !triedOf(getRow(scope, t.id)).has('spotify'))) {
-          if (stop) return;
+      // Spotify only for what has no match yet: its rate limit is spent where it can find one.
+      const unasked = pending.filter((t) => {
+        const row = getRow(scope, t.id);
+        return !idsOf(row).length && !triedOf(row).has('spotify');
+      });
+      for (const t of unasked) {
+        if (stop) return;
+        // Asked per track: the token lasts an hour, a sweep longer (cached until it expires).
+        const token = askSpotify && (await deps.spotifyAppToken());
+        if (!token) break;
+        try {
           record(scope, t.id, 'spotify', await spotify(token, t));
-          await sleep(SPOTIFY_GAP_MS);
+          spotifyFailures = 0;
+        } catch (err) {
+          // The track is not marked tried: the next run asks again. A short Retry-After is waited
+          // out; a long one (a penalty) or many failures in a row leave Spotify for the next run.
+          const wait = err instanceof SpotifyBusy ? err.retryAfterMs : 0;
+          askSpotify = ++spotifyFailures < SPOTIFY_GIVE_UP && wait <= SPOTIFY_MAX_WAIT_MS;
+          if (askSpotify) await sleep(wait);
         }
+        await sleep(SPOTIFY_GAP_MS);
+      }
       const lb = pending.filter((t) => {
         const row = getRow(scope, t.id);
         return !idsOf(row).length && !triedOf(row).has('lb-meta');
@@ -427,8 +459,10 @@ export function createSpotifyMatcher(deps: MatchDeps) {
      */
     async idsFor(scope: string, navidromeId: string, client: () => Promise<SubsonicClient | null>) {
       const row = getRow(scope, navidromeId);
+      // Done only when every fast matcher has had its turn: a client secret saved after
+      // ListenBrainz missed still gets Spotify asked.
       const tried = triedOf(row);
-      if (idsOf(row).length || tried.has('lb-meta')) return idsOf(row);
+      if (idsOf(row).length || (tried.has('lb-meta') && tried.has('spotify'))) return idsOf(row);
       const key = `${scope}|${navidromeId}`;
       let p = inflight.get(key);
       if (!p) {
