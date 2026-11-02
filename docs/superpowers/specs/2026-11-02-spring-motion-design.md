@@ -1,6 +1,6 @@
 # Springy motion everywhere in the web app — design
 
-Status: **draft**, awaiting the owner's approval (2026-11-02)
+Status: **approved** by the owner 2026-11-02 ("build it")
 
 ## Intent
 
