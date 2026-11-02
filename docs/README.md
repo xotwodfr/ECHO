@@ -26,8 +26,8 @@ deferred). Since 2026-10-29:
 - **Forgotten password** (2026-11-02): `admin-cli.ts reset-password <username>`, for whoever holds
   the master key (`SETTINGS_AND_SECURITY.md` §11).
 
-**Live** at echo.folk3s.com since 2026-11-02 15:31 UTC: all of the above, built from `653342f` on
-the `password-reset` branch (merged into `main` up to the page colours; the reset is on the branch).
+**Live** at echo.folk3s.com since 2026-11-02 15:31 UTC: all of the above, built from `653342f`, all
+of it merged into `main`.
 **Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
 the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full
 visual runs; `spotify-matching.spec` fails on leftover e2e database state. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
