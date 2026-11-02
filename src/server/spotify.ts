@@ -34,6 +34,13 @@ export interface SpotifyDeps {
 
 export type SpotifyStatus = 'connected' | 'expired' | 'premium_required' | 'not_on_user_list';
 
+/**
+ * Free only when Spotify says so: a `/me` without `product` (Development Mode apps lost it in
+ * February 2026) is unknown, not Free, and the SDK's account_error reports a Free account on play.
+ */
+const statusOfPlan = (product: string | null | undefined): SpotifyStatus =>
+  product && product !== 'premium' ? 'premium_required' : 'connected';
+
 interface Flow {
   userId: number;
   sessionHash: string;
@@ -207,7 +214,7 @@ export function createSpotifyTokens(deps: SpotifyDeps) {
         .run(deps.sealer.seal(out.body.refresh_token, SEALED(userId)), deps.now(), userId);
     if (r.status === 'expired') {
       const { product } = JSON.parse(r.config_json) as { product?: string };
-      setStatus(userId, product === 'premium' ? 'connected' : 'premium_required');
+      setStatus(userId, statusOfPlan(product));
     }
     const t = {
       accessToken: out.body.access_token as string,
@@ -332,7 +339,7 @@ export function spotifyRoutes(
     if (me === 'not_on_user_list') return back('not_on_user_list');
     // Seats are checked again: another user may have connected while this one was at Spotify.
     if (!row(user.id) && spotifySeatsUsed(deps.db) >= SPOTIFY_SEATS) return back('seats_full');
-    const status: SpotifyStatus = me.product === 'premium' ? 'connected' : 'premium_required';
+    const status = statusOfPlan(me.product);
     deps.db
       .prepare(
         `INSERT INTO connections (user_id, provider, config_json, secret_enc, status, updated_at)

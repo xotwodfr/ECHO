@@ -12,7 +12,7 @@ const CLIENT_ID = 'c'.repeat(32);
 
 function fakeSpotify() {
   const s = {
-    product: 'premium',
+    product: 'premium' as string | undefined,
     meStatus: 200,
     refreshError: null as string | null,
     rotate: false,
@@ -262,6 +262,20 @@ describe('Spotify PKCE', () => {
       a.cookie,
     );
     expect(r.headers.get('location')).toContain('spotify=bad_state');
+  });
+
+  it('a /me without "product" (Development Mode drops it) is not a Free account', async () => {
+    const x = setup();
+    x.fake.s.product = undefined; // omitted from the JSON, as Spotify's February 2026 guide says
+    const ada = x.user('ada');
+    expect((await connect(x, ada)).result).toBe('connected');
+    // A later refresh of an expired connection keeps it connected too.
+    x.db.prepare("UPDATE connections SET status = 'expired' WHERE user_id = ?").run(ada.id);
+    x.t.clock.t += 2 * 3600_000;
+    await call(x.t.app, 'POST', '/api/v1/spotify/token', undefined, ada.cookie);
+    expect(
+      x.db.prepare('SELECT status FROM connections WHERE user_id = ?').pluck().get(ada.id),
+    ).toBe('connected');
   });
 
   it('names Free accounts, accounts missing from the app’s user list, and a refused consent', async () => {
