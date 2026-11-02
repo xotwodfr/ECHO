@@ -71,6 +71,24 @@ describe('spotifyApi', () => {
     expect(spotifyCooldown()).toBe(0);
   });
 
+  it('QUOTA_EXCEEDED is Development Mode’s quota, not a 30 s window: no retry, a long pause', async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            error: { status: 429, message: 'Too many requests', reason: 'QUOTA_EXCEEDED' },
+          }),
+          { status: 429 },
+        ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(spotifyApi('/v1/me/albums')).rejects.toMatchObject({
+      appError: { code: 'spotify.rate_limited', userMessage: expect.stringContaining('quota') },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1); // not slept through and asked again
+    expect(spotifyCooldown()).toBeGreaterThan(10 * 60_000);
+  });
+
   it('missingScopes lists what the token lacks', async () => {
     await spotifyToken();
     expect(missingScopes()).toEqual(REQUIRED_SCOPES.filter((s) => !granted.includes(s)));

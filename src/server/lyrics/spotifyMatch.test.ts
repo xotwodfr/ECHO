@@ -376,6 +376,34 @@ describe('the library sweep', () => {
     expect(searches).toBe(10);
   });
 
+  it('QUOTA_EXCEEDED leaves Spotify at once, and nothing asks it again, sweep or play', async () => {
+    const logs: { msg: string; extra?: Record<string, unknown> }[] = [];
+    const w = web({});
+    let searches = 0;
+    const f = (async (u: string, init?: RequestInit) => {
+      if (!String(u).includes('/v1/search')) return w.f(u, init);
+      searches++;
+      return Response.json(
+        { error: { status: 429, message: 'Too many requests', reason: 'QUOTA_EXCEEDED' } },
+        { status: 429 }, // no Retry-After: a quota has no 30 s window
+      );
+    }) as unknown as typeof fetch;
+    const lib = library([song(1), song(2), song(3)]);
+    const { m } = matcher({
+      fetch: f,
+      log: (_level, msg, extra) => logs.push({ msg, extra }),
+      spotifyAppToken: async () => 'app-token',
+      libraries: async () => [{ scope: 'nd', client: lib.client }],
+    });
+    await m.sweep();
+    expect(searches).toBe(1); // not 10 tries, not a wait and another
+    expect(logs.find((l) => l.msg.includes('leaving Spotify'))?.extra).toMatchObject({
+      detail: 'spotify search 429: QUOTA_EXCEEDED',
+    });
+    await m.idsFor('nd', 's2', async () => lib.client); // a play after it
+    expect(searches).toBe(1); // Spotify was not asked again
+  });
+
   it('the log says why Spotify was left, with Spotify’s own words', async () => {
     const logs: { msg: string; extra?: Record<string, unknown> }[] = [];
     const w = web({});

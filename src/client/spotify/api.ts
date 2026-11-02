@@ -84,22 +84,35 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Spotify's rate limit is the app's, not the user's (Development Mode: a low one, and a Retry-After
 // of hours has been seen). A short wait is slept through once; a longer one, or a second 429, stops
 // every call from this page until it is over, so ECHO does not keep asking an app Spotify has told
-// to wait. Retry-After may be hidden from the page by CORS: then it counts as a minute.
+// to wait. Retry-After may be hidden from the page by CORS: then it counts as a minute. Development
+// Mode also has a quota, shared by the developer's apps and unpublished, that answers 429 with
+// `reason: QUOTA_EXCEEDED` and is no 30 s window: that is never retried, and waits much longer.
 let coolUntil = 0;
+let coolQuota = false;
 const COOL_DEFAULT_S = 60;
+const COOL_QUOTA_S = 15 * 60;
 const MAX_SLEEP_S = 30;
 
 /** Milliseconds until Spotify may be asked again; 0 when it may be asked now. */
 export const spotifyCooldown = () => Math.max(0, coolUntil - Date.now());
 
 const rateLimited = (seconds: number) =>
-  new SpotifyError(err('spotify.rate_limited', strings.spotify.rateLimited(seconds), true));
+  new SpotifyError(
+    err('spotify.rate_limited', strings.spotify.rateLimited(seconds, coolQuota), true),
+  );
 
 /** Throws while Spotify has asked the app to wait: for calls that would reach it some other way. */
 export function assertSpotifyReady() {
   const ms = spotifyCooldown();
   if (ms > 0) throw rateLimited(Math.ceil(ms / 1000));
 }
+
+/** The `reason` of Spotify's error body (`QUOTA_EXCEEDED`), or ''. */
+const reasonOf = (res: Response) =>
+  res
+    .json()
+    .then((b: { error?: { reason?: string } }) => b.error?.reason ?? '')
+    .catch(() => '');
 
 /** One Web API call; JSON in and out, null for 204. */
 export async function spotifyApi<T>(
@@ -124,13 +137,15 @@ export async function spotifyApi<T>(
     if (!res) throw new SpotifyError(err('spotify.unavailable', strings.spotify.unavailable, true));
     if (res.status === 429) {
       const after = Number(res.headers.get('retry-after')) || 0;
-      if (!retried && after <= MAX_SLEEP_S) {
+      coolQuota = (await reasonOf(res)) === 'QUOTA_EXCEEDED';
+      if (!coolQuota && !retried && after <= MAX_SLEEP_S) {
         retried = true;
         await sleep(Math.max(after, 1) * 1000);
         continue;
       }
-      coolUntil = Date.now() + (after || COOL_DEFAULT_S) * 1000;
-      throw rateLimited(after || COOL_DEFAULT_S);
+      const wait = after || (coolQuota ? COOL_QUOTA_S : COOL_DEFAULT_S);
+      coolUntil = Date.now() + wait * 1000;
+      throw rateLimited(wait);
     }
     if (res.status === 401 && !refreshed) {
       refreshed = true;

@@ -496,15 +496,18 @@ export const strings = {
     premium: 'Spotify playback needs Premium.',
     playbackFailed: "Spotify couldn't play this track.",
     unavailable: "Spotify isn't answering. Try again in a moment.",
-    /** Spotify's 429 with a Retry-After too long to wait out on this page. */
-    rateLimited: (seconds: number) => {
+    /** Spotify's 429 with a Retry-After too long to wait out on this page, or its quota used up. */
+    rateLimited: (seconds: number, quota = false) => {
       const [n, unit] =
         seconds >= 3600
           ? [Math.round(seconds / 3600), 'hour']
           : seconds >= 60
             ? [Math.round(seconds / 60), 'minute']
             : [Math.ceil(seconds), 'second'];
-      return `Spotify is limiting this app and asks ECHO to wait ${n} ${unit}${n === 1 ? '' : 's'}.`;
+      const wait = `${n} ${unit}${n === 1 ? '' : 's'}`;
+      return quota
+        ? `Spotify says this app's quota is used up. ECHO will ask again in ${wait}.`
+        : `Spotify is limiting this app and asks ECHO to wait ${wait}.`;
     },
     /** A 403 that is neither a missing scope nor the user list: Spotify's own reason. */
     refused: (why: string) => `Spotify refused ECHO: ${why}`,

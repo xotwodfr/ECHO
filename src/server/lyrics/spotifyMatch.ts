@@ -26,6 +26,7 @@ const MB_GIVE_UP = 20; // refusals in a row that end the MusicBrainz pass
 const RETRIES = 4;
 const SPOTIFY_GAP_MS = 250;
 const SPOTIFY_MAX_WAIT_MS = 120_000; // a longer Retry-After is a penalty, not the 30 s window
+const SPOTIFY_QUOTA_PAUSE_MS = 15 * 60_000; // a quota with no Retry-After: nothing asks for this long
 const SPOTIFY_GIVE_UP = 10; // failures in a row that leave Spotify for the next run
 const ON_PLAY_TIMEOUT_MS = 1500; // inside the resolver's 4.5 s
 const SPOTIFY_ID = /^[0-9A-Za-z]{22}$/;
@@ -53,12 +54,17 @@ interface Row {
   mbid: string | null;
 }
 
-/** Spotify's 429: ask again after this long (its Retry-After, else a minute). */
+/**
+ * Spotify's 429: ask again after this long (its Retry-After, else a minute). Development Mode's
+ * quota (`QUOTA_EXCEEDED`, shared by the developer's apps, unpublished) is no 30 s window.
+ */
 class SpotifyBusy extends Error {
   readonly retryAfterMs: number;
-  constructor(retryAfterMs: number) {
-    super('spotify search 429');
+  readonly quota: boolean;
+  constructor(retryAfterMs: number, reason = '') {
+    super(`spotify search 429${reason ? `: ${reason}` : ''}`);
     this.retryAfterMs = retryAfterMs;
+    this.quota = reason === 'QUOTA_EXCEEDED';
   }
 }
 
@@ -244,15 +250,28 @@ export function createSpotifyMatcher(deps: MatchDeps) {
     return b.recordings?.[0]?.id ?? null;
   }
 
+  // Spotify told the app to wait longer than a sweep sleeps (a penalty, a used-up quota): nothing
+  // asks it until then, the sweep or a play, and the fast matchers carry on without it.
+  let spotifyPausedUntil = 0;
+
   async function spotifySearch(token: string, q: string, limit: number) {
+    if (deps.now() < spotifyPausedUntil) throw new SpotifyBusy(spotifyPausedUntil - deps.now());
     const url = new URL('/v1/search', deps.spotifyApiUrl);
     url.search = new URLSearchParams({ q, type: 'track', limit: String(limit) }).toString();
     const res = await f(url, {
       headers: { authorization: `Bearer ${token}` },
       signal: AbortSignal.timeout(ON_PLAY_TIMEOUT_MS),
     });
-    if (res.status === 429)
-      throw new SpotifyBusy(Number(res.headers.get('retry-after')) * 1000 || 60_000);
+    if (res.status === 429) {
+      const reason = (
+        (await res.json().catch(() => null)) as { error?: { reason?: string } } | null
+      )?.error?.reason;
+      const quota = reason === 'QUOTA_EXCEEDED';
+      const wait =
+        Number(res.headers.get('retry-after')) * 1000 || (quota ? SPOTIFY_QUOTA_PAUSE_MS : 60_000);
+      if (quota || wait > SPOTIFY_MAX_WAIT_MS) spotifyPausedUntil = deps.now() + wait;
+      throw new SpotifyBusy(wait, reason);
+    }
     if (!res.ok) {
       const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
       const why = body?.error?.message;
@@ -358,7 +377,10 @@ export function createSpotifyMatcher(deps: MatchDeps) {
           // The track is not marked tried: the next run asks again. A short Retry-After is waited
           // out; a long one (a penalty) or many failures in a row leave Spotify for the next run.
           const wait = err instanceof SpotifyBusy ? err.retryAfterMs : 0;
-          askSpotify = ++spotifyFailures < SPOTIFY_GIVE_UP && wait <= SPOTIFY_MAX_WAIT_MS;
+          askSpotify =
+            ++spotifyFailures < SPOTIFY_GIVE_UP &&
+            wait <= SPOTIFY_MAX_WAIT_MS &&
+            !(err instanceof SpotifyBusy && err.quota);
           if (askSpotify) await sleep(wait);
           else
             deps.log?.('warn', 'spotify matching: leaving Spotify until the next run', {
