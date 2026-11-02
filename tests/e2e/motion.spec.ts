@@ -15,7 +15,7 @@ test('Settings → Motion → Full wins over a reduce-motion device', async ({ p
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await signedIn(page, 'motion');
   await page.goto('/settings');
-  expect(await motion(page)).toBe('less');
+  await expect.poll(() => motion(page)).toBe('less');
   await setMotion(page, 'Full');
   await expect.poll(() => motion(page)).toBe('full');
   await setMotion(page, 'Off');
@@ -328,11 +328,12 @@ test('play and pause morph; with less motion they only fade', async ({ page }) =
       b.getAnimations({ subtree: true }).map((a) => (a as CSSTransition).transitionProperty),
     );
   await play.click();
-  expect(await moving()).toEqual(expect.arrayContaining(['scale', 'rotate', 'opacity']));
+  expect(await moving()).toEqual(expect.arrayContaining(['scale', 'rotate'])); // the fade may be done
   await page.waitForTimeout(700);
   await page.evaluate(() => {
     document.documentElement.dataset.motion = 'less';
   });
+  await expect.poll(async () => (await moving()).length).toBe(0); // the last change has settled
   await play.click();
   expect(new Set(await moving())).toEqual(new Set(['opacity']));
 });
@@ -486,4 +487,22 @@ test('block states and notices spring in', async ({ page }) => {
     }, name);
     expect(transition, name).toMatch(/translate [\d.]+s linear\(/);
   }
+});
+
+// Review: Esc on a confirmation inside a sheet closes the confirmation, not the sheet with it.
+test('Esc on a confirmation inside the queue sheet keeps the sheet', async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 }); // below 1400px the queue is a sheet
+  await page.goto('/library/album/al-harbour');
+  await page.getByRole('button', { name: 'Play Ferry at Six' }).click();
+  await page.getByRole('region', { name: 'Player' }).getByRole('button', { name: 'Queue' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Queue' });
+  await expect(sheet).toBeVisible();
+  await settled(page, 'dialog.sheet[open]');
+  await sheet.getByRole('button', { name: 'Clear queue' }).click();
+  await expect(page.getByRole('alertdialog', { name: 'Clear the queue?' })).toBeVisible();
+  await settled(page, 'dialog.dialog[open]');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('dialog.dialog[open]')).toHaveCount(0);
+  await page.waitForTimeout(500);
+  await expect(page.locator('dialog.sheet[open]')).toHaveCount(1);
 });

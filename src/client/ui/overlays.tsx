@@ -55,9 +55,11 @@ function useModal(open: boolean, onClose: () => void) {
       e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
     if (!inside) void closeModal(e.currentTarget);
   };
-  // Esc: the exit first, then the native close.
+  // Esc: the exit first, then the native close. React passes the cancel up its own tree too: a
+  // confirmation inside a sheet must not close the sheet with it.
   const onCancel = (e: SyntheticEvent<HTMLDialogElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     void closeModal(e.currentTarget);
   };
   return { ref, handleClose, onBackdrop, onCancel };
