@@ -1,6 +1,6 @@
 # ECHO web in Fluent 2 with Mica: design
 
-Status: draft for owner approval · 2026-10-29
+Status: **approved** by the owner 2026-10-29 · implemented 2026-10-30 on branch `fluent-web` (not merged or deployed; see the plan's status)
 Supersedes the *look* of `DESIGN_SYSTEM.md` Draft 5 for the web client only. The frame and the
 behaviour stay as Draft 5 describes them.
 

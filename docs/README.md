@@ -5,11 +5,19 @@ is a floating, word-synchronised lyric field in an audio-reactive environment li
 cover. Design direction: **Reverb Chamber**, a dark acoustic room where sound arrives as light,
 peaks and decays.
 
-**Project status (2026-10-28):** milestones **M1–M9 are built and tested**, and ECHO is
+**Project status (2026-11-02):** milestones **M1–M9 are built and tested**, and ECHO is
 **deployed** at https://echo.folk3s.com (M5 task 12). Since then: the Material 3 shell (2026-10-25),
 NetEase lyrics and Spotify matching, daily backups, and an overnight audit and fix pass
 ([OVERNIGHT_ENGINEERING_PLAN.md](OVERNIGHT_ENGINEERING_PLAN.md): findings, fixes, evidence, what is
-deferred). SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
+deferred). On 2026-10-29 ECHO was redesigned after Spotify, web and Android
+([spec](superpowers/specs/2026-10-29-spotify-redesign-design.md)), with play-history mixes; that is
+what runs live. Liquid glass was tried and dropped for performance the same day, in favour of
+Material 3 surfaces (on `main`, not yet deployed). On 2026-10-30 the **web client was restyled in
+Fluent 2 with an album-tinted Mica glow** ([spec](superpowers/specs/2026-10-29-fluent-web-design.md),
+[plan](superpowers/plans/2026-10-30-fluent-web.md), `DESIGN_SYSTEM.md` Draft 6); the Android app keeps
+Material 3. That work is on the `fluent-web` branch, **not merged or deployed**: one Firefox test
+(LYR-17, a scrubber click half a second ahead in the lyrics view) fails from the Selawik commit on,
+cause not yet found. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
 real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
 (SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
 (REL-06), the Orca pass, the five-second test (DS-05), the 10-bit capture (VIS-09) and the Spotify
@@ -52,7 +60,7 @@ hand.
 | Audio-reactive visuals | Navidrome only (Web Audio in the client on same-origin streams). Spotify has no PCM access, so its visuals are Ambient. Default intensity **Expressive** | VISUALIZER_SPEC §2, §7.4 |
 | Spotify | One admin-owned Spotify app (Development Mode: ≤ 5 Spotify users). Per-user PKCE. Web Playback SDK. Strict artwork and attribution rules. Gates G1 (cover colours) and G2 (synced lyrics) **on** by owner decision, with admin kill switches | PLAYBACK_ARCHITECTURE §4 |
 | Lyrics | Best sync level wins: user's own files (Navidrome) > Spicy Lyrics (owner's key, server-side, Spotify ID; Navidrome tracks matched in the background) > NetEase > LRCLIB. Shared server cache | LYRICS_INTEGRATION §4 |
-| Typeface | **Mona Sans** (Latin only) for the Stage and player, chosen from the M1 specimen; **Roboto Flex** for the Shell under Material 3 (2026-10-25). The specimen and the runner-up, Geologica, were removed on 2026-10-27 | DESIGN_SYSTEM §0, §4, reviews/M1-type.md |
+| Typeface | Web (Draft 6, `fluent-web`): **Segoe UI** where installed, **Selawik** (Microsoft's open Segoe fallback) shipped, lyrics included. Before it: Figtree (Spotify redesign, 2026-10-29), Roboto Flex under Material 3 (2026-10-25), Mona Sans from the M1 specimen | DESIGN_SYSTEM §4, reviews/M1-type.md |
 | Palette | Extracted on the server (sharp + material quantiser), roles constrained in OKLCH, interpolated in OKLab, contrast solved against the brightest room pixels | VISUALIZER_SPEC §6, DESIGN_SYSTEM §3 |
 | Licence | AGPL-3.0 | TECHNICAL_ARCHITECTURE §9 |
 
