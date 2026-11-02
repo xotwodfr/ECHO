@@ -419,6 +419,11 @@ connection remains (SEC-06).
   in the M8 drill, `src/server/admin-cli.test.ts`): passwords, sessions, settings and queues work;
   Navidrome and Spotify connections show "needs re-entry"; TOTP secrets are unreadable, so users
   sign in with a recovery code and enrol again; the admin re-enters the Spicy key.
+- **Forgotten password:** `admin-cli.ts reset-password <username>`, for whoever holds the master
+  key: it refuses unless the key opens this server's sealed values, sets a generated password
+  (24 characters, shown once, never typed into a shell), signs the account out on every device and
+  writes `account.password_reset` to the audit log. TOTP is untouched: signing in still needs the
+  code (or a recovery code). The user then picks their own in Settings → Account → Password.
 - **Rotation:** `admin-cli.ts rotate-master-key --new-key-file <file>` re-seals every secret with
   the new key in one transaction; then replace the `echo_master_key` secret with that file and
   restart at once.

@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { backup, nightlyBackup, rotate, verify } from './admin-cli.ts';
+import { backup, nightlyBackup, resetPassword, rotate, verify } from './admin-cli.ts';
+import { passwordProblem, verifySecret } from './auth/password.ts';
 import { startSetup } from './auth/routes.ts';
 import { fromBase32, hotp, stepAt } from './auth/totp.ts';
 import { createSealer } from './crypto.ts';
@@ -197,5 +198,62 @@ describe('nightly backup', () => {
     }
     expect(existsSync(join(out, 'echo-auto-2026-10-02.db'))).toBe(false);
     expect(nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 2, 4))).made).toMatch(/10-02\.db$/);
+  });
+});
+
+// A forgotten password (owner, 2026-11-02): whoever holds the server's master key resets it from the
+// CLI. The new password is generated (never typed into a shell's history) and shown once; every
+// session and device of the account is signed out; TOTP stays as it was.
+describe('reset-password', () => {
+  const hashOf = (db: ReturnType<typeof openDb>) =>
+    (
+      db.prepare("SELECT password_hash FROM users WHERE username = 'ada'").get() as {
+        password_hash: string;
+      }
+    ).password_hash;
+
+  it('with the master key: a new generated password, the old one gone, signed out everywhere', async () => {
+    const { db, key, t } = await populated();
+    const sessions = () =>
+      (
+        db
+          .prepare(
+            "SELECT COUNT(*) AS n FROM sessions WHERE user_id = (SELECT id FROM users WHERE username = 'ada')",
+          )
+          .get() as { n: number }
+      ).n;
+    expect(sessions()).toBeGreaterThan(0);
+    const fresh = await resetPassword(db, createSealer(key), 'ada', t.clock.t);
+    expect(passwordProblem(fresh)).toBeNull();
+    expect(await verifySecret(fresh, hashOf(db))).toBe(true);
+    expect(await verifySecret(PASSWORD, hashOf(db))).toBe(false);
+    expect(sessions()).toBe(0);
+    const row = db
+      .prepare("SELECT event, detail FROM audit_log WHERE event = 'account.password_reset'")
+      .get() as { detail: string };
+    expect(row.detail).not.toContain(fresh);
+    expect(
+      (
+        db.prepare("SELECT totp_enabled FROM users WHERE username = 'ada'").get() as {
+          totp_enabled: number;
+        }
+      ).totp_enabled,
+    ).toBe(1);
+  });
+
+  it('without this server’s master key: refused, nothing changed', async () => {
+    const { db, t } = await populated();
+    const before = hashOf(db);
+    await expect(
+      resetPassword(db, createSealer(randomBytes(32)), 'ada', t.clock.t),
+    ).rejects.toThrow(/master key/);
+    expect(hashOf(db)).toBe(before);
+  });
+
+  it('an unknown user: refused', async () => {
+    const { db, key, t } = await populated();
+    await expect(resetPassword(db, createSealer(key), 'nobody', t.clock.t)).rejects.toThrow(
+      /No user named nobody/,
+    );
   });
 });

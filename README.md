@@ -100,6 +100,7 @@ Admin commands run inside the container (the image has no shell):
 docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts backup             # VACUUM INTO /data/backups/
 docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts verify             # do sealed values open?
 docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts rotate-master-key --new-key-file <f>
+docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts reset-password <username>  # forgotten password
 ```
 
 The server also backs the database up daily to `/data/backups/echo-auto-<date>.db` and keeps

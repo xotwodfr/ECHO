@@ -1,6 +1,10 @@
+import { randomBytes } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import Database from 'better-sqlite3';
+import { audit } from './audit.ts';
+import { hashSecret } from './auth/password.ts';
+import { revokeOthers } from './auth/sessions.ts';
 import { createSealer, loadMasterKey, type Sealer } from './crypto.ts';
 import { type Db, openDb } from './db/db.ts';
 
@@ -15,6 +19,9 @@ import { type Db, openDb } from './db/db.ts';
 //   rotate-master-key --new-key-file F   re-seals every secret with the key in F, in one
 //                                        transaction; then replace the Docker secret with F and
 //                                        restart at once (the running server still has the old key)
+//   reset-password <username>            a forgotten password: a new one, generated and shown once,
+//                                        for whoever holds this server's master key; the account is
+//                                        signed out everywhere, its TOTP stays
 
 /** Every sealed column, and the AAD row id each value was sealed with. */
 const SEALED = [
@@ -138,15 +145,40 @@ export function rotate(db: Db, from: Sealer, to: Sealer) {
   return { resealed, skipped };
 }
 
+/**
+ * A forgotten password, reset by whoever holds the master key (owner, 2026-11-02): the key must open
+ * this server's sealed values, so a copy of the database alone is not enough. The new password is
+ * generated, never typed (shell history), and returned to be shown once; every session and device
+ * of the account is signed out. TOTP is untouched: signing in still needs the code.
+ */
+export async function resetPassword(db: Db, sealer: Sealer, username: string, now: number) {
+  const user = db.prepare('SELECT id FROM users WHERE username = ?').get(username) as
+    | { id: number }
+    | undefined;
+  if (!user) throw new Error(`No user named ${username}.`);
+  const sealed = verify(db, sealer);
+  if (sealed.total > 0 && sealed.unreadable.length === sealed.total)
+    throw new Error("This is not this server's master key: nothing it holds opens with it.");
+  const password = randomBytes(18).toString('base64url'); // 24 characters, 144 bits
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(
+    await hashSecret(password),
+    user.id,
+  );
+  const revoked = revokeOthers(db, user.id, null).changes;
+  audit(db, now, user.id, 'account.password_reset', { by: 'admin-cli', revoked });
+  return password;
+}
+
 if (import.meta.main) {
   const [cmd, ...args] = process.argv.slice(2);
   const dataDir = process.env.ECHO_DATA_DIR || './data';
   const keyFile = process.env.ECHO_MASTER_KEY_FILE || '/run/secrets/echo_master_key';
-  const commands = ['backup', 'verify', 'rotate-master-key'];
+  const commands = ['backup', 'verify', 'rotate-master-key', 'reset-password'];
   if (!commands.includes(cmd ?? '')) {
     console.log(
-      'usage: echo-admin backup [file] | verify | rotate-master-key --new-key-file <file>',
+      'usage: echo-admin backup [file] | verify | rotate-master-key --new-key-file <file> |',
     );
+    console.log('       reset-password <username>');
     process.exit(2);
   }
   const db = openDb(join(dataDir, 'echo.db'));
@@ -163,6 +195,15 @@ if (import.meta.main) {
       );
       for (const u of r.unreadable) console.log(`  unreadable: ${u}`);
       process.exitCode = r.unreadable.length ? 1 : 0;
+    } else if (cmd === 'reset-password') {
+      const username = args[0];
+      if (!username) throw new Error('usage: echo-admin reset-password <username>');
+      const sealer = createSealer(loadMasterKey(keyFile));
+      const password = await resetPassword(db, sealer, username, Date.now());
+      console.log(`New password for ${username} (shown once):`);
+      console.log(`  ${password}`);
+      console.log('Sign in with it (and your authenticator code), then choose your own in');
+      console.log(`Settings → Account → Password. ${username} was signed out on every device.`);
     } else {
       const i = args.indexOf('--new-key-file');
       const next = i >= 0 ? args[i + 1] : undefined;
