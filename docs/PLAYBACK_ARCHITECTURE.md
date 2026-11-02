@@ -160,8 +160,12 @@ server refreshes per user when fewer than 5 minutes remain.
 ### 4.5 Web API usage
 
 All calls go **from the browser** with the short-lived access token. The refresh token never leaves
-the server. Rate limiting: on `429`, honour `Retry-After`. The adapter keeps one in-flight request
-per endpoint.
+the server. Rate limiting: on `429`, a `Retry-After` up to 30 s is slept through once; a longer one,
+a second `429`, or a Development Mode quota (`{"error":{"reason":"QUOTA_EXCEEDED"}}`, which has no
+30 s window and is shared by the developer's apps) starts a page-wide cooldown (the `Retry-After`;
+else 1 min, or 15 min for the quota). Until it is over no Web API call is sent and the SDK is not
+asked to connect (its own `check_scope` calls count too), and the message says how long Spotify
+asked ECHO to wait. A reconnect clears it. The adapter keeps one in-flight request per endpoint.
 
 | Need | Endpoint (checked against the February 2026 migration guide, 2026-10-24) |
 |---|---|
@@ -388,9 +392,9 @@ inputs:
 | Spotify device `not_ready` | SDK event | "Reconnecting to Spotify…" with backoff on `connect()`. After 60 s, offer "Retry". |
 | Spotify `authentication_error` / 401 | event / HTTP | Server refresh once. On failure → "Spotify sign-in expired" + Reconnect (refresh tokens last ~6 months [C]). |
 | Spotify `account_error` | event | "Spotify playback needs Premium." Spotify disabled until reconnect. |
-| Spotify 403 on Web API | HTTP | If the app is in Development Mode and the user isn't allow-listed: "Add this Spotify account to your app's user list in the Spotify Developer Dashboard." |
+| Spotify 403 on Web API | HTTP | If the app is in Development Mode and the user isn't allow-listed: "Add this Spotify account to your app's user list in the Spotify Developer Dashboard." Any other reason Spotify gives (for example the app owner's Premium has lapsed) is shown in its own words: "Spotify refused ECHO: …". |
 | Widevine missing | `requestMediaKeySystemAccess` rejection | Browser-specific guidance (`TECHNICAL_ARCHITECTURE.md` §2.2) |
-| Spotify 429 | HTTP | Honour `Retry-After`. Coalesce polling. |
+| Spotify 429 | HTTP | Short `Retry-After`: wait once. Long, repeated or `QUOTA_EXCEEDED`: stop calling for that long and say so ("Spotify is limiting this app and asks ECHO to wait 19 hours" / "…quota is used up"). §4.5. |
 | ECHO server unreachable (client still open) | fetch failures to `/api/v1/*` | Dock status "Can't reach the ECHO server · retrying", backoff as above. Navidrome audio already buffered keeps playing. Spotify keeps playing (the SDK talks to Spotify directly) until the access token expires. |
 | Session expired or revoked | 401 from `/api/v1/*` | Playback stops after the current track. Login sheet over the current screen, which returns to it after login. |
 

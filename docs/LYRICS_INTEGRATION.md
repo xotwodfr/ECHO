@@ -121,9 +121,13 @@ no connection) and is gone. Now (`src/server/lyrics/spotifyMatch.ts`):
   connected user, admins first), `search3` with an empty query in pages of 500: pass 1 the fast
   matchers (`spotify` only for tracks with no match yet), pass 2 MusicBrainz for what is left and has
   an ISRC or recording ID. Resumable: nothing is asked twice. A Spotify failure never ends the sweep:
-  that track waits for the next run, a `429` Retry-After up to 2 min is waited out, and a longer one
-  or 10 failures in a row leave Spotify for the next run. The app token is fetched per track (cached
-  until it expires; a sweep outlasts it). Admin → Server shows progress, "Match now" and the misses;
+  that track waits for the next run, a `429` Retry-After up to 2 min is waited out, and a longer one,
+  a Development Mode quota (`QUOTA_EXCEEDED`: no 30 s window, shared by the developer's apps), a
+  refused app token, or 10 failures in a row leave Spotify for the run. A pause longer than a sweep
+  sleeps also holds for plays (the quota's default is 15 min). Each exit is a `warn` line in the log
+  ("spotify matching: leaving Spotify until the next run", "spotify app token refused") with
+  Spotify's status, Retry-After and message. The app token is fetched per track (cached until it
+  expires; a sweep outlasts it). Admin → Server shows progress, "Match now" and the misses;
   "Match the Navidrome library with Spotify in the background" switches it off (default on).
 - **Measured 2026-10-24** on the owner's library (22,689 tracks, 74% with ISRC): `lb-meta` 60% on a
   300-track sample (0.7 s per 100); `lb-mbid` 6 of 10 sampled ISRCs. Odesli/song.link was tried and
