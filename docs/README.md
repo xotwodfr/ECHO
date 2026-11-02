@@ -15,7 +15,7 @@ what runs live. Liquid glass was tried and dropped for performance the same day,
 Material 3 surfaces (on `main`, not yet deployed). On 2026-10-30 the **web client was restyled in
 Fluent 2 with an album-tinted Mica glow** ([spec](superpowers/specs/2026-10-29-fluent-web-design.md),
 [plan](superpowers/plans/2026-10-30-fluent-web.md), `DESIGN_SYSTEM.md` Draft 6); the Android app keeps
-Material 3. That work is on the `fluent-web` branch, **not merged or deployed**: one Firefox test
+Material 3. That work is **merged into `main` (2026-11-02) but not deployed**; one Firefox test
 (LYR-17, a scrubber click half a second ahead in the lyrics view) fails from the Selawik commit on,
 cause not yet found. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
 real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
