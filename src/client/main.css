@@ -2616,11 +2616,6 @@ a {
   view-transition-name: page;
 }
 
-/* Switching library source: Your Library crosses over with the page (switchTransition). */
-.vt-source .library-panel {
-  view-transition-name: library;
-}
-
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -2631,14 +2626,12 @@ a {
   pointer-events: none;
 }
 
-::view-transition-old(page),
-::view-transition-old(library) {
+::view-transition-old(page) {
   animation: page-out var(--exit) both;
 }
 
 /* The new page fades in and rises on the spring (opacity never springs, §11.2). */
-::view-transition-new(page),
-::view-transition-new(library) {
+::view-transition-new(page) {
   animation:
     page-fade-in var(--fade) both,
     page-rise var(--spring) both;
