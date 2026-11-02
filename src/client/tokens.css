@@ -151,12 +151,26 @@
   --dur-pop: 160ms; --dur-scrub: 100ms; --dur-loop: 1000ms;
   --dur-art-out: 420ms; --dur-art-overlap: 200ms;
   --dur-page: 250ms; --dur-page-out: 100ms; --dur-morph: 420ms;   /* page changes (main.tsx) */
-  --page-rise: 10px;
+  --page-rise: 24px;
   --np-cover-from: 0.3; --np-cover-rise: 40%;   /* the lyrics view's cover grows from the player's corner */
-  /* Fluent 2's curves: decelerate max, easy ease, accelerate max */
+  /* Fluent 2's curves: decelerate max, easy ease */
   --ease-out: cubic-bezier(0.1,0.9,0.2,1);
   --ease-in-out: cubic-bezier(0.33,0,0.67,1);
-  --ease-exit: cubic-bezier(0.9,0.1,1,0.2);
+  /* The owner's spring (§11, Motion Lab C): stiffness 230, damping 21, 4.9% overshoot (motion.ts
+     samples it; motion.test.ts keeps this copy equal). Movement springs; opacity fades; exits
+     never bounce. Each pair also comes as one value for `transition`/`animation`. */
+  --dur-spring: 592ms;
+  --ease-spring: linear(0, 0.016, 0.0586, 0.1204, 0.1951, 0.2775, 0.3633, 0.4491, 0.5322, 0.6108, 0.6834, 0.7491, 0.8076, 0.8586, 0.9023, 0.9391, 0.9693, 0.9936, 1.0126, 1.0268, 1.037, 1.0437, 1.0475, 1.049, 1.0487, 1.0469, 1.0441, 1.0406, 1.0366, 1.0324, 1.0282, 1.0241, 1.0202, 1.0165, 1.0132, 1.0102, 1.0076, 1.0054, 1.0035, 1.0019, 1.0006, 0.9996, 0.9989, 0.9983, 0.9979, 0.9977, 0.9976, 0.9976, 1);
+  --dur-fade: 220ms; --ease-fade: cubic-bezier(0.32,0.72,0,1);
+  --dur-exit: 180ms; --ease-exit: cubic-bezier(0.4,0,1,1);
+  --dur-exit-move: 180ms;
+  --dur-exit-big: 320ms; --ease-exit-big: cubic-bezier(0.32,0.72,0,1);
+  --stagger: 35ms;
+  --spring: var(--dur-spring) var(--ease-spring);
+  --fade: var(--dur-fade) var(--ease-fade);
+  --exit: var(--dur-exit) var(--ease-exit);
+  --exit-move: var(--dur-exit-move) var(--ease-exit);
+  --exit-big: var(--dur-exit-big) var(--ease-exit-big);
 
   /* ---------- Fluent 2, dark (§3): neutrals from WinUI 3 and @fluentui/tokens webDarkTheme ---------- */
   --fl-mica-base: #1C1C1C;
@@ -252,3 +266,14 @@
 
 
 .num { font-variant-numeric: tabular-nums; }
+
+/* How much moves (§11.2; <html data-motion>, motionLevel() in ui/motion.ts): less motion keeps
+   fades and colour, nothing travels or springs; off stops UI motion altogether. */
+:root[data-motion="less"] {
+  --dur-spring: 0ms; --dur-exit-move: 0ms; --dur-exit-big: 0ms; --stagger: 0ms;
+}
+
+:root[data-motion="off"] {
+  --dur-spring: 0ms; --dur-fade: 0ms; --dur-exit: 0ms; --dur-exit-move: 0ms; --dur-exit-big: 0ms;
+  --stagger: 0ms;
+}

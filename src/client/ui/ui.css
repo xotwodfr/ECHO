@@ -1437,8 +1437,9 @@
   }
 }
 
-/* Reduced motion (§11.2): no travel, scale or loops; opacity and colour stay. */
-@media (prefers-reduced-motion: reduce) {
+/* Less motion (§11.2, <html data-motion> less or off; Settings → Motion → Full wins over the
+   device): no travel, scale or loops; opacity and colour stay. */
+:root:not([data-motion="full"]) {
   .sheet[open],
   .menu,
   .dialog[open] {

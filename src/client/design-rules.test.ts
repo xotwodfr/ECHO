@@ -65,6 +65,15 @@ describe('DS-01: no raw design values outside tokens.css', () => {
     });
   }
 
+  // §11.2: how much moves is <html data-motion> (Settings → Motion over the device), never the
+  // media query alone, or Settings → Motion → Full could not win.
+  it('no stylesheet reads prefers-reduced-motion', () => {
+    const css = files.filter(
+      (f) => f.name.endsWith('.css') && /prefers-reduced-motion/.test(f.text),
+    );
+    expect(css.map((f) => f.name)).toEqual([]);
+  });
+
   it('JS durations that mirror a token stay equal to it', () => {
     const tokens = readFileSync(join(ROOT, 'tokens.css'), 'utf8');
     expect(tokens).toContain(`--dur-toast: ${TOAST_EXIT_MS}ms`);

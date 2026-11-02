@@ -274,28 +274,41 @@ Unchanged from Draft 3: name, status pill and detail, actions on the right.
 
 ## 11. Motion system
 
-### 11.1 Tokens
+The owner's choice (2026-11-02, `docs/superpowers/specs/2026-11-02-spring-motion-design.md`):
+**springy motion on everything** that appears, leaves, moves or changes. Nothing pops.
 
-Fluent 2's durations and curves for the app; the lyrics view's and the palette's own stay.
+### 11.1 Tokens
 
 | Token | Value | Use |
 |---|---|---|
-| `--dur-press` | 100ms | Press fills |
-| `--dur-hover` | 150ms | Colour change on hover |
-| `--dur-ui` | 200ms | Menus, the sticky header, the card's play button |
-| `--dur-toast` | 250ms | Toast in/out |
-| `--dur-page` / `--dur-page-out` | 250 / 100ms | Page changes |
+| `--spring` (`--dur-spring` / `--ease-spring`) | 592ms, a `linear()` spring: stiffness 230, damping 21, 4.9% overshoot | Every movement in: scale, translate, size, clip, cover flights |
+| `--fade` (`--dur-fade` / `--ease-fade`) | 220ms, `cubic-bezier(0.32,0.72,0,1)` | Opacity in (opacity never springs) |
+| `--exit` (`--dur-exit` / `--ease-exit`) | 180ms, `cubic-bezier(0.4,0,1,1)` | Opacity out |
+| `--exit-move` (`--dur-exit-move`) | 180ms on `--ease-exit` | Movement out: no bounce |
+| `--exit-big` (`--dur-exit-big` / `--ease-exit-big`) | 320ms, `cubic-bezier(0.32,0.72,0,1)` | Big things leaving: the right panel, the lyrics view |
+| `--stagger` | 35ms | Per item in a group (menu items, rows, tiles), capped at the 12th |
+| `--dur-press` / `--dur-hover` | 100 / 150ms | Colour change on press and hover (presses themselves spring) |
+| `--dur-toast` | 250ms | The toast's time to leave (`TOAST_EXIT_MS`) |
 | `--dur-art` | 640ms | The pill fading out, the lyrics view's side settling |
 | `--dur-palette` | 1200ms | Palette interpolation and Mica's crossfade |
-| `--ease-out` / `--ease-in-out` / `--ease-exit` | Fluent's decelerate max / easy ease / accelerate max | Entrances / travels / exits |
+| `--ease-out` / `--ease-in-out` | Fluent's decelerate max / easy ease | Colour and the few non-UI fades left |
 
+`ui/motion.ts` samples the spring (`springPoints`); a unit test keeps tokens.css equal to it.
 The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 
 ### 11.2 Rules
 
-- Animate `transform`, `scale`, `opacity` and colour; never layout.
-- No bounce on UI elements.
-- **Reduced motion:** no scale, travel or loops; opacity and colour stay (Mica's crossfade too).
+- Movement springs; opacity fades; **exits never bounce**. The 4.9% overshoot is the ceiling.
+- An entrance is a transition from `@starting-style`; an exit sets `data-leaving` and the element
+  stays until its animation ends (`settle`, `useExit`, `closeModal`). Nothing waits on an animation
+  to accept input, and every animation can be interrupted.
+- Animate `transform`, `scale`, `opacity`, `clip-path` and colour. A size or grid change may
+  animate only where it is measured smooth (the right panel's column, MOT-PERF).
+- **How much moves** is `<html data-motion>` from Settings → Motion against the device's
+  reduce-motion setting (`motionLevel`): **full** springs (Full wins over the device); **less**
+  (Reduced, or System on a device asking for less) keeps opacity and colour, nothing travels,
+  scales or loops; **off** stops UI motion. tokens.css zeroes the tokens; no stylesheet reads
+  `prefers-reduced-motion` itself.
 
 ## 12. Accessibility baseline
 

@@ -25,6 +25,7 @@ import { spotifyStatus } from './shell/SpotifyViews.tsx';
 import { type Libraries, setSource, startSource } from './source.ts';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
+import { motionLevel } from './ui/motion.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
 import { createViewStore, type Route } from './view.ts';
 
@@ -35,12 +36,10 @@ const fixtures = __ECHO_FIXTURES__ ? await import('./fixtures/playback.ts') : nu
 
 /** Settings → Motion, or the system's choice under "system": less motion is reduced or off. */
 const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
-function lessMotion() {
-  const m = prefsStore.getState().visuals.motion;
-  return m === 'off' || m === 'reduced' || (m === 'system' && reducedQuery.matches);
-}
-// CSS motion of the shell's own (the lyrics view's entrance) reads it as <html data-motion>.
-const markMotion = () => (document.documentElement.dataset.motion = lessMotion() ? 'less' : 'full');
+const level = () => motionLevel(prefsStore.getState().visuals.motion, reducedQuery.matches);
+const lessMotion = () => level() !== 'full';
+// The shell's CSS motion reads it as <html data-motion> (tokens.css zeroes the motion tokens).
+const markMotion = () => (document.documentElement.dataset.motion = level());
 markMotion();
 prefsStore.subscribe((s, prev) => s.visuals !== prev.visuals && markMotion());
 reducedQuery.addEventListener('change', markMotion);
