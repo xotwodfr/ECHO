@@ -1,6 +1,6 @@
 # Springy motion everywhere in the web app — design
 
-Status: **approved** by the owner 2026-11-02 ("build it")
+Status: **approved** by the owner 2026-11-02 ("build it") · built, merged into `main` and deployed 2026-11-02 (plan `docs/superpowers/plans/2026-11-02-spring-motion.md`)
 
 ## Intent
 

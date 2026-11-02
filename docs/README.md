@@ -28,9 +28,9 @@ deferred). Since 2026-10-29:
 - **Spring motion** (2026-11-02, web; [spec](superpowers/specs/2026-11-02-spring-motion-design.md),
   [plan](superpowers/plans/2026-11-02-spring-motion.md), `DESIGN_SYSTEM.md` §11): everything that
   appears, leaves, moves or changes animates on the owner's spring; menus, dialogs and panels play
-  their exits; Spotify's artwork only fades. Branch `spring-motion`, not merged or deployed yet.
+  their exits; Spotify's artwork only fades.
 
-**Live** at echo.folk3s.com since 2026-11-02 15:31 UTC: all of the above, built from `653342f`, all
+**Live** at echo.folk3s.com since 2026-11-02 19:58 UTC: all of the above, built from `c9c0db9`, all
 of it merged into `main`.
 **Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
 the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full
