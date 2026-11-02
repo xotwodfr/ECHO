@@ -20,7 +20,7 @@ import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx
 import { Artwork } from '../ui/media.tsx';
 import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
-import { collections, setStar } from './collections.ts';
+import { collections, setStar, sourceOfItem } from './collections.ts';
 import { useCompact, useWide } from './compact.ts';
 import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
@@ -290,8 +290,8 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
       mute: c.toggleMute,
       like: () => {
         const t = c.player.getState().track;
-        if (t?.provider !== 'navidrome') return;
-        const s = collections.getState().starred;
+        if (!t) return;
+        const s = collections.getState()[sourceOfItem('track', t)].starred;
         const on = !!s && s !== 'error' && s.tracks.some((x) => x.id === t.id);
         void setStar('track', t, !on);
       },

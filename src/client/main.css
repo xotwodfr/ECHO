@@ -226,6 +226,43 @@ a {
   display: none;
 }
 
+/* The library switch (source.ts): Fluent's segmented control, the chosen source in the accent. */
+.source-switch {
+  display: inline-flex;
+  margin: 0;
+  min-width: 0;
+  flex: none;
+  gap: var(--rule);
+  padding: var(--rule);
+  border: var(--rule) solid var(--fl-stroke-control);
+  border-radius: var(--r-control);
+  background: var(--fl-control);
+}
+
+.source-switch button {
+  height: calc(var(--fl-button-h) - 2 * var(--rule));
+  padding: 0 var(--fl-button-pad);
+  border: 0;
+  border-radius: var(--fl-corner-s);
+  background: transparent;
+  color: var(--muted);
+  font: var(--fl-type-body-strong) var(--font-ui);
+  cursor: pointer;
+  transition:
+    background-color var(--dur-hover) var(--ease-in-out),
+    color var(--dur-hover) var(--ease-in-out);
+}
+
+.source-switch button:hover:not([aria-pressed="true"]) {
+  background: var(--fl-subtle-hover);
+  color: var(--text);
+}
+
+.source-switch button[aria-pressed="true"] {
+  background: var(--green);
+  color: var(--on-green);
+}
+
 .avatar-btn {
   display: grid;
   place-items: center;

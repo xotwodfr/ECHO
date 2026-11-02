@@ -159,6 +159,11 @@ test('QUE-03: Spotify music over a Navidrome queue asks first; Cancel keeps it, 
   await playAlbum(page, 'al-1');
   // In the app (a reload would start without the queue).
   await page.getByRole('button', { name: 'Close Now playing' }).click();
+  // One library at a time: Spotify's albums show once the switch says Spotify (the queue stays).
+  await page
+    .getByRole('group', { name: 'Library', exact: true })
+    .getByRole('button', { name: 'Spotify', exact: true })
+    .click();
   await page
     .getByRole('navigation', { name: 'Your Library' })
     .getByRole('link', { name: /^Northern Static/ })
@@ -196,17 +201,27 @@ test('QUE-04: Spotify’s queue is read-only except Add, with the explanation', 
     .toBe(true);
 });
 
-test('SRCH-02: results grouped by provider, Navidrome first, Spotify at most 10', async ({
+test('SRCH-02: search finds the active source only; Spotify at most 10 per type', async ({
   page,
 }) => {
   const fake = await ready(page);
   await page.goto('/search');
-  await page.getByRole('navigation', { name: 'Main' }).getByRole('searchbox').fill('a');
+  await page
+    .getByRole('group', { name: 'Library', exact: true })
+    .getByRole('button', { name: 'Navidrome', exact: true })
+    .click();
+  const box = page.getByRole('navigation', { name: 'Main' }).getByRole('searchbox');
+  await box.fill('a');
   const groups = page.locator('.results-group');
-  await expect(groups).toHaveCount(2);
+  await expect(groups).toHaveCount(1);
   await expect(groups.first()).toHaveAttribute('data-provider', 'navidrome');
-  await expect(groups.nth(1)).toHaveAttribute('data-provider', 'spotify');
-  await expect(groups.nth(1).locator('.provider-mark').first()).toHaveText('Spotify');
+  // The same query, now against Spotify: only its results, never the Navidrome ones meanwhile.
+  await page
+    .getByRole('group', { name: 'Library', exact: true })
+    .getByRole('button', { name: 'Spotify', exact: true })
+    .click();
+  await expect(groups).toHaveCount(1);
+  await expect(groups.first()).toHaveAttribute('data-provider', 'spotify');
   const searches = fake.requests.filter((r) => r.path === '/v1/search');
   expect(searches.length).toBeGreaterThan(0);
   for (const s of searches) expect(Number(s.query.get('limit'))).toBeLessThanOrEqual(10);

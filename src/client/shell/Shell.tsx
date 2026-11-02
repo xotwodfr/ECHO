@@ -1,9 +1,9 @@
 import { lazy, Suspense, type UIEvent, useCallback, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
-import type { Library } from '../library.ts';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
 import { logout, sessionStore } from '../session.ts';
+import type { Libraries } from '../source.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
@@ -43,6 +43,7 @@ import { panels } from './panels.ts';
 import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
 import { RightPanel } from './RightPanel.tsx';
 import { PreferencesSection } from './SettingsViews.tsx';
+import { SourceSwitch } from './SourceSwitch.tsx';
 import { Stage } from './Stage.tsx';
 import { StageChrome, StageContent } from './StageViews.tsx';
 
@@ -104,6 +105,7 @@ function TopBar({ route }: { route: Route }) {
         >
           <Icon name="home" solid={home} />
         </Link>
+        <SourceSwitch />
         <SearchField className="topbar-search" />
       </nav>
       <AccountMenu />
@@ -464,11 +466,13 @@ function Frame() {
 export function Shell(props: {
   store: ViewStore;
   controller: PlaybackController;
-  library: Library | null;
+  libraries: Libraries;
 }) {
   return (
     <ViewContext.Provider value={props.store}>
-      <PlaybackContext.Provider value={{ controller: props.controller, library: props.library }}>
+      <PlaybackContext.Provider
+        value={{ controller: props.controller, libraries: props.libraries }}
+      >
         <Frame />
       </PlaybackContext.Provider>
     </ViewContext.Provider>

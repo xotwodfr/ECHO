@@ -1,15 +1,18 @@
 import type { Track } from '../../shared/types.ts';
 import type { Album } from '../library.ts';
+import { sourceOf } from '../source.ts';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
-import { canStar, setStar, useStarred } from './collections.ts';
+import { canStar, setStar, sourceOfItem, useStarred } from './collections.ts';
 
 // Spotify's heart (a song) and save-to-library check (an album): outline when not saved, filled
-// green when saved. Navidrome's star underneath. Only on Navidrome items, where it can be saved.
+// when saved. Each saves to its item's own source (a Navidrome star, Spotify's library), whichever
+// source is active.
 
 export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'md' | 'lg' }) {
-  const on = useStarred('track', t.id);
-  if (!canStar() || t.provider !== 'navidrome') return null;
+  const source = sourceOfItem('track', t);
+  const on = useStarred('track', t.id, source);
+  if (!canStar(source)) return null;
   return (
     <button
       type="button"
@@ -26,7 +29,7 @@ export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'm
 
 export function SaveAlbumButton({ album: a }: { album: Album }) {
   const on = useStarred('album', a.id);
-  if (!canStar() || a.id.startsWith('spotify:')) return null;
+  if (!canStar(sourceOf(a.id))) return null;
   return (
     <button
       type="button"

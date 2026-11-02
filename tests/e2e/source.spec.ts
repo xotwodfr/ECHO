@@ -1,0 +1,70 @@
+import { expect, type Page, test } from '@playwright/test';
+import { fakeSpotify, SP_ALBUM } from './fake-spotify.ts';
+import { connectSpotify, releaseSpotify, signedInWithNavidrome } from './helpers.ts';
+
+// The library switch (docs/superpowers/specs/2026-11-02-source-switch-design.md): one source's
+// albums at a time; a link to the other source's item switches to it; playback carries on.
+
+test.describe.configure({ mode: 'default' });
+let user: string | null = null;
+test.afterEach(() => {
+  if (user) releaseSpotify(user);
+  user = null;
+});
+
+const panel = (page: Page) => page.locator('.library-panel');
+const segment = (page: Page, name: string) =>
+  page
+    .getByRole('group', { name: 'Library', exact: true })
+    .getByRole('button', { name, exact: true });
+
+async function both(page: Page) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await fakeSpotify(page);
+  user = await signedInWithNavidrome(page, 'src');
+  await connectSpotify(page);
+  await page.goto('/');
+}
+
+test('the switch shows one library at a time', async ({ page }) => {
+  await both(page);
+  await expect(segment(page, 'Navidrome')).toHaveAttribute('aria-pressed', 'true');
+  await expect(panel(page).getByText('Harbour Lights').first()).toBeVisible();
+  await expect(panel(page).getByText('Northern Static')).toHaveCount(0);
+  await segment(page, 'Spotify').click();
+  await expect(panel(page).getByText('Northern Static').first()).toBeVisible();
+  await expect(panel(page).getByText('Harbour Lights')).toHaveCount(0);
+  await page.reload();
+  await expect(segment(page, 'Spotify')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('a Spotify link in Navidrome mode opens it and switches', async ({ page }) => {
+  await both(page);
+  await segment(page, 'Navidrome').click();
+  await page.goto(`/library/album/${encodeURIComponent(`spotify:${SP_ALBUM.id}`)}`);
+  await expect(page.getByRole('heading', { name: 'Northern Static' })).toBeVisible();
+  await expect(segment(page, 'Spotify')).toHaveAttribute('aria-pressed', 'true');
+});
+
+test('switching keeps the music playing', async ({ page }) => {
+  await both(page);
+  await segment(page, 'Navidrome').click();
+  await page.goto('/library/album/al-1');
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
+  const dock = page.getByRole('region', { name: 'Player' });
+  await expect(dock).toHaveAttribute('data-status', 'playing');
+  await segment(page, 'Spotify').click();
+  await expect(page).toHaveURL(/\/$/); // the Navidrome album page gave way to Home
+  await expect(dock).toHaveAttribute('data-status', 'playing');
+});
+
+test('Navidrome only: no switch', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await signedInWithNavidrome(page, 'nsw');
+  await page.goto('/');
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Library', exact: true })).toHaveCount(0);
+});

@@ -454,6 +454,7 @@ export const strings = {
     secretSaved: '•••••••• Saved',
     reload: 'Connected. Loading your library…',
   },
+  source: { label: 'Library', navidrome: 'Navidrome', spotify: 'Spotify' },
   spotify: {
     title: 'Spotify',
     connect: 'Connect Spotify',

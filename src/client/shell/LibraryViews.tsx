@@ -1163,7 +1163,11 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
   const c = usePlayback();
   const s = strings.search;
   // A server library searches on the server, 200 ms after typing stops (PRODUCT_SPEC.md §6.4).
-  const [remote, setRemote] = useState<(Found & { q: string; failed?: boolean }) | null>(null);
+  // Each answer names the library that gave it: after the switch flips, the other source's results
+  // are never shown while the new search runs.
+  const [remote, setRemote] = useState<
+    (Found & { q: string; from: unknown; failed?: boolean }) | null
+  >(null);
   const [attempt, setAttempt] = useState(0);
   // biome-ignore lint/correctness/useExhaustiveDependencies: `attempt` re-runs the search (Retry)
   useEffect(() => {
@@ -1173,8 +1177,8 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
     let current = true;
     const id = setTimeout(() => {
       void library.searchRemote?.(q).then(
-        (r) => current && setRemote({ q, ...r }),
-        () => current && setRemote({ q, tracks: [], albums: [], failed: true }),
+        (r) => current && setRemote({ q, from: library, ...r }),
+        () => current && setRemote({ q, from: library, tracks: [], albums: [], failed: true }),
       );
     }, 200);
     return () => {
@@ -1186,7 +1190,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
   const found: Found | null = !q
     ? null
     : library?.searchRemote
-      ? remote?.q === q
+      ? remote?.q === q && remote.from === library
         ? remote
         : null
       : (library?.search(q) ?? { tracks: [], albums: [] });

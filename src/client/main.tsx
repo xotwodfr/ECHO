@@ -7,7 +7,7 @@ import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
 import { createNavidromeLibrary } from './library-navidrome.ts';
-import { combineLibraries, createSpotifyLibrary } from './library-spotify.ts';
+import { createSpotifyLibrary } from './library-spotify.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
@@ -22,6 +22,7 @@ import { confirmReplace } from './shell/ReplaceQueue.tsx';
 import { startAutoplay } from './shell/radio.ts';
 import { Shell } from './shell/Shell.tsx';
 import { spotifyStatus } from './shell/SpotifyViews.tsx';
+import { type Libraries, setSource, startSource } from './source.ts';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
@@ -131,8 +132,20 @@ const spotify =
   spotifyState?.connection?.status === 'connected'
     ? new SpotifyProvider({ gates: spotifyState.gates })
     : null;
-const baseLibrary = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null);
-const library = spotify ? combineLibraries(baseLibrary, createSpotifyLibrary()) : baseLibrary;
+// One library at a time (source.ts): both kept, the switch (Settings → Default service) picks.
+const libraries: Libraries = {
+  navidrome: ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null),
+  spotify: spotify ? createSpotifyLibrary() : null,
+};
+startSource(libraries, store, {
+  remembered: () => prefs().playback.defaultProvider,
+  remember: (s) => void setPref('playback', 'defaultProvider', s).catch(() => undefined),
+});
+prefsStore.subscribe(
+  (s, prev) =>
+    s.playback.defaultProvider !== prev.playback.defaultProvider &&
+    setSource(s.playback.defaultProvider),
+);
 
 const controller = createPlaybackController({
   provider: ownLibrary
@@ -183,8 +196,8 @@ if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().sho
 
 // Playlists and hearts for every page (one fetch, refreshed after changes), and Autoplay: similar
 // songs when the music runs out.
-startCollections(library);
-startAutoplay(controller, library, () => prefs().playback.autoplay);
+startCollections(libraries);
+startAutoplay(controller, libraries.navidrome, () => prefs().playback.autoplay);
 startHistory(controller, !!ownLibrary);
 
 // The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
@@ -209,7 +222,7 @@ if (root)
       {unreachable ? (
         <ServerUnreachable />
       ) : (
-        <Shell store={store} controller={controller} library={library} />
+        <Shell store={store} controller={controller} libraries={libraries} />
       )}
     </AppErrorBoundary>,
   );
