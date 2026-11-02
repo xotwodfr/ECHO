@@ -34,13 +34,19 @@ export function startCollections(libs: Libraries) {
   }
 }
 
-export async function refreshPlaylists(s: Source = active()) {
+/** A source, or the active one: also when called as an event handler (`onRetry={refreshPlaylists}`). */
+const sourceOrActive = (s: unknown): Source =>
+  s === 'navidrome' || s === 'spotify' ? s : active();
+
+export async function refreshPlaylists(source?: Source) {
+  const s = sourceOrActive(source);
   const lib = libraries[s];
   if (!lib?.playlists) return put(s, { playlists: [] });
   put(s, { playlists: await lib.playlists().catch(() => 'error' as const) });
 }
 
-export async function refreshStarred(s: Source = active()) {
+export async function refreshStarred(source?: Source) {
+  const s = sourceOrActive(source);
   const lib = libraries[s];
   if (!lib?.starredAll) return put(s, { starred: EMPTY });
   put(s, { starred: await lib.starredAll().catch(() => 'error' as const) });
