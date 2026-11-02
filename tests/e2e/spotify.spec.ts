@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { fakeSpotify, SP_ALBUM, SP_GLASS, SP_TRACKS } from './fake-spotify.ts';
+import { fakeSpotify, SP_ALBUM, SP_GLASS, SP_PLAYLIST, SP_TRACKS } from './fake-spotify.ts';
 import {
   clearLyricsCache,
   connectSpotify,
@@ -47,6 +47,14 @@ test('connecting Spotify from Settings → Account (PKCE through ECHO)', async (
   await expect(page.getByTestId('drm-guidance')).toHaveCount(0);
   await page.getByRole('button', { name: 'Disconnect' }).last().click();
   await expect(page.getByRole('button', { name: 'Connect Spotify' })).toBeVisible();
+});
+
+test('a Spotify playlist opens with its songs', async ({ page }) => {
+  await ready(page);
+  await page.goto(`/playlist/${encodeURIComponent(`spotify:${SP_PLAYLIST.id}`)}`);
+  await expect(page.getByRole('heading', { name: 'Night Drive' })).toBeVisible();
+  await expect(page.locator('.track-row')).toHaveCount(2);
+  await expect(page.getByText('This playlist does not exist')).toHaveCount(0);
 });
 
 test('BRW-02: without Widevine, the browser’s own fix is named', async ({ page, browserName }) => {

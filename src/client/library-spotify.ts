@@ -1,6 +1,6 @@
 import type { Track } from '../shared/types.ts';
-import type { Album, Library, Playlist } from './library.ts';
-import { spotifyApi } from './spotify/api.ts';
+import type { Album, Library, Playlist, PlaylistDetail } from './library.ts';
+import { SpotifyError, spotifyApi } from './spotify/api.ts';
 
 // The Spotify library subset (PLAYBACK_ARCHITECTURE.md §4.5): saved albums, the playlists the user
 // owns or collaborates on (others' items are unreadable for Development Mode apps), and search at
@@ -116,7 +116,7 @@ export function createSpotifyLibrary(): Library {
   }
   void loadSaved();
 
-  return {
+  const lib: Library = {
     get albums() {
       return albums;
     },
@@ -173,6 +173,33 @@ export function createSpotifyLibrary(): Library {
       }
       return out;
     },
+    async playlist(id): Promise<PlaylistDetail | undefined> {
+      const p = await spotifyApi<{
+        name: string;
+        description?: string | null;
+        owner?: { display_name?: string | null; id: string };
+      }>(`/v1/playlists/${encodeURIComponent(raw(id))}`, {
+        query: { fields: 'name,description,owner(display_name,id)' },
+      }).catch((e: unknown) => {
+        if (e instanceof SpotifyError && e.appError.code === 'spotify.http_404') return null;
+        throw e;
+      });
+      if (!p) return undefined;
+      const entries = (await lib.playlistTracks?.(id)) ?? [];
+      const covers = [
+        ...new Set(entries.map((t) => t.artwork[0]?.url).filter((u): u is string => !!u)),
+      ].slice(0, 4);
+      return {
+        id: PREFIX + raw(id),
+        name: p.name,
+        tracks: entries.length,
+        ...(p.description && { comment: p.description }),
+        owner: p.owner?.display_name ?? p.owner?.id,
+        covers,
+        durationMs: entries.reduce((n, t) => n + t.durationMs, 0),
+        entries,
+      };
+    },
     async playlistTracks(id) {
       const out: Track[] = [];
       for (let offset = 0; ; offset += PAGE) {
@@ -208,6 +235,7 @@ export function createSpotifyLibrary(): Library {
     },
     version: () => version,
   };
+  return lib;
 }
 
 /** Both answers; one that failed counts as `none`. Both failing is an error, shown with Retry. */
@@ -268,9 +296,7 @@ export function combineLibraries(nav: Library | null, sp: Library): Library {
     ...(nav.starred && { starred: nav.starred }),
     // Home, hearts, playlists, radio and genres are Navidrome's (Spotify's library is read-only).
     ...Object.fromEntries(NAV_ONLY.filter((k) => nav[k]).map((k) => [k, nav[k]])),
-    ...(nav.playlist && {
-      playlist: async (id: string) => (id.startsWith(PREFIX) ? undefined : nav.playlist?.(id)),
-    }),
+    playlist: async (id: string) => owner(id).playlist?.(id),
     async searchRemote(q) {
       const none = { tracks: [], albums: [] };
       const [a, b] = await eitherOf(

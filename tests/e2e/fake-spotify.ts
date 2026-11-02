@@ -153,6 +153,13 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
       ],
       next: null,
     });
+  if (method === 'GET' && p === `/v1/playlists/${SP_PLAYLIST.id}`)
+    return json({
+      ...SP_PLAYLIST,
+      description: '',
+      owner: { id: 'mock-user', display_name: 'Ada' },
+      images: [],
+    });
   if (method === 'GET' && p === `/v1/playlists/${SP_PLAYLIST.id}/items`)
     return json({
       items: SP_TRACKS.slice(0, 2).map((t) => ({ item: { ...t, album: SP_ALBUM } })),
