@@ -8,7 +8,7 @@ import type {
   Track,
   Unsubscribe,
 } from '../../shared/types.ts';
-import { SpotifyError, spotifyApi, spotifyToken } from '../spotify/api.ts';
+import { assertSpotifyReady, SpotifyError, spotifyApi, spotifyToken } from '../spotify/api.ts';
 import { strings } from '../strings.ts';
 import { type Clock, realClock } from './clock.ts';
 import { SILENT_FEATURES } from './features.ts';
@@ -181,6 +181,7 @@ export class SpotifyProvider implements PlaybackProvider {
   }
 
   private async start() {
+    assertSpotifyReady(); // the SDK's own calls to Spotify count against the same app limit
     spotifyStore.setState({ status: this.reconnectingSince ? 'reconnecting' : 'connecting' });
     const Spotify = await this.sdk();
     if (!this.player) {

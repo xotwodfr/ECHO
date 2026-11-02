@@ -9,7 +9,8 @@ vi.mock('../api.ts', () => ({
   ApiError: class extends Error {},
   api: async () => ({ accessToken: 'at', expiresAt: Date.now() + 3_600_000, scopes: granted }),
 }));
-const { forgetSpotifyToken, missingScopes, spotifyApi, spotifyToken } = await import('./api.ts');
+const { forgetSpotifyToken, missingScopes, spotifyApi, spotifyCooldown, spotifyToken } =
+  await import('./api.ts');
 
 const answer = (status: number, body: unknown) =>
   vi.stubGlobal(
@@ -35,6 +36,24 @@ describe('spotifyApi', () => {
     await expect(spotifyApi('/v1/me')).rejects.toMatchObject({
       appError: { code: 'spotify.not_on_user_list' },
     });
+  });
+
+  it('a long Retry-After stops the calls instead of being slept through and repeated', async () => {
+    const fetchMock = vi.fn(
+      async () => new Response('', { status: 429, headers: { 'retry-after': '68167' } }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(spotifyApi('/v1/me/albums')).rejects.toMatchObject({
+      appError: { code: 'spotify.rate_limited', userMessage: expect.stringContaining('19 hours') },
+    });
+    // Cooling down: later calls fail at once, without asking Spotify again.
+    await expect(spotifyApi('/v1/me/playlists')).rejects.toMatchObject({
+      appError: { code: 'spotify.rate_limited' },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(spotifyCooldown()).toBeGreaterThan(18 * 3600_000);
+    forgetSpotifyToken(); // a reconnect may try again
+    expect(spotifyCooldown()).toBe(0);
   });
 
   it('missingScopes lists what the token lacks', async () => {

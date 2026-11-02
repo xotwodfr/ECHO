@@ -96,9 +96,11 @@ let web: { method: string; url: URL; body: unknown }[];
 let tokenStatus: number;
 let webStatus: (url: URL) => number;
 let player: { device?: { id: string; name: string } };
+let retryAfter: string | null;
 
 beforeEach(() => {
   web = [];
+  retryAfter = null;
   tokenStatus = 200;
   webStatus = () => 204;
   player = {};
@@ -118,7 +120,10 @@ beforeEach(() => {
     });
     if (url.pathname === '/v1/me/player' && (init?.method ?? 'GET') === 'GET')
       return Response.json(player);
-    return new Response(null, { status: webStatus(url) });
+    return new Response(null, {
+      status: webStatus(url),
+      headers: retryAfter ? { 'retry-after': retryAfter } : {},
+    });
   });
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -274,6 +279,24 @@ describe('SpotifyProvider', () => {
     await flush();
     expect(errors.at(-1)).toMatchObject({ code: 'spotify.expired', retriable: false });
     expect(spotifyStore.getState().error?.code).toBe('spotify.expired');
+  });
+
+  it('told to wait hours, play says so and the SDK is not asked to connect again', async () => {
+    retryAfter = '68167';
+    webStatus = () => 429;
+    const first = setup();
+    await first.p.playContext({ kind: 'album', id: 'a'.repeat(22), title: 'Record' }, 0, [tr(1)]);
+    expect(first.errors.at(-1)).toMatchObject({
+      code: 'spotify.rate_limited',
+      userMessage: expect.stringContaining('19 hours'),
+    });
+    const asked = web.length;
+    const player = FakePlayer.last;
+    const next = setup();
+    await next.p.load(tr(2), { autoplay: true });
+    expect(next.errors.at(-1)).toMatchObject({ code: 'spotify.rate_limited' });
+    expect(web.length).toBe(asked); // nothing more went to Spotify
+    expect(FakePlayer.last).toBe(player); // and no second SDK player was created
   });
 
   it('a 403 from the Web API names the missing user-list entry', async () => {

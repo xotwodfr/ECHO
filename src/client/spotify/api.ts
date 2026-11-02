@@ -73,12 +73,33 @@ export function missingScopes(): string[] {
   return REQUIRED_SCOPES.filter((s) => !have.includes(s));
 }
 
-/** Forget the token (disconnect, sign-out). */
+/** Forget the token (disconnect, sign-out); a reconnect may also try Spotify again. */
 export function forgetSpotifyToken() {
   cached = null;
+  coolUntil = 0;
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Spotify's rate limit is the app's, not the user's (Development Mode: a low one, and a Retry-After
+// of hours has been seen). A short wait is slept through once; a longer one, or a second 429, stops
+// every call from this page until it is over, so ECHO does not keep asking an app Spotify has told
+// to wait. Retry-After may be hidden from the page by CORS: then it counts as a minute.
+let coolUntil = 0;
+const COOL_DEFAULT_S = 60;
+const MAX_SLEEP_S = 30;
+
+/** Milliseconds until Spotify may be asked again; 0 when it may be asked now. */
+export const spotifyCooldown = () => Math.max(0, coolUntil - Date.now());
+
+const rateLimited = (seconds: number) =>
+  new SpotifyError(err('spotify.rate_limited', strings.spotify.rateLimited(seconds), true));
+
+/** Throws while Spotify has asked the app to wait: for calls that would reach it some other way. */
+export function assertSpotifyReady() {
+  const ms = spotifyCooldown();
+  if (ms > 0) throw rateLimited(Math.ceil(ms / 1000));
+}
 
 /** One Web API call; JSON in and out, null for 204. */
 export async function spotifyApi<T>(
@@ -90,6 +111,7 @@ export async function spotifyApi<T>(
   let retried = false;
   let refreshed = false;
   for (;;) {
+    assertSpotifyReady();
     const token = await spotifyToken(refreshed);
     const res = await fetch(url, {
       method: init.method ?? 'GET',
@@ -100,10 +122,15 @@ export async function spotifyApi<T>(
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
     }).catch(() => null);
     if (!res) throw new SpotifyError(err('spotify.unavailable', strings.spotify.unavailable, true));
-    if (res.status === 429 && !retried) {
-      retried = true;
-      await sleep(Math.min(30, Number(res.headers.get('retry-after')) || 1) * 1000);
-      continue;
+    if (res.status === 429) {
+      const after = Number(res.headers.get('retry-after')) || 0;
+      if (!retried && after <= MAX_SLEEP_S) {
+        retried = true;
+        await sleep(Math.max(after, 1) * 1000);
+        continue;
+      }
+      coolUntil = Date.now() + (after || COOL_DEFAULT_S) * 1000;
+      throw rateLimited(after || COOL_DEFAULT_S);
     }
     if (res.status === 401 && !refreshed) {
       refreshed = true;

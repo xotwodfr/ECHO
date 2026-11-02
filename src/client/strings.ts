@@ -496,6 +496,16 @@ export const strings = {
     premium: 'Spotify playback needs Premium.',
     playbackFailed: "Spotify couldn't play this track.",
     unavailable: "Spotify isn't answering. Try again in a moment.",
+    /** Spotify's 429 with a Retry-After too long to wait out on this page. */
+    rateLimited: (seconds: number) => {
+      const [n, unit] =
+        seconds >= 3600
+          ? [Math.round(seconds / 3600), 'hour']
+          : seconds >= 60
+            ? [Math.round(seconds / 60), 'minute']
+            : [Math.ceil(seconds), 'second'];
+      return `Spotify is limiting this app and asks ECHO to wait ${n} ${unit}${n === 1 ? '' : 's'}.`;
+    },
     playingOn: (device: string) => `Playing on ${device}`,
     playHere: 'Play here',
     queueNote: 'Queue managed by Spotify. Items can be added but not reordered.',
