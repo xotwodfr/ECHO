@@ -101,6 +101,13 @@ export function spotifyAppReady() {
   db.close();
 }
 
+/** Forgets every Spotify match: the E2E database outlives runs, and each run fixes a miss by hand. */
+export function clearSpotifyMatches() {
+  const db = e2eDb();
+  db.prepare('DELETE FROM spotify_matches').run();
+  db.close();
+}
+
 /** Sets an admin setting directly (the gates), as Admin → Server would. */
 export function serverSetting(key: string, value: unknown) {
   const db = e2eDb();

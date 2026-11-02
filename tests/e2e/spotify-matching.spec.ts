@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import { clearLyricsCache, playAlbum, signedInWithNavidrome } from './helpers.ts';
+import {
+  clearLyricsCache,
+  clearSpotifyMatches,
+  playAlbum,
+  signedInWithNavidrome,
+} from './helpers.ts';
 
 // Spotify matching for Navidrome tracks (LYRICS_INTEGRATION.md §4.3) on the mock services, which
 // know no track: a playing track is tried at once, shows up as "not found" for the admin, and is
@@ -11,6 +16,7 @@ test('an admin fixes the playing track’s match from the Stage, and fixes a mis
   page,
 }) => {
   clearLyricsCache();
+  clearSpotifyMatches();
   await signedInWithNavidrome(page, 'adm', 'admin');
   await playAlbum(page, 'al-3'); // Glass Weather: LRCLIB lyrics, so the ⓘ menu is there
   await expect(page.locator('.stage-attribution')).toHaveText(/LRCLIB/);
