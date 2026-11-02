@@ -40,6 +40,8 @@ const state = (over: Partial<SdkState> = {}): SdkState => ({
 
 class FakePlayer implements SdkPlayer {
   static last: FakePlayer;
+  /** The SDK's `connect()` resolving false (it could not authenticate, say). */
+  static refuseConnect = false;
   listeners = new Map<string, (arg: never) => void>();
   calls: string[] = [];
   current: SdkState | null = null;
@@ -54,6 +56,7 @@ class FakePlayer implements SdkPlayer {
   }
   async connect() {
     this.calls.push('connect');
+    if (FakePlayer.refuseConnect) return false;
     if (this.readyOnConnect) queueMicrotask(() => this.fire('ready', { device_id: 'echo-device' }));
     return true;
   }
@@ -101,6 +104,7 @@ let retryAfter: string | null;
 beforeEach(() => {
   web = [];
   retryAfter = null;
+  FakePlayer.refuseConnect = false;
   tokenStatus = 200;
   webStatus = () => 204;
   player = {};
@@ -297,6 +301,19 @@ describe('SpotifyProvider', () => {
     expect(next.errors.at(-1)).toMatchObject({ code: 'spotify.rate_limited' });
     expect(web.length).toBe(asked); // nothing more went to Spotify
     expect(FakePlayer.last).toBe(player); // and no second SDK player was created
+  });
+
+  it('a refused connect leaves no "ready timeout" rejection behind', async () => {
+    FakePlayer.refuseConnect = true;
+    const unhandled: unknown[] = [];
+    const note = (e: unknown) => unhandled.push(e);
+    process.on('unhandledRejection', note);
+    const { p, clock } = setup();
+    await expect(p.connect()).rejects.toThrow('connect refused');
+    clock.advance(20_000); // past the 15 s the ready promise waits
+    await flush();
+    process.off('unhandledRejection', note);
+    expect(unhandled).toEqual([]);
   });
 
   it('a 403 from the Web API names the missing user-list entry', async () => {

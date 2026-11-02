@@ -216,6 +216,7 @@ export class SpotifyProvider implements PlaybackProvider {
       }, READY_TIMEOUT_MS);
       this.onReadyOnce = resolve;
     });
+    void ready.catch(() => undefined); // a refused connect never awaits it: its timeout is not news
     if (!(await this.player.connect())) throw new Error('connect refused');
     await ready;
   }
