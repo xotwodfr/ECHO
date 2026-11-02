@@ -24,6 +24,7 @@ export interface Faults {
   lrclibStatus: number; // and with this status (200: normal)
   spotifyProduct: string; // the mock Spotify account's plan ('premium' | 'free')
   spotifyMeStatus: number; // 403: the account is not on the app's user list
+  spotifyScope: string | null; // the token's granted `scope`; null: left out, as some answers do
   bigLibrary: number; // this many extra synthetic albums in the album list (LIB-02)
 }
 
@@ -140,6 +141,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     lrclibStatus: 200,
     spotifyProduct: 'premium',
     spotifyMeStatus: 200,
+    spotifyScope: null,
     bigLibrary: 0,
   };
   const starred = new Set<string>(['al-1-t2']);
@@ -208,6 +210,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       faults.lrclibStatus = Number(q.get('lrclibStatus') ?? 200);
       faults.spotifyProduct = q.get('spotifyProduct') ?? 'premium';
       faults.spotifyMeStatus = Number(q.get('spotifyMeStatus') ?? 200);
+      faults.spotifyScope = q.get('spotifyScope');
       faults.bigLibrary = Number(q.get('bigLibrary') ?? 0);
       return res.end('ok');
     }
@@ -228,6 +231,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
           access_token: 'mock-access',
           refresh_token: 'mock-refresh',
           expires_in: 3600,
+          ...(faults.spotifyScope !== null && { scope: faults.spotifyScope }),
         }),
       );
     }

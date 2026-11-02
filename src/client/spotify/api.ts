@@ -1,3 +1,4 @@
+import { REQUIRED_SCOPES } from '../../shared/spotify-scopes.ts';
 import type { AppError } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
 import { strings } from '../strings.ts';
@@ -8,7 +9,7 @@ import { strings } from '../strings.ts';
 
 export const SPOTIFY_API = 'https://api.spotify.com';
 
-let cached: { accessToken: string; expiresAt: number } | null = null;
+let cached: { accessToken: string; expiresAt: number; scopes?: string[] } | null = null;
 let pending: Promise<string> | null = null;
 
 export class SpotifyError extends Error {
@@ -30,7 +31,9 @@ const err = (code: string, userMessage: string, retriable = false): AppError => 
 export function spotifyToken(force = false): Promise<string> {
   if (!force && cached && cached.expiresAt - Date.now() > 60_000)
     return Promise.resolve(cached.accessToken);
-  pending ??= api<{ accessToken: string; expiresAt: number }>('/spotify/token', { method: 'POST' })
+  pending ??= api<{ accessToken: string; expiresAt: number; scopes?: string[] }>('/spotify/token', {
+    method: 'POST',
+  })
     .then(
       (t) => {
         cached = t;
@@ -47,6 +50,16 @@ export function spotifyToken(force = false): Promise<string> {
       pending = null;
     });
   return pending;
+}
+
+/**
+ * The scopes ECHO needs that the user's connection lacks (it predates them): a reconnect adds them.
+ * Empty while no token has been fetched, or when the server could not say.
+ */
+export function missingScopes(): string[] {
+  const have = cached?.scopes;
+  if (!have?.length) return [];
+  return REQUIRED_SCOPES.filter((s) => !have.includes(s));
 }
 
 /** Forget the token (disconnect, sign-out). */
@@ -85,10 +98,18 @@ export async function spotifyApi<T>(
       refreshed = true;
       continue;
     }
-    if (res.status === 403)
+    if (res.status === 403) {
+      // A connection made before a scope was added: reconnecting grants it.
+      const why = await res
+        .json()
+        .then((b: { error?: { message?: string } }) => b.error?.message ?? '')
+        .catch(() => '');
+      if (/scope/i.test(why))
+        throw new SpotifyError(err('spotify.scope', strings.spotify.reconnectScopes));
       throw new SpotifyError(
         err('spotify.not_on_user_list', strings.spotify.status.not_on_user_list as string),
       );
+    }
     if (res.status === 401) throw new SpotifyError(err('spotify.expired', strings.spotify.expired));
     if (!res.ok)
       throw new SpotifyError(

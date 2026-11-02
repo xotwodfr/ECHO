@@ -3,6 +3,7 @@ import { fakeSpotify, SP_ALBUM, SP_GLASS, SP_PLAYLIST, SP_TRACKS } from './fake-
 import {
   clearLyricsCache,
   connectSpotify,
+  faults,
   playAlbum,
   releaseSpotify,
   serverSetting,
@@ -55,6 +56,17 @@ test('a Spotify playlist opens with its songs', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Night Drive' })).toBeVisible();
   await expect(page.locator('.track-row')).toHaveCount(2);
   await expect(page.getByText('This playlist does not exist')).toHaveCount(0);
+});
+
+test('a connection older than the newer scopes asks for a reconnect', async ({ page }) => {
+  await faults(`spotifyScope=${encodeURIComponent('streaming user-library-read')}`);
+  try {
+    await ready(page);
+    await expect(page.getByText('Reconnect Spotify to finish setting it up.')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reconnect' })).toBeVisible();
+  } finally {
+    await faults();
+  }
 });
 
 test('BRW-02: without Widevine, the browser’s own fix is named', async ({ page, browserName }) => {

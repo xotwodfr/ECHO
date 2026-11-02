@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
+import { REQUIRED_SCOPES } from '../shared/spotify-scopes.ts';
 import { createSession } from './auth/sessions.ts';
 import { call, testDeps } from './testing.ts';
 
@@ -14,6 +15,8 @@ function fakeSpotify() {
     meStatus: 200,
     refreshError: null as string | null,
     rotate: false,
+    /** What the token response grants (`scope`); undefined: omitted, as some refreshes do. */
+    scope: 'streaming user-library-read' as string | undefined,
     issued: 0,
     challenge: '',
     verifiers: [] as string[],
@@ -33,6 +36,7 @@ function fakeSpotify() {
       return Response.json({
         access_token: `at-${s.issued}`,
         expires_in: 3600,
+        ...(s.scope !== undefined && { scope: s.scope }),
         ...((p.get('grant_type') === 'authorization_code' || s.rotate) && {
           refresh_token: `rt-${s.issued}`,
         }),
@@ -138,6 +142,27 @@ describe('Spotify PKCE', () => {
     expect((await call(x.t.app, 'POST', '/api/v1/spotify/token', undefined, b.cookie)).status).toBe(
       404,
     );
+  });
+
+  it('the token says which scopes it carries, kept when a refresh omits them', async () => {
+    const x = setup();
+    const a = x.user('ada');
+    await connect(x, a);
+    const token = async () =>
+      (await (
+        await call(x.t.app, 'POST', '/api/v1/spotify/token', undefined, a.cookie)
+      ).json()) as { scopes: string[] };
+    expect((await token()).scopes).toEqual(['streaming', 'user-library-read']);
+    x.fake.s.scope = undefined;
+    x.t.clock.t += 60 * 60_000; // refreshed, without a scope in the answer
+    expect((await token()).scopes).toEqual(['streaming', 'user-library-read']);
+  });
+
+  it('asks Spotify for every scope ECHO needs', async () => {
+    const x = setup();
+    const a = x.user('ada');
+    const q = await login(x.t, a.cookie);
+    expect(q.searchParams.get('scope')).toBe(REQUIRED_SCOPES.join(' '));
   });
 
   it('a state is single use and belongs to the session that started the flow', async () => {

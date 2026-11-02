@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { type Context, Hono, type MiddlewareHandler } from 'hono';
+import { REQUIRED_SCOPES } from '../shared/spotify-scopes.ts';
 import { SPOTIFY_SEATS, spotifyClientSecret, spotifySeatsUsed, spotifySettings } from './admin.ts';
 import { audit } from './audit.ts';
 import type { AuthEnv } from './auth/routes.ts';
@@ -12,16 +13,7 @@ import type { Db } from './db/db.ts';
 // sealed in `connections`, the access token stays in memory and reaches only its own user's
 // browser (`POST /spotify/token`), refreshed when fewer than 5 minutes remain.
 
-export const SPOTIFY_SCOPES = [
-  'streaming',
-  'user-read-playback-state',
-  'user-modify-playback-state',
-  'user-read-currently-playing',
-  'user-library-read',
-  'playlist-read-private',
-  'user-read-private',
-  'user-read-email', // PLAYBACK_ARCHITECTURE.md §4.2: dropped once the manual check shows it is not needed
-];
+export const SPOTIFY_SCOPES = REQUIRED_SCOPES;
 const FLOW_TTL = 10 * 60_000;
 const REFRESH_MARGIN = 5 * 60_000;
 const SEALED = (userId: number) =>
@@ -53,8 +45,9 @@ const b64url = (b: Buffer) => b.toString('base64url');
 const sameText = (a: string, b: string) =>
   a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
+/** `scopes`: what the user granted, as Spotify last said; empty when it never said. */
 export type TokenResult =
-  | { accessToken: string; expiresAt: number }
+  | { accessToken: string; expiresAt: number; scopes: string[] }
   | { error: 'not_connected' | 'expired' | 'unavailable' };
 
 /**
@@ -104,7 +97,13 @@ export function createSpotifyAppToken(deps: SpotifyDeps) {
  */
 export function createSpotifyTokens(deps: SpotifyDeps) {
   const f: typeof fetch = (url, init) => (deps.fetch ?? fetch)(url, init);
-  const tokens = new Map<number, { accessToken: string; expiresAt: number }>();
+  const tokens = new Map<number, { accessToken: string; expiresAt: number; scopes: string[] }>();
+  // Spotify may leave `scope` out of a refresh: the last one it gave holds until it says otherwise.
+  const granted = new Map<number, string[]>();
+  const scopesOf = (userId: number, scope: string | undefined) => {
+    if (scope !== undefined) granted.set(userId, scope.split(' ').filter(Boolean));
+    return granted.get(userId) ?? [];
+  };
   const refreshing = new Map<number, Promise<TokenResult>>();
 
   const row = (userId: number) =>
@@ -134,6 +133,7 @@ export function createSpotifyTokens(deps: SpotifyDeps) {
       access_token?: string;
       refresh_token?: string;
       expires_in?: number;
+      scope?: string;
       error?: string;
     };
     return { ok: res.ok && typeof body.access_token === 'string', body };
@@ -192,6 +192,7 @@ export function createSpotifyTokens(deps: SpotifyDeps) {
     const t = {
       accessToken: out.body.access_token as string,
       expiresAt: deps.now() + (out.body.expires_in ?? 3600) * 1000,
+      scopes: scopesOf(userId, out.body.scope),
     };
     tokens.set(userId, t);
     return t;
@@ -202,15 +203,26 @@ export function createSpotifyTokens(deps: SpotifyDeps) {
     row,
     tokenRequest,
     profile,
-    remember: (userId: number, t: { accessToken: string; expiresAt: number }) =>
-      tokens.set(userId, t),
-    forget: (userId: number) => tokens.delete(userId),
+    remember: (
+      userId: number,
+      t: { accessToken: string; expiresAt: number; scope: string | undefined },
+    ) =>
+      tokens.set(userId, {
+        accessToken: t.accessToken,
+        expiresAt: t.expiresAt,
+        scopes: scopesOf(userId, t.scope),
+      }),
+    forget: (userId: number) => {
+      tokens.delete(userId);
+      granted.delete(userId);
+    },
     /** A live access token for the user, refreshing when fewer than 5 minutes remain. */
     async accessToken(userId: number): Promise<TokenResult> {
       // Only while connected: user ids are reused after a delete, and a disconnect during a refresh
       // must not leave a token behind.
       if (!row(userId)?.secret_enc) {
         tokens.delete(userId);
+        granted.delete(userId);
         return { error: 'not_connected' };
       }
       const have = tokens.get(userId);
@@ -318,6 +330,7 @@ export function spotifyRoutes(
     t.remember(user.id, {
       accessToken: out.body.access_token as string,
       expiresAt: deps.now() + (out.body.expires_in ?? 3600) * 1000,
+      scope: out.body.scope,
     });
     audit(deps.db, deps.now(), user.id, 'spotify.connected', { product: me.product });
     return back(status);

@@ -3,6 +3,7 @@ import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { ApiError, api } from '../api.ts';
 import { sessionStore } from '../session.ts';
+import { missingScopes, spotifyToken } from '../spotify/api.ts';
 import { type DrmResult, drmGuidance, probeWidevine } from '../spotify/drm.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Toggle } from '../ui/controls.tsx';
@@ -37,8 +38,20 @@ export function SpotifyConnection() {
   const [drm, setDrm] = useState<DrmResult | null>(null);
   const result = RESULT;
 
+  // A connection made before ECHO asked for its newer scopes: a reconnect grants them.
+  const [needsScopes, setNeedsScopes] = useState(false);
   useEffect(() => {
-    void spotifyStatus().then(setSt, () => undefined);
+    void spotifyStatus().then(
+      (s) => {
+        setSt(s);
+        if (s.connection?.status === 'connected')
+          void spotifyToken().then(
+            () => setNeedsScopes(missingScopes().length > 0),
+            () => undefined,
+          );
+      },
+      () => undefined,
+    );
     void probeWidevine().then(setDrm);
   }, []);
   if (!st) return <SectionLoading title={t.title} />;
@@ -67,8 +80,9 @@ export function SpotifyConnection() {
           <p role="status">
             {c.status === 'connected' ? t.connected(c.displayName) : t.status[c.status]}
           </p>
+          {needsScopes && <p>{t.reconnectScopes}</p>}
           <div className="actions">
-            {c.status !== 'connected' && (
+            {(c.status !== 'connected' || needsScopes) && (
               <Button variant="primary" onClick={connect}>
                 {t.reconnect}
               </Button>

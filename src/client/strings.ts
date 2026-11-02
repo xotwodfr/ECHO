@@ -460,6 +460,7 @@ export const strings = {
     reconnect: 'Reconnect',
     disconnect: 'Disconnect',
     notConfigured: 'The admin has not set up a Spotify app on this server yet.',
+    reconnectScopes: 'Reconnect Spotify to finish setting it up.',
     seatsFull: 'All 5 Spotify seats on this server are taken. Ask the admin to free one.',
     connected: (name: string | null) => `Connected${name ? ` as ${name}` : ''}`,
     status: {
