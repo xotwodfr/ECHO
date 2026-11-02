@@ -34,7 +34,9 @@ deferred). Since 2026-10-29:
 of it merged into `main`.
 **Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
 the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full
-visual runs; `spotify-matching.spec` fails on leftover e2e database state. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
+visual runs; `spotify-matching.spec` fails on leftover e2e database state; the Home screenshots
+(`shell.visual`, paused player) fail from 18:00, when the masked greeting turns to "Good
+evening" and its box changes width. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
 real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
 (SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
 (REL-06), the Orca pass, the five-second test (DS-05), the 10-bit capture (VIS-09) and the Spotify

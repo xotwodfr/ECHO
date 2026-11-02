@@ -20,8 +20,12 @@ lyric field in an audio-reactive room lit by the album cover.
   solver keeps every lyric line readable.
 - **Accounts:** an admin and invited users, Argon2id + TOTP (mandatory for admins), sessions and
   device tokens, and per-user preferences that follow you across devices.
+- **Motion:** in the web client everything that appears, leaves, moves or changes springs into
+  place (menus and dialogs play their exits, the side panel slides, covers fly to their page and
+  into the lyrics view, queue rows glide); Settings → Motion tones it down or turns it off.
 
-Typefaces: **Mona Sans** (Stage, lyrics, player) and **Roboto Flex** (the shell). Licence:
+Typefaces (web): **Segoe UI** where installed, otherwise **Selawik**, its open fallback, shipped
+for everything, lyrics included (the Android app's are in `docs/ANDROID_CLIENT.md`). Licence:
 [AGPL-3.0](LICENSE). Fonts: SIL OFL 1.1 (`src/client/fonts/OFL-*.txt`).
 
 The design, plan and acceptance criteria live in [`docs/`](docs/README.md), the source of truth;

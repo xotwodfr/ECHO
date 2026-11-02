@@ -206,6 +206,9 @@ button does not sit on a Spotify cover.
 - Spotify content keeps Spotify's logo and links in the player (PLAYBACK_ARCHITECTURE.md §4.6).
 - The accent play button rises onto a card's cover corner on hover and focus (Spotify's), except on
   Spotify's own covers.
+- Motion (§11): ECHO's own covers spring in when the song changes and fly between a card and its
+  page's header and into and out of the lyrics view. Spotify's artwork only ever fades (its Design
+  Guidelines, `PLAYBACK_ARCHITECTURE.md` §4.6).
 
 ## 9. Components
 
@@ -213,8 +216,8 @@ button does not sit on a Spotify cover.
 
 Fluent's, 32px (`--fl-button-h`), `--r-control` corners: **primary** the accent with on-accent
 text, **secondary** `--fl-control` with a `--fl-stroke-control` edge, **tertiary** transparent,
-**destructive** transparent with `--negative` text. Hover and press change the fill, never the
-size. Icon buttons are subtle: a bare glyph in `--muted` with a `--fl-subtle-hover` fill on hover.
+**destructive** transparent with `--negative` text. Hover changes the fill; a press also squashes
+the control a little, and it springs back on release (§11). Icon buttons are subtle: a bare glyph in `--muted` with a `--fl-subtle-hover` fill on hover.
 A toggle that is on is the accent with a dot beneath (colour is never alone). The play disc is
 round (Spotify's shape) in the accent.
 
@@ -257,7 +260,9 @@ check before the chosen one.
 Fluent's: menus `--fl-flyout` with a 4px inset, 32px items with 4px hover fills, 8px corners,
 shadow 16; the side sheet a drawer (`--fl-dialog`, shadow 64) over the scrim; dialogs
 `--fl-dialog`, 8px, shadow 64, `--fl-type-subtitle1` titles and buttons at the end; the toast a
-`--fl-flyout` surface with an info glyph, bottom-centre above the player.
+`--fl-flyout` surface with an info glyph, bottom-centre above the player. Each springs in (a
+menu from its trigger's corner, its items rippling in; a sheet from its edge, from the bottom on
+phones) and plays its exit before it goes, by button, Esc or backdrop (§11.2).
 
 ### 9.7 Connection status row (Settings)
 

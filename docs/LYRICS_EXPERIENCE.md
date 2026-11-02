@@ -550,8 +550,9 @@ word sweep, the active line, the +1…+3 zone, and decaying lines without blur a
 
 ## 10. Reduced motion
 
-Triggered by `prefers-reduced-motion: reduce` **or** Settings → Visuals → Motion = Reduced. A third
-option, Motion = Off, is described below.
+Triggered by Settings → Visuals → Motion = Reduced, or = System on a device that asks for reduced
+motion (`prefers-reduced-motion: reduce`); Motion = Full keeps full motion even there
+(`DESIGN_SYSTEM.md` §11.2). A third option, Motion = Off, is described below.
 
 | Element | Full | Reduced |
 |---|---|---|

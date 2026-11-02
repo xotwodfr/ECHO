@@ -425,8 +425,9 @@ echo/
 │       ├── main.tsx  tokens.css  fonts/
 │       ├── playback/  audio/  palette/ (animator.ts; oklab.ts shared with server via src/shared)
 │       ├── stage/ (engine, renderer, shaders, perf) · stage/lyrics/ (field, model, layout, background, springs, timing, lyricsConfig)
-│       ├── shell/ (library, search, queue, settings, account, admin, dock, first-run, login)
-│       └── ui/
+│       ├── shell/ (library, search, queue, settings, account, admin, dock, first-run, login;
+│       │          page-transition: page changes, the lyrics view's open and close, source switch)
+│       └── ui/ (components; motion.ts: the spring, exits, glides, arrivals, still copies)
 ├── fixtures/                   ← lyrics, features, covers, Subsonic JSON
 └── tests/e2e/
 ```

@@ -1,5 +1,9 @@
 # Springy motion Implementation Plan
 
+Status: **built** 2026-11-02 (5d44196, bbe67fe, c9c0db9), executed inline with a self-review at the
+end; merged into `main` and deployed the same day. Its rulings are in the commit messages and in
+the spec's notes.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Every appearance, disappearance, movement and change in the web client animates with the owner's chosen spring (Motion Lab feel C); nothing pops.
