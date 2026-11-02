@@ -72,10 +72,7 @@ Each item says what the owner should see. "From the demo" means the Motion Lab s
    with the page change only, no wave, so Back stays instant.
 8. **The lyrics view**: opening grows the view out of the player's cover while the cover flies to
    its big spot and the lyric lines rise in. Closing shrinks it back into the player. The rest of
-   the shell recedes and returns. *From the demo (scene 7).* *Owner, 2026-11-02 evening: the
-   whole player bar transforms into the view* (its pill's box and corners open out to the window
-   and close back into it); the room starts once the view has grown, so the growth never stalls.
-   Switching library source also changes at once now, the new library and page rising in.
+   the shell recedes and returns. *From the demo (scene 7).*
 9. **Toasts**: spring up from the bottom; leave with the plain exit.
 10. **Tabs and switches**: the selected indicator slides to the new tab with the spring (the phone
     tab bar, chips, the Navidrome | Spotify switch, Settings toggles).

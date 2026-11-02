@@ -48,16 +48,6 @@
   opacity: 0.03;
 }
 
-/* Until the room starts (it waits for the lyrics view to grow in, Stage.tsx), the CSS room stands
-   in; a room started late fades in over it. */
-.stage:not([data-room]) .stage-room-css {
-  display: block;
-}
-
-.stage[data-room="fade"] .stage-canvas {
-  animation: arrive-fade var(--dur-art) var(--ease-in-out);
-}
-
 .stage[data-renderer="css"] .stage-room-css {
   display: block;
 }

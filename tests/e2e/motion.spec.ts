@@ -415,38 +415,6 @@ test.describe('the lyrics view', () => {
     await expect(ghosts(page)).toHaveCount(0, { timeout: 3000 });
   });
 
-  test('the whole player becomes the view, and the room starts once it has grown', async ({
-    page,
-  }) => {
-    await playing(page);
-    const pill = await player(page).boundingBox();
-    // The first frame of the view's clip, and whether the room had started when it began.
-    await page.evaluate(() => {
-      const w = window as unknown as { clipFrom: string; roomEarly: boolean };
-      const animate = Element.prototype.animate;
-      Element.prototype.animate = function (this: Element, frames, options) {
-        const first = (Array.isArray(frames) ? frames[0] : frames) as Keyframe | undefined;
-        if (this.classList.contains('canvas') && first?.clipPath) {
-          w.clipFrom = String(first.clipPath);
-          w.roomEarly = !!document.querySelector('.stage[data-room]');
-        }
-        return animate.call(this, frames, options);
-      };
-    });
-    await player(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
-    await expect(page.locator('.stage[data-room]')).toBeAttached({ timeout: 5000 });
-    const { clipFrom, roomEarly } = await page.evaluate(() => {
-      const w = window as unknown as { clipFrom: string; roomEarly: boolean };
-      return { clipFrom: w.clipFrom, roomEarly: w.roomEarly };
-    });
-    // inset(top right bottom left round r): it starts as the pill, rounded like it.
-    const [top, , , left] = (clipFrom.match(/-?[\d.]+px/g) ?? []).map(Number.parseFloat);
-    expect(Math.abs((top ?? 0) - (pill?.y ?? -99))).toBeLessThanOrEqual(1);
-    expect(Math.abs((left ?? 0) - (pill?.x ?? -99))).toBeLessThanOrEqual(1);
-    expect(clipFrom).not.toMatch(/round 4px/);
-    expect(roomEarly).toBe(false);
-  });
-
   test('with less motion it simply changes', async ({ page }) => {
     await playing(page);
     await page.evaluate(() => {

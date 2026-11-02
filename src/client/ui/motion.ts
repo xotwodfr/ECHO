@@ -290,25 +290,12 @@ export function ghost(el: HTMLElement) {
   return g;
 }
 
-/**
- * A copy of `look` (by default `to` itself) flies from the box `from` into `to`'s place, `to`
- * hidden meanwhile, then goes. Copy something already shown: a cover just mounted may still be
- * loading its picture, and would fly blank.
- */
-export function fly(
-  from: DOMRect,
-  to: HTMLElement,
-  t: KeyframeAnimationOptions,
-  look: HTMLElement = to,
-): Promise<void> {
+/** A copy of `to` flies from the box `from` into `to`'s place (hidden meanwhile), then goes. */
+export function fly(from: DOMRect, to: HTMLElement, t: KeyframeAnimationOptions): Promise<void> {
   const b = to.getBoundingClientRect();
   if (!from.width || !b.width) return Promise.resolve();
-  const { host, copy } = still(look, b, 'motion-fly');
+  const { host, copy } = still(to, b, 'motion-fly');
   Object.assign(copy.style, { width: '100%', height: '100%', margin: '0' });
-  for (const img of copy.querySelectorAll('img')) {
-    img.loading = 'eager';
-    img.decoding = 'sync';
-  }
   to.style.visibility = 'hidden';
   const dx = from.left - b.left;
   const dy = from.top - b.top;
@@ -320,16 +307,9 @@ export function fly(
   return host.animate([{ transform: start }, { transform: 'none' }], t).finished.then(land, land);
 }
 
-/** A clip-path inset that shows only `r` of the box `of`, its corners rounded by `round`. */
-export const insetTo = (r: DOMRect, of: DOMRect, round = token('--r-art')) =>
-  `inset(${r.top - of.top}px ${of.right - r.right}px ${of.bottom - r.bottom}px ${r.left - of.left}px round ${round})`;
-
-/** An element's corner radius in px, as drawn (a pill's 999px is its half height). */
-export function cornerOf(el: Element): string {
-  const r = el.getBoundingClientRect();
-  const set = Number.parseFloat(getComputedStyle(el).borderTopLeftRadius) || 0;
-  return `${Math.min(set, r.height / 2, r.width / 2)}px`;
-}
+/** A clip-path inset that shows only `r` of the box `of`, its corners rounded like a cover. */
+export const insetTo = (r: DOMRect, of: DOMRect) =>
+  `inset(${r.top - of.top}px ${of.right - r.right}px ${of.bottom - r.bottom}px ${r.left - of.left}px round ${token('--r-art')})`;
 
 /**
  * A choice's highlight slides from the last choice to the new one (§11): the chosen item's

@@ -122,15 +122,23 @@ test('the player stays whole in either mode: its album link and the artist card'
 });
 
 // Springy motion (docs/superpowers/specs/2026-11-02-spring-motion-design.md): switching is a page
-// change: at once, then the new library and page rise in, not a hard swap.
+// change, the page and Your Library crossing over, not a hard swap.
 test('switching is a page change', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { changes: number };
+    w.changes = 0;
+    const start = document.startViewTransition?.bind(document);
+    if (!start) return;
+    document.startViewTransition = ((update: () => void) => {
+      w.changes++;
+      return start(update);
+    }) as typeof document.startViewTransition;
+  });
   await both(page);
+  test.skip(!(await page.evaluate(() => 'startViewTransition' in document)), 'no View Transitions');
+  const changes = () => page.evaluate(() => (window as unknown as { changes: number }).changes);
+  const before = await changes();
   await segment(page, 'Spotify').click();
-  // It has switched by the time the click is over: the new library is there, and rising in.
-  await expect(segment(page, 'Spotify')).toHaveAttribute('aria-pressed', 'true');
-  const rising = await panel(page).evaluate((p) =>
-    [...p.children].some((c) => c.getAnimations().length > 0),
-  );
-  expect(rising).toBe(true);
   await expect(panel(page).getByText('Northern Static').first()).toBeVisible();
+  expect(await changes()).toBe(before + 1);
 });
