@@ -144,6 +144,9 @@ export async function spotifyApi<T>(
         .catch(() => '');
       if (/scope/i.test(why))
         throw new SpotifyError(err('spotify.scope', strings.spotify.reconnectScopes));
+      // Anything else Spotify explains (the app owner's Premium lapsed, say) is shown as it said it.
+      if (why && !/registered|user list|allowlist/i.test(why))
+        throw new SpotifyError(err('spotify.forbidden', strings.spotify.refused(why)));
       throw new SpotifyError(
         err('spotify.not_on_user_list', strings.spotify.status.not_on_user_list as string),
       );

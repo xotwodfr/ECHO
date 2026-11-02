@@ -506,6 +506,8 @@ export const strings = {
             : [Math.ceil(seconds), 'second'];
       return `Spotify is limiting this app and asks ECHO to wait ${n} ${unit}${n === 1 ? '' : 's'}.`;
     },
+    /** A 403 that is neither a missing scope nor the user list: Spotify's own reason. */
+    refused: (why: string) => `Spotify refused ECHO: ${why}`,
     playingOn: (device: string) => `Playing on ${device}`,
     playHere: 'Play here',
     queueNote: 'Queue managed by Spotify. Items can be added but not reordered.',

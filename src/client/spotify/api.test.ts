@@ -38,6 +38,21 @@ describe('spotifyApi', () => {
     });
   });
 
+  it('a 403 with Spotify’s own reason shows that reason, not "user list"', async () => {
+    answer(403, {
+      error: {
+        status: 403,
+        message: 'Active premium subscription required for the owner of the app',
+      },
+    });
+    await expect(spotifyApi('/v1/me/albums')).rejects.toMatchObject({
+      appError: {
+        code: 'spotify.forbidden',
+        userMessage: expect.stringContaining('premium subscription required for the owner'),
+      },
+    });
+  });
+
   it('a long Retry-After stops the calls instead of being slept through and repeated', async () => {
     const fetchMock = vi.fn(
       async () => new Response('', { status: 429, headers: { 'retry-after': '68167' } }),
