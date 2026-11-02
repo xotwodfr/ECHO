@@ -193,7 +193,7 @@ function useTrackMenu() {
             },
           ]
         : []),
-      ...(nav && t.album.id
+      ...(t.album.id
         ? [
             {
               label: strings.album.goToAlbum,
@@ -343,6 +343,7 @@ export function Albums({ albums, sub }: { albums: Album[]; sub?: (a: Album) => s
 
 export function LibraryContent({ tab }: { tab: LibraryTab }) {
   const library = useLibrary();
+  const followed = useStarredAll();
   const s = strings.library;
   if (!library)
     return (
@@ -385,6 +386,9 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
       if (known) known.n++;
       else artists.set(key, { name: a.artist.trim(), id: a.artistId, n: 1 });
     }
+    // The artists the user follows (hearts), with or without a saved album of theirs.
+    for (const f of followed && followed !== 'error' ? followed.artists : [])
+      if (!artists.has(f.id)) artists.set(f.id, { name: f.name, id: f.id, n: 0 });
     if (!artists.size) return <p className="empty">{s.noArtists}</p>;
     return (
       <ul className="artist-list">
@@ -399,7 +403,9 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
               ) : (
                 <span>{a.name}</span>
               )}
-              <span className="artist-count">{s.albumCount(a.n)}</span>
+              <span className="artist-count">
+                {a.n ? s.albumCount(a.n) : strings.artist.following}
+              </span>
             </li>
           ))}
       </ul>

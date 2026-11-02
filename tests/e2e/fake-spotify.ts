@@ -24,6 +24,8 @@ export const SP_TRACKS = ['Signal Fires', 'Long Wave', 'Dial Tone'].map((name, i
   type: 'track',
 }));
 export const SP_PLAYLIST = { id: id('nightdrive'), name: 'Night Drive' };
+/** An artist the user follows without a saved album of theirs. */
+export const SP_FOLLOWED = { id: id('lunarrow'), name: 'Lunar Row' };
 /** Named like the mock Navidrome's album the mock LRCLIB knows, so Spotify tracks get lyrics. */
 export const SP_GLASS = {
   id: id('glassweather'),
@@ -109,11 +111,22 @@ export interface FakeSpotify {
   requests: { method: string; path: string; query: URLSearchParams; body: unknown }[];
   /** What GET /v1/me/player reports (the remote device), when set. */
   device: { id: string; name: string } | null;
+  /** A connection made before ECHO's newer scopes: their endpoints answer 403 "Insufficient client scope". */
+  oldScopes: boolean;
 }
+
+/** The endpoints that need the scopes added on 2026-11-02 (src/shared/spotify-scopes.ts). */
+const NEW_SCOPE_PATHS = [
+  '/v1/me/following',
+  '/v1/me/top/tracks',
+  '/v1/me/top/artists',
+  '/v1/me/player/recently-played',
+  '/v1/me/library',
+];
 
 /** Installs the fake on `page`; call before the first navigation. */
 export async function fakeSpotify(page: Page): Promise<FakeSpotify> {
-  const fake: FakeSpotify = { requests: [], device: null };
+  const fake: FakeSpotify = { requests: [], device: null, oldScopes: false };
   // Widevine present: the real check runs against this stand-in (BRW-02 stubs it off itself).
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'requestMediaKeySystemAccess', {
@@ -139,6 +152,8 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
   const json = (data: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
   const p = url.pathname;
+  if (fake.oldScopes && NEW_SCOPE_PATHS.includes(p))
+    return json({ error: { status: 403, message: 'Insufficient client scope' } }, 403);
   if (method === 'GET' && p === '/v1/me') return json({ id: 'mock-user', product: 'premium' });
   if (method === 'GET' && p === '/v1/me/albums')
     return json({ items: ALBUMS.map((a) => ({ album: albumFull(a) })), next: null });
@@ -185,7 +200,10 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
       next: null,
     });
   if (method === 'GET' && p === '/v1/me/following')
-    return json({ artists: { items: SP_ALBUM.artists, next: null, cursors: {} } });
+    return json({
+      // Kite Weather (a saved album's artist) and Lunar Row, followed with no saved album.
+      artists: { items: [...SP_ALBUM.artists, SP_FOLLOWED], next: null, cursors: {} },
+    });
   const artist = [SP_ALBUM, SP_GLASS].find((a) => p.startsWith(`/v1/artists/${a.artists[0]?.id}`));
   if (method === 'GET' && artist && p.endsWith('/albums'))
     return json({ items: [{ ...artist, tracks: undefined }], next: null });

@@ -3,6 +3,7 @@ import { createStore } from 'zustand/vanilla';
 import type { Track } from '../../shared/types.ts';
 import type { Album, ArtistRef, Playlist, StarKind, Starred } from '../library.ts';
 import { type Libraries, type Source, sourceOf, sourceStore } from '../source.ts';
+import { spotifyScopes } from '../spotify/api.ts';
 import { strings } from '../strings.ts';
 import { toastStore } from '../ui/logic.ts';
 
@@ -63,8 +64,13 @@ export function sourceOfItem<K extends StarKind>(kind: K, item: Item[K]): Source
   return sourceOf(item.id);
 }
 
-/** Whether `source`'s library can heart (the active one when not given). */
-export const canStar = (source: Source = active()) => !!libraries[source]?.setStar;
+/**
+ * Whether `source`'s library can heart (the active one when not given). Spotify's hearts wait until
+ * the connection has the scopes for them (a reconnect, SpotifyViews.tsx).
+ */
+export const canStar = (source: Source = active()) =>
+  !!libraries[source]?.setStar &&
+  (source !== 'spotify' || spotifyScopes.getState().missing.length === 0);
 
 /** Heart or un-heart; the heart changes at once and changes back if the server says no. */
 export async function setStar<K extends StarKind>(kind: K, item: Item[K], on: boolean) {

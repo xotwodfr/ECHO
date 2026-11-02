@@ -84,3 +84,35 @@ test('phone: the switch lives in the account menu', async ({ page }) => {
     'true',
   );
 });
+
+test('the player stays whole in either mode: its album link and the artist card', async ({
+  page,
+}) => {
+  await both(page);
+  await segment(page, 'Navidrome').click();
+  await page.goto('/library/album/al-1');
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
+  const panel = page.locator('.right-panel');
+  await segment(page, 'Spotify').click();
+  // A Navidrome song in Spotify mode: its artist card still comes from Navidrome.
+  await expect(panel.getByText('make records in a small room by the sea')).toBeVisible();
+  await page.goto(`/library/album/${encodeURIComponent(`spotify:${SP_ALBUM.id}`)}`);
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
+  // Spotify music over a Navidrome queue asks first (QUE-03).
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Replace' }).click();
+  await expect(page.getByRole('region', { name: 'Player' })).toHaveAttribute(
+    'data-status',
+    'playing',
+  );
+  await segment(page, 'Navidrome').click();
+  // A Spotify song in Navidrome mode: its album is one click away, and the switch follows.
+  await panel.locator('.rp-title').getByRole('link').click();
+  await expect(page.getByRole('heading', { name: 'Northern Static', level: 1 })).toBeVisible();
+  await expect(segment(page, 'Spotify')).toHaveAttribute('aria-pressed', 'true');
+});

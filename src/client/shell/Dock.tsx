@@ -365,7 +365,7 @@ function SpotifyMeta({ track: t, titleId }: { track: Track; titleId: string }) {
           <span key={a.id ?? a.name}>
             {i > 0 && ', '}
             {a.id ? (
-              <a href={`${OPEN}/artist/${a.id}`} {...ext}>
+              <a href={`${OPEN}/artist/${a.id.replace(/^spotify:/, '')}`} {...ext}>
                 {a.name}
               </a>
             ) : (

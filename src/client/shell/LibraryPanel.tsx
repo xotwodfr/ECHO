@@ -67,6 +67,17 @@ function useRows(filter: LibraryFilter, q: string): Row[] {
             albums: 1,
           });
       }
+      // The artists the user follows (hearts), with or without a saved album of theirs.
+      for (const f of starred && starred !== 'error' ? starred.artists : [])
+        if (!artists.has(f.id))
+          artists.set(f.id, {
+            kind: 'artist',
+            key: `r:${f.id}`,
+            id: f.id,
+            name: f.name,
+            cover: f.image,
+            albums: 0,
+          });
       rows.push(
         ...[...artists.values()]
           .filter((x) => hit(x.name))

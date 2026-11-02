@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { ArtistInfo } from '../library.ts';
-import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
+import { useLibraryOf, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
@@ -57,11 +57,7 @@ const artistLinks = (t: Track) =>
   t.artists.map((a, i) => (
     <span key={a.id ?? a.name}>
       {i > 0 && ', '}
-      {a.id && t.provider === 'navidrome' ? (
-        <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link>
-      ) : (
-        a.name
-      )}
+      {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
     </span>
   ));
 
@@ -87,11 +83,7 @@ function NowPlayingPane() {
         <div className="rp-song">
           <div className="rp-song-text">
             <p className="rp-title">
-              {t.album.id && t.provider === 'navidrome' ? (
-                <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link>
-              ) : (
-                t.title
-              )}
+              {t.album.id ? <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link> : t.title}
             </p>
             <p className="rp-artist">{artistLinks(t)}</p>
           </div>
@@ -124,9 +116,9 @@ function NowPlayingPane() {
   );
 }
 
-/** The artist's picture and bio, when Navidrome knows them (Last.fm). */
+/** The artist's picture and bio, when Navidrome knows them (Last.fm): in either mode. */
 function AboutArtist({ track: t }: { track: Track }) {
-  const library = useLibrary();
+  const library = useLibraryOf('navidrome');
   const id = t.provider === 'navidrome' ? t.artists[0]?.id : undefined;
   const [info, setInfo] = useState<ArtistInfo | null>(null);
   useEffect(() => {

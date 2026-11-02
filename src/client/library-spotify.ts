@@ -1,6 +1,6 @@
 import type { Track } from '../shared/types.ts';
 import type { Album, ArtistRef, Library, Playlist, PlaylistDetail } from './library.ts';
-import { SpotifyError, spotifyApi } from './spotify/api.ts';
+import { isScopeError, SpotifyError, spotifyApi } from './spotify/api.ts';
 
 // The Spotify library subset (PLAYBACK_ARCHITECTURE.md §4.5): saved albums, the playlists the user
 // owns or collaborates on (others' items are unreadable for Development Mode apps), and search at
@@ -17,6 +17,12 @@ interface SpArtist {
   name: string;
   images?: SpImage[];
 }
+
+/** A connection without a newer scope (until the user reconnects): that part is empty, not an error. */
+const noneWithoutScope = (e: unknown): null => {
+  if (isScopeError(e)) return null;
+  throw e;
+};
 
 const artistRef = (a: SpArtist): ArtistRef => ({
   id: PREFIX + a.id,
@@ -263,7 +269,7 @@ export function createSpotifyLibrary(): Library {
           artists: { items: SpArtist[]; next: string | null; cursors?: { after?: string } };
         }>('/v1/me/following', {
           query: { type: 'artist', limit: PAGE, ...(after && { after }) },
-        });
+        }).catch(noneWithoutScope);
         artists.push(...(r?.artists.items ?? []).map(artistRef));
         after = r?.artists.cursors?.after;
         if (!r?.artists.next || !after) break;
@@ -318,13 +324,13 @@ export function createSpotifyLibrary(): Library {
         const r = await spotifyApi<{ items: { track: SpTrack }[] }>(
           '/v1/me/player/recently-played',
           { query: { limit: PAGE } },
-        );
+        ).catch(noneWithoutScope);
         return unique((r?.items ?? []).map((i) => i.track));
       }
       if (kind === 'frequent') {
         const r = await spotifyApi<{ items: SpTrack[] }>('/v1/me/top/tracks', {
           query: { limit: PAGE, time_range: 'medium_term' },
-        });
+        }).catch(noneWithoutScope);
         return unique(r?.items ?? []);
       }
       if (kind === 'newest' || kind === 'starred') {
@@ -336,7 +342,7 @@ export function createSpotifyLibrary(): Library {
     async topArtists(count) {
       const r = await spotifyApi<{ items: SpArtist[] }>('/v1/me/top/artists', {
         query: { limit: Math.min(count, PAGE), time_range: 'medium_term' },
-      });
+      }).catch(noneWithoutScope);
       return (r?.items ?? []).map(artistRef);
     },
     async artistInfo(id) {

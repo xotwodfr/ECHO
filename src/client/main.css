@@ -263,6 +263,23 @@ a {
   color: var(--on-green);
 }
 
+/* Spotify Home, a connection older than the newer scopes: what to do, and the button to do it. */
+.home-reconnect {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-3) var(--sp-4);
+  border: var(--rule) solid var(--fl-stroke);
+  border-radius: var(--r-card);
+  background: var(--raised);
+}
+
+.home-reconnect p {
+  margin: 0;
+}
+
 /* Home's head on phones: the avatar (account menu) before the greeting, as in Spotify's app. */
 .home-head {
   display: flex;

@@ -83,6 +83,7 @@ test('Spotify mode: Liked Songs, followed artists and an artist page', async ({ 
   // Your Library → Artists lists the followed artist; their page is Spotify's.
   await page.goto('/library/artists');
   await expect(page.locator('main').getByText('Kite Weather').first()).toBeVisible();
+  await expect(page.locator('main').getByText('Lunar Row')).toBeVisible(); // followed, no album
   await page.goto(`/library/artist/${encodeURIComponent(`spotify:${SP_ALBUM.artists[0]?.id}`)}`);
   await expect(page.getByRole('heading', { name: 'Kite Weather' })).toBeVisible();
   await expect(page.getByText('Northern Static').first()).toBeVisible();
@@ -131,6 +132,29 @@ test('Spotify Home: Jump back in, top tracks, top artists, saved albums, playlis
   await expect(
     page.getByRole('list', { name: 'Your top artists' }).getByText('Kite Weather'),
   ).toBeVisible();
+});
+
+test('an old connection: Spotify mode works with what it has, and says to reconnect', async ({
+  page,
+}) => {
+  await faults(
+    `spotifyScope=${encodeURIComponent('streaming user-library-read playlist-read-private')}`,
+  );
+  try {
+    const fake = await ready(page);
+    fake.oldScopes = true;
+    await page.goto('/');
+    await sourceButton(page, 'Spotify').click();
+    await expect(page.getByText('Reconnect Spotify to finish setting it up.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Saved albums', exact: true })).toBeVisible();
+    await expect(page.getByRole('alert')).toHaveCount(0); // no error blocks for the missing shelves
+    await expect(page.getByRole('heading', { name: 'Jump back in', exact: true })).toHaveCount(0);
+    await page.goto('/collection/tracks');
+    await expect(page.locator('.track-row')).toHaveCount(2); // Liked Songs: its scope was granted
+    await expect(page.locator('.track-row .heart')).toHaveCount(0); // hearts wait for the reconnect
+  } finally {
+    await faults();
+  }
 });
 
 test('BRW-02: without Widevine, the browser’s own fix is named', async ({ page, browserName }) => {
@@ -192,7 +216,7 @@ test('SP-01, SP-02: art, metadata linking to open.spotify.com, and the logo, eve
   );
   await expect(d.getByRole('link', { name: 'Kite Weather' })).toHaveAttribute(
     'href',
-    /^https:\/\/open\.spotify\.com\/artist\//,
+    `https://open.spotify.com/artist/${SP_ALBUM.artists[0]?.id}`,
   );
   await expect(d.getByRole('link', { name: 'Northern Static' })).toHaveAttribute(
     'href',

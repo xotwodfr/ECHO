@@ -1,3 +1,4 @@
+import { createStore } from 'zustand/vanilla';
 import { REQUIRED_SCOPES } from '../../shared/spotify-scopes.ts';
 import type { AppError } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
@@ -37,6 +38,9 @@ export function spotifyToken(force = false): Promise<string> {
     .then(
       (t) => {
         cached = t;
+        const missing = missingScopes();
+        if (missing.join() !== spotifyScopes.getState().missing.join())
+          spotifyScopes.setState({ missing });
         return t.accessToken;
       },
       (e: unknown) => {
@@ -51,6 +55,13 @@ export function spotifyToken(force = false): Promise<string> {
     });
   return pending;
 }
+
+/** What the current connection lacks (`missingScopes`), for the parts of the UI that wait for it. */
+export const spotifyScopes = createStore<{ missing: string[] }>()(() => ({ missing: [] }));
+
+/** A call refused for a scope the connection lacks (`spotify.scope`): treated as "nothing yet". */
+export const isScopeError = (e: unknown) =>
+  e instanceof SpotifyError && e.appError.code === 'spotify.scope';
 
 /**
  * The scopes ECHO needs that the user's connection lacks (it predates them): a reconnect adds them.

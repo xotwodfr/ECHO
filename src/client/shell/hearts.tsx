@@ -1,6 +1,8 @@
+import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { Album } from '../library.ts';
 import { sourceOf } from '../source.ts';
+import { spotifyScopes } from '../spotify/api.ts';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
 import { canStar, setStar, sourceOfItem, useStarred } from './collections.ts';
@@ -12,6 +14,7 @@ import { canStar, setStar, sourceOfItem, useStarred } from './collections.ts';
 export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'md' | 'lg' }) {
   const source = sourceOfItem('track', t);
   const on = useStarred('track', t.id, source);
+  useStore(spotifyScopes); // re-render once the connection's scopes are known
   if (!canStar(source)) return null;
   return (
     <button
@@ -29,6 +32,7 @@ export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'm
 
 export function SaveAlbumButton({ album: a }: { album: Album }) {
   const on = useStarred('album', a.id);
+  useStore(spotifyScopes);
   if (!canStar(sourceOf(a.id))) return null;
   return (
     <button
