@@ -21,6 +21,8 @@ test('Library: skeleton tiles at the real size, then the albums with no layout s
   await faults();
   const tile = page.locator('.tile:not(.tile--loading)').first();
   await expect(tile).toBeVisible({ timeout: 10_000 });
+  // The albums rise in as a wave (DESIGN_SYSTEM.md §11): measure where they land.
+  await expect(page.locator('[data-arrive]')).toHaveCount(0);
   const after = await tile.boundingBox();
   expect(after?.x).toBe(before?.x);
   expect(after?.y).toBe(before?.y);

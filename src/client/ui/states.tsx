@@ -5,6 +5,7 @@ import { useTicker } from '../playback/context.tsx';
 import { strings } from '../strings.ts';
 import { Button } from './controls.tsx';
 import { AlbumGrid, AlbumTileSkeleton, TrackList, TrackRowSkeleton } from './media.tsx';
+import { noteLoading } from './motion.ts';
 
 // The block states of DESIGN_SYSTEM.md §10 (DS-07): loading is the final layout in flat bars, an
 // error stays inside its block with what failed, the last good time and Retry, and empty is one
@@ -165,6 +166,7 @@ export function FreshnessNote({ loadedAt }: { loadedAt: number | null | undefine
 
 /** A Settings block while it loads: its heading and flat bars where its rows will be. */
 export function SectionLoading({ title, rows = 2 }: { title: string; rows?: number }) {
+  useEffect(noteLoading, []);
   return (
     <section className="connection" aria-busy="true" aria-label={title}>
       <h3>{title}</h3>

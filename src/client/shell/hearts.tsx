@@ -1,3 +1,4 @@
+import type { AnimationEvent } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { Album } from '../library.ts';
@@ -11,6 +12,14 @@ import { canStar, setStar, sourceOfItem, useStarred } from './collections.ts';
 // when saved. Each saves to its item's own source (a Navidrome star, Spotify's library), whichever
 // source is active.
 
+// A heart pops when it is clicked (main.css, data-pop), never when a page shows it already saved.
+const pop = (el: HTMLElement, on: boolean) => {
+  el.dataset.pop = on ? 'in' : 'out';
+};
+const popped = (e: AnimationEvent<HTMLButtonElement>) => {
+  if (e.animationName !== 'heart-ring') delete e.currentTarget.dataset.pop;
+};
+
 export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'md' | 'lg' }) {
   const source = sourceOfItem('track', t);
   const on = useStarred('track', t.id, source);
@@ -23,7 +32,11 @@ export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'm
       aria-pressed={on}
       aria-label={on ? strings.liked.unlike(t.title) : strings.liked.like(t.title)}
       title={on ? strings.liked.unlike(t.title) : strings.liked.like(t.title)}
-      onClick={() => void setStar('track', t, !on)}
+      onClick={(e) => {
+        pop(e.currentTarget, !on);
+        void setStar('track', t, !on);
+      }}
+      onAnimationEnd={popped}
     >
       <Icon name="heart" solid={on} />
     </button>
@@ -41,7 +54,11 @@ export function SaveAlbumButton({ album: a }: { album: Album }) {
       aria-pressed={on}
       aria-label={on ? strings.liked.unsave(a.title) : strings.liked.save(a.title)}
       title={on ? strings.liked.unsave(a.title) : strings.liked.save(a.title)}
-      onClick={() => void setStar('album', a, !on)}
+      onClick={(e) => {
+        pop(e.currentTarget, !on);
+        void setStar('album', a, !on);
+      }}
+      onAnimationEnd={popped}
     >
       <Icon name={on ? 'check' : 'plus'} />
     </button>

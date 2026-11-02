@@ -62,11 +62,21 @@ test('LYR-16: a slow lyric source shows the dots at 600 ms and the note at 1.5 s
   await signedInWithNavidrome(page);
   await faults('lyricsDelayMs=2500');
   clearLyricsCache();
-  await playAlbum(page, 'al-3'); // Glass Weather: lyrics from (the mock) LRCLIB
+  // Glass Weather: lyrics from (the mock) LRCLIB. The wait starts when the song does: time it from
+  // the Play click, not from opening the view (how long that takes is not the dots' business).
+  await page.goto('/library/album/al-3');
   const t0 = Date.now();
+  await page
+    .locator('.action-bar')
+    .getByRole('button', { name: /^Play / })
+    .click();
+  await page
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
+    .click();
   const dots = page.locator('.stage-dots');
   await expect(dots).toBeVisible({ timeout: 3000 });
-  expect(Date.now() - t0).toBeGreaterThanOrEqual(450); // not before ~600 ms (and the click/route cost)
+  expect(Date.now() - t0).toBeGreaterThanOrEqual(550); // not before ~600 ms
   await expect(page.getByText('Finding lyrics…')).toBeVisible();
   await expect(
     page.locator('.ly-field .ly-line', { hasText: 'Glass in the morning' }),

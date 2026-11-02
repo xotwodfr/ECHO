@@ -8,6 +8,7 @@ import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
+import { useSlide } from '../ui/motion.ts';
 import { Menu, ToastRegion } from '../ui/overlays.tsx';
 import {
   LIBRARY_TABS,
@@ -132,8 +133,10 @@ function TabBar({ route }: { route: Route }) {
       </li>
     );
   };
+  const nav = useRef<HTMLElement>(null);
+  useSlide(nav, 'a[aria-current="page"]', route.view, '::after');
   return (
-    <nav className="tabbar" aria-label={strings.nav.label}>
+    <nav className="tabbar" aria-label={strings.nav.label} ref={nav}>
       <ul>
         {tab({ view: 'home' }, ['home', 'mix', 'wrapped'], 'home', strings.nav.home)}
         {tab({ view: 'search', q: '' }, ['search', 'genre'], 'search', strings.nav.search)}

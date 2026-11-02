@@ -14,7 +14,8 @@ const INPUTS = ['pointermove', 'pointerdown', 'keydown', 'wheel', 'touchstart'] 
  * is never hidden, WCAG 2.4.11).
  */
 function mayHide() {
-  if (document.querySelector('dialog[open], .menu')) return false;
+  if (document.querySelector('dialog[open]:not([data-leaving]), .menu:not([data-leaving])'))
+    return false;
   const el = document.activeElement;
   return !(el?.closest('.dock, .stage-chrome, .stage-attribution') && el.matches(':focus-visible'));
 }

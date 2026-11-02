@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import { connectionStore } from '../connection.ts';
@@ -18,6 +18,7 @@ import {
 import { strings } from '../strings.ts';
 import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
+import { useCoverChange } from '../ui/motion.ts';
 import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
 import { collections, setStar, sourceOfItem } from './collections.ts';
@@ -46,6 +47,8 @@ export function Dock({ stage }: { stage: boolean }) {
   const c = usePlayback();
   // Everything but the position: the dock re-renders on state changes, the scrubber on its tick.
   const t = usePlayer((p) => p.track);
+  const dockRef = useRef<HTMLElement>(null);
+  useCoverChange(dockRef, t?.key);
   const status = usePlayer((p) => p.status);
   const shuffle = usePlayer((p) => p.shuffle);
   const repeat = usePlayer((p) => p.repeat);
@@ -79,7 +82,7 @@ export function Dock({ stage }: { stage: boolean }) {
   const toggleListen = () => (stage ? history.back() : navigate({ view: 'listen' }));
 
   return (
-    <section className="dock" aria-label={strings.dock.label} data-status={status}>
+    <section className="dock" ref={dockRef} aria-label={strings.dock.label} data-status={status}>
       <div className="dock-meta">
         {/* Phones: the mini player opens the Now Playing view; the whole strip is its target. */}
         {compact && !stage && t && (
@@ -90,7 +93,7 @@ export function Dock({ stage }: { stage: boolean }) {
           />
         )}
         {t ? (
-          <Artwork size="dock" src={t.artwork[0]?.url} title={t.album.title} />
+          <Artwork key={t.key} size="dock" src={t.artwork[0]?.url} title={t.album.title} />
         ) : (
           <span className="art art--dock" aria-hidden="true" />
         )}
@@ -319,8 +322,9 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
       const afterG = performance.now() - gAt < 1500;
       const action = shortcutFor(e, keyTarget(e.target), stage, afterG);
       // A modal sheet or dialog makes the page behind it inert, but its keys bubble here all the
-      // same: only the keys that close a sheet (Q, ?) still act.
-      if (document.querySelector('dialog:modal') && action !== 'queue' && action !== 'help') return;
+      // same: only the keys that close a sheet (Q, ?) still act. One playing its exit is gone.
+      const modal = document.querySelector('dialog:modal:not([data-leaving])');
+      if (modal && action !== 'queue' && action !== 'help') return;
       if (afterG && action !== 'goPrefix') gAt = Number.NEGATIVE_INFINITY;
       if (!action) return;
       e.preventDefault();

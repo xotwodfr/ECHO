@@ -26,7 +26,13 @@
   transition:
     background-color var(--dur-hover) var(--ease-in-out),
     border-color var(--dur-hover) var(--ease-in-out),
-    color var(--dur-hover) var(--ease-in-out);
+    color var(--dur-hover) var(--ease-in-out),
+    scale var(--spring);
+}
+
+/* Every press springs (§11): a small squash, and back with a little bounce on release. */
+.btn:active:not(:disabled, [aria-disabled="true"]) {
+  scale: 0.96;
 }
 
 .btn--primary {
@@ -140,7 +146,12 @@
   cursor: pointer;
   transition:
     color var(--dur-hover) var(--ease-in-out),
-    background-color var(--dur-hover) var(--ease-in-out);
+    background-color var(--dur-hover) var(--ease-in-out),
+    scale var(--spring);
+}
+
+.icon-btn:active:not(:disabled) {
+  scale: 0.88;
 }
 
 .icon-btn--lg {
@@ -198,7 +209,13 @@
   color: var(--on-green);
   box-shadow: var(--shadow-play);
   cursor: pointer;
-  transition: background-color var(--dur-hover) var(--ease-in-out);
+  transition:
+    background-color var(--dur-hover) var(--ease-in-out),
+    scale var(--spring);
+}
+
+.play-btn:active:not(:disabled) {
+  scale: 0.92;
 }
 
 .play-btn:hover:not(:disabled),
@@ -217,18 +234,25 @@
   cursor: not-allowed;
 }
 
-/* Glyph morph play ↔ pause, 180 ms (§9.2). */
+/* Glyph morph play ↔ pause (§9.2, §11): the new glyph turns and springs in, the old one turns
+   away without a bounce. */
 .play-btn .icon {
   grid-area: 1 / 1;
   transition:
-    opacity var(--dur-hover) var(--ease-out),
-    scale var(--dur-hover) var(--ease-out);
+    opacity var(--fade),
+    scale var(--spring),
+    rotate var(--spring);
 }
 
 .play-btn[data-playing="true"] .play-btn-play,
 .play-btn[data-playing="false"] .play-btn-pause {
   opacity: 0;
-  scale: 0.6;
+  scale: 0.3;
+  rotate: 90deg;
+  transition:
+    opacity var(--exit),
+    scale var(--exit-move),
+    rotate var(--exit-move);
 }
 
 .provider-mark {
@@ -462,9 +486,9 @@
   border-radius: 50%;
   background: var(--knob);
   transition:
-    left var(--dur-hover) var(--ease-out),
-    width var(--dur-press) var(--ease-out),
-    height var(--dur-press) var(--ease-out);
+    left var(--spring),
+    width var(--spring),
+    height var(--spring);
 }
 
 .toggle[aria-checked="true"] {
@@ -1067,8 +1091,8 @@
   cursor: pointer;
   transition:
     opacity var(--dur-hover) ease,
-    translate var(--dur-ui) var(--ease-out),
-    scale var(--dur-press) ease,
+    translate var(--spring),
+    scale var(--spring),
     background-color var(--dur-hover) ease;
 }
 
@@ -1185,7 +1209,113 @@
   background: var(--fl-flyout);
   box-shadow: var(--fl-shadow-16);
   transform-origin: top right;
-  animation: menu-in var(--dur-ui) var(--ease-out);
+  /* In from its trigger's corner with the spring (§11); out under [data-leaving] below. */
+  transition:
+    opacity var(--fade),
+    scale var(--spring);
+
+  @starting-style {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+/* Still copies for changes that swap at once (ghost, fly in ui/motion.ts): over the page, never
+   taking a click. A ghost sits under the player (it shrinks into its cover), or under the whole
+   page while the lyrics view grows over it. */
+.motion-ghost,
+.motion-fly {
+  position: fixed;
+  z-index: 4;
+  margin: 0;
+  pointer-events: none;
+}
+
+.motion-ghost--under {
+  z-index: -1;
+}
+
+.motion-fly {
+  z-index: 6;
+  transform-origin: 0 0;
+}
+
+/* Groups ripple (§11): each child's place in the wave, capped at the 12th. */
+:is(.menu, [data-arrive]) > :nth-child(2) {
+  --i: 1;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(3) {
+  --i: 2;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(4) {
+  --i: 3;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(5) {
+  --i: 4;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(6) {
+  --i: 5;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(7) {
+  --i: 6;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(8) {
+  --i: 7;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(9) {
+  --i: 8;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(10) {
+  --i: 9;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(11) {
+  --i: 10;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(12) {
+  --i: 11;
+}
+
+:is(.menu, [data-arrive]) > :nth-child(n + 13) {
+  --i: 12;
+}
+
+/* Content that replaced a placeholder rises in, a wave down the list (useArrival, ui/motion.ts). */
+[data-arrive] > * {
+  animation:
+    arrive-fade var(--fade) calc(var(--i, 0) * var(--stagger)) both,
+    arrive-rise var(--spring) calc(var(--i, 0) * var(--stagger)) both;
+}
+
+@keyframes arrive-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes arrive-rise {
+  from {
+    translate: 0 var(--sp-4);
+  }
+}
+
+/* Leaving (§11.2): out without a bounce, and clicks already go to what is under it. */
+.menu[data-leaving] {
+  opacity: 0;
+  scale: 0.95;
+  pointer-events: none;
+  transition:
+    opacity var(--exit),
+    scale var(--exit-move);
 }
 
 /* Not enough room below inside the scroll container (e.g. above the player): open upward. */
@@ -1220,6 +1350,15 @@
   text-align: left;
   white-space: nowrap;
   cursor: pointer;
+  /* The items ripple in after the menu (the --i index rules below). */
+  transition:
+    opacity var(--fade) calc(var(--i, 0) * var(--stagger)),
+    translate var(--spring) calc(var(--i, 0) * var(--stagger));
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 calc(-1 * var(--sp-1));
+  }
 }
 
 .menu-item:hover:not([aria-disabled="true"]),
@@ -1273,10 +1412,57 @@
   box-shadow: var(--fl-shadow-64);
 }
 
+/* Sheet and dialog (§11): in with the spring from @starting-style; out under [data-leaving]
+   (closeModal), the backdrop fading both ways. */
+.sheet[open],
+.dialog[open] {
+  transition:
+    opacity var(--fade),
+    scale var(--spring),
+    translate var(--spring);
+}
+
 .sheet[open] {
   display: flex;
   flex-direction: column;
-  animation: sheet-in var(--fl-motion-move-duration) var(--fl-motion-move);
+
+  @starting-style {
+    opacity: 0;
+    translate: var(--sp-5) 0;
+  }
+}
+
+.sheet[open]::backdrop,
+.dialog[open]::backdrop {
+  transition: opacity var(--fade);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.sheet[data-leaving],
+.dialog[data-leaving] {
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--exit),
+    scale var(--exit-move),
+    translate var(--exit-move);
+}
+
+.sheet[data-leaving] {
+  translate: var(--sp-5) 0;
+}
+
+.dialog[data-leaving] {
+  scale: 0.96;
+}
+
+.sheet[data-leaving]::backdrop,
+.dialog[data-leaving]::backdrop {
+  opacity: 0;
+  transition: opacity var(--exit);
 }
 
 .sheet::backdrop {
@@ -1316,7 +1502,10 @@
 }
 
 .dialog[open] {
-  animation: dialog-in var(--dur-ui) var(--ease-out);
+  @starting-style {
+    opacity: 0;
+    scale: 0.94;
+  }
 }
 
 .dialog::backdrop {
@@ -1365,10 +1554,16 @@
   color: var(--fl-fg1);
   box-shadow: var(--fl-shadow-16);
   font: var(--fl-type-body) var(--font-ui);
-  transition: opacity var(--dur-toast) var(--ease-out);
+  /* Up on the spring (§11); out with a plain fade (data-leaving, within --dur-toast). */
+  transition:
+    opacity var(--fade),
+    translate var(--spring),
+    scale var(--spring);
 
   @starting-style {
     opacity: 0;
+    translate: 0 var(--sp-4);
+    scale: 0.96;
   }
 }
 
@@ -1378,7 +1573,7 @@
 
 .toast[data-leaving] {
   opacity: 0;
-  transition-timing-function: var(--ease-exit);
+  transition: opacity var(--exit);
 }
 
 /* ---- Pinned focus (for /__ui) and motion ---- */
@@ -1404,35 +1599,8 @@
   }
 }
 
-@keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-}
-
 @keyframes fade-out {
   to {
-    opacity: 0;
-  }
-}
-
-@keyframes sheet-in {
-  from {
-    translate: var(--sp-5) 0;
-    opacity: 0;
-  }
-}
-
-@keyframes menu-in {
-  from {
-    scale: 0.96;
-    opacity: 0;
-  }
-}
-
-@keyframes dialog-in {
-  from {
-    scale: 0.94;
     opacity: 0;
   }
 }
@@ -1440,12 +1608,6 @@
 /* Less motion (§11.2, <html data-motion> less or off; Settings → Motion → Full wins over the
    device): no travel, scale or loops; opacity and colour stay. */
 :root:not([data-motion="full"]) {
-  .sheet[open],
-  .menu,
-  .dialog[open] {
-    animation-name: fade-in;
-  }
-
   .btn,
   .icon-btn,
   .play-btn,
@@ -1500,6 +1662,19 @@
     width: 100%;
     border: 0;
     border-radius: 0;
+  }
+
+  .sheet[open] {
+    @starting-style {
+      translate: 0 100%;
+    }
+  }
+
+  .sheet[data-leaving] {
+    translate: 0 100%;
+    transition:
+      opacity var(--exit-big),
+      translate var(--exit-big);
   }
 
   /* Above the mini player and the tab bar. */

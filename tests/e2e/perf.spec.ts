@@ -47,6 +47,43 @@ test('LIB-02: 5,000 albums scroll at ≥ 55 fps with ≤ 150 tiles in the DOM', 
   expect(1000 / result.median).toBeGreaterThanOrEqual(55);
 });
 
+// Spring motion (DESIGN_SYSTEM.md §11.2): the right panel's column animates the page's width, so
+// it must stay smooth over a big library page.
+test('MOT-PERF: the right panel opens and closes at ≥ 50 fps over 5,000 albums', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1600, height: 900 });
+  await signedInWithNavidrome(page, 'perf');
+  await faults('bigLibrary=5000');
+  await page.goto('/library');
+  await expect
+    .poll(() => page.evaluate(() => document.querySelectorAll('.tile').length), { timeout: 20_000 })
+    .toBeGreaterThan(10);
+  const queue = page.getByRole('region', { name: 'Player' }).getByRole('button', { name: 'Queue' });
+  const deltas: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const sampling = page.evaluate(
+      () =>
+        new Promise<number[]>((done) => {
+          const out: number[] = [];
+          let last = performance.now();
+          const end = last + 650;
+          const frame = (now: number) => {
+            out.push(now - last);
+            last = now;
+            if (now < end) requestAnimationFrame(frame);
+            else done(out.slice(1));
+          };
+          requestAnimationFrame(frame);
+        }),
+    );
+    await queue.click();
+    deltas.push(...(await sampling));
+  }
+  const sorted = deltas.sort((a, b) => a - b);
+  expect(sorted[Math.floor(sorted.length / 2)]).toBeLessThanOrEqual(20);
+});
+
 test('PERF-05: cold start to an interactive shell within 1.5 s on the LAN', async ({ page }) => {
   await signedInWithNavidrome(page, 'perf');
   // A fresh navigation with an empty cache.

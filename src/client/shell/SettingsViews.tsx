@@ -1,10 +1,11 @@
-import { useId } from 'react';
+import { useId, useRef } from 'react';
 import { useStore } from 'zustand';
 import { type Prefs, prefsStore, setPref } from '../prefs.ts';
 import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Pill, Toggle } from '../ui/controls.tsx';
 import { toastStore } from '../ui/logic.ts';
+import { useSlide } from '../ui/motion.ts';
 import { Slider } from '../ui/slider.tsx';
 
 // Settings → Preferences (SETTINGS_AND_SECURITY.md §7.1, §7.3): Playback, Lyrics, Visuals,
@@ -23,10 +24,12 @@ function Choice<T extends string | number>(p: {
   onChange: (v: T) => void;
 }) {
   const hintId = useId();
+  const choices = useRef<HTMLDivElement>(null);
+  useSlide(choices, '[aria-pressed="true"]', p.value);
   return (
     <fieldset className="pref-choice" aria-describedby={p.hint ? hintId : undefined}>
       <legend className="pref-label">{p.label}</legend>
-      <div className="view-switch">
+      <div className="view-switch" ref={choices}>
         {p.options.map((o) => (
           <button
             key={String(o)}

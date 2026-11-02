@@ -150,9 +150,7 @@
   --dur-art: 640ms; --dur-palette: 1200ms;
   --dur-pop: 160ms; --dur-scrub: 100ms; --dur-loop: 1000ms;
   --dur-art-out: 420ms; --dur-art-overlap: 200ms;
-  --dur-page: 250ms; --dur-page-out: 100ms; --dur-morph: 420ms;   /* page changes (main.tsx) */
   --page-rise: 24px;
-  --np-cover-from: 0.3; --np-cover-rise: 40%;   /* the lyrics view's cover grows from the player's corner */
   /* Fluent 2's curves: decelerate max, easy ease */
   --ease-out: cubic-bezier(0.1,0.9,0.2,1);
   --ease-in-out: cubic-bezier(0.33,0,0.67,1);
@@ -166,6 +164,7 @@
   --dur-exit-move: 180ms;
   --dur-exit-big: 320ms; --ease-exit-big: cubic-bezier(0.32,0.72,0,1);
   --stagger: 35ms;
+  --dur-wash: 1200ms;   /* a new queue row's accent wash, fading */
   --spring: var(--dur-spring) var(--ease-spring);
   --fade: var(--dur-fade) var(--ease-fade);
   --exit: var(--dur-exit) var(--ease-exit);

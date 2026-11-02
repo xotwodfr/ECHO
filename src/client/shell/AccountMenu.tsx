@@ -5,6 +5,7 @@ import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
 import { Menu } from '../ui/overlays.tsx';
 import { useView } from './link.tsx';
+import { switchTransition } from './page-transition.ts';
 
 /** The account menu; with both sources connected it also holds the library switch (on phones its
  * only place, docs/superpowers/specs/2026-11-02-source-switch-design.md). */
@@ -27,7 +28,7 @@ export function AccountMenu() {
           ? (['navidrome', 'spotify'] as const).map((s) => ({
               label: strings.source.menu[s],
               checked: s === source,
-              onSelect: () => setSource(s),
+              onSelect: () => switchTransition(() => setSource(s)),
             }))
           : []),
         {

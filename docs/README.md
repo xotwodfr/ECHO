@@ -25,6 +25,10 @@ deferred). Since 2026-10-29:
   its glow (`DESIGN_SYSTEM.md` §3.2).
 - **Forgotten password** (2026-11-02): `admin-cli.ts reset-password <username>`, for whoever holds
   the master key (`SETTINGS_AND_SECURITY.md` §11).
+- **Spring motion** (2026-11-02, web; [spec](superpowers/specs/2026-11-02-spring-motion-design.md),
+  [plan](superpowers/plans/2026-11-02-spring-motion.md), `DESIGN_SYSTEM.md` §11): everything that
+  appears, leaves, moves or changes animates on the owner's spring; menus, dialogs and panels play
+  their exits; Spotify's artwork only fades. Branch `spring-motion`, not merged or deployed yet.
 
 **Live** at echo.folk3s.com since 2026-11-02 15:31 UTC: all of the above, built from `653342f`, all
 of it merged into `main`.

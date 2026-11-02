@@ -65,6 +65,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole('dialog', { name: 'Queue' })).toBeVisible();
     await expect(page).toHaveScreenshot(`sheet-${width}.png`, shot);
     await page.keyboard.press('Escape');
+    await expect(page.locator('dialog[open]')).toHaveCount(0); // its exit has played
 
     await page
       .locator('[data-section="overlays"]')
@@ -73,6 +74,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByRole('alertdialog')).toBeVisible();
     await expect(page).toHaveScreenshot(`dialog-${width}.png`, shot);
     await page.keyboard.press('Escape');
+    await expect(page.locator('dialog[open]')).toHaveCount(0);
 
     const trigger = page
       .locator('[data-section="overlays"]')
@@ -83,6 +85,7 @@ for (const width of [1440, 390]) {
     // The page, not the row: an element screenshot would crop the popup that overflows it.
     await expect(page).toHaveScreenshot(`menu-${width}.png`, shot);
     await page.keyboard.press('Escape');
+    await expect(page.locator('.menu')).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Show toast' }).click();
     await expect(page.locator('.toast')).toBeVisible();

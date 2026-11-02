@@ -1,10 +1,11 @@
 import type React from 'react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { orderedContext } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { Button } from '../ui/controls.tsx';
 import { TrackList, TrackRow } from '../ui/media.tsx';
+import { occurrenceKeys, useFlip } from '../ui/motion.ts';
 import { ConfirmDialog, Sheet } from '../ui/overlays.tsx';
 
 // S4 Queue (PRODUCT_SPEC.md §6.2): Now playing, Next up (user-added), Then (the context). In the
@@ -20,6 +21,10 @@ export function QueueList({ scope }: { scope: string }) {
   const playing = status !== 'ended' && status !== 'idle';
   const [clearing, setClearing] = useState(false);
   const s = strings.queue;
+  // Rows keep who they are through moves (a song can be queued twice), so they glide (§11).
+  const keys = occurrenceKeys([...q.nextUp, ...then].map((t) => t.key));
+  const upcoming = useRef<HTMLDivElement>(null);
+  useFlip(upcoming, keys.join('|'));
   // Upcoming rows can be moved (Alt+↑/↓, drag, the ⋯ menu) and removed (QUE-01).
   const edit = (i: number, title: string) =>
     canEdit
@@ -58,7 +63,8 @@ export function QueueList({ scope }: { scope: string }) {
       : {};
   const row = (t: (typeof then)[number], i: number | null) => (
     <TrackRow
-      key={`${t.key}-${i ?? 'now'}`}
+      key={i === null ? 'now' : keys[i]}
+      flipKey={i === null ? undefined : keys[i]}
       title={t.title}
       artist={t.artists.map((a) => a.name).join(', ')}
       durationMs={t.durationMs}
@@ -77,7 +83,7 @@ export function QueueList({ scope }: { scope: string }) {
           <TrackList label={s.now}>{row(q.now, null)}</TrackList>
         </>
       )}
-      <div className="queue-upcoming">
+      <div className="queue-upcoming" ref={upcoming}>
         {q.nextUp.length > 0 && (
           <>
             <h3 className="sheet-section">{s.nextUp}</h3>

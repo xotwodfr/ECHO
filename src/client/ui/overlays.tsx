@@ -2,6 +2,7 @@ import {
   type KeyboardEvent,
   type MouseEvent,
   type ReactNode,
+  type SyntheticEvent,
   useEffect,
   useId,
   useLayoutEffect,
@@ -13,9 +14,20 @@ import { strings } from '../strings.ts';
 import { Button, IconButton } from './controls.tsx';
 import { Icon, type IconName } from './icons.tsx';
 import { menuMove, toastStore } from './logic.ts';
+import { leave, stay, useExit } from './motion.ts';
 
 // Sheet, menu, dialog and toast (DESIGN_SYSTEM.md §9.6). Sheet and dialog are native modal
-// <dialog>s: the browser contains focus, makes the rest inert, and closes on Esc.
+// <dialog>s: the browser contains focus, makes the rest inert, and closes on Esc. Each plays its
+// exit before it goes (§11.2).
+
+/** Closes a modal <dialog> once its exit (ui.css `[data-leaving]`) has played. */
+export async function closeModal(d: HTMLDialogElement | null) {
+  if (!d?.open || d.dataset.leaving !== undefined) return;
+  if (await leave(d)) {
+    d.close();
+    stay(d); // ready for the next time it opens
+  }
+}
 
 /** Opens/closes a <dialog> with `open`, returns focus to where it was, reports every close. */
 function useModal(open: boolean, onClose: () => void) {
@@ -24,10 +36,12 @@ function useModal(open: boolean, onClose: () => void) {
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
-    if (open && !d.open) {
+    // Opened again mid-exit: it stays, and turns back from where it is.
+    if (open && d.dataset.leaving !== undefined) stay(d);
+    else if (open && !d.open) {
       returnTo.current = document.activeElement as HTMLElement | null;
       d.showModal();
-    } else if (!open && d.open) d.close();
+    } else if (!open) void closeModal(d);
   }, [open]);
   const handleClose = () => {
     onClose();
@@ -39,9 +53,14 @@ function useModal(open: boolean, onClose: () => void) {
     const r = e.currentTarget.getBoundingClientRect();
     const inside =
       e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
-    if (!inside) e.currentTarget.close();
+    if (!inside) void closeModal(e.currentTarget);
   };
-  return { ref, handleClose, onBackdrop };
+  // Esc: the exit first, then the native close.
+  const onCancel = (e: SyntheticEvent<HTMLDialogElement>) => {
+    e.preventDefault();
+    void closeModal(e.currentTarget);
+  };
+  return { ref, handleClose, onBackdrop, onCancel };
 }
 
 /** Side sheet (queue): 400px from the trailing edge, full screen when compact. */
@@ -51,7 +70,7 @@ export function Sheet(props: {
   title: string;
   children: ReactNode;
 }) {
-  const { ref, handleClose, onBackdrop } = useModal(props.open, props.onClose);
+  const { ref, handleClose, onBackdrop, onCancel } = useModal(props.open, props.onClose);
   const titleId = useId();
   return (
     // biome-ignore lint/a11y/useKeyWithClickEvents: backdrop click is a pointer shortcut; keyboard closes with Esc (native)
@@ -60,11 +79,12 @@ export function Sheet(props: {
       className="sheet"
       aria-labelledby={titleId}
       onClose={handleClose}
+      onCancel={onCancel}
       onClick={onBackdrop}
     >
       <header className="sheet-head">
         <h2 id={titleId}>{props.title}</h2>
-        <IconButton label={strings.ui.close} icon="close" onClick={() => ref.current?.close()} />
+        <IconButton label={strings.ui.close} icon="close" onClick={() => closeModal(ref.current)} />
       </header>
       <div className="sheet-body">{props.children}</div>
     </dialog>
@@ -84,7 +104,7 @@ export function ConfirmDialog(props: {
   onCancel: () => void;
 }) {
   const confirmed = useRef(false);
-  const { ref, handleClose } = useModal(props.open, () => {
+  const { ref, handleClose, onCancel } = useModal(props.open, () => {
     if (confirmed.current) props.onConfirm();
     else props.onCancel();
     confirmed.current = false;
@@ -108,18 +128,19 @@ export function ConfirmDialog(props: {
         e.stopPropagation();
         handleClose();
       }}
+      onCancel={onCancel}
     >
       <h2 id={titleId}>{props.title}</h2>
       <p id={bodyId}>{props.consequence}</p>
       <div className="dialog-actions">
-        <Button ref={cancel} onClick={() => ref.current?.close()}>
+        <Button ref={cancel} onClick={() => closeModal(ref.current)}>
           {strings.ui.cancel}
         </Button>
         <Button
           variant="destructive"
           onClick={() => {
             confirmed.current = true;
-            ref.current?.close();
+            void closeModal(ref.current);
           }}
         >
           {props.confirmLabel}
@@ -165,14 +186,17 @@ export function Menu({
   // leave its panel on the left (a trigger near the left edge). Measured before paint, so it never
   // flashes.
   const menu = useRef<HTMLDivElement>(null);
+  const shown = useExit(open, menu);
   const [placement, setPlacement] = useState<'bottom' | 'top'>('bottom');
   const [align, setAlign] = useState<'end' | 'start'>('end');
   useLayoutEffect(() => {
     const el = menu.current;
-    if (!open || !el) {
+    // Leaving, it keeps its place; gone, it starts from the defaults next time.
+    if (!shown) {
       setAlign('end');
       return setPlacement('bottom');
     }
+    if (!open || !el) return;
     let limit = window.innerHeight;
     let left = 0;
     let top = 0;
@@ -189,12 +213,14 @@ export function Menu({
       }
     }
     // Right-aligned, it would leave its panel (or the window) on the left: open rightward.
-    if (el.getBoundingClientRect().left < left) setAlign('start');
-    const below = el.getBoundingClientRect().bottom <= limit;
+    // Its layout box, not its painted one: it is still scaled down at the start of its entrance.
+    const at = wrap.current?.getBoundingClientRect() ?? { left: 0, top: 0 };
+    if (at.left + el.offsetLeft < left) setAlign('start');
+    const below = at.top + el.offsetTop + el.offsetHeight <= limit;
     // Room above is inside the same container: above its top the menu would be clipped.
     const room = (triggerRef.current?.getBoundingClientRect().top ?? 0) - top > el.offsetHeight;
     setPlacement(below || !room ? 'bottom' : 'top');
-  }, [open]);
+  }, [open, shown]);
 
   useEffect(() => {
     if (active !== null && active >= 0) refs.current[active]?.focus({ preventScroll: true });
@@ -264,7 +290,7 @@ export function Menu({
           onKeyDown={onTriggerKey}
         />
       )}
-      {open && (
+      {shown && (
         <div
           ref={menu}
           className="menu"

@@ -75,6 +75,10 @@ test('phone: the switch lives in the account menu', async ({ page }) => {
   await page.goto('/');
   await page.locator('.home').getByRole('button', { name: 'Profile' }).click();
   await page.getByRole('menuitemradio', { name: 'Spotify library' }).click();
+  // The switch lands with its page change (a frame on); wait until it is saved before leaving.
+  await expect
+    .poll(async () => (await (await page.request.get('/api/v1/me/settings')).json()).playback)
+    .toMatchObject({ defaultProvider: 'spotify' });
   await page.goto('/library');
   await expect(page.locator('main').getByText('Northern Static').first()).toBeVisible();
   await page.goto('/');
@@ -115,4 +119,26 @@ test('the player stays whole in either mode: its album link and the artist card'
   await panel.locator('.rp-title').getByRole('link').click();
   await expect(page.getByRole('heading', { name: 'Northern Static', level: 1 })).toBeVisible();
   await expect(segment(page, 'Spotify')).toHaveAttribute('aria-pressed', 'true');
+});
+
+// Springy motion (docs/superpowers/specs/2026-11-02-spring-motion-design.md): switching is a page
+// change, the page and Your Library crossing over, not a hard swap.
+test('switching is a page change', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { changes: number };
+    w.changes = 0;
+    const start = document.startViewTransition?.bind(document);
+    if (!start) return;
+    document.startViewTransition = ((update: () => void) => {
+      w.changes++;
+      return start(update);
+    }) as typeof document.startViewTransition;
+  });
+  await both(page);
+  test.skip(!(await page.evaluate(() => 'startViewTransition' in document)), 'no View Transitions');
+  const changes = () => page.evaluate(() => (window as unknown as { changes: number }).changes);
+  const before = await changes();
+  await segment(page, 'Spotify').click();
+  await expect(panel(page).getByText('Northern Static').first()).toBeVisible();
+  expect(await changes()).toBe(before + 1);
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { ArtistInfo } from '../library.ts';
@@ -7,6 +7,7 @@ import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
+import { useCoverChange, useExit } from '../ui/motion.ts';
 import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
 import { Link } from './link.tsx';
@@ -18,11 +19,19 @@ import { QueueList } from './Queue.tsx';
 
 export function RightPanel() {
   const right = useStore(panels, (s) => s.right);
-  if (!right) return null;
-  const title = right === 'queue' ? strings.queue.title : strings.panel.nowPlaying;
+  // Closing, it keeps showing its last pane while it slides out (DESIGN_SYSTEM.md §11).
+  const ref = useRef<HTMLElement>(null);
+  const last = useRef(right);
+  if (right) last.current = right;
+  const shown = useExit(!!right, ref);
+  const pane = right ?? last.current;
+  if (!shown || !pane) return null;
+  const title = pane === 'queue' ? strings.queue.title : strings.panel.nowPlaying;
   return (
-    <aside className="right-panel" aria-label={title}>
-      {right === 'queue' ? <QueuePane /> : <NowPlayingPane />}
+    <aside ref={ref} className="right-panel" aria-label={title}>
+      <div className="rp-pane" key={pane}>
+        {pane === 'queue' ? <QueuePane /> : <NowPlayingPane />}
+      </div>
     </aside>
   );
 }
@@ -63,6 +72,8 @@ const artistLinks = (t: Track) =>
 
 function NowPlayingPane() {
   const t = usePlayer((p) => p.track);
+  const body = useRef<HTMLDivElement>(null);
+  useCoverChange(body, t?.key);
   const source = useQueue((q) => q.contextSource);
   const next = useQueue((q) => upcoming(q)[0]);
   if (!t)
@@ -78,8 +89,8 @@ function NowPlayingPane() {
   return (
     <>
       <PaneHead title={source?.title ?? t.album.title} />
-      <div className="rp-body">
-        <Artwork size="np" src={t.artwork[0]?.url} title={t.album.title} />
+      <div className="rp-body" ref={body}>
+        <Artwork key={t.key} size="np" src={t.artwork[0]?.url} title={t.album.title} />
         <div className="rp-song">
           <div className="rp-song-text">
             <p className="rp-title">

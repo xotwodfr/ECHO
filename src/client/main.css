@@ -56,13 +56,18 @@ a {
 /* ---- Frame: top bar over three rounded panels, the player floating over the middle one ---- */
 .shell {
   display: grid;
-  grid-template-columns: var(--library-w) minmax(0, 1fr);
+  /* Three tracks always: the right panel's is 0 while closed, so opening and closing it can move
+     the page beside it (§11; the gap before it is the shell's right padding while closed). */
+  grid-template-columns: var(--library-w) minmax(0, 1fr) 0;
   grid-template-rows: var(--topbar) minmax(0, 1fr);
   column-gap: var(--panel-gap);
   box-sizing: border-box;
   height: 100dvh;
-  padding: 0 var(--panel-gap) var(--panel-gap);
+  padding: 0 0 var(--panel-gap) var(--panel-gap);
   background: var(--frame);
+  transition-property: grid-template-columns, padding-right;
+  transition-duration: var(--dur-exit-big);
+  transition-timing-function: var(--ease-exit-big);
 }
 
 /* Mica (§6): the album's glow, baked once per album (palette/mica.ts), crossfading by opacity. */
@@ -88,10 +93,22 @@ a {
 
 .shell[data-right] {
   grid-template-columns: var(--library-w) minmax(0, 1fr) var(--np-w);
+  padding-right: var(--panel-gap);
+  transition-duration: var(--dur-spring);
+  transition-timing-function: var(--ease-spring);
+}
+
+.shell[data-right] .topbar {
+  margin-right: 0;
+  transition: margin-right var(--spring);
 }
 
 .topbar {
   grid-area: 1 / 1 / 2 / -1;
+  /* With the right panel closed the shell has no right padding (its column's gap stands in): the
+     bar keeps its edge, moving with the panel's column. */
+  margin-right: var(--panel-gap);
+  transition: margin-right var(--dur-exit-big) var(--ease-exit-big);
   display: flex;
   align-items: center;
   gap: var(--sp-2);
@@ -131,7 +148,7 @@ a {
   transition:
     color var(--dur-hover) ease,
     background-color var(--dur-hover) ease,
-    scale var(--dur-press) ease;
+    scale var(--spring);
 }
 
 .round-btn:hover {
@@ -259,8 +276,45 @@ a {
 }
 
 .source-switch button[aria-pressed="true"] {
-  background: var(--green);
   color: var(--on-green);
+}
+
+/* A choice's highlight is a layer of its own, so it can slide to the next choice (useSlide,
+   ui/motion.ts, §11): the source switch, Settings' choices, the album sort. */
+.source-switch button,
+.shell:not([data-view="listen"]) .canvas .view-switch button {
+  position: relative;
+  isolation: isolate;
+}
+
+.source-switch button[aria-pressed="true"]::before,
+.shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: var(--green);
+}
+
+/* Under its border, as a background would be. */
+.shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"]::before {
+  inset: calc(-1 * var(--rule));
+}
+
+/* Forced colours: the chosen one is the system's Highlight, on the button itself. */
+@media (forced-colors: active) {
+  .source-switch button[aria-pressed="true"],
+  .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
+
+  .source-switch button[aria-pressed="true"]::before,
+  .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"]::before {
+    display: none;
+  }
 }
 
 /* Spotify Home, a connection older than the newer scopes: what to do, and the button to do it. */
@@ -307,7 +361,7 @@ a {
   background: var(--raised);
   color: var(--muted);
   cursor: pointer;
-  transition: scale var(--dur-press) ease;
+  transition: scale var(--spring);
 }
 
 .avatar-btn:hover {
@@ -358,7 +412,38 @@ a {
 
 .right-panel {
   grid-area: 2 / 3;
-  overflow: auto;
+  /* It clips its pane while its column grows or shrinks: the pane keeps its width, held to the
+     column's moving edge, so it slides in and out and never reflows. */
+  min-width: 0;
+  overflow: hidden;
+  transition: opacity var(--fade);
+
+  @starting-style {
+    opacity: 0;
+  }
+}
+
+.right-panel[data-leaving] {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--exit-big);
+}
+
+/* The pane scrolls (the head sticks); Queue ↔ Now playing: the new pane rises in. */
+.rp-pane {
+  box-sizing: border-box;
+  width: var(--np-w);
+  height: 100%;
+  overflow: hidden auto;
+  scrollbar-color: var(--raised-3) transparent;
+  transition:
+    opacity var(--fade),
+    translate var(--spring);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--sp-3);
+  }
 }
 
 .empty {
@@ -382,6 +467,22 @@ a {
   justify-items: start;
   gap: var(--sp-3);
   margin-bottom: var(--sp-4);
+}
+
+/* States and notes that appear in place spring in (§11). */
+.block-error,
+.block-empty,
+.notice,
+.freshness,
+.home-reconnect {
+  transition:
+    opacity var(--fade),
+    translate var(--spring);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--sp-2);
+  }
 }
 
 .app-error {
@@ -463,7 +564,16 @@ a {
   color: var(--text);
   font: var(--fl-type-body) var(--font-ui);
   cursor: pointer;
-  transition: background-color var(--dur-hover) var(--ease-in-out);
+  transition:
+    background-color var(--dur-hover) var(--ease-in-out),
+    opacity var(--fade),
+    scale var(--spring);
+
+  /* Chips come and go as the filter changes: they spring in. */
+  @starting-style {
+    opacity: 0;
+    scale: 0.9;
+  }
 }
 
 .chip:hover {
@@ -1019,6 +1129,28 @@ a {
 }
 
 /* "Clear queue" under the upcoming rows (QUE-01). */
+/* Queue changes glide (useFlip, ui/motion.ts): rows spring to their new places, a new row arrives
+   with an accent wash, a removed one fades out where it was as an inert copy. */
+.queue-upcoming {
+  position: relative;
+}
+
+.flip-ghost {
+  position: absolute;
+  margin: 0;
+  pointer-events: none;
+}
+
+.fresh {
+  animation: wash var(--dur-wash) var(--ease-fade);
+}
+
+@keyframes wash {
+  from {
+    background: var(--fl-accent-subtle);
+  }
+}
+
 .queue-upcoming + .btn,
 .queue-upcoming ~ .btn {
   margin-top: var(--sp-4);
@@ -1033,6 +1165,7 @@ a {
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   padding: 0;
+  transition: none;
 }
 
 .shell[data-view="listen"] .canvas {
@@ -1212,7 +1345,7 @@ a {
   color: var(--on-green);
   cursor: pointer;
   transition:
-    scale var(--dur-press) ease,
+    scale var(--spring),
     background-color var(--dur-hover) ease;
 }
 
@@ -1247,7 +1380,7 @@ a {
   cursor: pointer;
   transition:
     border-color var(--dur-hover) ease,
-    scale var(--dur-press) ease;
+    scale var(--spring);
 }
 
 .follow-btn:hover {
@@ -1257,6 +1390,7 @@ a {
 
 /* Hearts and the save check: outline, filled green when saved. */
 .heart {
+  position: relative;
   display: grid;
   flex: none;
   place-items: center;
@@ -1270,12 +1404,56 @@ a {
   cursor: pointer;
   transition:
     color var(--dur-hover) ease,
-    scale var(--dur-press) ease;
+    scale var(--spring);
 }
 
 .heart:hover {
   color: var(--text);
   scale: 1.06;
+}
+
+/* Liked (§11): the heart pops in on the spring with a ring bursting from it; unliked, it shrinks
+   back. Only on a click (hearts.tsx sets data-pop), never when a page shows a saved song. */
+.heart[data-pop="in"] .icon {
+  animation: heart-pop var(--spring);
+}
+
+.heart[data-pop="in"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: calc(2 * var(--rule)) solid currentColor;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: heart-ring var(--dur-spring) var(--ease-fade) both;
+}
+
+.heart[data-pop="out"] .icon {
+  animation: heart-out var(--exit-move);
+}
+
+@keyframes heart-pop {
+  from {
+    scale: 0;
+  }
+}
+
+@keyframes heart-ring {
+  from {
+    opacity: 0.8;
+    scale: 0.4;
+  }
+
+  to {
+    opacity: 0;
+    scale: 1.5;
+  }
+}
+
+@keyframes heart-out {
+  from {
+    scale: 0.7;
+  }
 }
 
 .heart[aria-pressed="true"] {
@@ -1310,11 +1488,19 @@ a {
   background: var(--head-colour);
   box-shadow: var(--fl-shadow-16);
   opacity: 0;
-  transition: opacity var(--dur-ui) var(--ease-out);
+  translate: 0 calc(-1 * var(--sp-3));
+  transition:
+    opacity var(--exit),
+    translate var(--exit-move);
 }
 
+/* It drops in on the spring (§11), and goes back up without a bounce. */
 .sticky-head[data-shown] .sticky-bar {
   opacity: 1;
+  translate: 0 0;
+  transition:
+    opacity var(--fade),
+    translate var(--spring);
 }
 
 .sticky-title {
@@ -1482,7 +1668,7 @@ a {
   overflow: hidden;
   border-radius: var(--r-panel);
   background: var(--hue);
-  transition: scale var(--dur-press) ease;
+  transition: scale var(--spring);
 }
 
 .genre-card a:hover {
@@ -1766,7 +1952,6 @@ a {
 }
 
 .shell:not([data-view="listen"]) .canvas .view-switch button[aria-pressed="true"] {
-  background: var(--green);
   color: var(--on-green);
 }
 
@@ -2080,8 +2265,14 @@ a {
 
 /* ---- Medium (720–1399px): no right panel; below 1024 Your Library narrows to covers ---- */
 @media (max-width: 1399.98px) {
+  .shell,
   .shell[data-right] {
-    grid-template-columns: var(--library-w) minmax(0, 1fr);
+    grid-template-columns: var(--library-w) minmax(0, 1fr) 0;
+    padding-right: 0;
+  }
+
+  .shell[data-right] .topbar {
+    margin-right: var(--panel-gap);
   }
 
   .right-panel,
@@ -2097,7 +2288,7 @@ a {
 @media (min-width: 720px) and (max-width: 1023.98px) {
   .shell,
   .shell[data-right] {
-    grid-template-columns: var(--library-w-min) minmax(0, 1fr);
+    grid-template-columns: var(--library-w-min) minmax(0, 1fr) 0;
   }
 
   .library-panel :is(.lp-title, .chips, .lp-tools, .lp-text, .lp-speaker, .lp-empty) {
@@ -2425,6 +2616,11 @@ a {
   view-transition-name: page;
 }
 
+/* Switching library source: Your Library crosses over with the page (switchTransition). */
+.vt-source .library-panel {
+  view-transition-name: library;
+}
+
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
@@ -2435,12 +2631,17 @@ a {
   pointer-events: none;
 }
 
-::view-transition-old(page) {
-  animation: page-out var(--dur-page-out) var(--ease-exit) both;
+::view-transition-old(page),
+::view-transition-old(library) {
+  animation: page-out var(--exit) both;
 }
 
-::view-transition-new(page) {
-  animation: page-in var(--dur-page) var(--ease-out) both;
+/* The new page fades in and rises on the spring (opacity never springs, §11.2). */
+::view-transition-new(page),
+::view-transition-new(library) {
+  animation:
+    page-fade-in var(--fade) both,
+    page-rise var(--spring) both;
 }
 
 @keyframes page-out {
@@ -2449,9 +2650,14 @@ a {
   }
 }
 
-@keyframes page-in {
+@keyframes page-fade-in {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes page-rise {
+  from {
     translate: 0 var(--page-rise);
   }
 }
@@ -2461,8 +2667,8 @@ a {
 }
 
 ::view-transition-group(cover) {
-  animation-duration: var(--dur-morph);
-  animation-timing-function: var(--ease-out);
+  animation-duration: var(--dur-spring);
+  animation-timing-function: var(--ease-spring);
 }
 
 /* The flying cover is the picture itself: no cross-fade between its two sizes. */

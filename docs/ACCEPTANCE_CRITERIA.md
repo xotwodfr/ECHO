@@ -156,9 +156,28 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | DS-05 | Five-second test: 3 of 3 people (or 3 independent model reviews of the screenshot) can say "a music player showing the song's lyrics" | M | M9 |
 | DS-06 | Every component in `DESIGN_SYSTEM.md` §9 has default/hover/pressed/focus-visible/disabled states (plus loading where relevant), shown on an internal `/__ui` page and snapshotted | V | M2 |
 | DS-07 | Every block has designed loading/empty/error/offline states (`DESIGN_SYSTEM.md` §10) with no layout shift between loading and ready | V | M8 |
-| DS-08 | Artwork is never cropped, overlaid, scaled or animated. Radii are 4 or 8 px only | I + V | M2, M7 |
+| DS-08 | Artwork is never cropped, overlaid, scaled or animated. Radii are 4 or 8 px only. *(2026-11-02, spring motion: this stays the rule for Spotify artwork; ECHO's own covers spring in and fly, `DESIGN_SYSTEM.md` §11.2, by the owner's choice)* | I + V | M2, M7 |
 | DS-10 | Typeface decision recorded in `DESIGN_SYSTEM.md` §4.1 (Draft 6: Segoe UI where installed, Selawik shipped). `--font` names that one face and its fallbacks; no unused face is shipped. *Wording aligned with Draft 6: it previously required exactly one family* | I | M1 |
 | DS-09 | Critique record: a written design critique (design-critique format + taste-skill app-screen questions) for Listen, Library and Settings, with its top 3 fixes applied | M | M9 |
+
+## 7a. Motion (2026-11-02, `DESIGN_SYSTEM.md` §11)
+
+The owner's spring on everything that appears, leaves, moves or changes ([spec](superpowers/specs/2026-11-02-spring-motion-design.md)).
+
+| ID | Criterion | Method | MS |
+|---|---|---|---|
+| MOT-01 | Menus spring in from their trigger and play their exit before they unmount; reopening mid-exit keeps the same menu | E (`motion.spec.ts`: a menu animates out…, reopening a closing menu…) | 2026-11-02 |
+| MOT-02 | Dialogs and sheets spring in and play their exit on Cancel, Esc, close and backdrop; focus returns to the trigger; an exit never waits on an endless animation inside | E (`motion.spec.ts`: a dialog closes…, a sheet closes…) | 2026-11-02 |
+| MOT-03 | The right panel slides in and out and the page beside it resizes smoothly; Queue ↔ Now playing crossfades | E (`motion.spec.ts`: the right panel …) | 2026-11-02 |
+| MOT-04 | Page changes rise in on the spring; a card's cover flies into its page's header and back into its card on Back (not Spotify artwork) | E (`motion.spec.ts`: Back flies the header cover…) | 2026-11-02 |
+| MOT-05 | Queue rows glide when moved, arrive with a wash, and fade out where they were when removed | E (`motion.spec.ts`: queue changes …) | 2026-11-02 |
+| MOT-06 | Presses spring; play/pause morphs; a heart pops when liked, never when a page shows it saved | E (`motion.spec.ts`: presses spring, the heart pops…, play and pause morph…) | 2026-11-02 |
+| MOT-07 | Content that replaced a placeholder waves in; a page brought back as it was does not | E (`motion.spec.ts`: tiles arrive in a wave…) | 2026-11-02 |
+| MOT-08 | The lyrics view grows out of the player's cover and shrinks back into it; the page under it is live at once | E (`motion.spec.ts`: the lyrics view …) | 2026-11-02 |
+| MOT-09 | Toasts spring up; a switch's selection slides; a new song's cover springs in (Spotify's only fades) | E (`motion.spec.ts`: a toast springs up, a switch's selection slides…, the player's cover…) | 2026-11-02 |
+| MOT-10 | Switching Navidrome ↔ Spotify is a page change; block states and notices spring in | E (`source.spec.ts`: switching is a page change; `motion.spec.ts`: block states…) | 2026-11-02 |
+| MOT-11 | Settings → Motion → Full wins over a reduce-motion device; less motion keeps fades only, Off stops UI motion | E (`motion.spec.ts`; `design-rules.test.ts`: no stylesheet reads prefers-reduced-motion) | 2026-11-02 |
+| MOT-PERF | Opening and closing the right panel over 5,000 albums keeps ≥ 50 fps | E (`perf.spec.ts`) | 2026-11-02 |
 
 ## 8. Performance
 

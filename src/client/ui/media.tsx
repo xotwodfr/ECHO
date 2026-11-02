@@ -2,6 +2,7 @@ import {
   type CSSProperties,
   type HTMLAttributes,
   type ReactNode,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -12,6 +13,7 @@ import type { Route } from '../view.ts';
 import type { Force } from './controls.tsx';
 import { Icon } from './icons.tsx';
 import { formatTime } from './logic.ts';
+import { noteLoading, useArrival } from './motion.ts';
 import { Menu, type MenuItem } from './overlays.tsx';
 
 // Artwork, track rows and album tiles (DESIGN_SYSTEM.md §8, §9.3, §9.4).
@@ -66,6 +68,8 @@ export interface TrackRowProps {
   force?: Force;
   /** Extra attributes on the row: keyboard and drag handling where a list can be reordered. */
   rowProps?: HTMLAttributes<HTMLLIElement>;
+  /** Who the row is across reorders, for the queue's glide (useFlip, ui/motion.ts). */
+  flipKey?: string;
 }
 
 /** Track row (§9.3): the whole row plays; numbers right-aligned and tabular. */
@@ -78,6 +82,7 @@ export function TrackRow(p: TrackRowProps) {
       data-now-playing={p.nowPlaying || undefined}
       data-force={p.force}
       aria-current={p.nowPlaying || undefined}
+      data-flip-key={p.flipKey}
       {...p.rowProps}
     >
       {p.number !== undefined && (
@@ -123,6 +128,7 @@ export function TrackRow(p: TrackRowProps) {
 
 /** Loading row: the final layout with flat bars at the real sizes, no shimmer (§10). */
 export function TrackRowSkeleton({ media = false }: { media?: boolean }) {
+  useEffect(noteLoading, []);
   return (
     <li className="track-row track-row--loading" data-media={media || undefined} aria-hidden="true">
       {media && <span className="art art--row" />}
@@ -147,6 +153,8 @@ export function TrackList({
   busy?: boolean;
   children: ReactNode;
 }) {
+  const ref = useRef<HTMLOListElement>(null);
+  useArrival(ref);
   return (
     <div className="track-list" data-ruled={ruled || undefined}>
       {ruled && (
@@ -156,7 +164,7 @@ export function TrackList({
           <span className="track-dur">{strings.ui.duration}</span>
         </div>
       )}
-      <ol aria-label={label} aria-busy={busy || undefined}>
+      <ol ref={ref} aria-label={label} aria-busy={busy || undefined}>
         {children}
       </ol>
     </div>
@@ -218,6 +226,7 @@ export function AlbumTile(p: {
 }
 
 export function AlbumTileSkeleton() {
+  useEffect(noteLoading, []);
   return (
     <li className="tile tile--loading" aria-hidden="true">
       <span className="art art--grid" />
@@ -240,8 +249,10 @@ export function AlbumTileSkeleton() {
  * floor(1168 / 184) = 6 columns of (1152 − 5·16) / 6 = 178.67px.
  */
 export function AlbumGrid({ children }: { children?: ReactNode }) {
+  const ref = useRef<HTMLUListElement>(null);
+  useArrival(ref);
   return (
-    <ul className="album-grid" aria-label={strings.search.albums}>
+    <ul ref={ref} className="album-grid" aria-label={strings.search.albums}>
       {children}
     </ul>
   );
@@ -264,6 +275,7 @@ export function WindowedAlbumGrid<T>({
   render: (item: T) => ReactNode;
 }) {
   const ref = useRef<HTMLUListElement>(null);
+  useArrival(ref);
   const [range, setRange] = useState({ from: 0, to: 60, cols: 6, rowH: 0 });
   useLayoutEffect(() => {
     const ul = ref.current;

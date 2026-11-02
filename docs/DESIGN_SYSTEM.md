@@ -299,6 +299,9 @@ The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 ### 11.2 Rules
 
 - Movement springs; opacity fades; **exits never bounce**. The 4.9% overshoot is the ceiling.
+- **Spotify's artwork** stays in its original form (Spotify Design Guidelines, §8): it never
+  scales or flies, it only fades with what holds it. ECHO's own covers (Navidrome) spring in, and
+  fly between a card and its page's header and into and out of the lyrics view.
 - An entrance is a transition from `@starting-style`; an exit sets `data-leaving` and the element
   stays until its animation ends (`settle`, `useExit`, `closeModal`). Nothing waits on an animation
   to accept input, and every animation can be interrupted.
