@@ -59,18 +59,16 @@ export function MixView({ id }: { id: string }) {
       </div>
     );
   const ctx: PlayContext = { kind: 'mix', id, title: mix.title };
-  const tint = `var(--genre-${hueOf(id)})`;
   return (
     <>
       <PageHead
         kind={strings.playlist.title}
         title={mix.title}
-        tint={tint}
         art={<MixArt mix={mix} size="detail" />}
         play={{ live, playing, onPlay: () => c.playList(tracks, 0, ctx) }}
         facts={`${mix.subtitle} • ${strings.album.songs(tracks.length)}`}
       />
-      <PageBody tint={tint}>
+      <PageBody>
         <div className="action-bar">
           <PlayXL
             label={mix.title}

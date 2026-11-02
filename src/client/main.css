@@ -1076,7 +1076,7 @@ a {
   padding: var(--sp-5) var(--gutter);
 }
 
-/* ---- Pages: a header tinted by the cover, the body fading from it ---- */
+/* ---- Pages: a header in the playing song's colour, fading out over Mica under it ---- */
 .page-head {
   display: flex;
   align-items: flex-end;
@@ -1171,23 +1171,19 @@ a {
 }
 
 .genre-head {
-  background: linear-gradient(transparent, var(--header-shade)), var(--hue);
+  background: linear-gradient(transparent, var(--header-shade)), var(--head-colour);
 }
 
 .page-body {
   margin: 0 calc(-1 * var(--gutter));
   padding: 0 var(--gutter);
   background:
-    linear-gradient(var(--header-shade), var(--panel) var(--body-fade)), var(--head-colour);
-}
-
-.page-body--liked {
-  background:
-    linear-gradient(var(--header-shade), var(--panel) var(--body-fade)), var(--liked-from);
+    linear-gradient(var(--header-shade), transparent var(--body-fade)),
+    linear-gradient(var(--head-colour), transparent var(--body-fade));
 }
 
 .page-head:has(.liked-art--xl) {
-  background: linear-gradient(transparent, var(--header-shade)), var(--liked-from);
+  background: linear-gradient(transparent, var(--header-shade)), var(--head-colour);
 }
 
 .action-bar {

@@ -98,15 +98,17 @@ ramp (accent 80, hover 85, pressed 75, on-accent 10, accent text 82, subtle 30) 
 | `--focus` | `--fl-focus-outer` | The focus ring (§12) |
 | (floating surfaces) | `--fl-flyout`, `--fl-dialog` | Menus, the player, toasts; dialogs, sheets |
 
-### 3.2 Tints from the cover
+### 3.2 The playing song's colour on every page
 
-A page header takes its cover's accent (the server's palette, `VISUALIZER_SPEC.md` §6) as
-`--tint`; `[data-tint]` turns it into `--head-colour`, Spotify's header tone: OKLCH lightness 0.42,
-chroma at most 0.13, the cover's hue. The body under the header fades from it to `--panel` over
-`--body-fade`. Without a tint, `--head-fallback` (`surface-container-highest`). The playing album's tone,
-`--playing-tint`, colours the phone mini player. Liked Songs keeps Spotify's violet-to-mint
-(`--liked-from`, `--liked-to`); Browse all's genre cards take one of twelve category colours
-(`--genre-0…11`), picked by name.
+Every page header (album, artist, playlist, mix, genre, Liked Songs) takes **the playing song's**
+colour, not its own cover's (owner, 2026-11-02): `--head-colour` is the playing album's accent
+(`--art-accent`) as a calm header tone, OKLCH lightness 0.38 and chroma at most 0.10, animated with
+the palette (§3.3). The body under the header fades from it to transparent over `--body-fade`, so the
+same song's Mica glow (§6) shows below: one colour story for the whole window. Nothing playing:
+the fallback accent's grey. The sticky bar is the same tone, opaque. `--playing-tint` (lightness
+0.42) colours the phone mini player. The artwork keeps its own colours: Liked Songs' violet-to-mint
+tile (`--liked-from`, `--liked-to`), the mix covers and Browse all's genre cards (`--genre-0…11`,
+one of twelve picked by name).
 
 ### 3.3 Dynamic artwork palette
 

@@ -60,8 +60,9 @@
   --lyric-ink-active: oklch(0.98 0.004 80);
   /* the playing album's colour, as a header tone: the phone mini player and the Now Playing view */
   --playing-tint: oklch(from var(--art-accent) 0.42 min(c, 0.13) h);
-  /* a page header's colour without a tint of its own */
-  --head-colour: var(--head-fallback);
+  /* every page header's colour: the playing song's, calm and dark enough for white text (owner,
+     2026-11-02); it animates with the palette and fades out under the header, over Mica */
+  --head-colour: oklch(from var(--art-accent) 0.38 min(c, 0.1) h);
   --body-fade: 232px;
 
   /* type: Segoe UI where installed, Selawik (shipped, fonts.css) everywhere else (§4) */
@@ -240,10 +241,6 @@
   /* scrims under the lyrics view's chrome (§7.7) */
   --scrim-top: 0.25; --scrim-dock: 0.4;
 }
-
-/* A page tinted by its cover (shell/tint.ts sets --tint): Spotify's header tone, mid-dark and
-   never garish, so white text keeps its contrast. */
-[data-tint] { --head-colour: oklch(from var(--tint) 0.42 min(c, 0.13) h); }
 
 /* Browse all's cards and a genre's page header take their category colour. */
 [data-hue="0"] { --hue: var(--genre-0); }  [data-hue="1"] { --hue: var(--genre-1); }

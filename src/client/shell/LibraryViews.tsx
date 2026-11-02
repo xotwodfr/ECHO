@@ -48,7 +48,6 @@ import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
 import { startRadio, startSmartShuffle } from './radio.ts';
-import { useTint } from './tint.ts';
 
 // The pages after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md): Album,
 // Artist, Playlist, Liked Songs, Genre and Search. A page opens with a header tinted by its cover,
@@ -101,7 +100,6 @@ export function PageHead(p: {
   title: string;
   art: ReactNode;
   facts: ReactNode;
-  tint: string | null;
   play?: { live: boolean; playing: boolean; onPlay: () => void };
   hero?: boolean;
   busy?: boolean;
@@ -121,15 +119,9 @@ export function PageHead(p: {
     io.observe(el);
     return () => io.disconnect();
   }, []);
-  const tint = p.tint ? ({ '--tint': p.tint } as CSSProperties) : undefined;
   return (
     <>
-      <div
-        className="sticky-head"
-        data-shown={past || undefined}
-        data-tint={!!p.tint || undefined}
-        style={tint}
-      >
+      <div className="sticky-head" data-shown={past || undefined}>
         <div className="sticky-bar" inert={!past}>
           {p.play && <PlayXL label={p.title} size="md" {...p.play} />}
           <span className="sticky-title">{p.title}</span>
@@ -138,8 +130,6 @@ export function PageHead(p: {
       <header
         ref={ref}
         className={`page-head${p.hero ? ' page-head--hero' : ''}`}
-        data-tint={!!p.tint || undefined}
-        style={tint}
         aria-busy={p.busy || undefined}
       >
         {p.art}
@@ -155,17 +145,9 @@ export function PageHead(p: {
   );
 }
 
-/** The page body under a tinted header: the tint fades out over its first rows. */
-export function PageBody({ tint, children }: { tint: string | null; children: ReactNode }) {
-  return (
-    <div
-      className="page-body"
-      data-tint={!!tint || undefined}
-      style={tint ? ({ '--tint': tint } as CSSProperties) : undefined}
-    >
-      {children}
-    </div>
-  );
+/** The page body under the header: the playing song's colour fades out over its first rows. */
+export function PageBody({ children }: { children: ReactNode }) {
+  return <div className="page-body">{children}</div>;
 }
 
 /** A track's own menu: Spotify's Add to playlist, song radio, queue, and where it came from. */
@@ -502,14 +484,6 @@ export function AlbumView({ id }: { id: string }) {
     );
   }, [library, id]);
   useEffect(fetchAlbum, [fetchAlbum]);
-  const tint = useTint(
-    a
-      ? a.id.startsWith('spotify:')
-        ? `spotify:album:${a.id.slice(8)}`
-        : `navidrome:${a.id}`
-      : null,
-    a?.cover,
-  );
   const s = strings.album;
   const { live, playing } = useContextPlaying((x) => x?.kind === 'album' && x.id === id);
   if (!a && load === 'loading') return <PageLoading kind={s.title} />;
@@ -534,7 +508,6 @@ export function AlbumView({ id }: { id: string }) {
       <PageHead
         kind={s.title}
         title={a.title}
-        tint={tint}
         art={<Artwork size="detail" src={a.cover} title={a.title} />}
         play={{ live, playing, onPlay: play }}
         facts={
@@ -555,7 +528,7 @@ export function AlbumView({ id }: { id: string }) {
           </>
         }
       />
-      <PageBody tint={tint}>
+      <PageBody>
         <div className="action-bar">
           <PlayXL label={a.title} live={live} playing={playing} onPlay={play} />
           <IconButton
@@ -639,7 +612,6 @@ export function ArtistView({ id }: { id: string }) {
   );
   const top: Track[] | null = Array.isArray(popular) ? popular : null;
   const first = typeof artist === 'object' && artist ? artist.albums[0] : undefined;
-  const tint = useTint(first && !first.id.startsWith('spotify:') ? `navidrome:${first.id}` : null);
   const s = strings.artist;
   // Spotify has no artist top tracks for this app: the user's own liked songs by them instead.
   const starredAll = useStarredAll();
@@ -665,7 +637,6 @@ export function ArtistView({ id }: { id: string }) {
         <PageHead
           kind={s.title}
           title={known ?? s.title}
-          tint={null}
           art={null}
           facts={<span className="bar bar--small" aria-hidden="true" />}
           hero
@@ -693,7 +664,6 @@ export function ArtistView({ id }: { id: string }) {
       <PageHead
         kind={s.title}
         title={artist.name.trim()}
-        tint={tint}
         hero
         art={
           info?.image || first?.cover ? (
@@ -705,7 +675,7 @@ export function ArtistView({ id }: { id: string }) {
         play={{ live, playing, onPlay: () => void playAll() }}
         facts={strings.library.albumCount(artist.albums.length)}
       />
-      <PageBody tint={tint}>
+      <PageBody>
         <div className="action-bar">
           <PlayXL label={artist.name} live={live} playing={playing} onPlay={() => void playAll()} />
           {library?.setStar && (
@@ -808,7 +778,6 @@ export function PlaylistView({ id }: { id: string }) {
   );
   const load = () => void reload();
   const firstAlbum = typeof p === 'object' && p ? p.entries[0]?.album.key : undefined;
-  const tint = useTint(firstAlbum ?? null);
   const { live, playing } = useContextPlaying((x) => x?.kind === 'playlist' && x.id === id);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -845,7 +814,6 @@ export function PlaylistView({ id }: { id: string }) {
       <PageHead
         kind={s.title}
         title={p.name}
-        tint={tint}
         art={<PlaylistArt p={p} />}
         play={
           p.entries.length
@@ -868,7 +836,7 @@ export function PlaylistView({ id }: { id: string }) {
           </>
         }
       />
-      <PageBody tint={tint}>
+      <PageBody>
         <div className="action-bar">
           {p.entries.length > 0 && (
             <>
@@ -1036,7 +1004,6 @@ export function LikedView() {
       <PageHead
         kind={strings.playlist.title}
         title={s.title}
-        tint={null}
         art={
           <span className="art art--detail liked-art liked-art--xl" aria-hidden="true">
             <Icon name="heart" solid />
@@ -1047,7 +1014,7 @@ export function LikedView() {
         }
         facts={strings.album.songs(tracks.length)}
       />
-      <div className="page-body page-body--liked">
+      <div className="page-body">
         {tracks.length > 0 && (
           <div className="action-bar">
             <PlayXL
