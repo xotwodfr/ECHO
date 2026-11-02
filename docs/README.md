@@ -9,18 +9,28 @@ peaks and decays.
 **deployed** at https://echo.folk3s.com (M5 task 12). Since then: the Material 3 shell (2026-10-25),
 NetEase lyrics and Spotify matching, daily backups, and an overnight audit and fix pass
 ([OVERNIGHT_ENGINEERING_PLAN.md](OVERNIGHT_ENGINEERING_PLAN.md): findings, fixes, evidence, what is
-deferred). On 2026-10-29 ECHO was redesigned after Spotify, web and Android
-([spec](superpowers/specs/2026-10-29-spotify-redesign-design.md)), with play-history mixes; that is
-what runs live. Liquid glass was tried and dropped for performance the same day, in favour of
-Material 3 surfaces (on `main`, not yet deployed). On 2026-10-30 the **web client was restyled in
-Fluent 2 with an album-tinted Mica glow** ([spec](superpowers/specs/2026-10-29-fluent-web-design.md),
-[plan](superpowers/plans/2026-10-30-fluent-web.md), `DESIGN_SYSTEM.md` Draft 6); the Android app keeps
-Material 3. That work is **merged into `main` (2026-11-02) but not deployed**; one Firefox test
-(LYR-17, a scrubber click half a second ahead in the lyrics view) fails from the Selawik commit on,
-cause not yet found. On 2026-11-02 the **library source switch** was built
-([spec](superpowers/specs/2026-11-02-source-switch-design.md),
-[plan](superpowers/plans/2026-11-02-source-switch.md)): Navidrome or Spotify, one library at a
-time, with a full Spotify library behind it. Merged into `main` the same day; not deployed yet. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
+deferred). Since 2026-10-29:
+
+- **Spotify redesign** (2026-10-29, web and Android; [spec](superpowers/specs/2026-10-29-spotify-redesign-design.md)):
+  Spotify's layout and features, with play-history mixes. Liquid glass was tried and dropped the
+  same day for performance.
+- **Fluent 2 with Mica** (2026-10-30, web; [spec](superpowers/specs/2026-10-29-fluent-web-design.md),
+  [plan](superpowers/plans/2026-10-30-fluent-web.md), `DESIGN_SYSTEM.md` Draft 6): Fluent surfaces,
+  icons and controls, with the playing album's glow behind the frame. The Android app keeps
+  Material 3.
+- **Library source switch** (2026-11-02; [spec](superpowers/specs/2026-11-02-source-switch-design.md),
+  [plan](superpowers/plans/2026-11-02-source-switch.md)): Navidrome or Spotify, one library at a
+  time, with a full Spotify library behind it. Spotify users reconnect once for the new scopes.
+- **Page colours** (2026-11-02): every page header takes the playing song's colour and fades into
+  its glow (`DESIGN_SYSTEM.md` §3.2).
+- **Forgotten password** (2026-11-02): `admin-cli.ts reset-password <username>`, for whoever holds
+  the master key (`SETTINGS_AND_SECURITY.md` §11).
+
+**Live** at echo.folk3s.com since 2026-11-02 15:31 UTC: all of the above, built from `653342f` on
+the `password-reset` branch (merged into `main` up to the page colours; the reset is on the branch).
+**Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
+the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full
+visual runs; `spotify-matching.spec` fails on leftover e2e database state. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
 real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
 (SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
 (REL-06), the Orca pass, the five-second test (DS-05), the 10-bit capture (VIS-09) and the Spotify

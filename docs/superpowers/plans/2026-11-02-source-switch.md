@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+**Status (2026-11-02):** all seven tasks done, plus the review's fix pass (Spotify artist links,
+connections older than the new scopes, followed artists, the player's links); merged into `main`
+and deployed. Full e2e in the CI image: 439 passed + 18 isolated; only the known Firefox LYR-17
+fails. Deferred minors: a failed pref save snaps the switch back silently; Liked Songs and follows
+reload in full at every start; hearting a Spotify album shows in Your Library only after a reload;
+the menu's library choices have no group separator; Settings → Default service shows with one
+source connected.
+
 **Goal:** One library at a time, Navidrome or Spotify, chosen by a switch, with a full Spotify
 library behind it.
 

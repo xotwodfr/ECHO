@@ -4,6 +4,8 @@ Status: **Draft 6** · 2026-10-30: the web client in Fluent 2 with Mica (owner d
 `docs/superpowers/specs/2026-10-29-fluent-web-design.md`). Draft 5 (2026-10-29): ECHO redesigned
 after Spotify, web and Android, liquid glass dropped for performance (§7.11). The Android app keeps
 Draft 5's Material 3 surfaces (`ANDROID_CLIENT.md`); this document describes the web client.
+2026-11-02: the library switch in the top bar (§2, §9.5) and every page header in the playing
+song's colour (§3.2).
 Related: [Fluent spec](superpowers/specs/2026-10-29-fluent-web-design.md) · [Redesign spec](superpowers/specs/2026-10-29-spotify-redesign-design.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
 This is the visual language of the web application: tokens, component rules and the reason each

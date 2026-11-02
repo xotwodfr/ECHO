@@ -1,6 +1,6 @@
 # Source switch: Navidrome or Spotify, one at a time — design
 
-Status: **approved** by the owner 2026-11-02 · built and merged into `main` 2026-11-02, not deployed (plan `docs/superpowers/plans/2026-11-02-source-switch.md`)
+Status: **approved** by the owner 2026-11-02 · built, merged into `main` and deployed 2026-11-02 (plan `docs/superpowers/plans/2026-11-02-source-switch.md`)
 
 ## Intent
 
