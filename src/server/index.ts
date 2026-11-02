@@ -301,7 +301,7 @@ if (import.meta.main) {
     musicbrainzUrl: config.musicbrainzUrl,
     spotifyApiUrl: config.spotifyApiUrl,
     userAgent,
-    spotifyAppToken: createSpotifyAppToken(spotifyDeps),
+    spotifyAppToken: createSpotifyAppToken(spotifyDeps, log),
     sweepEnabled: () => matchLibrary(auth.db),
     // Each Navidrome server once, through the first user connected to it (admins first).
     libraries: async () => {

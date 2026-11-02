@@ -253,7 +253,11 @@ export function createSpotifyMatcher(deps: MatchDeps) {
     });
     if (res.status === 429)
       throw new SpotifyBusy(Number(res.headers.get('retry-after')) * 1000 || 60_000);
-    if (!res.ok) throw new Error(`spotify search ${res.status}`);
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: { message?: string } } | null;
+      const why = body?.error?.message;
+      throw new Error(`spotify search ${res.status}${why ? `: ${why}` : ''}`);
+    }
     return (
       (
         (await res.json()) as {
@@ -340,7 +344,13 @@ export function createSpotifyMatcher(deps: MatchDeps) {
         if (stop) return;
         // Asked per track: the token lasts an hour, a sweep longer (cached until it expires).
         const token = askSpotify && (await deps.spotifyAppToken());
-        if (!token) break;
+        if (!token) {
+          // A refused token (the app's own, logged where it was refused) is not asked for again
+          // on every page: Spotify is left for this run.
+          if (askSpotify) deps.log?.('warn', 'spotify matching: no app token, Spotify skipped');
+          askSpotify = false;
+          break;
+        }
         try {
           record(scope, t.id, 'spotify', await spotify(token, t));
           spotifyFailures = 0;
@@ -350,6 +360,12 @@ export function createSpotifyMatcher(deps: MatchDeps) {
           const wait = err instanceof SpotifyBusy ? err.retryAfterMs : 0;
           askSpotify = ++spotifyFailures < SPOTIFY_GIVE_UP && wait <= SPOTIFY_MAX_WAIT_MS;
           if (askSpotify) await sleep(wait);
+          else
+            deps.log?.('warn', 'spotify matching: leaving Spotify until the next run', {
+              failures: spotifyFailures,
+              ...(wait && { retryAfterS: Math.round(wait / 1000) }),
+              detail: err instanceof Error ? err.message : String(err),
+            });
         }
         await sleep(SPOTIFY_GAP_MS);
       }

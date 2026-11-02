@@ -376,6 +376,50 @@ describe('the library sweep', () => {
     expect(searches).toBe(10);
   });
 
+  it('the log says why Spotify was left, with Spotify’s own words', async () => {
+    const logs: { msg: string; extra?: Record<string, unknown> }[] = [];
+    const w = web({});
+    const f = (async (u: string, init?: RequestInit) =>
+      String(u).includes('/v1/search')
+        ? new Response('{"error":{"status":429,"message":"API rate limit exceeded"}}', {
+            status: 429,
+            headers: { 'retry-after': '68167' },
+          })
+        : w.f(u, init)) as unknown as typeof fetch;
+    const { m } = matcher({
+      fetch: f,
+      log: (_level, msg, extra) => logs.push({ msg, extra }),
+      spotifyAppToken: async () => 'app-token',
+      libraries: async () => [{ scope: 'nd', client: library([song(1), song(2)]).client }],
+    });
+    await m.sweep();
+    expect(logs.find((l) => l.msg.includes('leaving Spotify'))?.extra).toMatchObject({
+      failures: 1,
+      retryAfterS: 68167,
+      detail: 'spotify search 429',
+    });
+  });
+
+  it('a refused app token is asked for once per run, and the log says so', async () => {
+    const logs: string[] = [];
+    let tokens = 0;
+    const { m } = matcher({
+      fetch: web({}).f as unknown as typeof fetch,
+      log: (_level, msg) => logs.push(msg),
+      spotifyAppToken: async () => {
+        tokens++;
+        return null;
+      },
+      // Two pages of songs: before, the token was asked for again on every page.
+      libraries: async () => [
+        { scope: 'nd', client: library(Array.from({ length: 501 }, (_, i) => song(i))).client },
+      ],
+    });
+    await m.sweep();
+    expect(tokens).toBe(1);
+    expect(logs.filter((l) => l.includes('no app token'))).toHaveLength(1);
+  });
+
   it('an app token that expires during the sweep is renewed', async () => {
     const lib = library([song(1), song(2), song(3)]);
     let searches = 0;

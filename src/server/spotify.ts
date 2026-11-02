@@ -6,6 +6,7 @@ import { audit } from './audit.ts';
 import type { AuthEnv } from './auth/routes.ts';
 import type { Sealer } from './crypto.ts';
 import type { Db } from './db/db.ts';
+import type { Log } from './log.ts';
 
 // Each user's Spotify connection (SETTINGS_AND_SECURITY.md §6.2, PLAYBACK_ARCHITECTURE.md §4.2):
 // Authorization Code with PKCE against the admin's app (no client secret). The verifier and state
@@ -55,9 +56,17 @@ export type TokenResult =
  * (lyrics/spotifyMatch.ts): no user's account is involved. Null without a saved client secret or
  * when Spotify refuses; cached until a minute before it expires.
  */
-export function createSpotifyAppToken(deps: SpotifyDeps) {
+export function createSpotifyAppToken(deps: SpotifyDeps, log?: Log) {
   const f: typeof fetch = (url, init) => (deps.fetch ?? fetch)(url, init);
   let cached: { token: string; expiresAt: number; for: string } | null = null;
+  // A refusal is logged when it first happens or changes, not on every track that asks again.
+  let lastRefusal = '';
+  const refused = (extra: Record<string, unknown>) => {
+    const sig = JSON.stringify(extra);
+    if (sig !== lastRefusal) log?.('warn', 'spotify app token refused', extra);
+    lastRefusal = sig;
+    return null;
+  };
   return async (): Promise<string | null> => {
     const { clientId } = spotifySettings(deps.db);
     const secret = spotifyClientSecret(deps.db, deps.sealer);
@@ -76,16 +85,27 @@ export function createSpotifyAppToken(deps: SpotifyDeps) {
       const b = (await res.json().catch(() => ({}))) as {
         access_token?: string;
         expires_in?: number;
+        error?: string;
+        error_description?: string;
       };
-      if (!res.ok || !b.access_token) return null;
+      if (!res.ok || !b.access_token)
+        return refused({
+          status: res.status,
+          error: b.error,
+          detail: b.error_description,
+          ...(res.status === 429 && {
+            retryAfterS: Number(res.headers.get('retry-after')) || null,
+          }),
+        });
+      lastRefusal = '';
       cached = {
         token: b.access_token,
         expiresAt: deps.now() + ((b.expires_in ?? 3600) - 60) * 1000,
         for: clientId,
       };
       return cached.token;
-    } catch {
-      return null;
+    } catch (err) {
+      return refused({ detail: err instanceof Error ? err.message : String(err) });
     }
   };
 }

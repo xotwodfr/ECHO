@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { REQUIRED_SCOPES } from '../shared/spotify-scopes.ts';
 import { createSession } from './auth/sessions.ts';
+import { createSpotifyAppToken } from './spotify.ts';
 import { call, testDeps } from './testing.ts';
 
 // SETTINGS_AND_SECURITY.md §6.2: PKCE bound to the session, sealed refresh tokens, per-user access
@@ -50,6 +51,58 @@ function fakeSpotify() {
   };
   return { s, fetch: fetch as typeof globalThis.fetch };
 }
+
+describe('createSpotifyAppToken', () => {
+  const SECRET = { table: 'server_settings', rowId: 'spotify.clientSecret', column: 'secret_enc' };
+  function appToken(reply: () => Response) {
+    const t = testDeps();
+    const db = t.deps.auth.db;
+    db.prepare("INSERT INTO server_settings (key, value_json) VALUES ('spotify.clientId', ?)").run(
+      JSON.stringify(CLIENT_ID),
+    );
+    db.prepare(
+      "INSERT INTO server_settings (key, secret_enc) VALUES ('spotify.clientSecret', ?)",
+    ).run(t.deps.spotify.sealer.seal('shh-secret', SECRET));
+    const logs: { msg: string; extra?: Record<string, unknown> }[] = [];
+    let asked = 0;
+    const get = createSpotifyAppToken(
+      {
+        ...t.deps.spotify,
+        fetch: (async () => {
+          asked++;
+          return reply();
+        }) as unknown as typeof fetch,
+      },
+      (_level, msg, extra) => logs.push({ msg, extra }),
+    );
+    return { get, logs, asked: () => asked };
+  }
+
+  it('a refusal is logged once with Spotify’s reason, and gives no token', async () => {
+    const x = appToken(() =>
+      Response.json(
+        { error: 'invalid_client', error_description: 'Invalid client secret' },
+        { status: 400 },
+      ),
+    );
+    expect(await x.get()).toBeNull();
+    expect(await x.get()).toBeNull();
+    expect(x.asked()).toBe(2);
+    expect(x.logs).toHaveLength(1); // the same refusal again is not logged again
+    expect(x.logs[0]).toMatchObject({
+      msg: 'spotify app token refused',
+      extra: { status: 400, error: 'invalid_client', detail: 'Invalid client secret' },
+    });
+  });
+
+  it('a good answer is cached and logs nothing', async () => {
+    const x = appToken(() => Response.json({ access_token: 'at', expires_in: 3600 }));
+    expect(await x.get()).toBe('at');
+    expect(await x.get()).toBe('at');
+    expect(x.asked()).toBe(1);
+    expect(x.logs).toHaveLength(0);
+  });
+});
 
 function setup() {
   const fake = fakeSpotify();
