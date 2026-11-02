@@ -107,7 +107,7 @@ export function trackFromSdk(t: SdkTrack): Track {
     id,
     spotifyId: id,
     title: t.name,
-    artists: t.artists.map((a) => ({ id: idOf(a.uri), name: a.name })),
+    artists: t.artists.map((a) => ({ id: `spotify:${idOf(a.uri)}`, name: a.name })), // ECHO's artist id
     album: {
       id: `spotify:${idOf(t.album.uri)}`, // ECHO's album id (library-spotify.ts)
       title: t.album.name,

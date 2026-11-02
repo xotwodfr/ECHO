@@ -1,5 +1,5 @@
 import type { Track } from '../shared/types.ts';
-import type { Album, Library, Playlist, PlaylistDetail } from './library.ts';
+import type { Album, ArtistRef, Library, Playlist, PlaylistDetail } from './library.ts';
 import { SpotifyError, spotifyApi } from './spotify/api.ts';
 
 // The Spotify library subset (PLAYBACK_ARCHITECTURE.md §4.5): saved albums, the playlists the user
@@ -15,7 +15,16 @@ const raw = (id: string) => id.replace(/^spotify:/, '');
 interface SpArtist {
   id: string;
   name: string;
+  images?: SpImage[];
 }
+
+const artistRef = (a: SpArtist): ArtistRef => ({
+  id: PREFIX + a.id,
+  name: a.name,
+  ...(a.images?.[0] && { image: a.images[0].url }),
+});
+/** A Spotify URI from an ECHO id: `spotify:<kind>:<id>` (the Web API's library takes URIs). */
+const uriOf = (kind: 'track' | 'album' | 'artist', id: string) => `spotify:${kind}:${raw(id)}`;
 interface SpImage {
   url: string;
   width?: number | null;
@@ -53,7 +62,7 @@ export function trackOf(t: SpTrack, album: SpAlbum | undefined = t.album): Track
     id: t.id,
     spotifyId: t.id,
     title: t.name,
-    artists: t.artists.map((a) => ({ id: a.id, name: a.name })),
+    artists: t.artists.map((a) => ({ id: PREFIX + a.id, name: a.name })),
     album: {
       id: album ? PREFIX + album.id : undefined,
       title: album?.name ?? '',
@@ -69,6 +78,7 @@ export function albumOf(a: SpAlbum): Album {
     id: PREFIX + a.id,
     title: a.name,
     artist: a.artists.map((x) => x.name).join(', '),
+    ...(a.artists[0] && { artistId: PREFIX + a.artists[0].id }),
     year: a.release_date ? Number(a.release_date.slice(0, 4)) || undefined : undefined,
     cover: images(a.images)[0]?.url,
     tracks: (a.tracks?.items ?? []).map((t) => trackOf(t, a)),
@@ -114,7 +124,7 @@ export function createSpotifyLibrary(): Library {
       if (!r.next) break;
     }
   }
-  void loadSaved();
+  const saved = loadSaved();
 
   const lib: Library = {
     get albums() {
@@ -219,15 +229,86 @@ export function createSpotifyLibrary(): Library {
       return out;
     },
     async searchRemote(q) {
-      const r = await spotifyApi<{ tracks?: { items: SpTrack[] }; albums?: { items: SpAlbum[] } }>(
-        '/v1/search',
-        { query: { q, type: 'track,album', limit: SEARCH_LIMIT } },
-      );
+      const r = await spotifyApi<{
+        tracks?: { items: SpTrack[] };
+        albums?: { items: SpAlbum[] };
+        artists?: { items: SpArtist[] };
+      }>('/v1/search', { query: { q, type: 'track,album,artist', limit: SEARCH_LIMIT } });
       for (const a of r?.albums?.items ?? []) if (!byId.has(PREFIX + a.id)) put(albumOf(a), false);
       return {
         tracks: (r?.tracks?.items ?? []).map((t) => trackOf(t)),
         albums: (r?.albums?.items ?? []).map(albumOf),
+        artists: (r?.artists?.items ?? []).map(artistRef),
       };
+    },
+    // Liked Songs: the user's saved tracks.
+    async starred() {
+      const out: Track[] = [];
+      for (let offset = 0; ; offset += PAGE) {
+        const r = await spotifyApi<{ items: { track: SpTrack | null }[]; next: string | null }>(
+          '/v1/me/tracks',
+          { query: { limit: PAGE, offset } },
+        );
+        for (const it of r?.items ?? [])
+          if (it.track && !it.track.is_local) out.push(trackOf(it.track));
+        if (!r?.next) break;
+      }
+      return out;
+    },
+    async starredAll() {
+      const artists: ArtistRef[] = [];
+      let after: string | undefined;
+      for (;;) {
+        const r = await spotifyApi<{
+          artists: { items: SpArtist[]; next: string | null; cursors?: { after?: string } };
+        }>('/v1/me/following', {
+          query: { type: 'artist', limit: PAGE, ...(after && { after }) },
+        });
+        artists.push(...(r?.artists.items ?? []).map(artistRef));
+        after = r?.artists.cursors?.after;
+        if (!r?.artists.next || !after) break;
+      }
+      const tracks = (await lib.starred?.()) ?? [];
+      if (status === 'loading') await saved;
+      return { tracks, albums, artists };
+    },
+    // Hearts save to the user's Spotify library: one generic endpoint for every kind (Feb 2026).
+    async setStar(kind, id, on) {
+      await spotifyApi('/v1/me/library', {
+        method: on ? 'PUT' : 'DELETE',
+        body: { uris: [uriOf(kind, id)] },
+      });
+      if (kind === 'album' && !on) {
+        albums = albums.filter((a) => a.id !== id);
+        changed();
+      }
+    },
+    async artist(id) {
+      const a = await spotifyApi<SpArtist>(`/v1/artists/${encodeURIComponent(raw(id))}`);
+      if (!a) return undefined;
+      let list: SpAlbum[];
+      try {
+        const r = await spotifyApi<{ items: SpAlbum[] }>(
+          `/v1/artists/${encodeURIComponent(raw(id))}/albums`,
+          { query: { include_groups: 'album,single', limit: PAGE } },
+        );
+        list = r?.items ?? [];
+      } catch (e) {
+        // The artist's album list closed to this app: their albums from search instead.
+        if (!(e instanceof SpotifyError)) throw e;
+        const r = await spotifyApi<{ albums?: { items: SpAlbum[] } }>('/v1/search', {
+          query: { q: `artist:"${a.name}"`, type: 'album', limit: SEARCH_LIMIT },
+        });
+        list = r?.albums?.items ?? [];
+      }
+      const out = list.map(albumOf);
+      for (const x of out) if (!byId.has(x.id)) put(x, false);
+      return { name: a.name, albums: out };
+    },
+    async artistInfo(id) {
+      const a = await spotifyApi<SpArtist>(`/v1/artists/${encodeURIComponent(raw(id))}`);
+      // No bio or related artists for this app (Development Mode): the picture only.
+      return { similar: [], ...(a?.images?.[0] && { image: a.images[0].url }) };
     },
     subscribe(onChange) {
       listeners.add(onChange);

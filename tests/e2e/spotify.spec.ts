@@ -32,6 +32,11 @@ async function ready(page: Page) {
   return fake;
 }
 
+const sourceButton = (page: Page, name: string) =>
+  page
+    .getByRole('group', { name: 'Library', exact: true })
+    .getByRole('button', { name, exact: true });
+
 async function playSpotifyAlbum(page: Page) {
   await page.goto(`/library/album/${encodeURIComponent(`spotify:${SP_ALBUM.id}`)}`);
   await expect(page.getByRole('heading', { name: 'Northern Static' })).toBeVisible();
@@ -67,6 +72,42 @@ test('a connection older than the newer scopes asks for a reconnect', async ({ p
   } finally {
     await faults();
   }
+});
+
+test('Spotify mode: Liked Songs, followed artists and an artist page', async ({ page }) => {
+  await ready(page);
+  await page.goto('/');
+  await sourceButton(page, 'Spotify').click();
+  await page.goto('/collection/tracks');
+  await expect(page.locator('.track-row')).toHaveCount(2);
+  // Your Library → Artists lists the followed artist; their page is Spotify's.
+  await page.goto('/library/artists');
+  await expect(page.locator('main').getByText('Kite Weather').first()).toBeVisible();
+  await page.goto(`/library/artist/${encodeURIComponent(`spotify:${SP_ALBUM.artists[0]?.id}`)}`);
+  await expect(page.getByRole('heading', { name: 'Kite Weather' })).toBeVisible();
+  await expect(page.getByText('Northern Static').first()).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Your liked songs by this artist' }),
+  ).toBeVisible();
+});
+
+test('hearting a Spotify song in Navidrome mode saves it in Spotify', async ({ page }) => {
+  const fake = await ready(page);
+  await playSpotifyAlbum(page);
+  await sourceButton(page, 'Navidrome').click();
+  const heart = dock(page).getByRole('button', { name: /Liked Songs$/ });
+  const before = await heart.getAttribute('aria-pressed');
+  await heart.click();
+  await expect(heart).not.toHaveAttribute('aria-pressed', before ?? '');
+  await expect
+    .poll(() =>
+      fake.requests.some(
+        (r) =>
+          r.path === '/v1/me/library' &&
+          (r.body as { uris?: string[] })?.uris?.[0] === `spotify:track:${SP_TRACKS[0]?.id}`,
+      ),
+    )
+    .toBe(true);
 });
 
 test('BRW-02: without Widevine, the browser’s own fix is named', async ({ page, browserName }) => {

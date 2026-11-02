@@ -165,6 +165,20 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
       items: SP_TRACKS.slice(0, 2).map((t) => ({ item: { ...t, album: SP_ALBUM } })),
       next: null,
     });
+  // Liked Songs, followed artists, artist pages and hearts (the February 2026 library endpoint).
+  if (method === 'GET' && p === '/v1/me/tracks')
+    return json({
+      items: SP_TRACKS.slice(0, 2).map((t) => ({ track: { ...t, album: SP_ALBUM } })),
+      next: null,
+    });
+  if (method === 'GET' && p === '/v1/me/following')
+    return json({ artists: { items: SP_ALBUM.artists, next: null, cursors: {} } });
+  const artist = [SP_ALBUM, SP_GLASS].find((a) => p.startsWith(`/v1/artists/${a.artists[0]?.id}`));
+  if (method === 'GET' && artist && p.endsWith('/albums'))
+    return json({ items: [{ ...artist, tracks: undefined }], next: null });
+  if (method === 'GET' && artist) return json({ ...artist.artists[0], images: [] });
+  if ((method === 'PUT' || method === 'DELETE') && p === '/v1/me/library')
+    return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
   if (method === 'GET' && p === '/v1/search') {
     const q = (url.searchParams.get('q') ?? '').toLowerCase();
     const limit = Number(url.searchParams.get('limit'));
@@ -178,6 +192,7 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
         })),
       },
       albums: { items: hit(SP_ALBUM.name) || hit('kite weather') ? [SP_ALBUM] : [] },
+      artists: { items: hit('kite weather') ? SP_ALBUM.artists : [] },
     });
   }
   if (method === 'PUT' && p === '/v1/me/player') {

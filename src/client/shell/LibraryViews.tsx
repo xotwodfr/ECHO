@@ -183,7 +183,7 @@ function useTrackMenu() {
         : []),
       { label: strings.album.playNext, onSelect: () => c.playNext([t], t.title) },
       { label: strings.album.addToQueue, onSelect: () => c.addToQueue([t], t.title) },
-      ...(nav && t.artists[0]?.id
+      ...(t.artists[0]?.id
         ? [
             {
               label: strings.album.goToArtist,
@@ -631,8 +631,14 @@ export function ArtistView({ id }: { id: string }) {
   );
   const top: Track[] | null = Array.isArray(popular) ? popular : null;
   const first = typeof artist === 'object' && artist ? artist.albums[0] : undefined;
-  const tint = useTint(first ? `navidrome:${first.id}` : null);
+  const tint = useTint(first && !first.id.startsWith('spotify:') ? `navidrome:${first.id}` : null);
   const s = strings.artist;
+  // Spotify has no artist top tracks for this app: the user's own liked songs by them instead.
+  const starredAll = useStarredAll();
+  const liked =
+    !library?.topSongs && starredAll && starredAll !== 'error'
+      ? starredAll.tracks.filter((t) => t.artists.some((a) => a.id === id))
+      : [];
   const { live, playing } = useContextPlaying((x) => x?.kind === 'artist' && x.id === id);
   const following = useStarred('artist', id);
   const shown = top?.length ? top : null;
@@ -717,6 +723,14 @@ export function ArtistView({ id }: { id: string }) {
                 {more ? strings.home.showLess : strings.home.seeMore}
               </button>
             )}
+          </section>
+        )}
+        {liked.length > 0 && (
+          <section className="shelf" aria-labelledby="artist-liked">
+            <h2 id="artist-liked">{s.likedBy}</h2>
+            <TrackList label={s.likedBy}>
+              <Rows tracks={liked} context={ctx} numbered art />
+            </TrackList>
           </section>
         )}
         <section className="shelf" aria-labelledby="artist-discography">
@@ -1202,7 +1216,9 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
       albums: (found?.albums ?? [])
         .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
         .slice(0, RESULTS),
-      artists: provider === 'navidrome' ? (found?.artists ?? []).slice(0, RESULTS) : [],
+      artists: (found?.artists ?? [])
+        .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
+        .slice(0, RESULTS),
     }))
     .filter((g) => g.tracks.length || g.albums.length || g.artists.length);
   const shown = groups.reduce(

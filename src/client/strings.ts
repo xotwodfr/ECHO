@@ -170,6 +170,7 @@ export const strings = {
     },
   },
   artist: {
+    likedBy: 'Your liked songs by this artist',
     title: 'Artist',
     missing: 'This artist is not in your library.',
     popular: 'Popular',
