@@ -49,6 +49,8 @@ export interface Library {
   // The Spotify-style pages (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md).
   /** Home's shelves: albums by kind (`getAlbumList2`). */
   albumList?(kind: AlbumListKind, size: number): Promise<Album[]>;
+  /** Home's artist shelf, where the source knows the user's favourites (Spotify's top artists). */
+  topArtists?(count: number): Promise<ArtistRef[]>;
   /** Bio, picture and similar artists (`getArtistInfo2`, Last.fm through Navidrome). */
   artistInfo?(id: string): Promise<ArtistInfo>;
   /** An artist's most played songs (`getTopSongs`, by name). */

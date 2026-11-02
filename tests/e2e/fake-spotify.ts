@@ -165,6 +165,19 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
       items: SP_TRACKS.slice(0, 2).map((t) => ({ item: { ...t, album: SP_ALBUM } })),
       next: null,
     });
+  // Home: what was played lately, and the user's top tracks and artists.
+  if (method === 'GET' && p === '/v1/me/player/recently-played')
+    return json({
+      items: [...SP_TRACKS.slice(0, 2), ...SP_GLASS_TRACKS].map((t) => ({
+        track: { ...t, album: albumOfTrack(t as SpTrack) },
+      })),
+    });
+  if (method === 'GET' && p === '/v1/me/top/tracks')
+    return json({ items: SP_TRACKS.map((t) => ({ ...t, album: SP_ALBUM })) });
+  if (method === 'GET' && p === '/v1/me/top/artists')
+    return json({
+      items: [...SP_ALBUM.artists, ...SP_GLASS.artists].map((x) => ({ ...x, images: [] })),
+    });
   // Liked Songs, followed artists, artist pages and hearts (the February 2026 library endpoint).
   if (method === 'GET' && p === '/v1/me/tracks')
     return json({

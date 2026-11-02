@@ -305,6 +305,40 @@ export function createSpotifyLibrary(): Library {
       for (const x of out) if (!byId.has(x.id)) put(x, false);
       return { name: a.name, albums: out };
     },
+    // Home (docs/superpowers/specs/2026-11-02-source-switch-design.md): from the user's own history;
+    // Spotify has no random or rated lists for this app.
+    async albumList(kind, size) {
+      const unique = (ts: SpTrack[]) => {
+        const seen = new Map<string, Album>();
+        for (const t of ts)
+          if (t.album && !seen.has(t.album.id)) seen.set(t.album.id, albumOf(t.album));
+        return [...seen.values()].slice(0, size);
+      };
+      if (kind === 'recent') {
+        const r = await spotifyApi<{ items: { track: SpTrack }[] }>(
+          '/v1/me/player/recently-played',
+          { query: { limit: PAGE } },
+        );
+        return unique((r?.items ?? []).map((i) => i.track));
+      }
+      if (kind === 'frequent') {
+        const r = await spotifyApi<{ items: SpTrack[] }>('/v1/me/top/tracks', {
+          query: { limit: PAGE, time_range: 'medium_term' },
+        });
+        return unique(r?.items ?? []);
+      }
+      if (kind === 'newest' || kind === 'starred') {
+        if (status === 'loading') await saved;
+        return albums.slice(0, size);
+      }
+      return [];
+    },
+    async topArtists(count) {
+      const r = await spotifyApi<{ items: SpArtist[] }>('/v1/me/top/artists', {
+        query: { limit: Math.min(count, PAGE), time_range: 'medium_term' },
+      });
+      return (r?.items ?? []).map(artistRef);
+    },
     async artistInfo(id) {
       const a = await spotifyApi<SpArtist>(`/v1/artists/${encodeURIComponent(raw(id))}`);
       // No bio or related artists for this app (Development Mode): the picture only.

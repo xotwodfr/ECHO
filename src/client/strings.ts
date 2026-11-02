@@ -22,6 +22,12 @@ export const strings = {
     newest: 'New in your library',
     frequent: 'Your most played',
     random: 'Something different',
+    spotify: {
+      recent: 'Jump back in',
+      newest: 'Saved albums',
+      frequent: 'From your top tracks',
+      artists: 'Your top artists',
+    },
     playlists: 'Your playlists',
     artists: 'Artists you play',
     showAll: 'Show all',

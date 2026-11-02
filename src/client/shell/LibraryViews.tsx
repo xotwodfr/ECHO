@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { useStore } from 'zustand';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import {
   ALBUM_SORTS,
@@ -17,6 +18,7 @@ import {
 } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
+import { sourceStore } from '../source.ts';
 import { strings } from '../strings.ts';
 import { Button, buttonClass, Field, IconButton, ProviderMark } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
@@ -626,7 +628,7 @@ export function ArtistView({ id }: { id: string }) {
   );
   const info: ArtistInfo | null = typeof about === 'object' ? about : null;
   const name = typeof artist === 'object' && artist ? artist.name.trim() : known;
-  const [popular] = useFresh(`top:${name ?? ''}`, async () =>
+  const [popular] = useFresh(`top:${id}:${name ?? ''}`, async () =>
     name && library?.topSongs ? library.topSongs(name, 10).catch(() => []) : [],
   );
   const top: Track[] | null = Array.isArray(popular) ? popular : null;
@@ -1092,7 +1094,11 @@ const genreColour = (name: string) =>
 
 function BrowseAll() {
   const library = useLibrary();
-  const [v, reload] = useFresh('genres', async () => (library?.genres ? library.genres() : []));
+  // Genres are Navidrome's: per source, so Spotify mode never shows them from the cache.
+  const source = useStore(sourceStore, (x) => x.source);
+  const [v, reload] = useFresh(`genres:${source}`, async () =>
+    library?.genres ? library.genres() : [],
+  );
   const genres = v === 'loading' ? null : v;
   const load = () => void reload();
   if (genres === null) return <GridLoading count={8} />;

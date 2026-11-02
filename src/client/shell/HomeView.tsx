@@ -1,7 +1,9 @@
 import type React from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import type { Album, AlbumListKind } from '../library.ts';
+import { useStore } from 'zustand';
+import type { Album, AlbumListKind, ArtistRef } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
+import { sourceStore } from '../source.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
@@ -35,7 +37,9 @@ const SHELVES: Shelf[] = [
 
 function useAlbumList(kind: AlbumListKind) {
   const library = useLibrary();
-  const [v, reload] = useFresh(`home:${kind}`, async () =>
+  // Per source: after the switch flips, the other source's shelves are never shown.
+  const source = useStore(sourceStore, (x) => x.source);
+  const [v, reload] = useFresh(`home:${source}:${kind}`, async () =>
     library?.albumList ? library.albumList(kind, SHELF) : (library?.albums.slice(0, SHELF) ?? []),
   );
   return [v === 'loading' ? null : v, () => void reload()] as const;
@@ -234,6 +238,41 @@ function PlaylistShelf() {
   );
 }
 
+/** Spotify's own top artists (Spotify Home), round, each leading to their page. */
+function TopArtistShelf() {
+  const library = useLibrary();
+  const [artists, setArtists] = useState<ArtistRef[]>([]);
+  useEffect(() => {
+    let current = true;
+    void library?.topArtists?.(SHELF).then(
+      (a) => current && setArtists(a),
+      () => undefined, // a connection without the scope yet: no shelf (Settings asks to reconnect)
+    );
+    return () => {
+      current = false;
+    };
+  }, [library]);
+  if (artists.length < 2) return null;
+  return (
+    <section className="shelf" aria-labelledby="shelf-top-artists">
+      <h2 id="shelf-top-artists">{strings.home.spotify.artists}</h2>
+      <ul className="album-grid card-row" aria-label={strings.home.spotify.artists}>
+        {artists.map((a) => (
+          <AlbumTile
+            key={a.id}
+            id={a.id}
+            title={a.name}
+            artist={strings.artist.title}
+            cover={a.image}
+            round
+            to={{ view: 'artist', id: a.id }}
+          />
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 /** Artists of the most played albums, each once. */
 function ArtistShelf({ albums }: { albums: Album[] }) {
   const seen = new Map<string, Album>();
@@ -261,6 +300,11 @@ function ArtistShelf({ albums }: { albums: Album[] }) {
 
 export function HomeView() {
   const library = useLibrary();
+  // Spotify Home: its shelves come from the user's Spotify history; ECHO's own play history (mixes,
+  // Jump back in) is Navidrome's.
+  const spotify = useStore(sourceStore, (x) => x.source) === 'spotify';
+  const titled = (sh: Shelf): Shelf =>
+    spotify && sh.kind !== 'random' ? { ...sh, title: strings.home.spotify[sh.kind] } : sh;
   const [recent, retryRecent] = useAlbumList('recent');
   const [newest, retryNewest] = useAlbumList('newest');
   const [frequent, retryFrequent] = useAlbumList('frequent');
@@ -294,16 +338,30 @@ export function HomeView() {
       ) : (
         <>
           <Shortcuts recent={shortcutsFrom} />
-          <MadeForYouShelf />
-          <JumpBackInShelf />
+          {!spotify && <MadeForYouShelf />}
+          {!spotify && <JumpBackInShelf />}
           {SHELVES.slice(0, 2).map((s) => (
-            <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />
+            <AlbumShelf
+              key={s.kind}
+              shelf={titled(s)}
+              albums={lists[s.kind]}
+              retry={retries[s.kind]}
+            />
           ))}
           <PlaylistShelf />
           {SHELVES.slice(2).map((s) => (
-            <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />
+            <AlbumShelf
+              key={s.kind}
+              shelf={titled(s)}
+              albums={lists[s.kind]}
+              retry={retries[s.kind]}
+            />
           ))}
-          {Array.isArray(frequent) && <ArtistShelf albums={frequent} />}
+          {spotify ? (
+            <TopArtistShelf />
+          ) : (
+            Array.isArray(frequent) && <ArtistShelf albums={frequent} />
+          )}
         </>
       )}
     </div>

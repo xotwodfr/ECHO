@@ -110,6 +110,29 @@ test('hearting a Spotify song in Navidrome mode saves it in Spotify', async ({ p
     .toBe(true);
 });
 
+test('Spotify Home: Jump back in, top tracks, top artists, saved albums, playlists', async ({
+  page,
+}) => {
+  await ready(page);
+  await page.goto('/');
+  await sourceButton(page, 'Spotify').click();
+  for (const name of [
+    'Jump back in',
+    'Saved albums',
+    'From your top tracks',
+    'Your top artists',
+    'Your playlists',
+  ])
+    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('list', { name: 'Jump back in' }).getByText('Northern Static'),
+  ).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Made For You' })).toHaveCount(0);
+  await expect(
+    page.getByRole('list', { name: 'Your top artists' }).getByText('Kite Weather'),
+  ).toBeVisible();
+});
+
 test('BRW-02: without Widevine, the browser’s own fix is named', async ({ page, browserName }) => {
   await fakeSpotify(page);
   await page.addInitScript(() => {

@@ -103,4 +103,36 @@ describe('createSpotifyLibrary', () => {
     const q = calls.find((c) => c.path === '/v1/search')?.init?.query;
     expect(q).toMatchObject({ type: 'track,album,artist', limit: 10 });
   });
+
+  it('albumList recent: the albums played lately, each once, newest first', async () => {
+    const other = { ...album, id: 'gw', name: 'Glass Weather' };
+    answers['/v1/me/player/recently-played'] = {
+      items: [
+        { track: { ...track('a'), album } },
+        { track: { ...track('b'), album: other } },
+        { track: { ...track('c'), album } },
+      ],
+    };
+    const r = await createSpotifyLibrary().albumList?.('recent', 10);
+    expect(r?.map((a) => a.id)).toEqual(['spotify:ns', 'spotify:gw']);
+  });
+
+  it('albumList frequent: the albums of the top tracks', async () => {
+    answers['/v1/me/top/tracks'] = { items: [track('a'), track('b')] };
+    const r = await createSpotifyLibrary().albumList?.('frequent', 10);
+    expect(r?.map((a) => a.id)).toEqual(['spotify:ns']);
+  });
+
+  it('albumList newest: the saved albums; random: none', async () => {
+    const lib = createSpotifyLibrary();
+    expect((await lib.albumList?.('newest', 10))?.map((a) => a.id)).toEqual(['spotify:ns']);
+    expect(await lib.albumList?.('random', 10)).toEqual([]);
+  });
+
+  it('topArtists maps prefixed ids', async () => {
+    answers['/v1/me/top/artists'] = { items: [{ ...artist, images: [{ url: 'face' }] }] };
+    expect(await createSpotifyLibrary().topArtists?.(10)).toEqual([
+      { id: 'spotify:kite', name: 'Kite Weather', image: 'face' },
+    ]);
+  });
 });
