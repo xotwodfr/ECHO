@@ -1231,6 +1231,15 @@
   outline-offset: calc(-1 * var(--fl-focus-ring));
 }
 
+/* A choice among siblings: a check before the chosen one, room for it before the others. */
+.menu-item[aria-checked] {
+  gap: var(--sp-2);
+}
+
+.menu-item[aria-checked="false"] .icon {
+  visibility: hidden;
+}
+
 .menu-item--destructive {
   color: var(--negative);
 }

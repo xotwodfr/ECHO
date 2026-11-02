@@ -134,6 +134,8 @@ export interface MenuItem {
   onSelect: () => void;
   disabled?: boolean;
   destructive?: boolean;
+  /** A choice among siblings (menuitemradio): checked or not; a check marks the chosen one. */
+  checked?: boolean;
 }
 
 /** Menu button (§9.6; ARIA menu button pattern): opens from its trigger, arrows move, Esc closes. */
@@ -281,6 +283,11 @@ export function Menu({
               }}
               type="button"
               role="menuitem"
+              // A choice among siblings is a menuitemradio, checked or not.
+              {...(item.checked !== undefined && {
+                role: 'menuitemradio',
+                'aria-checked': item.checked,
+              })}
               tabIndex={-1}
               className={item.destructive ? 'menu-item menu-item--destructive' : 'menu-item'}
               aria-disabled={item.disabled || undefined}
@@ -290,6 +297,7 @@ export function Menu({
                 item.onSelect();
               }}
             >
+              {item.checked !== undefined && <Icon name="check" />}
               {item.label}
             </button>
           ))}

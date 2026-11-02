@@ -68,3 +68,19 @@ test('Navidrome only: no switch', async ({ page }) => {
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByRole('group', { name: 'Library', exact: true })).toHaveCount(0);
 });
+
+test('phone: the switch lives in the account menu', async ({ page }) => {
+  await both(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('.home').getByRole('button', { name: 'Profile' }).click();
+  await page.getByRole('menuitemradio', { name: 'Spotify library' }).click();
+  await page.goto('/library');
+  await expect(page.locator('main').getByText('Northern Static').first()).toBeVisible();
+  await page.goto('/');
+  await page.locator('.home').getByRole('button', { name: 'Profile' }).click();
+  await expect(page.getByRole('menuitemradio', { name: 'Spotify library' })).toHaveAttribute(
+    'aria-checked',
+    'true',
+  );
+});

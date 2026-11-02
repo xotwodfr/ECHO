@@ -3,7 +3,7 @@ import { useStore } from 'zustand';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
 import { logout, sessionStore } from '../session.ts';
-import type { Libraries } from '../source.ts';
+import { type Libraries, setSource, sourceStore } from '../source.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
@@ -18,6 +18,7 @@ import {
   type SettingsSection,
   type ViewStore,
 } from '../view.ts';
+import { AccountMenu } from './AccountMenu.tsx';
 import { InviteView } from './AccountViews.tsx';
 import { AdminSection } from './AdminViews.tsx';
 import { AccountSection, LoginView, SessionExpiredSheet, SetupView } from './AuthViews.tsx';
@@ -110,49 +111,6 @@ function TopBar({ route }: { route: Route }) {
       </nav>
       <AccountMenu />
     </header>
-  );
-}
-
-function AccountMenu() {
-  const session = useStore(sessionStore);
-  const navigate = useView((s) => s.navigate);
-  const signedIn = session.status === 'signedIn';
-  const admin = signedIn && session.role === 'admin';
-  const initial = signedIn ? session.username.slice(0, 1).toUpperCase() : '';
-  return (
-    <Menu
-      label={strings.nav.profile}
-      trigger={{
-        className: 'avatar-btn',
-        content: initial ? <span className="avatar">{initial}</span> : <Icon name="user" />,
-      }}
-      items={[
-        {
-          label: strings.nav.account,
-          onSelect: () => navigate({ view: 'settings', section: 'account' }),
-        },
-        {
-          label: strings.nav.settings,
-          onSelect: () => navigate({ view: 'settings', section: 'preferences' }),
-        },
-        ...(admin
-          ? [
-              {
-                label: strings.nav.admin,
-                onSelect: () => navigate({ view: 'settings', section: 'admin' }),
-              },
-            ]
-          : []),
-        ...(signedIn
-          ? [
-              {
-                label: strings.nav.signOut,
-                onSelect: () => void logout().finally(() => window.location.assign('/login')),
-              },
-            ]
-          : []),
-      ]}
-    />
   );
 }
 

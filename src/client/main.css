@@ -263,6 +263,22 @@ a {
   color: var(--on-green);
 }
 
+/* Home's head on phones: the avatar (account menu) before the greeting, as in Spotify's app. */
+.home-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.home-head .menu-wrap {
+  position: relative;
+}
+
+.home-head .menu {
+  right: auto;
+  left: 0;
+}
+
 .avatar-btn {
   display: grid;
   place-items: center;

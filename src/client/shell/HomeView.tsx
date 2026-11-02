@@ -11,7 +11,9 @@ import { toastStore } from '../ui/logic.ts';
 import { AlbumTile, Artwork } from '../ui/media.tsx';
 import { BlockEmpty, BlockError, GridLoading } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
+import { AccountMenu } from './AccountMenu.tsx';
 import { usePlaylists, useStarredAll } from './collections.ts';
+import { useCompact } from './compact.ts';
 import { useFresh } from './fresh.ts';
 import { useAlbumMenu } from './LibraryViews.tsx';
 import { Link } from './link.tsx';
@@ -300,6 +302,7 @@ function ArtistShelf({ albums }: { albums: Album[] }) {
 
 export function HomeView() {
   const library = useLibrary();
+  const compact = useCompact();
   // Spotify Home: its shelves come from the user's Spotify history; ECHO's own play history (mixes,
   // Jump back in) is Navidrome's.
   const spotify = useStore(sourceStore, (x) => x.source) === 'spotify';
@@ -320,9 +323,13 @@ export function HomeView() {
     Array.isArray(recent) && recent.length ? recent : Array.isArray(newest) ? newest : [];
   return (
     <div className="home">
-      <h1 className="home-greeting" tabIndex={-1}>
-        {strings.home.greeting(new Date().getHours())}
-      </h1>
+      <div className="home-head">
+        {/* Phones have no top bar: the account menu (and the library switch) opens from here. */}
+        {compact && <AccountMenu />}
+        <h1 className="home-greeting" tabIndex={-1}>
+          {strings.home.greeting(new Date().getHours())}
+        </h1>
+      </div>
       {!library ? (
         <BlockEmpty
           text={strings.library.empty}
