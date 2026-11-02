@@ -87,7 +87,8 @@ IDs are referenced by the implementation plan and acceptance criteria.
 | **F5** | Transport | Play/pause, previous/next, seek with scrubbing, volume, shuffle, repeat, provider/device indicator. | `PLAYBACK_ARCHITECTURE.md` §3 |
 | **F6** | Queue | View, reorder, remove, clear, "play next", "add to queue". Provider-aware (see constraints). | `PLAYBACK_ARCHITECTURE.md` §6 |
 | **F7** | Library | Navidrome: artists, albums, album detail, playlists, recently added, starred. Spotify: saved albums & playlists (read-only browse, play). | §6.3 |
-| **F8** | Search | One search field across connected providers, grouped results (tracks, albums, artists), keyboard-first. | §6.4 |
+| **F8** | Search | One search field over the active library source (the switch, below), results as tracks, albums, artists, keyboard-first. | §6.4 |
+| **F8b** | Library source switch | With Navidrome and Spotify both connected: one library at a time, switched in the top bar (the account menu on phones; Settings → Default service is the same setting). Every library page, Home and Search follow it; playback, the queue and the lyrics do not. A link to the other source's item switches to it (2026-11-02, `superpowers/specs/2026-11-02-source-switch-design.md`). | §6.3 |
 | **F9** | Connections & settings | Each user connects, tests and disconnects their own Navidrome and Spotify accounts and sets appearance, motion, audio and lyrics preferences. The admin configures server-wide Spotify app, Spicy Lyrics key and policy gates. | `SETTINGS_AND_SECURITY.md` §6–§8 |
 | **F10** | Keyboard control | Full operation without a pointer; global shortcuts inside the app; a shortcut sheet. | §7 |
 | **F11** | States & resilience | Designed loading, empty, offline, reconnecting, and error states for every block; no blank screens. | §8 |

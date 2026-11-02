@@ -82,7 +82,8 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | LIB-02 | A library of 5,000 albums scrolls at ≥ 55 fps (virtualised, ≤ 150 album tiles in the DOM) | P | M9 |
 | LIB-03 | Covers show the cached dominant colour (or `--surface-2`) until loaded, with no layout shift (CLS 0) | E | M5 |
 | SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | E | M5 |
-| SRCH-02 | With both providers connected, results are grouped with a provider mark and Navidrome first. Spotify results respect limit ≤ 10 per page | E (fake) + M | M7 |
+| SRCH-02 | Search finds the active library source only (the switch, SRC-01); after a switch the same query answers from the new source and never shows the other's results meanwhile. Spotify results respect limit ≤ 10 per type. *Changed 2026-11-02: results were merged and grouped by provider* | E (fake) + M | M7 |
+| SRC-01 | With Navidrome and Spotify both connected, a switch (top bar; the account menu on phones; Settings → Default service is the same setting) shows one source's library at a time on every library page. A link to the other source's item switches to it; switching never stops playback; with one source connected there is no switch | U + E (fake) | 2026-11-02 |
 
 ## 4. Floating lyrics (F2), the signature
 

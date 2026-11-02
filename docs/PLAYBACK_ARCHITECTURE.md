@@ -112,9 +112,16 @@ Authorization Code with **PKCE**, run by ECHO's server (details and token storag
 | `streaming` | Web Playback SDK [C] |
 | `user-read-playback-state`, `user-modify-playback-state` | devices, transfer, play, seek, shuffle, repeat, volume, queue add [C] |
 | `user-read-currently-playing` | currently playing and queue read [C] |
-| `user-library-read`, `playlist-read-private` | browse saved albums and the user's playlists (MVP-β, optional) |
+| `user-library-read`, `playlist-read-private` | browse saved albums, Liked Songs and the user's playlists |
+| `user-library-modify`, `user-follow-read`, `user-follow-modify` | hearts save to Spotify (`/v1/me/library`); followed artists in Your Library (2026-11-02) |
+| `user-top-read`, `user-read-recently-played` | Spotify Home: top tracks and artists, Jump back in (2026-11-02) |
 | `user-read-private` | Required by Search [C: scopes doc, 2026-10-24] and returns `product`, which ECHO reads to say "Spotify playback needs Premium" before the SDK fails. |
 | `user-read-email` | No endpoint ECHO uses needs it, and the SDK reference names no scopes [C]; Spotify's own SDK example still requests it [R]. Kept until the M7 manual checklist shows the SDK plays without it (one constant, `SPOTIFY_SCOPES`). |
+
+The scope list is `REQUIRED_SCOPES` (`src/shared/spotify-scopes.ts`), shared with the browser: the
+token route also returns the scopes Spotify granted, and a connection made before a scope was added
+shows "Reconnect Spotify to finish setting it up." in Settings (a 403 naming the scope maps to
+`spotify.scope`, never to "not on the user list").
 
 The client asks the server for the **current user's** access token (`POST /api/v1/spotify/token`)
 whenever the SDK calls `getOAuthToken`, and before Web API calls. Access tokens last 3600 s [C]. The
@@ -162,7 +169,12 @@ per endpoint.
 | Queue read / add | `GET /v1/me/player/queue`, `POST /v1/me/player/queue?uri=` |
 | User playlists | `GET /v1/me/playlists`. Playlist items via `/playlists/{id}/items` (renamed from `/tracks`). Only playlists the user owns or collaborates on are readable [C: Feb 2026 guide] |
 | Saved albums | `GET /v1/me/albums` (unchanged). Saving and checking use the generic `PUT`/`DELETE /v1/me/library` and `GET /v1/me/library/contains` with Spotify URIs [C: Feb 2026 guide] |
-| Search | `GET /v1/search`, **limit ≤ 10** (default 5) [C] |
+| Search | `GET /v1/search` (`track,album,artist`), **limit ≤ 10** (default 5) [C] |
+| Playlist page | `GET /v1/playlists/{id}` (name, owner, description) + its items |
+| Liked Songs, followed artists | `GET /v1/me/tracks`, `GET /v1/me/following?type=artist` |
+| Hearts (save, follow) | `PUT`/`DELETE /v1/me/library` with `{ uris }` (tracks, albums, artists) [C: Feb 2026 guide] |
+| Artist page | `GET /v1/artists/{id}`, `GET /v1/artists/{id}/albums`; search `artist:"…"` if the latter is refused. No top tracks: "Your liked songs by this artist" instead |
+| Home | `GET /v1/me/player/recently-played`, `GET /v1/me/top/tracks`, `GET /v1/me/top/artists` |
 | Single track | `GET /v1/tracks/{id}` (batch `GET /tracks` removed [C]) |
 
 Not used: Audio Features, Audio Analysis, Recommendations, Related Artists (restricted for new apps

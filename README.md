@@ -9,7 +9,9 @@ lyric field in an audio-reactive room lit by the album cover.
   crossfade, ReplayGain, scrobbling), with audio-reactive visuals (Reverb).
 - **Spotify:** each user connects their own account to the server's Spotify app (PKCE). Playback runs
   through the Web Playback SDK, with Spotify's attribution rules and two admin policy switches.
-  Navidrome tracks are matched to Spotify where a source needs it.
+  With both connected, a switch shows one library at a time: Spotify mode has its own Home (from
+  your Spotify history), Liked Songs, playlists, followed artists, artist pages and search, and
+  hearts save to Spotify. Navidrome tracks are matched to Spotify where a source needs it.
 - **Lyrics:** the best synchronised source wins (your Navidrome files, Spicy Lyrics, NetEase,
   LRCLIB), word-timed where available, with a shared cache, credits on the Stage, per-track timing
   offsets and a static sheet when untimed.

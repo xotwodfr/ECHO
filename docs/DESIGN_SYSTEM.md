@@ -56,8 +56,10 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
                                                                       └─────────────┘
 ```
 
-- **Top bar** (`--topbar`): the ECHO wordmark, a round Home button, the search pill, the account
-  menu (Account, Settings, Admin, Log out).
+- **Top bar** (`--topbar`): the ECHO wordmark, a round Home button, the library switch
+  (`Navidrome | Spotify`, only with both connected; §9.5), the search pill, the account menu (the
+  library choice when both are connected, Account, Settings, Admin, Log out). On phones the account
+  menu opens from an avatar before Home's greeting.
 - **Your Library** (`--library-w`; covers only, `--library-w-min`, below 1024px): Liked Songs,
   playlists, albums, artists; filter chips, a search, the library's order; "+" makes a playlist.
 - **The page**: `--panel`, `--r-panel` corners, its own scroll.
@@ -241,7 +243,10 @@ the focus ring. Switches are Fluent's: a 40×20 track in a 24px target, off an o
 matching knob, on the accent with an on-accent knob. Chips and view switches are toggle buttons
 (4px, edged; selected is the accent). Tabs are text with a 3px rounded accent bar under the
 current one. The current Your Library row and phone tab carry a short accent bar (leading edge,
-or under the icon) over a subtle fill.
+or under the icon) over a subtle fill. The library switch is a segmented control: a `--fl-control`
+track with a hairline edge, two 30px segments, the chosen one the accent (a fieldset of pressed
+buttons, like Settings' choices). In a menu, a choice among siblings is a `menuitemradio` with a
+check before the chosen one.
 
 ### 9.6 Sheets, menus, dialogs, toasts
 

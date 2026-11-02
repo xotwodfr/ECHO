@@ -1,6 +1,6 @@
 # Source switch: Navidrome or Spotify, one at a time — design
 
-Status: draft for owner approval · 2026-11-02
+Status: **approved** by the owner 2026-11-02 · built 2026-11-02 (plan `docs/superpowers/plans/2026-11-02-source-switch.md`)
 
 ## Intent
 
@@ -94,6 +94,9 @@ Settings.
 ### The active source
 
 - A small store holds `source: 'navidrome' | 'spotify'`.
+- *As built:* the remembered choice is the existing per-account preference
+  `playback.defaultProvider` (Settings → Default service, which had no effect before). So the
+  switch and that setting are one, and the choice follows the account rather than the device.
 - It is remembered per device, like volume. Per device is my call: a phone and a desktop can
   differ, and it needs no server change.
 - It defaults to Navidrome when both are connected. With one connection, the source is that

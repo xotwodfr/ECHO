@@ -17,7 +17,10 @@ Fluent 2 with an album-tinted Mica glow** ([spec](superpowers/specs/2026-10-29-f
 [plan](superpowers/plans/2026-10-30-fluent-web.md), `DESIGN_SYSTEM.md` Draft 6); the Android app keeps
 Material 3. That work is **merged into `main` (2026-11-02) but not deployed**; one Firefox test
 (LYR-17, a scrubber click half a second ahead in the lyrics view) fails from the Selawik commit on,
-cause not yet found. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
+cause not yet found. On 2026-11-02 the **library source switch** was built
+([spec](superpowers/specs/2026-11-02-source-switch-design.md),
+[plan](superpowers/plans/2026-11-02-source-switch.md)): Navidrome or Spotify, one library at a
+time, with a full Spotify library behind it. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
 real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
 (SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
 (REL-06), the Orca pass, the five-second test (DS-05), the 10-bit capture (VIS-09) and the Spotify
