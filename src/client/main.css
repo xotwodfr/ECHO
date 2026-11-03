@@ -371,10 +371,10 @@ a {
 .mode-switch {
   flex: none;
   display: flex;
-  gap: 2px;
+  gap: var(--trace);
   margin: 0;
-  padding: 3px;
-  border: 1px solid var(--line);
+  padding: var(--trace);
+  border: var(--rule) solid var(--line);
   border-radius: var(--r-pill);
   background: var(--chip);
 }
@@ -383,7 +383,7 @@ a {
   display: flex;
   align-items: center;
   gap: var(--sp-2);
-  height: 32px;
+  height: var(--control-h);
   padding: 0 var(--sp-3);
   border: 0;
   border-radius: var(--r-pill);
@@ -403,10 +403,10 @@ a {
 }
 
 .mode-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--yt-dot);
+  height: var(--yt-dot);
   border-radius: 50%;
-  background: #ff0033;
+  background: var(--yt-red);
 }
 
 .yt-steps {
@@ -417,7 +417,6 @@ a {
 .yt-cookie {
   min-height: 6rem;
   resize: vertical;
-  font-family: ui-monospace, monospace;
   word-break: break-all;
 }
 

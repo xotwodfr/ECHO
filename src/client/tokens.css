@@ -144,6 +144,11 @@
   /* Made For You's covers: the mix's name sized and inset by the cover's own width. */
   --mix-title: 800 14cqi/1.02; --mix-pad: 7cqi; --mix-photo: 0.6;
 
+  /* YouTube Music mode (src/client/youtube, youtube/yt.css): YouTube Music's own look, mockup A of
+     docs/superpowers/specs/2026-11-03-youtube-music-design.md, not Fluent. */
+  --yt-red: #ff0033;
+  --yt-dot: 8px;
+
   /* motion */
   --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;
   --dur-art: 640ms; --dur-palette: 1200ms;
