@@ -1,6 +1,6 @@
 # YouTube Music mode — design
 
-Status: **approved** by the owner 2026-11-03.
+Status: **approved** by the owner 2026-11-03 · built on branch `youtube-music` (plan `docs/superpowers/plans/2026-11-03-youtube-music.md`), not merged, not deployed.
 Mockups: https://claude.ai/artifact/8yTf8MWLVBU9TQqsDvfcWm (board A was chosen).
 
 ## Intent

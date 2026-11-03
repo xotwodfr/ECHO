@@ -56,9 +56,12 @@ export type Run = (
   args: string[],
 ) => Promise<{ code: number; stdout: string; stderr: string }>;
 
-/** `TMPDIR` is where the standalone binary unpacks itself: the image may have no writable /tmp. */
-const execRun =
-  (tmp?: string): Run =>
+/**
+ * `TMPDIR`: where the standalone binary unpacks itself. `XDG_CACHE_HOME`: its cache (YouTube's
+ * player code); in the image uid 1000 has no home, so without it yt-dlp fails to create `/.cache`.
+ */
+export const createRun =
+  (dirs: { tmp?: string; cache?: string } = {}): Run =>
   (bin, args) =>
     new Promise((resolve) => {
       execFile(
@@ -67,7 +70,11 @@ const execRun =
         {
           timeout: TIMEOUT_MS,
           maxBuffer: 16 * 1024 * 1024,
-          env: tmp ? { ...process.env, TMPDIR: tmp } : process.env,
+          env: {
+            ...process.env,
+            ...(dirs.tmp && { TMPDIR: dirs.tmp }),
+            ...(dirs.cache && { XDG_CACHE_HOME: dirs.cache }),
+          },
         },
         (err, stdout, stderr) =>
           resolve({
@@ -100,9 +107,10 @@ export function createYtdlpResolver(opts: {
   now: () => number;
   log: Log;
   tmp?: string;
+  cache?: string;
   run?: Run;
 }): Resolver {
-  const run = opts.run ?? execRun(opts.tmp);
+  const run = opts.run ?? createRun({ tmp: opts.tmp, cache: opts.cache });
   const done = new Map<string, Resolved>();
   const pending = new Map<string, Promise<Resolved>>();
   const status: YtdlpStatus = { version: null, updatedAt: null, lastError: null };
@@ -211,7 +219,7 @@ export function ensureBinary(bundled: string, dataDir: string): string {
 export async function updateYtdlp(
   bin: string,
   r: Resolver,
-  run: Run = execRun(),
+  run: Run = createRun(),
   now: () => number = Date.now,
 ): Promise<void> {
   const u = await run(bin, ['-U']).catch((e: unknown) => ({

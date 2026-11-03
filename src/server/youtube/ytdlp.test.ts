@@ -160,6 +160,28 @@ describe('the yt-dlp resolver', () => {
 });
 
 describe('the yt-dlp binary', () => {
+  // Live in the image 2026-11-03: uid 1000 has no home there, so yt-dlp could not create its cache
+  // ("Permission denied: '/.cache'"); its temporary files and cache live in the data volume.
+  it('runs with its temp and cache directories in the data volume', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'echo-ytdlp-'));
+    const bin = join(dir, 'fake-yt-dlp');
+    writeFileSync(
+      bin,
+      '#!/bin/sh\necho "{\\"url\\":\\"https://x/v?expire=1&t=$TMPDIR&c=$XDG_CACHE_HOME\\",\\"filesize\\":5}"\n',
+      { mode: 0o755 },
+    );
+    const r = createYtdlpResolver({
+      bin,
+      now: () => 0,
+      log: () => {},
+      tmp: '/data/tmp',
+      cache: '/data/cache',
+    });
+    const got = await r.resolve(ID);
+    expect(new URL(got.url).searchParams.get('t')).toBe('/data/tmp');
+    expect(new URL(got.url).searchParams.get('c')).toBe('/data/cache');
+  });
+
   it('ensureBinary copies once', () => {
     const dir = mkdtempSync(join(tmpdir(), 'echo-ytdlp-'));
     const bundled = join(dir, 'bundled');

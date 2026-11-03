@@ -2,7 +2,7 @@
   "name": "echo",
   "version": "0.1.0",
   "private": true,
-  "description": "ECHO: an immersive, self-hosted music player for Navidrome and Spotify",
+  "description": "ECHO: an immersive, self-hosted music player for Navidrome, and YouTube Music",
   "license": "AGPL-3.0-only",
   "type": "module",
   "packageManager": "pnpm@12.11.2",

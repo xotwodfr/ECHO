@@ -80,6 +80,7 @@ with another user's credentials (security review, 2026-11-03). Each user adds at
 | Recovery codes | user | Argon2id hashes (low-cost params) | once, at generation |
 | Session ids / device tokens | user | SHA-256 hashes | the token itself, once (cookie / response body) |
 | Navidrome password or API key | user | encrypted (`connections.secret_enc`) | never |
+| YouTube Music cookie (the pasted `Cookie` header) | user | encrypted (`youtube_accounts.cookie_enc`, re-sealed by `rotate-master-key`) | never; sent only to YouTube's own hosts, never to yt-dlp |
 | Spicy Lyrics secret key (`sl_sk_…`) | server | encrypted | never |
 | Stream-URL signing key, cookie-signing key | server | derived from the master key (HKDF-SHA256, distinct `info` labels) | never |
 | **Master key** | server | Docker secret file, **not** in the DB or the image | never |
@@ -269,6 +270,26 @@ server: validate URL (rules below) → test (PLAYBACK_ARCHITECTURE.md §5.3)
 
 Removed on 2026-11-03: the admin's Spotify app, each user's PKCE connection, and the 5-seat limit.
 
+### 6.2a YouTube Music (per user; 2026-11-03)
+
+Settings → Account → YouTube Music: the user pastes the `Cookie` request header of a signed-in
+music.youtube.com tab (Google offers no sign-in for this). The server stores it only once an
+authenticated call answers with the account's name, sealed, and never returns it. It is used for
+browsing (InnerTube, through youtubei.js) and never for audio: yt-dlp fetches every song
+anonymously, because its documentation warns that accounts used with it get banned. Each user's
+browsing session is cached per stored sealed value, so a reused user id never inherits another's
+sign-in. A cookie Google rotated answers 409 `youtube.signed_out` (`stale: true`) and the client asks
+to sign in again; 401 stays reserved for the ECHO session.
+
+Audio: `/youtube/stream/:id` resolves the song with yt-dlp (at most two at once, cached until 30 min
+before the URL's expiry) and proxies it: googlevideo URLs are bound to the server's IP and refuse
+other User-Agents, so the bytes pass through ECHO with yt-dlp's own headers, the browser's Range
+translated into googlevideo's `range` parameter (at most 10 MiB per answer), sandboxed and
+`no-store`. Thumbnails pass through `/youtube/image`, https on YouTube's image hosts only, no
+redirects, raster types only, so the CSP keeps `img-src 'self'`. The yt-dlp binary is copied from
+the image into `/data/bin` and updated daily with `yt-dlp -U` (which checks the release's
+checksums); its temporary files and cache live in `/data`.
+
 ### 6.3 Spicy Lyrics (admin)
 
 Admin → Server → Lyrics → Spicy Lyrics key. The server validates the `sl_sk_` prefix and runs a test
@@ -313,6 +334,7 @@ brightness. Everything else follows the user across devices.
 | `lyrics.spicyKey` (secret), `lyrics.spicyEnabled`, `lyrics.lrclibEnabled` | —, true, true |
 | `auth.requireTotpForAll` | false (admin always required) |
 | `navidrome.extraAllowedUrls` | [] |
+| `youtube.enabled` (YouTube Music mode for everyone; off answers 404 `youtube.disabled` on `/youtube/*`) | true |
 
 ### 7.3 Settings screens
 

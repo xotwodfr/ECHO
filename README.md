@@ -13,6 +13,12 @@ lyric field in an audio-reactive room lit by the album cover.
 - **Wanted:** one list for everyone on the server of music that isn't in Navidrome yet. Add to it
   on Your Library → Wanted or from a search that finds nothing (which also links to the same
   search on YouTube Music); ECHO marks what the library gets, and plays it.
+- **YouTube Music (web):** a switch in the top bar turns ECHO into a YouTube Music app: its
+  Home, Explore, search and your own Library (sign in by pasting a cookie in Settings → Account),
+  YouTube Music's look and its full-screen player with Up next, Lyrics and Related. Songs play
+  through ECHO's own player: the server fetches each song's audio with yt-dlp (anonymously, never
+  with your cookie) and streams it like a Navidrome song. That breaks YouTube's terms; an admin
+  can turn the mode off for everyone. yt-dlp updates itself daily in the data volume.
 - **Colour:** the palette is extracted on the server from each cover and drives the Stage, the
   web client's Fluent 2 accent and its Mica glow (the Android app keeps Material 3); a contrast
   solver keeps every lyric line readable.
@@ -23,7 +29,8 @@ lyric field in an audio-reactive room lit by the album cover.
   into the lyrics view, queue rows glide); Settings → Motion tones it down or turns it off.
 
 Typefaces (web): **Segoe UI** where installed, otherwise **Selawik**, its open fallback, shipped
-for everything, lyrics included (the Android app's are in `docs/ANDROID_CLIENT.md`). Licence:
+for everything, lyrics included, and **Roboto** in YouTube Music mode (the Android app's are in
+`docs/ANDROID_CLIENT.md`). Licence:
 [AGPL-3.0](LICENSE). Fonts: SIL OFL 1.1 (`src/client/fonts/OFL-*.txt`).
 
 The design, plan and acceptance criteria live in [`docs/`](docs/README.md), the source of truth;

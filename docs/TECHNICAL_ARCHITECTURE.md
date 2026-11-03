@@ -393,6 +393,28 @@ built (Vite).
   per-client quality setting: Auto (raw when the client reports a LAN/fast connection via a
   throughput probe, else 192 kbps Opus), Raw, 320, 192, 128.
 
+### 6.6 YouTube Music mode (2026-11-03)
+
+Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`; plan:
+`docs/superpowers/plans/2026-11-03-youtube-music.md`.
+
+- **Server** (`src/server/youtube/`): `catalogue.ts` maps youtubei.js (InnerTube, the API the
+  YouTube Music website uses: no key, no quota) into `src/shared/youtube.ts`'s `YtPage`s;
+  `ytdlp.ts` resolves audio URLs with the standalone yt-dlp binary (Node as its JavaScript runtime,
+  never the user's cookie) and keeps it updated; `proxy.ts` streams audio (Range → googlevideo's
+  `range` parameter, 206 answers) and thumbnails; `routes.ts` is the API; `fake.ts` is the fixed
+  catalogue development and E2E use (`ECHO_DEV_FIXTURES=1`), its audio from the mock Subsonic's
+  `/videoplayback`.
+- **Client** (`src/client/youtube/`): a separate frame (`YtFrame.tsx`, YouTube Music's look, tokens
+  `--yt-*`, Roboto) under `/yt/...` routes; the switch is per device (`localStorage` `echo.mode`).
+  YouTube songs are ordinary `Track`s (`provider: 'youtube'`) played by the same `<audio>` provider
+  (`navidrome.ts` picks `/api/v1/youtube/stream/:id` for them), so the queue, Media Session and
+  lyrics carry on when the switch flips. A queue holding YouTube songs is saved to
+  `/me/queue/youtube`, which the Android app never reads.
+- **Measured** (OptiPlex, 2026-11-03): about 4 s per yt-dlp resolve plus YouTube's few-second
+  `available_at` wait, so a song nobody prepared starts in about 7 s; the next three in the queue
+  are resolved ahead (`/youtube/prepare`).
+
 ---
 
 ## 7. Repository layout (single package, AGPL-3.0)

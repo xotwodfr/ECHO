@@ -44,7 +44,7 @@ import { checkWanted, wantedRoutes, wantedScope } from './wanted.ts';
 import { createCatalogue } from './youtube/catalogue.ts';
 import { createFakeCatalogue } from './youtube/fake.ts';
 import { type YoutubeDeps, youtubeRoutes } from './youtube/routes.ts';
-import { createYtdlpResolver, ensureBinary, updateYtdlp } from './youtube/ytdlp.ts';
+import { createRun, createYtdlpResolver, ensureBinary, updateYtdlp } from './youtube/ytdlp.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -342,8 +342,10 @@ if (import.meta.main) {
     } catch (err) {
       log('warn', 'yt-dlp is not installed: YouTube Music cannot play', { detail: String(err) });
     }
-    const resolver = createYtdlpResolver({ bin, now: Date.now, log, tmp });
-    const update = () => void updateYtdlp(bin, resolver);
+    const cache = join(config.dataDir, 'cache', 'yt-dlp');
+    const resolver = createYtdlpResolver({ bin, now: Date.now, log, tmp, cache });
+    const run = createRun({ tmp, cache });
+    const update = () => void updateYtdlp(bin, resolver, run);
     setTimeout(update, 120_000).unref();
     setInterval(update, 86_400_000).unref();
     youtube = {

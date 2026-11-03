@@ -16,15 +16,24 @@ COPY public ./public
 COPY src ./src
 RUN ECHO_DEV_PAGES=0 pnpm build && CI=true pnpm prune --prod && mkdir -p /tmp/data
 
+# yt-dlp for YouTube Music mode (src/server/youtube/ytdlp.ts): the standalone Linux binary (the
+# runtime has no Python), checked against the release's SHA2-256SUMS. It is only the first copy:
+# the server copies it into /data/bin on start and `yt-dlp -U` keeps that one current daily.
+ARG YTDLP_VERSION=2026.10.21
+ADD --checksum=sha256:d8bd33fca9d5b23bd5b9952b3fca36db5c46331933fda9f598a3da14ce2c243f \
+  https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}/yt-dlp_linux /app/bin/yt-dlp
+RUN chmod 0755 /app/bin/yt-dlp
+
 # Runtime: distroless Node 24 on Debian 13 (M9, SEC-10): no shell, no package manager, no
 # util-linux, ncurses or perl, so none of their CVEs (the 43 HIGH findings of the slim base,
 # docs/reviews/M1-SEC-10-exception.md). glibc and libstdc++ are there for the native modules.
 FROM gcr.io/distroless/nodejs24-debian13@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8
-ENV NODE_ENV=production ECHO_PORT=8080 ECHO_DATA_DIR=/data
+ENV NODE_ENV=production ECHO_PORT=8080 ECHO_DATA_DIR=/data ECHO_YTDLP=/app/bin/yt-dlp
 WORKDIR /app
 COPY --from=build /app/package.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/bin ./bin
 COPY --from=build /app/src/server ./src/server
 COPY --from=build /app/src/shared ./src/shared
 COPY scripts/verify-hardware.ts ./scripts/

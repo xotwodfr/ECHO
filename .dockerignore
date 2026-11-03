@@ -10,3 +10,4 @@
 !src/
 !scripts/verify-hardware.ts
 src/**/*.test.ts
+src/server/youtube/fixtures/
