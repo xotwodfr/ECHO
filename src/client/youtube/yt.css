@@ -708,10 +708,22 @@
   min-width: 9rem;
 }
 
-/* Mid widths: the volume keeps its mute button (and the arrow keys); the slider goes. */
+/* Mid widths: a shorter volume slider and tighter gaps, so the strip stays one row at 1024. */
 @media (max-width: 1099.98px) {
-  .yt-player .slider--volume {
-    display: none;
+  .yt-player {
+    --volume-w: 3.5rem;
+  }
+
+  .yt:not([data-compact]) .yt-player-row {
+    column-gap: var(--sp-4);
+  }
+
+  .yt-strip-words {
+    column-gap: var(--sp-3);
+  }
+
+  .yt-strip-progress {
+    min-width: 7rem;
   }
 }
 
@@ -993,6 +1005,15 @@
   --faint: var(--ln-muted);
   --font: var(--ln-serif);
   --dock: var(--sp-4);
+}
+
+/* The untimed and Motion = Off sheets: every line readable ink (faded ink is 1.8:1 on paper). */
+.ln-lyrics .ly-sheet-line {
+  color: var(--ln-ink-2);
+}
+
+.ln-lyrics .ly-sheet-line[aria-current="true"] {
+  color: var(--ln-ink);
 }
 
 .ln-lyrics .ly-field {

@@ -233,6 +233,11 @@ function grouped(sections: Raw[] | undefined, tab: YtTab): YtShelf[] {
 /** "You must be signed in", a 401, a login page: all mean the cookie is missing or stale. */
 const SIGNED_OUT = /signed in|sign in|log ?in|LOGIN_REQUIRED|status code 401/i;
 
+// meta() remembers a video is not a song (no album) for a day, so its lyrics requests and look-ups
+// ahead stop asking InnerTube again; an error is not remembered.
+const NOT_SONG_MS = 24 * 60 * 60 * 1000;
+const NOT_SONG_MAX = 5000;
+
 export function createCatalogue(opts: {
   cookie?: string;
   fetch?: typeof fetch;
@@ -242,6 +247,7 @@ export function createCatalogue(opts: {
   // Every InnerTube answer says whether it was answered signed in (`logged_in`). With a cookie, a
   // "0" means Google no longer accepts it (rotated): signed out, on every page, Home included.
   let staleSeen = false;
+  const notSongs = new Map<string, number>(); // videoId → until when meta() answers null unasked
   const base = opts.fetch ?? fetch;
   const checked: typeof fetch = async (input, init) => {
     const res = await base(input, init);
@@ -434,20 +440,26 @@ export function createCatalogue(opts: {
           .filter((t): t is Track => !!t),
       })),
 
-    meta: (videoId) =>
-      call(async (y) => {
+    meta: async (videoId) => {
+      if ((notSongs.get(videoId) ?? 0) > Date.now()) return null;
+      return call(async (y) => {
         // Up next's first entry is the song itself, with its album when it is a song.
         const seed = (raw(await y.music.getUpNext(videoId, false)).contents ?? [])
           .map((n) => trackOf(n))
           .find((t) => t?.id === videoId);
-        if (!seed?.album.title) return null;
+        if (!seed?.album.title) {
+          if (notSongs.size >= NOT_SONG_MAX) notSongs.delete(notSongs.keys().next().value ?? '');
+          notSongs.set(videoId, Date.now() + NOT_SONG_MS);
+          return null;
+        }
         return {
           title: seed.title,
           artist: seed.artists.map((a) => a.name).join(', '),
           album: seed.album.title,
           durationMs: seed.durationMs,
         };
-      }),
+      });
+    },
 
     related: (videoId) =>
       call(async (y) => {

@@ -153,6 +153,26 @@ describe('the YouTube Music catalogue (recorded answers)', () => {
     expect(await f.meta('unavailable')).toBeNull(); // no album
   });
 
+  it('meta reads a real song: its album from Up next', async () => {
+    const m = await cat().meta(fx.meta.song);
+    expect(m?.album).toBeTruthy();
+    expect(m?.title).toBeTruthy();
+    expect(m?.durationMs).toBeGreaterThan(0);
+  });
+
+  // Review 2026-11-03: every lyrics request for a video waited on InnerTube again.
+  it('remembers a video is not a song: one InnerTube call, not one per request', async () => {
+    let calls = 0;
+    const counting = (async (input: string | URL | Request, init?: RequestInit) => {
+      if (String(input instanceof Request ? input.url : input).includes('/next')) calls++;
+      return replay(input, init);
+    }) as typeof fetch;
+    const c = createCatalogue({ fetch: counting });
+    expect(await c.meta('fJ9rUzIMcZQ')).toBeNull();
+    expect(await c.meta('fJ9rUzIMcZQ')).toBeNull();
+    expect(calls).toBe(1);
+  });
+
   it('maps suggestions', async () => {
     expect((await cat().suggest('bohem')).length).toBeGreaterThan(0);
   });

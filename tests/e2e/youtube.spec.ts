@@ -297,3 +297,62 @@ test('phone: the paper player scrolls down to the whole lyrics stage', async ({ 
   const strip = await bar(page).boundingBox();
   expect(stage && strip && stage.y + stage.height <= strip.y + 1).toBe(true);
 });
+
+// ---- review 2026-11-03 (Liner notes) ----
+
+test("the strip's Lyrics word switches the open player back to Lyrics", async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await bar(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
+  const np = page.getByRole('dialog', { name: 'Now playing' });
+  await np.getByRole('tab', { name: 'Up next' }).click();
+  await expect(np.getByRole('tab', { name: 'Up next', selected: true })).toBeVisible();
+  await bar(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
+  await expect(np.getByRole('tab', { name: 'Lyrics', selected: true })).toBeVisible();
+});
+
+test('mid widths: the strip keeps its volume slider', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(bar(page).getByRole('slider', { name: 'Volume' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(1024);
+});
+
+test('Motion Off on paper: the sheet lines are ink, not faded', async ({ page }) => {
+  clearLyricsCache();
+  await signedIn(page, 'paper-off');
+  await page.goto('/settings');
+  await page.getByRole('group', { name: 'Motion' }).getByRole('button', { name: 'Off' }).click();
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await bar(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
+  const line = page.locator('.yt-np .ly-sheet-line:not([aria-current="true"])').first();
+  await expect(line).toBeVisible();
+  expect(await line.evaluate((e) => getComputedStyle(e).color)).toBe('rgb(74, 70, 63)'); // --ln-ink-2
+});
+
+test('a song change on paper recedes without blur', async ({ page }) => {
+  clearLyricsCache();
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await bar(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
+  await expect(page.locator('.yt-np .ly-line').first()).toBeAttached();
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { farBlur: string[] }).farBlur = seen;
+    new MutationObserver((ms) => {
+      for (const m of ms)
+        for (const n of m.addedNodes)
+          if (n instanceof HTMLElement && n.classList.contains('ly-receding'))
+            seen.push(n.style.getPropertyValue('--far-blur'));
+    }).observe(document.body, { childList: true, subtree: true });
+  });
+  await bar(page).getByRole('button', { name: 'Next', exact: true }).click();
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { farBlur: string[] }).farBlur))
+    .toEqual(['0px']);
+});

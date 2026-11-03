@@ -368,7 +368,7 @@ export function createLyricField(
   function recede() {
     if (!els.size) return;
     const old = div('ly-scene ly-receding');
-    old.style.setProperty('--far-blur', `${blurAt(1)}px`);
+    old.style.setProperty('--far-blur', `${blurs ? blurAt(1) : 0}px`);
     for (const e of els.values()) old.append(e.root);
     els = new Map();
     host.append(old);

@@ -21,14 +21,16 @@ import { itemOfTrack, LikeWord, PageState, Row, Shelves, Thumb, useYtPage } from
 // strip. Esc or the chevron closes it.
 
 const y = strings.youtube;
-type Tab = 'next' | 'lyrics' | 'related';
+export type Tab = 'next' | 'lyrics' | 'related';
 
 export function NowPlaying({
   onClose,
-  tab: first,
+  tab,
+  onTab,
 }: {
   onClose: () => void;
-  tab: 'next' | 'lyrics';
+  tab: Tab;
+  onTab: (tab: Tab) => void;
 }) {
   const c = usePlayback();
   const t = usePlayer((p) => p.track);
@@ -36,10 +38,8 @@ export function NowPlaying({
   const volume = usePlayer((p) => p.volume);
   const source = useQueue((q) => q.contextSource);
   const session = useStore(sessionStore);
-  const [tab, setTab] = useState<Tab>(first);
   const close = useRef<HTMLButtonElement>(null);
   const id = useId();
-  useEffect(() => setTab(first), [first]);
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -107,7 +107,7 @@ export function NowPlaying({
               id={`${id}-${x.key}`}
               aria-selected={x.key === shown}
               aria-controls={`${id}-panel`}
-              onClick={() => setTab(x.key)}
+              onClick={() => onTab(x.key)}
             >
               {x.label}
             </button>

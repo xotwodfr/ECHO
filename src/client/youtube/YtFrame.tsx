@@ -10,7 +10,7 @@ import { ToastRegion } from '../ui/overlays.tsx';
 import type { Route, YtRoute } from '../view.ts';
 import { useYtShortcuts } from './keys.ts';
 import { ModeSwitch } from './ModeSwitch.tsx';
-import { NowPlaying } from './NowPlaying.tsx';
+import { NowPlaying, type Tab } from './NowPlaying.tsx';
 import { PlayerBar } from './PlayerBar.tsx';
 import { YtPageView } from './pages.tsx';
 import { YtSearch } from './parts.tsx';
@@ -49,9 +49,9 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
   const compact = useCompact();
   const main = useRef<HTMLElement>(null);
   const page = route.page;
-  const [open, setOpen] = useState<'next' | 'lyrics' | null>(null);
+  const [open, setOpen] = useState<Tab | null>(null);
   const close = useCallback(() => setOpen(null), []);
-  const openOn = useCallback((tab: 'next' | 'lyrics') => setOpen(tab), []);
+  const openOn = useCallback((tab: Tab) => setOpen(tab), []);
   useYtShortcuts(openOn);
   // Going to a page closes the full-screen player.
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new page is what closes it
@@ -84,7 +84,7 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
           <YtPageView page={page} />
         </div>
       </main>
-      {open && <NowPlaying onClose={close} tab={open} />}
+      {open && <NowPlaying onClose={close} tab={open} onTab={openOn} />}
       <PlayerBar compact={compact} onOpen={openOn} />
       {compact && <Nav page={page} className="yt-tabs yt-tabs--bottom" icons />}
       <ToastRegion />

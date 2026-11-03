@@ -48,6 +48,7 @@ await yt.music.getArtist(s0.artists[0].channel_id);
 const pls = await yt.music.search('queen', { type: 'playlist' });
 await yt.music.getPlaylist(pls.playlists.contents[0].id);
 await yt.music.getUpNext('fJ9rUzIMcZQ', true);
+await yt.music.getUpNext(s0.id, false); // meta(): a song's own details, with its album
 await yt.music.getHomeFeed();
 await yt.music.getExplore();
 await yt.music.getLyrics('fJ9rUzIMcZQ');
