@@ -161,6 +161,11 @@ describe('browsing YouTube Music', () => {
       ada.cookie,
     );
     expect(like.status).toBe(200);
+    expect(
+      await (
+        await call(s.app, 'GET', '/api/v1/youtube/like/fakesong001', undefined, ada.cookie)
+      ).json(),
+    ).toEqual({ like: true });
     const liked = await (
       await call(s.app, 'GET', '/api/v1/youtube/playlist/VLLM', undefined, ada.cookie)
     ).json();

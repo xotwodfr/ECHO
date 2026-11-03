@@ -22,5 +22,8 @@ export const ytLike = (videoId: string, like: boolean) =>
     body: { like },
   });
 
+export const ytLiked = async (videoId: string) =>
+  (await api<{ like: boolean }>(`/youtube/like/${encodeURIComponent(videoId)}`)).like;
+
 export const ytPrepare = (ids: string[]) =>
   api<null>('/youtube/prepare', { method: 'POST', body: { ids } });

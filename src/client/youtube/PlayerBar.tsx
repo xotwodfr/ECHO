@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
@@ -7,7 +8,7 @@ import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { formatTime, toastStore } from '../ui/logic.ts';
 import { Slider, Volume } from '../ui/slider.tsx';
-import { ytLike } from './api.ts';
+import { ytLike, ytLiked } from './api.ts';
 import { Thumb } from './parts.tsx';
 
 // YouTube Music mode's player bar (mockup A, spec goal 7): a thin red progress line on top, the
@@ -16,11 +17,18 @@ import { Thumb } from './parts.tsx';
 
 const y = strings.youtube;
 
-/** Likes made here (YouTube's answers carry no like state); reset per page load. */
+/** Each song's like: YouTube's answer, then what is pressed here. */
 const likes = createStore<Record<string, boolean>>()(() => ({}));
 
 function LikeButton({ id }: { id: string }) {
   const on = useStore(likes, (l) => !!l[id]);
+  useEffect(() => {
+    if (id in likes.getState()) return;
+    void ytLiked(id).then(
+      (like) => !(id in likes.getState()) && likes.setState({ [id]: like }),
+      () => undefined,
+    );
+  }, [id]);
   const toggle = async () => {
     likes.setState({ [id]: !on });
     try {

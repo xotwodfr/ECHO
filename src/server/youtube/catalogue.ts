@@ -38,6 +38,8 @@ export interface Catalogue {
   related(videoId: string): Promise<YtPage>;
   lyrics(videoId: string): Promise<YtLyrics | null>;
   like(videoId: string, on: boolean): Promise<void>;
+  /** Whether the user likes the song (false when signed out). */
+  liked(videoId: string): Promise<boolean>;
   played(videoId: string): Promise<void>;
 }
 
@@ -446,6 +448,13 @@ export function createCatalogue(opts: {
         await (on ? y.interact.like(videoId) : y.interact.removeRating(videoId));
       }),
 
+    liked: (videoId) =>
+      call(async (y) => {
+        // The answer Up next reads carries the like button's state (`likeStatus`).
+        const r = await y.actions.execute('/next', { videoId, client: 'YTMUSIC' });
+        return likeStatusOf(r.data);
+      }),
+
     played: (videoId) =>
       call(async (y) => {
         if (!opts.cookie) return; // anonymous plays go nowhere
@@ -455,6 +464,11 @@ export function createCatalogue(opts: {
   };
 }
 
+/** A `likeStatus` of LIKE anywhere in an answer (the player overlay's like button). */
+export function likeStatusOf(n: unknown): boolean {
+  return findText(n, 'likeStatus', 0, 12) === 'LIKE';
+}
+
 function descriptionOf(h: Raw | undefined): string {
   const d = h?.description;
   if (!d) return '';
@@ -462,12 +476,12 @@ function descriptionOf(h: Raw | undefined): string {
 }
 
 /** The first string under `key`, anywhere in a node (account names sit a few levels down). */
-function findText(n: unknown, key: string, depth = 0): string {
-  if (!n || typeof n !== 'object' || depth > 6) return '';
+function findText(n: unknown, key: string, depth = 0, max = 6): string {
+  if (!n || typeof n !== 'object' || depth > max) return '';
   const o = n as Record<string, unknown>;
   if (o[key] != null) return text(o[key] as Text);
   for (const v of Object.values(o)) {
-    const hit = findText(v, key, depth + 1);
+    const hit = findText(v, key, depth + 1, max);
     if (hit) return hit;
   }
   return '';

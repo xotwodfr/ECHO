@@ -219,6 +219,7 @@ export function createFakeCatalogue(opts: {
       account();
       likes.set(videoId, on);
     },
+    liked: async (videoId) => likes.get(videoId) ?? false,
     played: async () => {},
     resolver: {
       async resolve(id) {

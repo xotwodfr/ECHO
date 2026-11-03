@@ -938,6 +938,12 @@ paths:
   /youtube/like/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    get:
+      summary: Whether the user likes the song on YouTube Music (false when signed out)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { like: { type: boolean } } } } } }
+        '400': { description: Not an id }
+        '409': { description: youtube.signed_out (a stale sign-in), content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
     put:
       summary: Like a song on the user's YouTube Music account, or take the like back
       requestBody:

@@ -153,6 +153,10 @@ test('like toggles, and Liked music lists the song', async ({ page }) => {
   await expect(like).toHaveAttribute('aria-pressed', 'false');
   await like.click();
   await expect(like).toHaveAttribute('aria-pressed', 'true');
+  // After a reload the button shows YouTube's own state, not a guess.
+  await page.goto('/yt/album/MPREb_fake3');
+  await page.getByRole('button', { name: /^Play Fake Song 3\b/ }).click();
+  await expect(bar(page).getByRole('button', { name: 'Like' })).toHaveAttribute('aria-pressed', 'true');
   await page.goto('/yt/playlist/VLLM');
   await expect(page.getByRole('button', { name: /^Play Fake Song 3\b/ })).toBeVisible();
 });

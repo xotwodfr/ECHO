@@ -174,6 +174,9 @@ describe('SEC-11: isolation between users', () => {
     expect((await as(B, 'PUT', '/api/v1/youtube/like/fakesong001', { like: false })).status).toBe(
       409,
     );
+    expect(await (await as(B, 'GET', '/api/v1/youtube/like/fakesong001')).json()).toEqual({
+      like: false,
+    });
     expect((await field('/api/v1/me/connections/youtube')).connected).toBe(false);
     expect((await field(`/api/v1/me/tracks/navidrome:${track}/override`)).offsetMs).toBe(0);
     expect(

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { type Catalogue, createCatalogue, YtSignedOut } from './catalogue.ts';
+import { type Catalogue, createCatalogue, likeStatusOf, YtSignedOut } from './catalogue.ts';
 import { createFakeCatalogue } from './fake.ts';
 
 // The catalogue against InnerTube answers recorded once from the live service (fixtures/, by
@@ -113,6 +113,13 @@ describe('the YouTube Music catalogue (recorded answers)', () => {
     expect(l?.source).toMatch(/Musixmatch|LyricFind/);
   });
 
+  // Review 2026-11-03: the like button started unliked for every song; YouTube's answer says.
+  it("reads a song's like from YouTube's answer", async () => {
+    expect(await cat().liked('fJ9rUzIMcZQ')).toBe(false); // recorded: INDIFFERENT
+    expect(likeStatusOf({ a: [{ likeButtonRenderer: { likeStatus: 'LIKE' } }] })).toBe(true);
+    expect(likeStatusOf({ likeStatus: 'DISLIKE' })).toBe(false);
+  });
+
   it('maps suggestions', async () => {
     expect((await cat().suggest('bohem')).length).toBeGreaterThan(0);
   });
@@ -154,6 +161,7 @@ describe('the fake catalogue (development and E2E)', () => {
     expect(await f.suggest('fake')).toContain('fake song 1');
     expect(await f.lyrics('fakesong001')).toMatchObject({ source: 'Fixture' });
     await f.like('fakesong001', true);
+    expect(await f.liked('fakesong001')).toBe(true);
     await f.played('fakesong001');
     expect((await f.explore()).shelves.length).toBeGreaterThan(0);
   });

@@ -223,6 +223,11 @@ export function youtubeRoutes(deps: YoutubeDeps, requireUser: MiddlewareHandler<
     return lyrics ? c.json(lyrics) : c.json({ error: 'no_lyrics' }, 404);
   });
 
+  app.get('/youtube/like/:id', async (c) => {
+    const v = id(c, VIDEO_ID);
+    return v ? answer(c, async (cat) => ({ like: await cat.liked(v) })) : bad(c);
+  });
+
   app.put('/youtube/like/:id', async (c) => {
     const v = id(c, VIDEO_ID);
     if (!v) return bad(c);
