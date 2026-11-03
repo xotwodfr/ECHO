@@ -344,6 +344,11 @@ export function ToastRegion() {
         <div key={toast.id} className="toast" data-leaving={toast.leaving || undefined}>
           <Icon name="info" />
           {toast.message}
+          {toast.action && (
+            <button type="button" className="toast-action" onClick={toast.action.run}>
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
     </div>

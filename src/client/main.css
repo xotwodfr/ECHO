@@ -2640,3 +2640,91 @@ a {
 ::view-transition-new(cover) {
   animation: none;
 }
+
+/* ---- Wanted (Your Library → Wanted; WantedView.tsx): an intro, the add field, then one list ---- */
+.wanted {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.wanted-intro {
+  margin: 0;
+  max-width: 64ch;
+  color: var(--muted);
+}
+
+.wanted-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-3);
+}
+
+.wanted-add .field {
+  flex: 1 1 var(--sidebar);
+  min-width: 0;
+}
+
+.wanted-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wanted-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-control);
+}
+
+.wanted-row:nth-child(odd) {
+  background: var(--raised);
+}
+
+.wanted-text {
+  display: flex;
+  flex: 1 1 var(--sidebar);
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.wanted-name {
+  overflow-wrap: anywhere;
+}
+
+.wanted-sub {
+  color: var(--muted);
+  font: var(--fl-type-caption) var(--font-ui);
+}
+
+.wanted-elsewhere {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-transport);
+  color: var(--text);
+}
+
+/* A search that found nothing: the reason, then Add to Wanted and YouTube Music. */
+.nothing-found {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.nothing-found .empty {
+  margin: 0;
+}
+
+.nothing-found .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}

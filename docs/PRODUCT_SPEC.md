@@ -91,6 +91,7 @@ IDs are referenced by the implementation plan and acceptance criteria.
 | **F6** | Queue | View, reorder, remove, clear, "play next", "add to queue". Provider-aware (see constraints). | `PLAYBACK_ARCHITECTURE.md` §6 |
 | **F7** | Library | Navidrome: artists, albums, album detail, playlists, recently added, starred. | §6.3 |
 | **F8** | Search | One search field over the library, results as tracks, albums, artists, keyboard-first; with nothing found, a link to the same search on YouTube Music. | §6.4 |
+| **F8c** | Wanted list | One list for everyone on the server of music that isn't in Navidrome yet: added on Your Library → Wanted or from a search that finds nothing; ECHO marks what the library gets (daily and when the list opens) and plays it; until then each item links to YouTube Music. | `ACCEPTANCE_CRITERIA.md` WNT-01 |
 | **F8b** | Library source switch | Removed 2026-11-03 with Spotify (it chose between the Navidrome and Spotify libraries). | — |
 | **F9** | Connections & settings | Each user connects, tests and disconnects their own Navidrome account and sets appearance, motion, audio and lyrics preferences. The admin configures the Spicy Lyrics key, library matching and the two-factor policy. | `SETTINGS_AND_SECURITY.md` §6–§8 |
 | **F10** | Keyboard control | Full operation without a pointer; global shortcuts inside the app; a shortcut sheet. | §7 |

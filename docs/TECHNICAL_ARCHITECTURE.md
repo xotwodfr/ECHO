@@ -274,6 +274,7 @@ provider emits track change
 | `server_settings` | key, value_json, secret_enc | admin: public origin, Spicy key, matching switch |
 | `track_overrides` | user_id, track_key, offset_ms, pinned_source | lyric offset and pin |
 | `queue_state` | user_id, json, updated_at | per-user queue, so it follows the user across clients |
+| `wanted` | text, norm (unique words), added_by, added_at, found_json, checked_at | the shared Wanted list (2026-11-03) |
 | `audit_log` | at, user_id, event, detail | logins, failures, connection changes, admin actions |
 
 Caches live as files, not in the database (§7.3). Shared caches (palette, lyrics) are keyed by
@@ -311,6 +312,7 @@ audio itself.
 | `GET/PUT /me/tracks/:trackKey/override` | Lyric offset and pin |
 | `GET /palette/:albumKey` | Palette (computed on miss) |
 | `GET/PUT /me/queue` | Queue persistence (compare-and-set) |
+| `GET/POST /wanted` · `DELETE /wanted/:id` | The Wanted list: one for everyone on the server; items marked found only by the server's own Navidrome (`src/server/wanted.ts`) |
 | `GET/PUT /admin/settings` · `GET /admin/users` · `PATCH/DELETE /admin/users/:id` · `POST /admin/users/:id/unlock` · `GET/POST /admin/invites` · `DELETE /admin/invites/:id` · `GET /admin/audit` | Admin only |
 
 Versioning: breaking changes go to `/api/v2`. `/api/v1` stays until every first-party client has

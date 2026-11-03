@@ -16,6 +16,7 @@ import {
 import { dropTracks } from './drag.ts';
 import { Link, useView } from './link.tsx';
 import { type LibraryFilter, panels } from './panels.ts';
+import { wantedStore } from './wanted.ts';
 
 // Your Library (DESIGN_SYSTEM.md §5): the left panel on wide screens, the Library page on phones.
 // Liked Songs first, then playlists, albums and artists, filtered by chip and by a search, in the
@@ -23,6 +24,7 @@ import { type LibraryFilter, panels } from './panels.ts';
 
 type Row =
   | { kind: 'liked'; key: string; count: number }
+  | { kind: 'wanted'; key: string; count: number; found: number }
   | { kind: 'playlist'; key: string; p: Playlist }
   | { kind: 'album'; key: string; a: Album }
   | { kind: 'artist'; key: string; id?: string; name: string; cover?: string; albums: number };
@@ -35,6 +37,7 @@ function useRows(filter: LibraryFilter, q: string): Row[] {
   const version = useLibraryVersion();
   const playlists = usePlaylists();
   const starred = useStarredAll();
+  const wanted = useStore(wantedStore, (s) => s.items);
   return useMemo(() => {
     void version;
     const albums = library?.albums ?? [];
@@ -45,6 +48,15 @@ function useRows(filter: LibraryFilter, q: string): Row[] {
     if (filter === 'all' || filter === 'playlists') {
       if (library?.starredAll && hit(strings.liked.title))
         rows.push({ kind: 'liked', key: 'liked', count: liked });
+      if (filter === 'all' && hit(strings.wanted.title)) {
+        const items = Array.isArray(wanted) ? wanted : [];
+        rows.push({
+          kind: 'wanted',
+          key: 'wanted',
+          count: items.length,
+          found: items.filter((x) => x.found).length,
+        });
+      }
       for (const p of Array.isArray(playlists) ? playlists : [])
         if (hit(p.name)) rows.push({ kind: 'playlist', key: `p:${p.id}`, p });
     }
@@ -85,7 +97,7 @@ function useRows(filter: LibraryFilter, q: string): Row[] {
       );
     }
     return rows;
-  }, [library, version, playlists, starred, filter, q]);
+  }, [library, version, playlists, starred, wanted, filter, q]);
 }
 
 function useLibraryVersion() {
@@ -100,6 +112,7 @@ function useLibraryVersion() {
 
 function routeOf(row: Row): Route | null {
   if (row.kind === 'liked') return { view: 'liked' };
+  if (row.kind === 'wanted') return { view: 'library', tab: 'wanted' };
   if (row.kind === 'playlist') return { view: 'playlist', id: row.p.id };
   if (row.kind === 'album') return { view: 'album', id: row.a.id };
   return row.id ? { view: 'artist', id: row.id } : null;
@@ -112,6 +125,7 @@ function LibraryRow({ row }: { row: Row }) {
   const to = routeOf(row);
   const current =
     (row.kind === 'liked' && route.view === 'liked') ||
+    (row.kind === 'wanted' && route.view === 'library' && route.tab === 'wanted') ||
     (row.kind === 'playlist' && route.view === 'playlist' && route.id === row.p.id) ||
     (row.kind === 'album' && route.view === 'album' && route.id === row.a.id) ||
     (row.kind === 'artist' && route.view === 'artist' && route.id === row.id);
@@ -124,22 +138,24 @@ function LibraryRow({ row }: { row: Row }) {
   const [title, sub, art] =
     row.kind === 'liked'
       ? [strings.liked.title, `${k.playlist} • ${strings.panel.songs(row.count)}`, null]
-      : row.kind === 'playlist'
-        ? [
-            row.p.name,
-            `${k.playlist} • ${row.p.owner ?? strings.panel.songs(row.p.tracks)}`,
-            row.p.cover,
-          ]
-        : row.kind === 'album'
-          ? [row.a.title, `${k.album} • ${row.a.artist}`, row.a.cover]
-          : [row.name, k.artist, row.cover];
+      : row.kind === 'wanted'
+        ? [strings.wanted.title, strings.wanted.sub(row.count, row.found), null]
+        : row.kind === 'playlist'
+          ? [
+              row.p.name,
+              `${k.playlist} • ${row.p.owner ?? strings.panel.songs(row.p.tracks)}`,
+              row.p.cover,
+            ]
+          : row.kind === 'album'
+            ? [row.a.title, `${k.album} • ${row.a.artist}`, row.a.cover]
+            : [row.name, k.artist, row.cover];
   const body = (
     <>
       {row.kind === 'liked' ? (
         <span className="liked-art" aria-hidden="true">
           <Icon name="heart" solid />
         </span>
-      ) : row.kind === 'playlist' && !art ? (
+      ) : row.kind === 'wanted' || (row.kind === 'playlist' && !art) ? (
         <span className="art art--list art--empty" aria-hidden="true">
           <Icon name="music" />
         </span>

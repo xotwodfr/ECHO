@@ -86,6 +86,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | LIB-02 | A library of 5,000 albums scrolls at ≥ 55 fps (virtualised, ≤ 150 album tiles in the DOM) | P | M9 |
 | LIB-03 | Covers show the cached dominant colour (or `--surface-2`) until loaded, with no layout shift (CLS 0) | E | M5 |
 | SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | E | M5 |
+| WNT-01 | The Wanted list (Your Library → Wanted, one for everyone on the server): items added on its page or from a search that finds nothing (a toast with Open), each with who added it and when; the same words are one item; an item the server's own library has (an album, else a song, with every word in its artist and title) is marked and plays from its album, else it links to YouTube Music; anyone removes anything; a user on another Navidrome server never marks items found; at most 200 items each | U (`wanted.test.ts`) + E (`wanted.spec.ts`) | 2026-11-03 |
 | SRCH-02 | Search finds the library's tracks, albums and artists; with nothing found it offers the same search on YouTube Music, in a new tab. *Changed 2026-11-03: was the active source only (Spotify ≤ 10 per type)* | E (`pages.spec.ts`: a search with no result offers…) | 2026-11-03 |
 | SRC-01 | **Removed 2026-11-03** with Spotify. | — | — |
 

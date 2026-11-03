@@ -1756,3 +1756,20 @@
 .track-row[draggable="true"] {
   cursor: grab;
 }
+
+/* A toast's one action ("Open"): the region ignores the pointer, the action takes it. */
+.toast-action {
+  margin-left: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--r-control);
+  background: transparent;
+  color: var(--fl-accent-text);
+  font: var(--fl-type-body-strong) var(--font-ui);
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.toast-action:hover {
+  background: var(--fl-subtle-hover);
+}

@@ -38,6 +38,8 @@ import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
 import { startRadio, startSmartShuffle } from './radio.ts';
+import { WantedList } from './WantedView.tsx';
+import { addWanted, youTubeMusicSearch } from './wanted.ts';
 
 // The pages after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md): Album,
 // Artist, Playlist, Liked Songs, Genre and Search. A page opens with a header tinted by its cover,
@@ -315,6 +317,8 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
   const library = useLibrary();
   const followed = useStarredAll();
   const s = strings.library;
+  // The Wanted list is the server's, with or without a library connected.
+  if (tab === 'wanted') return <WantedList />;
   if (!library)
     return (
       <BlockEmpty
@@ -1113,6 +1117,38 @@ export function SearchResults({ q }: { q: string }) {
   );
 }
 
+/** A search that found nothing: put it on the Wanted list, or look on YouTube Music. */
+function NothingFound({ q }: { q: string }) {
+  const navigate = useView((v) => v.navigate);
+  const w = strings.wanted;
+  const add = async () => {
+    const r = await addWanted(q);
+    if (!r) return toastStore.getState().show(w.failed);
+    toastStore.getState().show(r.known ? w.known : w.added, {
+      label: w.open,
+      run: () => navigate({ view: 'library', tab: 'wanted' }),
+    });
+  };
+  return (
+    <div className="nothing-found">
+      <p className="empty">{strings.search.none(q)}</p>
+      <div className="actions">
+        <Button variant="primary" onClick={() => void add()}>
+          {w.fromSearch}
+        </Button>
+        <a
+          className={buttonClass('secondary')}
+          href={youTubeMusicSearch(q)}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {strings.search.elsewhere}
+        </a>
+      </div>
+    </div>
+  );
+}
+
 type Found = {
   tracks: Track[];
   albums: Album[];
@@ -1181,19 +1217,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
         }}
       />
     );
-  if (!shown)
-    return (
-      <p className="empty">
-        {s.none(q)}{' '}
-        <a
-          href={`https://music.youtube.com/search?q=${encodeURIComponent(q)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          {s.elsewhere}
-        </a>
-      </p>
-    );
+  if (!shown) return <NothingFound q={q} />;
   return groups.map((g, gi) => {
     const top =
       gi === 0

@@ -93,9 +93,12 @@ export function menuMove(from: number, key: string, disabled: readonly boolean[]
 export const TOAST_VISIBLE_MS = 4000;
 export const TOAST_EXIT_MS = 250; // = --dur-toast
 
+/** A toast's one action ("Open"): a button that runs it. */
+export type ToastAction = { label: string; run: () => void };
+
 export interface ToastState {
-  toast: { id: number; message: string; leaving: boolean } | null;
-  show(message: string): void;
+  toast: { id: number; message: string; leaving: boolean; action?: ToastAction } | null;
+  show(message: string, action?: ToastAction): void;
 }
 
 export function createToastStore() {
@@ -103,13 +106,14 @@ export function createToastStore() {
   let timers: ReturnType<typeof setTimeout>[] = [];
   return createStore<ToastState>()((set) => ({
     toast: null,
-    show(message) {
+    show(message, action) {
       // A new toast replaces the visible one at once.
       for (const t of timers) clearTimeout(t);
       const mine = ++id;
-      set({ toast: { id: mine, message, leaving: false } });
+      const base = { id: mine, message, ...(action && { action }) };
+      set({ toast: { ...base, leaving: false } });
       timers = [
-        setTimeout(() => set({ toast: { id: mine, message, leaving: true } }), TOAST_VISIBLE_MS),
+        setTimeout(() => set({ toast: { ...base, leaving: true } }), TOAST_VISIBLE_MS),
         setTimeout(() => set({ toast: null }), TOAST_VISIBLE_MS + TOAST_EXIT_MS),
       ];
     },

@@ -154,7 +154,13 @@ export const strings = {
     } as Record<string, string>,
   },
   library: {
-    tabs: { albums: 'Albums', artists: 'Artists', playlists: 'Playlists', starred: 'Liked Songs' },
+    tabs: {
+      albums: 'Albums',
+      artists: 'Artists',
+      playlists: 'Playlists',
+      starred: 'Liked Songs',
+      wanted: 'Wanted',
+    },
     tabsLabel: 'Library sections',
     empty: 'Nothing in your library yet. Connect a server in Settings.',
     noArtists: 'No artists yet.',
@@ -198,6 +204,32 @@ export const strings = {
     pauseName: (t: string) => `Pause ${t}`,
     shuffleName: (t: string) => `Shuffle ${t}`,
     more: (t: string) => `More options for ${t}`,
+  },
+  wanted: {
+    title: 'Wanted',
+    intro:
+      'Music that isn’t in Navidrome yet. Everyone on this server shares this list. ECHO looks for each item in your library every day, and when you open this page.',
+    add: 'Add something',
+    addHint: 'Artist and song, or an album',
+    addButton: 'Add',
+    fromSearch: 'Add to Wanted',
+    added: 'Added to Wanted',
+    known: 'Already on the Wanted list',
+    open: 'Open',
+    failed: 'Couldn’t change the Wanted list. Try again.',
+    loadFailed: 'Couldn’t load the Wanted list.',
+    empty:
+      'Nothing wanted yet. Add music that isn’t in Navidrome here, or from a search that finds nothing.',
+    found: 'In your library',
+    missing: 'Not in Navidrome yet',
+    by: (who: string | null, when: string) => `Added by ${who ?? 'a former user'} · ${when}`,
+    you: 'you',
+    youTubeMusic: 'YouTube Music',
+    play: (title: string) => `Play ${title}`,
+    remove: (text: string) => `Remove ${text} from Wanted`,
+    /** Your Library's row. */
+    sub: (n: number, found: number) =>
+      `List • ${n} item${n === 1 ? '' : 's'}${found ? ` · ${found} in your library` : ''}`,
   },
   search: {
     placeholder: 'What do you want to play?',

@@ -176,6 +176,14 @@ function Tabs<T extends string>(props: {
  */
 function LibraryPage({ tab }: { tab: LibraryTab }) {
   const compact = useCompact();
+  // Phones show Your Library's list; its Wanted row opens the Wanted page itself.
+  if (compact && tab === 'wanted')
+    return (
+      <div className="library-grid-page">
+        <h1 tabIndex={-1}>{strings.wanted.title}</h1>
+        <LibraryContent tab="wanted" />
+      </div>
+    );
   if (compact) return <LibraryPanel page />;
   return (
     <div className="library-grid-page">

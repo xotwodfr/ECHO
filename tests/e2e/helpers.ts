@@ -85,6 +85,17 @@ export function clearLyricsCache() {
 
 const e2eDb = () => new Database(join(tmpdir(), 'echo-e2e', 'data', 'echo.db'));
 
+/**
+ * Takes these items off the Wanted list (`norm`: lower-case words): the E2E database outlives runs,
+ * and other specs' items are left alone.
+ */
+export function forgetWanted(...norms: string[]) {
+  const db = e2eDb();
+  const del = db.prepare('DELETE FROM wanted WHERE norm = ?');
+  for (const n of norms) del.run(n);
+  db.close();
+}
+
 /** Forgets every Spotify match: the E2E database outlives runs, and each run fixes a miss by hand. */
 export function clearSpotifyMatches() {
   const db = e2eDb();

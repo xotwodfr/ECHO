@@ -34,6 +34,9 @@ deferred). Since 2026-10-29:
   an empty search links to YouTube Music. Matching Navidrome tracks to Spotify ids for Spicy Lyrics
   stays (no Spotify account involved). The deploy's migration deleted the stored Spotify
   connections and app credentials.
+- **Wanted list** (2026-11-03): Your Library → Wanted, one list for everyone on the server of music
+  that isn't in Navidrome yet; added there or from a search that finds nothing, marked and playable
+  once the server's own library has it (`ACCEPTANCE_CRITERIA.md` WNT-01).
 
 **Live** at echo.folk3s.com since 2026-11-03 10:19 UTC: all of the above, built from `378c86d`,
 all of it on `main`.

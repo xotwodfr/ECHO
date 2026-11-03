@@ -4,7 +4,7 @@ import type { Tier } from './stage/renderer.ts';
 // viewStore (TECHNICAL_ARCHITECTURE.md §5.4): the current view and its params, kept in sync with
 // browser history so every view is a deep link. No router library (§3, "Not used").
 
-export const LIBRARY_TABS = ['albums', 'artists', 'playlists', 'starred'] as const;
+export const LIBRARY_TABS = ['albums', 'artists', 'playlists', 'starred', 'wanted'] as const;
 export const SETTINGS_SECTIONS = ['preferences', 'account', 'admin'] as const;
 export type LibraryTab = (typeof LIBRARY_TABS)[number];
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
