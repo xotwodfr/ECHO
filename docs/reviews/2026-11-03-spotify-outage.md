@@ -1,5 +1,16 @@
 # Spotify streaming outage: overnight report (2026-11-02 → 03)
 
+## Status 2026-11-03 13:30: done and live
+
+- **Spotify removed and deployed** at 10:15 UTC (`833469b`), the leftover Spotify copy at 10:19
+  (`378c86d`). Verified on the server: the CSP has no Spotify hosts, the bundle no SDK or quota
+  code, and the migration left 0 Spotify connections and 0 credential settings (counts only).
+- **Instead of Spotify**, music that is not in Navidrome goes on the shared **Wanted list** (live
+  at 11:13 UTC, `edc3d9e`; `ACCEPTANCE_CRITERIA.md` WNT-01), and an empty search links to YouTube
+  Music.
+- **Left for the owner:** delete the Spotify app in the Spotify developer dashboard, which also
+  stops it counting against the developer account's quota.
+
 ## Update 2026-11-03 10:05: Spotify was removed
 
 The owner decided almost nothing they play is missing from Navidrome, so Spotify was taken out
@@ -11,7 +22,7 @@ Kept: matching Navidrome tracks to Spotify **ids** for Spicy Lyrics (ListenBrain
 about 95% of the matches; the 688 Spotify-search matches stay), the admin "Spotify matching" screen
 and its manual fix.
 
-**On deploy, a migration deletes** every stored Spotify connection (sealed refresh tokens) and the
+**On deploy (done 10:15 UTC), a migration deleted** every stored Spotify connection (sealed refresh tokens) and the
 app's Client ID, client secret and gate settings. It keeps `spotify_matches` and
 `spotify.matchLibrary`. It cannot be undone; reconnecting would mean entering the Client ID and
 signing in again. Tests: 1371 unit, 252 Chromium e2e (4 failures: the Home screenshots that fail

@@ -67,7 +67,8 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
   account menu (Account, Settings, Admin, Log out). On phones the account
   menu opens from an avatar before Home's greeting.
 - **Your Library** (`--library-w`; covers only, `--library-w-min`, below 1024px): Liked Songs,
-  playlists, albums, artists; filter chips, a search, the library's order; "+" makes a playlist.
+  the Wanted list, playlists, albums, artists; filter chips, a search, the library's order; "+"
+  makes a playlist. The Library page has the same kinds as tabs, Wanted last.
 - **The page**: `--panel`, `--r-panel` corners, its own scroll.
 - **Right panel** (`--np-w`, wide only): Spotify's Now Playing view (cover, song and heart, About
   the artist, Next in queue) or the queue, toggled from the player.
@@ -259,7 +260,9 @@ check before the chosen one.
 Fluent's: menus `--fl-flyout` with a 4px inset, 32px items with 4px hover fills, 8px corners,
 shadow 16; the side sheet a drawer (`--fl-dialog`, shadow 64) over the scrim; dialogs
 `--fl-dialog`, 8px, shadow 64, `--fl-type-subtitle1` titles and buttons at the end; the toast a
-`--fl-flyout` surface with an info glyph, bottom-centre above the player. Each springs in (a
+`--fl-flyout` surface with an info glyph, bottom-centre above the player, and at most one action
+(a text button in the accent, "Open" after "Added to Wanted") that takes the pointer though the
+toast's region does not. Each springs in (a
 menu from its trigger's corner, its items rippling in; a sheet from its edge, from the bottom on
 phones) and plays its exit before it goes, by button, Esc or backdrop (§11.2).
 

@@ -10,6 +10,9 @@ lyric field in an audio-reactive room lit by the album cover.
 - **Lyrics:** the best synchronised source wins (your Navidrome files, Spicy Lyrics, NetEase,
   LRCLIB), word-timed where available, with a shared cache, credits on the Stage, per-track timing
   offsets and a static sheet when untimed.
+- **Wanted:** one list for everyone on the server of music that isn't in Navidrome yet. Add to it
+  on Your Library → Wanted or from a search that finds nothing (which also links to the same
+  search on YouTube Music); ECHO marks what the library gets, and plays it.
 - **Colour:** the palette is extracted on the server from each cover and drives the Stage, the
   web client's Fluent 2 accent and its Mica glow (the Android app keeps Material 3); a contrast
   solver keeps every lyric line readable.

@@ -52,6 +52,7 @@ Out of scope: an attacker with root on the OptiPlex, and DDoS (handled, if at al
 | Preferences, queue, lyric offsets and pins | **Spicy Lyrics secret key** |
 | Sessions and devices, TOTP | Library matching for Spicy Lyrics (`LYRICS_INTEGRATION.md` §4.3) |
 | — | Shared caches: palettes, lyrics, Spotify-id matches |
+| — | The Wanted list: one for everyone, by the owner's choice (2026-11-03); see §2.3 |
 
 ### 2.3 Isolation rule
 
@@ -59,6 +60,12 @@ Every data-access function takes a `userId` (`forUser(userId).connections.get('n
 is no unscoped accessor for user-owned tables. The isolation test suite logs in as user B and calls
 every route with user A's identifiers (queue, sessions, overrides, connections, streams through
 signed URLs). Every call must fail (`ACCEPTANCE_CRITERIA.md` SEC-11).
+
+Shared by design, and listed as such in that suite: the lyrics cache (its per-user overrides are
+attacked) and the **Wanted list** (`/wanted`: everyone reads, adds and removes). For the list, only
+the server's own library marks items found: the default Navidrome (`ECHO_NAVIDROME_URL`), else the
+first admin's. A user connected to another server never fills it, and nobody's text is searched
+with another user's credentials (security review, 2026-11-03). Each user adds at most 200 items.
 
 ---
 

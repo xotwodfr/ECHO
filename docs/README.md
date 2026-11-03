@@ -38,7 +38,7 @@ deferred). Since 2026-10-29:
   that isn't in Navidrome yet; added there or from a search that finds nothing, marked and playable
   once the server's own library has it (`ACCEPTANCE_CRITERIA.md` WNT-01).
 
-**Live** at echo.folk3s.com since 2026-11-03 10:19 UTC: all of the above, built from `378c86d`,
+**Live** at echo.folk3s.com since 2026-11-03 11:13 UTC: all of the above, built from `edc3d9e`,
 all of it on `main`.
 **Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
 the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full
