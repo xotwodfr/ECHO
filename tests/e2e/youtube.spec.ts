@@ -132,6 +132,16 @@ test('flipping to Navidrome keeps playing', async ({ page }) => {
   const dock = page.getByRole('region', { name: 'Player' });
   await expect(dock).toContainText('Fake Song 2');
   await expect(dock).toHaveAttribute('data-status', 'playing');
+  // Spec call 17: no Navidrome heart or links for a YouTube song, in the dock or the side panel.
+  await expect(dock.getByRole('button', { name: /^Add .* to Liked Songs$/ })).toHaveCount(0);
+  await expect(dock.getByRole('link', { name: 'Fake Song 2' })).toHaveCount(0);
+  const panel = page.locator('.right-panel');
+  await page.waitForTimeout(500); // the panel, if open, has mounted
+  if ((await panel.count()) === 0) await dock.getByRole('button', { name: 'Now playing view' }).click();
+  await expect(panel).toContainText('Fake Song 2');
+  await expect(panel.getByRole('link', { name: 'Fake Song 2' })).toHaveCount(0);
+  await expect(panel.getByRole('link', { name: 'Ada Varga' })).toHaveCount(0);
+  await expect(panel.locator('.rp-song button[aria-pressed]')).toHaveCount(0);
 });
 
 test('like toggles, and Liked music lists the song', async ({ page }) => {

@@ -62,11 +62,16 @@ function QueuePane() {
   );
 }
 
+// A YouTube song playing in Navidrome mode (spec call 17): no Navidrome links, no heart.
 const artistLinks = (t: Track) =>
   t.artists.map((a, i) => (
     <span key={a.id ?? a.name}>
       {i > 0 && ', '}
-      {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
+      {a.id && t.provider === 'navidrome' ? (
+        <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link>
+      ) : (
+        a.name
+      )}
     </span>
   ));
 
@@ -94,11 +99,15 @@ function NowPlayingPane() {
         <div className="rp-song">
           <div className="rp-song-text">
             <p className="rp-title">
-              {t.album.id ? <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link> : t.title}
+              {t.album.id && t.provider === 'navidrome' ? (
+                <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link>
+              ) : (
+                t.title
+              )}
             </p>
             <p className="rp-artist">{artistLinks(t)}</p>
           </div>
-          <HeartButton track={t} />
+          {t.provider === 'navidrome' && <HeartButton track={t} />}
         </div>
         <AboutArtist track={t} />
         {next && (
