@@ -10,6 +10,38 @@ import { ytPrepare, ytUpNext } from './api.ts';
 // ahead (goal 9): yt-dlp takes seconds per song, so the next one is fetched while this one plays.
 
 const PREPARE = 3;
+const HINT_FOR_MS = 3_600_000; // a looked-up URL is good for hours; ask again after one
+
+/**
+ * Songs about to be pressed (pointed at, focused, first on a page), looked up ahead: a cold
+ * YouTube song takes ~9 s (yt-dlp, then YouTube's own wait), a prepared one starts at once. Hints
+ * within `waitMs` go as one request of the latest three; the server drops them past a backlog.
+ */
+export function createHinter(
+  send: (ids: string[]) => Promise<unknown> = ytPrepare,
+  waitMs = 150,
+  now: () => number = Date.now,
+) {
+  const asked = new Map<string, number>();
+  let batch: string[] = [];
+  let waiting = false;
+  return (id: string) => {
+    const at = asked.get(id);
+    if ((at !== undefined && now() - at < HINT_FOR_MS) || batch.includes(id)) return;
+    batch.push(id);
+    if (waiting) return;
+    waiting = true;
+    setTimeout(() => {
+      const ids = batch.slice(-PREPARE);
+      batch = [];
+      waiting = false;
+      for (const x of ids) asked.set(x, now());
+      void send(ids).catch(() => undefined);
+    }, waitMs);
+  };
+}
+
+export const hintSong = createHinter();
 
 /** On every queue change: the playing and next two YouTube songs, resolved ahead (once per set). */
 export function startYtPrepare(

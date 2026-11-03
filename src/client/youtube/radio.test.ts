@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { Track } from '../../shared/types.ts';
 import { ManualClock } from '../playback/clock.ts';
 import { createPlaybackController } from '../playback/controller.ts';
 import { FakeProvider } from '../playback/fake.ts';
-import { startYtPrepare, ytAutoplay } from './radio.ts';
+import { createHinter, startYtPrepare, ytAutoplay } from './radio.ts';
 
 // Resolving ahead (goal 9: the next song starts without yt-dlp's wait) and YouTube's radio when
 // the queue runs out (spec call 11).
@@ -60,5 +60,32 @@ describe('YouTube radio and prepare-ahead', () => {
       return { tracks: [yt('z')] };
     });
     expect(asked).toBe(false);
+  });
+});
+
+// Songs pointed at (or first on a page) are looked up ahead: a lookup plus YouTube's wait is ~9 s.
+describe('looking songs up ahead', () => {
+  afterEach(() => vi.useRealTimers());
+
+  it('batches hints, keeps the latest three, and never asks twice within the hour', async () => {
+    vi.useFakeTimers();
+    const sent: string[][] = [];
+    let now = 0;
+    const hint = createHinter(
+      async (ids) => void sent.push(ids),
+      150,
+      () => now,
+    );
+    for (const id of ['aaaaaaaaaaa', 'bbbbbbbbbbb', 'ccccccccccc', 'ddddddddddd', 'aaaaaaaaaaa'])
+      hint(id);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(sent).toEqual([['bbbbbbbbbbb', 'ccccccccccc', 'ddddddddddd']]);
+    hint('ddddddddddd'); // already asked
+    await vi.advanceTimersByTimeAsync(200);
+    expect(sent).toHaveLength(1);
+    now = 3_600_001; // an hour later its URL may be stale: ask again
+    hint('ddddddddddd');
+    await vi.advanceTimersByTimeAsync(200);
+    expect(sent.at(-1)).toEqual(['ddddddddddd']);
   });
 });

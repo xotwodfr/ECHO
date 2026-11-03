@@ -10,6 +10,7 @@ import { BlockError } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
 import { ytPage, ytSuggest } from './api.ts';
 import { playItem } from './play.ts';
+import { hintSong } from './radio.ts';
 
 // The pieces YouTube Music mode's pages are made of (yt.css): rows (songs: a tap plays), cards
 // (albums, playlists, artists: a tap opens their page), shelves of either, and the search box.
@@ -99,7 +100,14 @@ export function Row({ item, onPlay, index }: { item: YtItem; onPlay: () => void;
   const label = `${y.play} ${item.title}${item.subtitle ? `, ${item.subtitle}` : ''}`;
   return (
     <li className="yt-row" data-playing={playing || undefined}>
-      <button type="button" className="yt-row-play" onClick={onPlay} aria-label={label}>
+      <button
+        type="button"
+        className="yt-row-play"
+        onClick={onPlay}
+        onPointerEnter={() => hintSong(item.id)}
+        onFocus={() => hintSong(item.id)}
+        aria-label={label}
+      >
         {index !== undefined ? (
           <span className="yt-row-index" aria-hidden="true">
             {index + 1}
@@ -138,7 +146,13 @@ export function Card({ item, onPlay }: { item: YtItem; onPlay: () => void }) {
           {body}
         </Link>
       ) : (
-        <button type="button" className="yt-card-open" onClick={onPlay}>
+        <button
+          type="button"
+          className="yt-card-open"
+          onClick={onPlay}
+          onPointerEnter={() => hintSong(item.id)}
+          onFocus={() => hintSong(item.id)}
+        >
           {body}
         </button>
       )}
@@ -179,6 +193,9 @@ export function Shelf({ shelf }: { shelf: YtShelf }) {
 }
 
 export function Shelves({ shelves }: { shelves: YtShelf[] }) {
+  // The first song of the page (Quick picks', the top search result) is the likeliest press.
+  const first = shelves.find((s) => s.layout === 'rows')?.items[0]?.id;
+  useEffect(() => void (first && hintSong(first)), [first]);
   return shelves.map((s) => <Shelf key={s.title} shelf={s} />);
 }
 

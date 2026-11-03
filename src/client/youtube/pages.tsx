@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { YT_TABS, type YtPage, type YtTab } from '../../shared/youtube.ts';
 import { usePlayback } from '../playback/context.tsx';
 import { Link } from '../shell/link.tsx';
@@ -6,6 +7,7 @@ import { Icon } from '../ui/icons.tsx';
 import type { YtRoute } from '../view.ts';
 import { itemOfTrack, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
 import { playItem } from './play.ts';
+import { hintSong } from './radio.ts';
 
 // YouTube Music mode's pages (spec goals 2–6): Home, Explore, Library, search, and the pages of an
 // album, an artist and a playlist. Every one is a YtPage from the server.
@@ -91,6 +93,9 @@ function Detail({
 }) {
   const c = usePlayback();
   const tracks = page.tracks ?? [];
+  // Play plays the first song: look it up while the page is read.
+  const first = tracks[0]?.id;
+  useEffect(() => void (first && hintSong(first)), [first]);
   const context = { kind, id, title: page.title } as const;
   return (
     <>

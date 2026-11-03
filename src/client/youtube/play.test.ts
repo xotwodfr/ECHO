@@ -33,4 +33,25 @@ describe('a tap in YouTube Music mode', () => {
     expect(c.queue.getState().now?.durationMs).toBe(201_000);
     expect(c.queue.getState().context.map((t) => t.id)).toEqual(['b']);
   });
+
+  // The owner, 2026-11-03: "it takes long for the audio to play". The lookup starts at the tap,
+  // not after Up next has answered.
+  it('starts the lookup at the tap, before Up next answers', async () => {
+    const clock = new ManualClock();
+    const provider = new FakeProvider({ clock, loadMs: 0 });
+    Object.assign(provider, { sources: ['navidrome', 'youtube'] });
+    const c = createPlaybackController({ provider, clock });
+    const order: string[] = [];
+    await playItem(
+      c,
+      { kind: 'song', id: 'a', title: 'Song a', subtitle: '', thumb: '', track: yt('a') },
+      undefined,
+      async () => {
+        order.push('upNext');
+        return { tracks: [yt('a')] };
+      },
+      async (ids) => void order.push(`prepare:${ids.join(',')}`),
+    );
+    expect(order).toEqual(['prepare:a', 'upNext']);
+  });
 });

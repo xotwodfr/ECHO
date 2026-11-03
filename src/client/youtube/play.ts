@@ -3,7 +3,7 @@ import type { YtItem, YtUpNext } from '../../shared/youtube.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
 import { toastStore } from '../ui/logic.ts';
-import { ytUpNext } from './api.ts';
+import { ytPrepare, ytUpNext } from './api.ts';
 
 // What a tap plays in YouTube Music mode (spec call 15), as YouTube Music does: a single song (in
 // search, a shelf, Related) starts its radio, Up next filled with YouTube's automix; a song
@@ -14,6 +14,7 @@ export async function playItem(
   item: YtItem,
   list?: { tracks: Track[]; kind: 'album' | 'playlist' | 'artist'; id: string; title: string },
   upNext: (id: string) => Promise<YtUpNext> = ytUpNext,
+  prepare: (ids: string[]) => Promise<unknown> = ytPrepare,
 ) {
   const track = item.track;
   if (!track) return;
@@ -24,7 +25,8 @@ export async function playItem(
     );
     return c.playList(list.tracks, index, { kind: list.kind, id: list.id, title: list.title });
   }
-  // Up next answers in about half a second, well inside the audio's own start-up (yt-dlp).
+  // The lookup starts now, while Up next answers (about half a second): the stream joins it.
+  void prepare([track.id]).catch(() => undefined);
   const radio = { kind: 'radio', id: track.id, title: strings.radio.title(track.title) } as const;
   try {
     const { tracks } = await upNext(track.id);
