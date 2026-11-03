@@ -1,6 +1,6 @@
 # YouTube Music mode — design
 
-Status: **draft** 2026-11-03, waiting for the owner's approval.
+Status: **approved** by the owner 2026-11-03.
 Mockups: https://claude.ai/artifact/8yTf8MWLVBU9TQqsDvfcWm (board A was chosen).
 
 ## Intent
