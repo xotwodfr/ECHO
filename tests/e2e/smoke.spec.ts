@@ -59,9 +59,9 @@ test('the type is Segoe UI, falling back to Selawik', async ({ page }) => {
   expect(stack).toMatch(/^Segoe UI Variable Text, Segoe UI, Selawik,/);
   expect(r.computed.replaceAll('"', '')).toBe(stack);
   expect(r.dock.replaceAll('"', '')).toBe(stack);
-  // Roboto is declared for YouTube Music mode (youtube/yt.css) and never loaded here; the test box
-  // has no Segoe UI.
-  expect(r.families).toEqual(['Roboto', 'Selawik']);
+  // Fraunces and Instrument Sans are declared for YouTube Music mode (youtube/yt.css) and never
+  // loaded here; the test box has no Segoe UI.
+  expect(r.families).toEqual(['Fraunces', 'Instrument Sans', 'Selawik']);
   expect(r.loaded).toEqual(['Selawik']);
   expect(r.check).toBe(true);
 });

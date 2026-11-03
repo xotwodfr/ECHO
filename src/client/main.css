@@ -403,10 +403,10 @@ a {
 }
 
 .mode-dot {
-  width: var(--yt-dot);
-  height: var(--yt-dot);
+  width: var(--ln-dot);
+  height: var(--ln-dot);
   border-radius: 50%;
-  background: var(--yt-red);
+  background: var(--ln-vermilion);
 }
 
 .yt-steps {

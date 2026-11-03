@@ -88,8 +88,8 @@ export function PlayerBar({ onOpen, compact }: { onOpen: () => void; compact: bo
         <button type="button" className="yt-player-song" onClick={onOpen}>
           <Thumb src={t.artwork[0]?.url ?? ''} />
           <span className="yt-row-text">
-            <span className="yt-row-title">{t.title}</span>
-            <span className="yt-row-sub">{by}</span>
+            <span className="yt-strip-title">{t.title}</span>
+            <span className="yt-strip-sub">{by}</span>
           </span>
         </button>
         {t.provider === 'youtube' && signedIn && <LikeButton id={t.id} />}

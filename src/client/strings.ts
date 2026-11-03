@@ -124,9 +124,10 @@ export const strings = {
     unavailable: 'This song isn’t available on YouTube.',
     botCheck:
       'YouTube is asking this server to prove it isn’t a bot, so YouTube songs can’t play for now. Try again later.',
-    home: 'Home',
+    home: 'Today',
     explore: 'Explore',
-    library: 'Library',
+    library: 'Your shelf',
+    edition: (day: string) => `YouTube Music · ${day} edition`,
     search: 'Search YouTube Music',
     searchPlaceholder: 'Search songs, albums, artists',
     suggestions: 'Suggestions',

@@ -76,13 +76,53 @@ test('phone layout has bottom tabs and the switch in the account menu', async ({
   await signedIn(page, 'yt');
   await page.goto('/yt');
   const tabs = ytNav(page);
-  for (const name of ['Home', 'Explore', 'Library'])
+  for (const name of ['Today', 'Explore', 'Your shelf'])
     await expect(tabs.getByRole('link', { name })).toBeVisible();
   await tabs.getByRole('link', { name: 'Explore' }).click();
   await expect(page).toHaveURL(/\/yt\/explore$/);
   await page.getByRole('button', { name: 'Profile' }).click();
   await page.getByRole('menuitem', { name: 'Navidrome' }).click();
   await expect(page).toHaveURL(/\/$/);
+});
+
+// ---- Liner notes (docs/superpowers/specs/2026-11-03-youtube-liner-notes-design.md) ----
+
+test('the masthead names the edition', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt');
+  const day = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
+  await expect(page.getByText('ECHO', { exact: true }).first()).toBeVisible();
+  await expect(page.getByText(`YouTube Music · ${day} edition`)).toBeVisible();
+  const tabs = ytNav(page);
+  for (const name of ['Today', 'Explore', 'Your shelf'])
+    await expect(tabs.getByRole('link', { name })).toBeVisible();
+  await expect(tabs.getByRole('link', { name: 'Today' })).toHaveAttribute('aria-current', 'page');
+});
+
+test('phone: no sideways scroll, tabs at the bottom', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signedIn(page, 'yt');
+  await page.goto('/yt');
+  await expect(page.getByRole('heading', { name: 'Quick picks' })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  const box = await ytNav(page).boundingBox();
+  expect(box?.y ?? 0).toBeGreaterThan(700);
+});
+
+test('keys: space pauses, but not while typing', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const bar = page.getByRole('region', { name: 'Player' });
+  await expect(bar).toHaveAttribute('data-status', 'playing', { timeout: 10_000 });
+  await page.locator('body').click({ position: { x: 5, y: 300 } });
+  await page.keyboard.press('Space');
+  await expect(bar).toHaveAttribute('data-status', 'paused');
+  const box = page.getByRole('combobox', { name: 'Search YouTube Music' });
+  await box.click();
+  await page.keyboard.type('a b');
+  await expect(box).toHaveValue('a b');
+  await expect(bar).toHaveAttribute('data-status', 'paused');
 });
 
 // ---- playback ----

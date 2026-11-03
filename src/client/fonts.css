@@ -31,15 +31,32 @@
 }
 
 /*
- * YouTube Music mode's typeface (youtube/yt.css): Roboto, as YouTube Music uses. The latin subset of
- * Google Fonts' variable Roboto (v51, weights 100–900 in one file), redistributed unmodified. SIL
- * OFL 1.1, Copyright 2011 The Roboto Project Authors: see fonts/OFL-Roboto.txt.
+ * YouTube Music mode's typefaces, "Liner notes" (youtube/yt.css): Fraunces (titles, credits,
+ * lyrics) and Instrument Sans (everything else). The latin subsets of Google Fonts' variable
+ * versions (Fraunces v38 roman and italic, Instrument Sans v4), redistributed unmodified. SIL OFL
+ * 1.1: see fonts/OFL-Fraunces.txt and fonts/OFL-InstrumentSans.txt.
  */
 
 @font-face {
-  font-family: "Roboto";
-  src: url("./fonts/roboto-latin.woff2") format("woff2");
+  font-family: "Fraunces";
+  src: url("./fonts/fraunces-latin.woff2") format("woff2");
   font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("./fonts/fraunces-italic-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Instrument Sans";
+  src: url("./fonts/instrument-sans-latin.woff2") format("woff2");
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
 }

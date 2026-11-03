@@ -144,26 +144,28 @@
   /* Made For You's covers: the mix's name sized and inset by the cover's own width. */
   --mix-title: 800 14cqi/1.02; --mix-pad: 7cqi; --mix-photo: 0.6;
 
-  /* YouTube Music mode (src/client/youtube, youtube/yt.css): YouTube Music's own look, mockup A of
-     docs/superpowers/specs/2026-11-03-youtube-music-design.md, not Fluent. */
-  --yt-red: #ff0033;
-  --yt-dot: 8px;
-  --yt-ground: #030303; --yt-raised: #212121; --yt-raised-2: #383838;
-  --yt-hover: #ffffff1a; --yt-line: #ffffff1a; --yt-line-strong: #ffffff33;
-  --yt-text: #ffffff; --yt-muted: #aaaaaa; --yt-on-light: #030303; --yt-avatar: #7b3fa0;
-  --yt-font: Roboto, Arial, sans-serif;
-  --yt-type-h1: 700 2.25rem/1.15 var(--yt-font); --yt-type-h2: 700 1.5rem/1.25 var(--yt-font);
-  --yt-type-wordmark: 700 1.5rem/1 var(--yt-font);
-  --yt-type-title: 500 1rem/1.35 var(--yt-font); --yt-type-body: 400 1rem/1.4 var(--yt-font);
-  --yt-type-small: 400 0.875rem/1.35 var(--yt-font); --yt-type-button: 500 0.875rem/1 var(--yt-font);
-  --yt-type-strap: 400 0.8125rem/1.3 var(--yt-font); --yt-type-tab: 400 0.75rem/1.2 var(--yt-font);
-  --yt-bar-h: 64px; --yt-nav-w: 240px; --yt-nav-h: 48px; --yt-player-h: 72px; --yt-tabs-h: 56px;
-  --yt-search-w: 480px; --yt-search-h: 40px; --yt-chip-h: 36px; --yt-button-h: 36px;
-  --yt-gutter: 48px; --yt-gutter-phone: 16px; --yt-page-w: 1480px;
-  --yt-art-row: 48px; --yt-art-bar: 40px; --yt-art-hero: 264px; --yt-art-hero-phone: 200px;
-  --yt-card-min: 168px; --yt-card-phone: 144px; --yt-row-min: 300px;
-  --yt-r-art: 4px; --yt-r-card: 6px; --yt-r-ctl: 8px; --yt-progress: 2px; --yt-progress-hover: 4px;
-  --yt-np-art: min(56vh, 520px); --yt-np-lyrics-min: 360px;
+  /* YouTube Music mode (src/client/youtube, youtube/yt.css): "Liner notes", a music magazine on
+     paper (docs/superpowers/specs/2026-11-03-youtube-liner-notes-design.md, boards C and F). */
+  --ln-paper: #f3eee6; --ln-ink: #1b1a17; --ln-ink-2: #4a463f; --ln-muted: #6f6a61;
+  --ln-rule: #d8d0c2; --ln-leader: #b3aa9a; --ln-hover: #1b1a170d;
+  --ln-faded: #c9c0b0; --ln-faded-2: #a69d8c; --ln-faded-3: #8f877a;
+  --ln-vermilion: #b8391a; --ln-vermilion-on-ink: #e0896f; --ln-on-ink: #f3eee6; --ln-on-ink-2: #c9c1b3;
+  --ln-serif: Fraunces, Georgia, "Times New Roman", serif;
+  --ln-sans: "Instrument Sans", system-ui, sans-serif;
+  --ln-type-mast: 800 2.75rem/1 var(--ln-serif); --ln-type-mast-phone: 800 1.75rem/1 var(--ln-serif);
+  --ln-type-kicker: 600 0.75rem/1.2 var(--ln-sans); --tracking-ln-kicker: 0.2em;
+  --ln-type-h1: 600 3.5rem/1 var(--ln-serif); --ln-type-h1-phone: 600 2.25rem/1.05 var(--ln-serif);
+  --ln-type-h2: 600 2rem/1.15 var(--ln-serif); --tracking-ln-display: -0.02em;
+  --ln-type-credit: italic 400 1.25rem/1.3 var(--ln-serif);
+  --ln-type-title: 600 1.0625rem/1.35 var(--ln-sans); --ln-type-body: 400 1rem/1.45 var(--ln-sans);
+  --ln-type-ui: 500 0.9375rem/1.2 var(--ln-sans); --ln-type-small: 400 0.875rem/1.35 var(--ln-sans);
+  --ln-type-artist: italic 400 1rem/1.35 var(--ln-serif); --ln-type-number: 400 0.9375rem/1 var(--ln-serif);
+  --ln-type-lyrics: 600 2.25rem/1.15 var(--ln-serif); --ln-type-strip: 600 0.8125rem/1.2 var(--ln-sans);
+  --ln-rule-strong: 2px; --ln-dot: 8px; --ln-gutter: 56px; --ln-gutter-phone: 16px; --ln-page-w: 1480px;
+  --ln-search-w: 520px; --ln-control-h: 44px; --ln-nav-h: 52px; --ln-tabs-h: 56px; --ln-strip-h: 68px;
+  --ln-art-row: 44px; --ln-art-strip: 40px; --ln-art-hero: 520px; --ln-art-hero-phone: 280px;
+  --ln-card-min: 150px; --ln-card-phone: 136px; --ln-number-w: 2rem; --ln-time-w: 3rem;
+  --ln-np-art: min(56vh, 520px); --ln-lyrics-min: 360px; --ln-leader-lift: -0.3em;
 
   /* motion */
   --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;

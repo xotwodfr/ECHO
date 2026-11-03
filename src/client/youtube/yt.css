@@ -1,26 +1,28 @@
-/* YouTube Music mode (YtFrame.tsx): YouTube Music's look, mockup A of the design
-   (docs/superpowers/specs/2026-11-03-youtube-music-design.md), not Fluent. Every value is a --yt-*
-   token (tokens.css, DS-01). No live blur (echo-no-glass), no glows. */
+/* YouTube Music mode (YtFrame.tsx), "Liner notes": a music magazine on paper (boards C and F of
+   docs/superpowers/specs/2026-11-03-youtube-liner-notes-design.md). Ink on paper, one vermilion
+   accent, thin rules instead of boxes; Fraunces for titles, credits and lyrics, Instrument Sans for
+   the rest. Every value is a --ln-* token (tokens.css, DS-01). No shadows, no blur, no glow. */
 
 .yt {
   display: grid;
   grid-template:
-    "bar bar" var(--yt-bar-h)
-    "nav main" minmax(0, 1fr)
-    "player player" auto
-    / var(--yt-nav-w) minmax(0, 1fr);
+    "mast" auto
+    "tabs" auto
+    "main" minmax(0, 1fr)
+    "player" auto
+    / minmax(0, 1fr);
   height: 100dvh;
-  background: var(--yt-ground);
-  color: var(--yt-text);
-  font: var(--yt-type-body);
+  background: var(--ln-paper);
+  color: var(--ln-ink);
+  font: var(--ln-type-body);
 }
 
 .yt[data-compact] {
   grid-template:
-    "bar" var(--yt-bar-h)
+    "mast" auto
     "main" minmax(0, 1fr)
     "player" auto
-    "tabs" var(--yt-tabs-h)
+    "tabs" var(--ln-tabs-h)
     / minmax(0, 1fr);
 }
 
@@ -30,82 +32,117 @@
 }
 
 .yt :focus-visible {
-  outline: var(--focus-ring) solid var(--yt-text);
+  outline: var(--focus-ring) solid var(--ln-vermilion);
   outline-offset: var(--trace);
 }
 
-/* ---- the top bar ---- */
+.yt-kicker,
+.yt-strap {
+  color: var(--ln-vermilion);
+  font: var(--ln-type-kicker);
+  letter-spacing: var(--tracking-ln-kicker);
+  text-transform: uppercase;
+}
 
-.yt-bar {
-  grid-area: bar;
+/* ---- the masthead ---- */
+
+.yt-masthead {
+  grid-area: mast;
   display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-4) var(--sp-7);
+  padding: var(--sp-5) var(--ln-gutter) var(--sp-4);
+  border-bottom: var(--ln-rule-strong) solid var(--ln-ink);
+}
+
+.yt[data-compact] .yt-masthead {
   align-items: center;
-  gap: var(--sp-4);
-  padding: 0 var(--sp-4);
-  border-bottom: var(--rule) solid var(--yt-line);
-  min-width: 0;
-}
-
-.yt-wordmark {
-  flex: none;
-  width: calc(var(--yt-nav-w) - var(--sp-4) * 2);
-  font: var(--yt-type-wordmark);
-}
-
-.yt[data-compact] .yt-wordmark {
-  width: auto;
-}
-
-.yt[data-compact] .yt-bar {
   gap: var(--sp-3);
+  padding: var(--sp-3) var(--ln-gutter-phone);
+}
+
+.yt-mast-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.yt-mast-name {
+  font: var(--ln-type-mast);
+  letter-spacing: var(--tracking-ln-display);
+}
+
+.yt[data-compact] .yt-mast-name {
+  font: var(--ln-type-mast-phone);
+}
+
+.yt[data-compact] .yt-mast-title .yt-kicker {
+  display: none;
 }
 
 .yt-bar-end {
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
   margin-left: auto;
 }
 
+/* The switch: two words, the active one underlined in vermilion. */
 .yt .mode-switch {
   display: flex;
+  gap: var(--sp-4);
   margin: 0;
-  padding: var(--sp-1);
+  padding: 0;
   border: 0;
-  border-radius: var(--r-pill);
-  background: var(--yt-hover);
+  background: none;
 }
 
 .yt .mode-btn {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  height: var(--yt-button-h);
-  padding: 0 var(--sp-4);
+  min-height: var(--ln-control-h);
+  padding: 0;
   border: 0;
-  border-radius: var(--r-pill);
-  background: transparent;
-  color: var(--yt-muted);
-  font: var(--yt-type-button);
+  border-bottom: var(--ln-rule-strong) solid transparent;
+  border-radius: 0;
+  background: none;
+  color: var(--ln-muted);
+  font: var(--ln-type-ui);
   cursor: pointer;
 }
 
 .yt .mode-btn[aria-pressed="true"] {
-  background: var(--yt-text);
-  color: var(--yt-on-light);
+  border-bottom-color: var(--ln-vermilion);
+  color: var(--ln-ink);
+}
+
+.yt .mode-dot {
+  display: none;
+}
+
+.yt .avatar-btn {
+  background: none;
 }
 
 .yt .avatar {
-  background: var(--yt-avatar);
-  color: var(--yt-text);
+  border: var(--rule) solid var(--ln-ink);
+  background: none;
+  color: var(--ln-ink);
+  font: var(--ln-type-title);
+  font-family: var(--ln-serif);
 }
 
-/* Search, with suggestions under it. */
+/* Search: an underlined field, its suggestions on paper under it. */
 .yt-search {
-  flex: 1 1 auto;
+  flex: 1 1 16rem;
   min-width: 0;
-  max-width: var(--yt-search-w);
+  max-width: var(--ln-search-w);
+}
+
+.yt[data-compact] .yt-search {
+  order: 3;
+  flex-basis: 100%;
+  max-width: none;
 }
 
 .yt-search form {
@@ -113,12 +150,9 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  height: var(--yt-search-h);
-  padding: 0 var(--sp-4);
-  border: var(--rule) solid var(--yt-line);
-  border-radius: var(--yt-r-ctl);
-  background: var(--yt-hover);
-  color: var(--yt-muted);
+  min-height: var(--ln-control-h);
+  border-bottom: var(--rule) solid var(--ln-ink);
+  color: var(--ln-ink-2);
 }
 
 .yt-search input {
@@ -127,17 +161,16 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--yt-text);
-  font: var(--yt-type-body);
+  color: var(--ln-ink);
+  font: var(--ln-type-body);
 }
 
 .yt-search input:focus-visible {
-  outline: 0; /* the box shows focus (below) */
+  outline: 0; /* the rule under the field shows focus (below) */
 }
 
 .yt-search form:focus-within {
-  border-color: var(--yt-line-strong);
-  background: var(--yt-raised);
+  border-bottom: var(--ln-rule-strong) solid var(--ln-vermilion);
 }
 
 .yt-suggest {
@@ -147,70 +180,67 @@
   right: 0;
   z-index: 3;
   margin: 0;
-  padding: var(--sp-2) 0;
-  border-radius: var(--yt-r-ctl);
-  background: var(--yt-raised);
-  list-style: none;
+  padding: var(--sp-1) 0;
+  border: var(--rule) solid var(--ln-ink);
+  background: var(--ln-paper);
 }
 
 .yt-suggest [role="option"] {
   padding: var(--sp-2) var(--sp-4);
-  color: var(--yt-text);
+  color: var(--ln-ink);
   cursor: pointer;
 }
 
 .yt-suggest [role="option"]:hover,
 .yt-suggest [aria-selected="true"] {
-  background: var(--yt-hover);
+  background: var(--ln-hover);
 }
 
-/* ---- the menu: a left column on wide screens, tabs at the bottom on phones ---- */
+/* ---- the tabs: words under the masthead, or a bar at the bottom on phones ---- */
 
-.yt-nav {
-  grid-area: nav;
+.yt-tabs {
+  grid-area: tabs;
   display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding: var(--sp-3) var(--sp-2);
-  border-right: var(--rule) solid var(--yt-line);
+  flex-wrap: wrap;
+  gap: var(--sp-6);
+  padding: 0 var(--ln-gutter);
+  border-bottom: var(--rule) solid var(--ln-rule);
 }
 
 .yt-nav-link {
   display: flex;
   align-items: center;
-  gap: var(--sp-5);
-  height: var(--yt-nav-h);
-  padding: 0 var(--sp-4);
-  border-radius: var(--yt-r-ctl);
-  font: var(--yt-type-body);
+  gap: var(--sp-2);
+  min-height: var(--ln-nav-h);
+  border-bottom: var(--ln-rule-strong) solid transparent;
+  color: var(--ln-muted);
+  font: var(--ln-type-ui);
 }
 
-.yt-nav .yt-nav-link:hover,
-.yt-nav .yt-nav-link[aria-current="page"] {
-  background: var(--yt-hover);
+.yt-nav-link:hover {
+  color: var(--ln-ink);
 }
 
-.yt-tabs {
-  grid-area: tabs;
-  display: flex;
-  border-top: var(--rule) solid var(--yt-line);
-  background: var(--yt-raised);
+.yt-nav-link[aria-current="page"] {
+  border-bottom-color: var(--ln-ink);
+  color: var(--ln-ink);
 }
 
-.yt-tabs .yt-nav-link {
+.yt-tabs--bottom {
+  gap: 0;
+  padding: 0;
+  border-top: var(--rule) solid var(--ln-ink);
+  border-bottom: 0;
+  background: var(--ln-paper);
+}
+
+.yt-tabs--bottom .yt-nav-link {
   flex: 1;
   flex-direction: column;
   justify-content: center;
   gap: var(--sp-1);
-  height: 100%;
-  padding: 0;
-  border-radius: 0;
-  color: var(--yt-muted);
-  font: var(--yt-type-tab);
-}
-
-.yt-tabs .yt-nav-link[aria-current="page"] {
-  color: var(--yt-text);
+  border-bottom: 0;
+  font: var(--ln-type-small);
 }
 
 /* ---- the page ---- */
@@ -224,18 +254,24 @@
 .yt-page {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-6);
-  max-width: var(--yt-page-w);
-  padding: var(--sp-5) var(--yt-gutter) var(--yt-gutter);
+  gap: var(--sp-7);
+  max-width: var(--ln-page-w);
+  padding: var(--sp-6) var(--ln-gutter) var(--sp-7);
 }
 
 .yt[data-compact] .yt-page {
-  padding: var(--sp-4) var(--yt-gutter-phone) var(--yt-gutter);
+  gap: var(--sp-6);
+  padding: var(--sp-4) var(--ln-gutter-phone) var(--sp-6);
 }
 
 .yt h1 {
   margin: 0;
-  font: var(--yt-type-h1);
+  font: var(--ln-type-h1);
+  letter-spacing: var(--tracking-ln-display);
+}
+
+.yt[data-compact] h1 {
+  font: var(--ln-type-h1-phone);
 }
 
 .yt h1:focus {
@@ -243,25 +279,24 @@
 }
 
 .yt-shelf h2 {
-  margin: 0 0 var(--sp-4);
-  font: var(--yt-type-h2);
+  margin: 0;
+  padding-bottom: var(--sp-2);
+  border-bottom: var(--ln-rule-strong) solid var(--ln-ink);
+  font: var(--ln-type-h2);
 }
 
-.yt-strap {
+.yt-shelf .yt-strap {
   margin: 0 0 var(--sp-1);
-  color: var(--yt-muted);
-  font: var(--yt-type-strap);
-  text-transform: uppercase;
 }
 
 .yt-loading {
-  height: calc(var(--yt-art-hero) * 2);
-  border-radius: var(--yt-r-card);
-  background: var(--yt-hover);
+  height: var(--ln-art-hero-phone);
+  border-top: var(--ln-rule-strong) solid var(--ln-rule);
 }
 
 .yt-empty {
-  color: var(--yt-muted);
+  color: var(--ln-muted);
+  font: var(--ln-type-artist);
 }
 
 .yt-signin {
@@ -270,76 +305,74 @@
   align-items: flex-start;
   gap: var(--sp-4);
   padding: var(--sp-5) 0;
-  font: var(--yt-type-title);
+  font: var(--ln-type-credit);
 }
 
-/* Thumbnails: square, an artist's round. */
+/* Covers: square, an artist's round. */
 .yt-thumb {
   display: grid;
   place-items: center;
   flex: none;
-  width: var(--thumb-w, var(--yt-art-row));
+  width: var(--thumb-w, var(--ln-art-row));
   aspect-ratio: 1;
-  border-radius: var(--thumb-r, var(--yt-r-art));
   object-fit: cover;
-  background: var(--yt-raised);
-  color: var(--yt-muted);
+  background: var(--ln-rule);
+  color: var(--ln-muted);
 }
 
 .yt-thumb[data-round] {
   border-radius: 50%;
 }
 
-/* An album's, playlist's or artist's header. */
+/* A spread: an album's, playlist's or artist's cover beside its title, credits and actions. */
 .yt-hero {
-  --thumb-w: var(--yt-art-hero);
-  --thumb-r: var(--yt-r-card);
+  --thumb-w: min(100%, var(--ln-art-hero));
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: var(--sp-5);
+  gap: var(--sp-6);
+}
+
+.yt-hero > .yt-thumb {
+  flex: 0 1 var(--ln-art-hero);
 }
 
 .yt-hero-text {
   display: flex;
-  flex: 1 1 var(--yt-row-min);
+  flex: 1 1 18rem;
   flex-direction: column;
-  gap: var(--sp-2);
+  gap: var(--sp-3);
   min-width: 0;
 }
 
-.yt-hero-sub,
-.yt-hero-desc {
+.yt-hero-sub {
   margin: 0;
-  color: var(--yt-muted);
+  color: var(--ln-ink-2);
+  font: var(--ln-type-credit);
 }
 
 .yt-hero-desc {
   display: -webkit-box;
+  margin: 0;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
-  font: var(--yt-type-small);
+  color: var(--ln-muted);
+  font: var(--ln-type-small);
 }
 
 .yt-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-3);
   margin-top: var(--sp-2);
 }
 
-/* Rows: songs. A grid of them on shelves, one column in a list. */
+/* Rows: a tracklist. Number in vermilion, title, a dotted leader, the artist in italic, the time. */
 .yt-rows {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(var(--yt-row-min), 1fr));
-  gap: var(--sp-1) var(--sp-6);
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.yt-rows--list {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .yt-row-play {
@@ -348,9 +381,10 @@
   gap: var(--sp-4);
   width: 100%;
   min-width: 0;
-  padding: var(--sp-1) var(--sp-2);
+  min-height: var(--ln-control-h);
+  padding: var(--sp-2) 0;
   border: 0;
-  border-radius: var(--yt-r-ctl);
+  border-bottom: var(--rule) solid var(--ln-rule);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -359,14 +393,15 @@
 }
 
 .yt-row-play:hover {
-  background: var(--yt-hover);
+  background: var(--ln-hover);
 }
 
 .yt-row-index {
   flex: none;
-  width: var(--yt-art-row);
-  color: var(--yt-muted);
-  text-align: center;
+  width: var(--ln-number-w);
+  color: var(--ln-vermilion);
+  font: var(--ln-type-number);
+  font-variant-numeric: tabular-nums;
 }
 
 .yt-row-text {
@@ -386,49 +421,48 @@
 }
 
 .yt-row-title {
-  font: var(--yt-type-title);
+  font: var(--ln-type-title);
 }
 
 .yt-row[data-playing] .yt-row-title {
-  color: var(--yt-red);
+  color: var(--ln-vermilion);
 }
 
-.yt-row-sub,
-.yt-row-time,
-.yt-card-sub {
-  color: var(--yt-muted);
-  font: var(--yt-type-small);
+.yt-row-sub {
+  color: var(--ln-ink-2);
+  font: var(--ln-type-artist);
 }
 
 .yt-row-time {
   flex: none;
+  width: var(--ln-time-w);
+  color: var(--ln-muted);
+  font: var(--ln-type-small);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
-/* Cards: albums, playlists, artists, on a shelf that scrolls sideways. */
+/* Covers with captions, in a grid that wraps (a scroll row on phones). */
 .yt-cards {
   display: grid;
-  grid-auto-columns: var(--yt-card-min);
-  grid-auto-flow: column;
-  gap: var(--sp-5);
+  grid-template-columns: repeat(auto-fill, minmax(var(--ln-card-min), 1fr));
+  gap: var(--sp-6);
   margin: 0;
-  padding: 0 0 var(--sp-2);
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
+  padding: var(--sp-4) 0 0;
   list-style: none;
 }
 
-.yt[data-compact] .yt-hero {
-  --thumb-w: var(--yt-art-hero-phone);
-}
-
 .yt[data-compact] .yt-cards {
-  grid-auto-columns: var(--yt-card-phone);
-  gap: var(--sp-3);
+  grid-template-columns: none;
+  grid-auto-columns: var(--ln-card-phone);
+  grid-auto-flow: column;
+  gap: var(--sp-4);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
 }
 
 .yt-card {
   --thumb-w: 100%;
-  --thumb-r: var(--yt-r-card);
   scroll-snap-align: start;
   min-width: 0;
 }
@@ -448,75 +482,82 @@
 }
 
 .yt-card-title {
-  font: var(--yt-type-title);
+  font: var(--ln-type-title);
 }
 
-/* Buttons and chips. */
+.yt-card-sub {
+  color: var(--ln-muted);
+  font: var(--ln-type-artist);
+}
+
+/* Buttons: an ink pill, or an outlined one. */
 .yt-button {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  height: var(--yt-button-h);
-  padding: 0 var(--sp-4);
-  border: var(--rule) solid var(--yt-line-strong);
+  min-height: var(--ln-control-h);
+  padding: 0 var(--sp-5);
+  border: var(--rule) solid var(--ln-ink);
   border-radius: var(--r-pill);
   background: transparent;
-  color: var(--yt-text);
-  font: var(--yt-type-button);
+  color: var(--ln-ink);
+  font: var(--ln-type-ui);
   cursor: pointer;
 }
 
 .yt-button:hover {
-  background: var(--yt-hover);
+  background: var(--ln-hover);
 }
 
 .yt-button--light,
 .yt-button--light:hover {
-  border-color: var(--yt-text);
-  background: var(--yt-text);
-  color: var(--yt-on-light);
+  background: var(--ln-ink);
+  color: var(--ln-paper);
 }
 
+/* Search tabs: underlined words. */
 .yt-tabs-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--sp-3);
+  gap: var(--sp-5);
+  border-bottom: var(--rule) solid var(--ln-rule);
 }
 
 .yt-chip {
   display: inline-flex;
   align-items: center;
-  height: var(--yt-chip-h);
-  padding: 0 var(--sp-3);
-  border-radius: var(--yt-r-ctl);
-  background: var(--yt-hover);
-  font: var(--yt-type-button);
+  min-height: var(--ln-control-h);
+  border-bottom: var(--ln-rule-strong) solid transparent;
+  color: var(--ln-muted);
+  font: var(--ln-type-ui);
 }
 
 .yt-chip[aria-current="page"] {
-  background: var(--yt-text);
-  color: var(--yt-on-light);
+  border-bottom-color: var(--ln-ink);
+  color: var(--ln-ink);
 }
 
-/* ---- the player bar ---- */
+/* ---- the ink strip ---- */
 
 .yt-player {
   grid-area: player;
   position: relative;
-  background: var(--yt-raised);
+  background: var(--ln-ink);
+  color: var(--ln-on-ink);
 }
 
 .yt-player-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--sp-4);
-  min-height: var(--yt-player-h);
-  padding: 0 var(--sp-4);
+  gap: var(--sp-3) var(--sp-5);
+  min-height: var(--ln-strip-h);
+  padding: var(--sp-2) var(--ln-gutter);
 }
 
 .yt[data-compact] .yt-player-row {
-  min-height: var(--yt-bar-h);
-  padding: 0 var(--sp-2);
+  flex-wrap: nowrap;
+  padding: var(--sp-2) var(--ln-gutter-phone);
 }
 
 .yt-transport,
@@ -528,25 +569,23 @@
 }
 
 .yt-player-end {
-  color: var(--yt-muted);
+  color: var(--ln-on-ink-2);
 }
 
 .yt-time {
-  margin-left: var(--sp-2);
-  color: var(--yt-muted);
-  font: var(--yt-type-small);
+  color: var(--ln-on-ink-2);
+  font: var(--ln-type-small);
+  font-variant-numeric: tabular-nums;
 }
 
 .yt-player-song {
   display: flex;
   flex: 1;
   align-items: center;
-  justify-content: center;
   gap: var(--sp-3);
   min-width: 0;
   padding: var(--sp-1);
   border: 0;
-  border-radius: var(--yt-r-ctl);
   background: transparent;
   color: inherit;
   font: inherit;
@@ -554,13 +593,21 @@
   cursor: pointer;
 }
 
-.yt[data-compact] .yt-player-song {
-  order: -1;
-  justify-content: flex-start;
+.yt-strip-title {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font: var(--ln-type-strip);
+  letter-spacing: var(--tracking-ln-kicker);
+  text-transform: uppercase;
 }
 
-.yt-player-song .yt-row-text {
-  flex: 0 1 auto;
+.yt-strip-sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ln-on-ink-2);
+  font: var(--ln-type-artist);
 }
 
 .yt .icon-btn {
@@ -568,14 +615,14 @@
 }
 
 .yt .icon-btn[aria-pressed="true"] {
-  color: var(--yt-text);
+  color: var(--ln-vermilion-on-ink);
 }
 
 .yt-open .icon {
   rotate: 180deg;
 }
 
-/* The progress line: YouTube's thin red rule along the bar's top edge, its thumb on hover. */
+/* The progress line: a hairline across the strip's top, vermilion as it plays. */
 .yt-progress {
   position: absolute;
   top: 0;
@@ -585,24 +632,20 @@
 }
 
 .yt-progress .slider-rail {
-  height: var(--yt-progress);
+  height: var(--trace);
   border-radius: 0;
-  background: var(--yt-line-strong);
-}
-
-.yt-progress:hover .slider-rail {
-  height: var(--yt-progress-hover);
+  background: var(--ln-muted);
 }
 
 .yt-progress .slider-fill {
   border-radius: 0;
-  background: var(--yt-red);
+  background: var(--ln-vermilion-on-ink);
 }
 
 .yt-progress .slider-thumb {
   width: var(--sp-3);
   height: var(--sp-3);
-  background: var(--yt-red);
+  background: var(--ln-vermilion-on-ink);
   box-shadow: none;
   opacity: 0;
 }
@@ -616,48 +659,52 @@
   opacity: 1;
 }
 
-.yt-player .slider--volume .slider-fill,
-.yt-player .slider--volume .slider-thumb::after {
-  background: var(--yt-text);
+.yt-player .slider--volume .slider-rail {
+  background: var(--ln-muted);
 }
 
-/* ---- the full-screen player: over the page, under the top bar, above the player bar ---- */
+.yt-player .slider--volume .slider-fill,
+.yt-player .slider--volume .slider-thumb::after {
+  background: var(--ln-on-ink);
+}
+
+/* ---- the full-screen player: paper, over the page, the strip below it ---- */
 
 .yt-np {
-  grid-row: 2;
+  grid-row: 2 / span 2;
   grid-column: 1 / -1;
   z-index: 2;
   display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: var(--yt-gutter);
-  padding: var(--sp-5) var(--yt-gutter);
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--sp-8);
+  padding: var(--sp-6) var(--ln-gutter);
   overflow: hidden;
-  background: var(--yt-ground);
+  background: var(--ln-paper);
 }
 
 .yt[data-compact] .yt-np {
+  grid-row: 2;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: var(--sp-4);
-  padding: var(--sp-4) var(--yt-gutter-phone);
+  padding: var(--sp-4) var(--ln-gutter-phone);
   overflow-y: auto;
 }
 
 .yt-np-close {
   position: absolute;
-  margin: calc(var(--sp-3) * -1) 0 0 calc(var(--sp-6) * -1);
+  margin: calc(var(--sp-4) * -1) 0 0 calc(var(--sp-7) * -1);
 }
 
 .yt-np-art {
+  --thumb-w: var(--ln-np-art);
   display: grid;
-  place-items: center;
+  place-items: start center;
   min-height: 0;
-  --thumb-w: var(--yt-np-art);
-  --thumb-r: var(--yt-r-ctl);
 }
 
 .yt[data-compact] .yt-np-art {
-  --thumb-w: min(100%, var(--yt-art-hero));
+  --thumb-w: min(100%, var(--ln-art-hero-phone));
 }
 
 .yt-np-side {
@@ -668,39 +715,38 @@
 
 .yt-np-tabs {
   display: flex;
-  border-bottom: var(--rule) solid var(--yt-line);
+  gap: var(--sp-6);
+  border-bottom: var(--rule) solid var(--ln-rule);
 }
 
 .yt-np-tabs [role="tab"] {
-  flex: 1;
-  height: var(--yt-nav-h);
+  min-height: var(--ln-control-h);
+  padding: 0;
   border: 0;
-  border-bottom: var(--focus-ring) solid transparent;
+  border-bottom: var(--ln-rule-strong) solid transparent;
   background: transparent;
-  color: var(--yt-muted);
-  font: var(--yt-type-button);
-  text-transform: uppercase;
+  color: var(--ln-muted);
+  font: var(--ln-type-ui);
   cursor: pointer;
 }
 
 .yt-np-tabs [aria-selected="true"] {
-  border-bottom-color: var(--yt-text);
-  color: var(--yt-text);
+  border-bottom-color: var(--ln-ink);
+  color: var(--ln-ink);
 }
 
 .yt-np-panel {
   flex: 1;
   min-height: 0;
-  padding: var(--sp-3) 0;
+  padding: var(--sp-4) 0;
   overflow-y: auto;
 }
 
 .yt-np-stage {
   position: relative;
   height: 100%;
-  min-height: var(--yt-np-lyrics-min);
+  min-height: var(--ln-lyrics-min);
   overflow: hidden;
-  border-radius: var(--yt-r-ctl);
 }
 
 /* The Stage's lyric area fills the tab (in the lyrics view it sits right of the cover column). */
@@ -710,6 +756,6 @@
 
 .yt-lyrics-plain {
   margin: 0 0 var(--sp-4);
-  font: var(--yt-type-title);
+  font: var(--ln-type-credit);
   white-space: pre-line;
 }
