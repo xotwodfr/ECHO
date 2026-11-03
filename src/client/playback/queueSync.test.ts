@@ -33,10 +33,12 @@ describe('the queue slot (spec call 16)', () => {
     history: [],
     ...over,
   });
-  it('queueSlot picks youtube for any youtube track', () => {
+  it('queueSlot picks youtube for any youtube track still to play', () => {
     expect(queueSlot(q({}))).toBe('/me/queue');
     expect(queueSlot(q({ nextUp: [ytTrack('y')] }))).toBe('/me/queue/youtube');
     expect(queueSlot(q({ now: ytTrack('y'), provider: 'youtube' }))).toBe('/me/queue/youtube');
+    // Review 2026-11-03: a YouTube song in the history kept a Navidrome album from Android.
+    expect(queueSlot(q({ history: [ytTrack('y')] }))).toBe('/me/queue');
   });
 });
 
@@ -137,6 +139,27 @@ describe('queue sync start', () => {
     c.seek(100_000);
     await vi.advanceTimersByTimeAsync(2500);
     expect(puts.slice(1).map((p) => Math.round(p.positionMs / 1000))).toEqual([30, 100]);
+  });
+
+  it('a Navidrome queue saved after YouTube songs leaves them out of its history', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    const puts: { url: string; body: { queue: QueueState } }[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') puts.push({ url, body: JSON.parse(String(init.body)) });
+      return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const provider = new FakeProvider({ clock, loadMs: 0 });
+    Object.assign(provider, { sources: ['navidrome', 'youtube'] });
+    const c = createPlaybackController({ provider, clock });
+    await startQueueSync(c, () => {});
+    c.playList([ytTrack('y')], 0, { kind: 'radio', id: 'y', title: 'Y' });
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    await vi.advanceTimersByTimeAsync(2500);
+    const last = puts.at(-1);
+    expect(last?.url).toBe('/api/v1/me/queue');
+    expect(last?.body.queue.history.map((t) => t.provider)).not.toContain('youtube');
   });
 
   it('restores the newer of the two slots', async () => {

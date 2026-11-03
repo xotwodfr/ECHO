@@ -56,13 +56,18 @@ type Slot = '/me/queue' | '/me/queue/youtube';
 type Saved = { queue: QueueState | null; positionMs: number; updatedAt: number };
 
 /**
- * Where a queue is saved: one holding any YouTube song goes to the web-only slot, so the Android
- * app (which reads `/me/queue` and plays Navidrome alone) never restores one (spec call 16).
+ * Where a queue is saved: one with any YouTube song still to play goes to the web-only slot, so
+ * the Android app (which reads `/me/queue` and plays Navidrome alone) never restores one (spec
+ * call 16). The history does not count: a Navidrome album after a YouTube session is Android's.
  */
 export function queueSlot(q: QueueState): Slot {
-  const all = [q.now, ...q.nextUp, ...q.context, ...q.history];
-  return all.some((t) => t?.provider === 'youtube') ? '/me/queue/youtube' : '/me/queue';
+  const ahead = [q.now, ...q.nextUp, ...q.context];
+  return ahead.some((t) => t?.provider === 'youtube') ? '/me/queue/youtube' : '/me/queue';
 }
+
+/** What a slot keeps: `/me/queue` without YouTube songs, even in its history. */
+const forSlot = (q: QueueState, slot: Slot): QueueState =>
+  slot === '/me/queue' ? { ...q, history: q.history.filter((t) => t.provider !== 'youtube') } : q;
 
 export async function startQueueSync(c: PlaybackController, notify: (message: string) => void) {
   const base: Record<Slot, number> = { '/me/queue': 0, '/me/queue/youtube': 0 };
@@ -92,8 +97,9 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
     // The session ended: whoever signs in next must not receive this queue (REL-05).
     if (sessionExpired.getState().expired) return;
     const p = c.player.getState();
-    const queue = trimQueue(c.queue.getState());
-    const slot = queueSlot(queue);
+    const all = trimQueue(c.queue.getState());
+    const slot = queueSlot(all);
+    const queue = forSlot(all, slot);
     const body = {
       queue,
       positionMs: positionNow(p, performance.now()),
