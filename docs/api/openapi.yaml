@@ -53,6 +53,10 @@ paths:
                       role: { enum: [admin, user] }
                       navidrome: { type: boolean, description: The user has a Navidrome connection }
                       mustEnrolTotp: { type: boolean, description: '"Require TOTP for all" is on and this user has none yet' }
+                      youtube:
+                        type: object
+                        description: YouTube Music mode (the admin switch, and whether this user saved a sign-in)
+                        properties: { enabled: { type: boolean }, signedIn: { type: boolean } }
                   - type: object
                     properties: { status: { enum: [anonymous, setup] } }
 
@@ -786,10 +790,201 @@ paths:
                   type: object
                   properties:
                     matchLibrary: { type: boolean, description: Match the Navidrome library with Spotify track ids in the background, for Spicy Lyrics }
+                youtube: { type: object, properties: { enabled: { type: boolean, description: YouTube Music mode for everyone (on by default) } } }
       responses:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettings' } } } }
         '400': { description: Not a secret key, or an unknown setting (the removed Spotify app ones too); nothing was saved }
         '403': { description: Not an admin }
+
+  /me/connections/youtube:
+    get:
+      summary: The user's YouTube Music sign-in (the cookie is never returned)
+      responses:
+        '200':
+          description: Signed in or not
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected: { type: boolean }
+                  name: { type: string, description: The Google account's name }
+                  needsReentry: { type: boolean, description: Restored without the master key; paste the cookie again }
+    put:
+      summary: Sign in by pasting the Cookie header of a signed-in music.youtube.com tab; stored sealed only once YouTube accepts it
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [cookie], properties: { cookie: { type: string, maxLength: 8192, description: Must hold SAPISID or __Secure-3PAPISID } } } } }
+      responses:
+        '200': { description: Signed in, content: { application/json: { schema: { type: object, properties: { name: { type: string } } } } } }
+        '400': { description: 'youtube.input (not a whole Cookie header) or youtube.signed_out (YouTube did not accept it); nothing stored', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+    delete:
+      summary: Sign out of YouTube Music (the sealed cookie is deleted)
+      responses:
+        '200': { description: Signed out }
+  /admin/youtube:
+    get:
+      summary: yt-dlp's version, its last update and its last error (admins only)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { version: { type: [string, 'null'] }, updatedAt: { type: [integer, 'null'] }, lastError: { type: [string, 'null'] } } } } } }
+        '403': { description: Not an admin }
+  /youtube/home:
+    get:
+      summary: YouTube Music's Home (personal when signed in, general when not)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/explore:
+    get:
+      summary: New releases, charts, moods and genres
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/library:
+    get:
+      summary: The user's playlists, Liked music, albums and artists (signed in only)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/search:
+    parameters:
+      - { name: q, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 200 } }
+      - { name: tab, in: query, schema: { enum: [all, songs, albums, artists, playlists], default: all } }
+    get:
+      summary: Search, grouped by kind
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '400': { description: No query, or an unknown tab }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/suggest:
+    parameters:
+      - { name: q, in: query, required: true, schema: { type: string } }
+    get:
+      summary: Search suggestions as the user types
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { items: { type: array, items: { type: string } } } } } } }
+  /youtube/album/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{2,64}$' } }
+    get:
+      summary: "An album: its songs, and more by the artist"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '400': { description: Not an id }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/artist/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{2,64}$' } }
+    get:
+      summary: "An artist: top songs, albums, singles"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '400': { description: Not an id }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/playlist/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{2,64}$' } }
+    get:
+      summary: "A playlist's songs (VLLM: the user's Liked music)"
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '400': { description: Not an id }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/up-next/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    get:
+      summary: The song's radio (YouTube's Up next automix), the song first
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { tracks: { type: array, items: { type: object } } } } } } }
+        '400': { description: Not an id }
+        '404': { description: youtube.disabled, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/related/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    get:
+      summary: Songs, playlists and artists like this song
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/YtPage' } } } }
+        '400': { description: Not an id }
+        '404': { description: 'youtube.disabled (the admin switch is off), or youtube.not_found', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '409': { description: 'youtube.signed_out: sign in (again) in Settings', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+        '502': { description: YouTube Music did not answer, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/lyrics/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    get:
+      summary: YouTube Music's own plain lyrics (the fallback when ECHO's lyric sources find none)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { text: { type: string }, source: { type: string } } } } } }
+        '400': { description: Not an id }
+        '404': { description: No lyrics, or youtube.disabled }
+  /youtube/like/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    put:
+      summary: Like a song on the user's YouTube Music account, or take the like back
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [like], properties: { like: { type: boolean } } } } }
+      responses:
+        '200': { description: Done, content: { application/json: { schema: { type: object, properties: { like: { type: boolean } } } } } }
+        '400': { description: Not an id, or like is not a boolean }
+        '409': { description: youtube.signed_out, content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/played/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    post:
+      summary: A play, added to the user's YouTube history when signed in (never fails the player)
+      responses:
+        '204': { description: Noted }
+        '400': { description: Not an id }
+  /youtube/prepare:
+    post:
+      summary: Resolve up to three songs' audio ahead, so they start without waiting for yt-dlp
+      requestBody:
+        required: true
+        content: { application/json: { schema: { type: object, required: [ids], properties: { ids: { type: array, maxItems: 3, items: { type: string, pattern: '^[\w-]{11}$' } } } } } }
+      responses:
+        '202': { description: Resolving in the background }
+        '400': { description: Not up to three video ids }
+  /youtube/stream/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }
+    get:
+      summary: "A song's audio through ECHO (yt-dlp, anonymous): Range in, 206 out, at most 10 MiB per answer"
+      parameters:
+        - { name: Range, in: header, schema: { type: string } }
+      responses:
+        '206': { description: The bytes asked for (audio/mp4) }
+        '400': { description: Not an id }
+        '416': { description: The range starts past the end }
+        '502': { description: 'youtube.unavailable, youtube.bot_check or youtube.failed', content: { application/json: { schema: { $ref: '#/components/schemas/YtProblem' } } } }
+  /youtube/image:
+    get:
+      summary: A YouTube Music thumbnail through ECHO (the CSP keeps img-src 'self'); YouTube's image hosts only
+      parameters:
+        - { name: u, in: query, required: true, schema: { type: string, format: uri } }
+      responses:
+        '200': { description: A raster image }
+        '400': { description: Not https on an allowed host }
+        '502': { description: Not an image, or no answer }
 
 components:
   securitySchemes:
@@ -863,6 +1058,44 @@ components:
           type: object
           properties:
             matchLibrary: { type: boolean }
+        youtube: { type: object, properties: { enabled: { type: boolean } } }
+    YtItem:
+      type: object
+      required: [kind, id, title, subtitle, thumb]
+      properties:
+        kind: { enum: [song, video, album, playlist, artist] }
+        id: { type: string, description: The video id (song, video) or browse id (album, artist, playlist) }
+        title: { type: string }
+        subtitle: { type: string }
+        thumb: { type: string, description: Through /youtube/image, or empty }
+        track: { type: object, description: The playable Track (provider youtube) of a song or video }
+    YtPage:
+      type: object
+      required: [title, shelves]
+      properties:
+        title: { type: string }
+        subtitle: { type: string }
+        description: { type: string }
+        thumb: { type: string }
+        kind: { enum: [song, video, album, playlist, artist] }
+        id: { type: string }
+        tracks: { type: array, items: { type: object }, description: What Play plays }
+        shelves:
+          type: array
+          items:
+            type: object
+            required: [title, layout, items]
+            properties:
+              title: { type: string }
+              strapline: { type: string }
+              layout: { enum: [rows, cards] }
+              items: { type: array, items: { $ref: '#/components/schemas/YtItem' } }
+    YtProblem:
+      type: object
+      properties:
+        code: { enum: [youtube.signed_out, youtube.disabled, youtube.not_found, youtube.failed, youtube.unavailable, youtube.bot_check, youtube.input] }
+        stale: { type: boolean, description: A sign-in is saved but YouTube no longer accepts it }
+        userMessage: { type: string }
     SpotifyMatching:
       type: object
       properties:

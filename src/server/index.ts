@@ -1,4 +1,4 @@
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
 import { getConnInfo } from '@hono/node-server/conninfo';
@@ -41,6 +41,10 @@ import { playsRoutes } from './plays.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
 import { checkWanted, wantedRoutes, wantedScope } from './wanted.ts';
+import { createCatalogue } from './youtube/catalogue.ts';
+import { createFakeCatalogue } from './youtube/fake.ts';
+import { type YoutubeDeps, youtubeRoutes } from './youtube/routes.ts';
+import { createYtdlpResolver, ensureBinary, updateYtdlp } from './youtube/ytdlp.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -50,6 +54,7 @@ export interface AppDeps {
   auth: AuthDeps;
   navidrome: NavidromeDeps;
   lyrics: LyricsDeps;
+  youtube: YoutubeDeps;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -171,6 +176,7 @@ export function createApp(deps: AppDeps) {
       requireUser(deps.auth),
     ),
   );
+  app.route('/api/v1', youtubeRoutes(deps.youtube, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -309,6 +315,46 @@ if (import.meta.main) {
   };
   setTimeout(() => void checkWantedDaily(), 90_000).unref();
   setInterval(() => void checkWantedDaily(), 86_400_000).unref();
+  // YouTube Music mode (youtube/): development and E2E use the fake catalogue, its audio from the
+  // mock Subsonic; otherwise youtubei.js and yt-dlp, the binary copied once into the data volume
+  // and updated daily (2 min after start, then every 24 h), never in the way of starting.
+  let youtube: YoutubeDeps;
+  if (config.devFixtures) {
+    const fake = (cookie?: string) =>
+      createFakeCatalogue({
+        ...(cookie && { cookie }),
+        audioBase: config.navidromeUrl ?? 'http://127.0.0.1:9',
+      });
+    youtube = {
+      db: auth.db,
+      sealer: auth.sealer,
+      now: Date.now,
+      log,
+      catalogue: fake,
+      resolver: fake().resolver,
+    };
+  } else {
+    const tmp = join(config.dataDir, 'tmp');
+    mkdirSync(tmp, { recursive: true });
+    let bin = config.ytdlp;
+    try {
+      bin = ensureBinary(config.ytdlp, config.dataDir);
+    } catch (err) {
+      log('warn', 'yt-dlp is not installed: YouTube Music cannot play', { detail: String(err) });
+    }
+    const resolver = createYtdlpResolver({ bin, now: Date.now, log, tmp });
+    const update = () => void updateYtdlp(bin, resolver);
+    setTimeout(update, 120_000).unref();
+    setInterval(update, 86_400_000).unref();
+    youtube = {
+      db: auth.db,
+      sealer: auth.sealer,
+      now: Date.now,
+      log,
+      catalogue: (cookie) => createCatalogue({ ...(cookie && { cookie }) }),
+      resolver,
+    };
+  }
   const lyrics: LyricsDeps = {
     db: auth.db,
     log,
@@ -335,6 +381,7 @@ if (import.meta.main) {
     auth,
     navidrome,
     lyrics,
+    youtube,
     devFixtures: config.devFixtures,
     log,
     ...(process.env.ECHO_CSP_REPORT_FILE && { cspReportFile: process.env.ECHO_CSP_REPORT_FILE }),

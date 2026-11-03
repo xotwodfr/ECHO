@@ -19,6 +19,10 @@ export interface Resolved {
   url: string;
   size: number;
   expiresAt: number;
+  /** yt-dlp's request headers: googlevideo refuses a different User-Agent (403). */
+  headers: Record<string, string>;
+  /** The URL is refused before this (ms; yt-dlp's `available_at`, a few seconds after extraction). */
+  availableAt: number;
 }
 
 export interface YtdlpStatus {
@@ -132,6 +136,8 @@ export function createYtdlpResolver(opts: {
     const j = JSON.parse(r.stdout) as {
       url?: string;
       filesize?: number | null;
+      http_headers?: Record<string, string>;
+      available_at?: number | null;
       requested_downloads?: { url?: string; filesize?: number | null }[];
     };
     const url = j.url ?? j.requested_downloads?.[0]?.url;
@@ -139,7 +145,13 @@ export function createYtdlpResolver(opts: {
     const q = new URL(url).searchParams;
     const size = j.filesize ?? j.requested_downloads?.[0]?.filesize ?? (Number(q.get('clen')) || 0);
     if (!size) throw new YtAudioError('youtube.failed', 'yt-dlp gave no size');
-    return { url, size, expiresAt: Number(q.get('expire')) * 1000 };
+    return {
+      url,
+      size,
+      expiresAt: Number(q.get('expire')) * 1000,
+      headers: j.http_headers ?? {},
+      availableAt: (j.available_at ?? 0) * 1000,
+    };
   }
 
   return {

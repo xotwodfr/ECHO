@@ -217,6 +217,8 @@ export function createFakeCatalogue(opts: {
           url: `${opts.audioBase}/videoplayback?id=${id}&expire=${expire}`,
           size: YT_AUDIO_BYTES,
           expiresAt: expire * 1000,
+          headers: {},
+          availableAt: 0,
         };
       },
       forget: () => {},

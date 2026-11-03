@@ -9,14 +9,21 @@ import { type Resolved, type Resolver, YtAudioError } from './ytdlp.ts';
 const ID = 'fJ9rUzIMcZQ';
 const UP = 'https://rr1---sn-x.googlevideo.com/videoplayback?expire=1793752364&itag=140';
 
-function resolver(size: number, fail?: YtAudioError) {
+function resolver(size: number, fail?: YtAudioError, extra: Partial<Resolved> = {}) {
   const calls: string[] = [];
   const forgotten: string[] = [];
   const r: Resolver = {
     async resolve(id) {
       calls.push(id);
       if (fail) throw fail;
-      return { url: UP, size, expiresAt: 0 } satisfies Resolved;
+      return {
+        url: UP,
+        size,
+        expiresAt: 0,
+        headers: {},
+        availableAt: 0,
+        ...extra,
+      } satisfies Resolved;
     },
     forget: (id) => void forgotten.push(id),
     status: () => ({ version: null, updatedAt: null, lastError: null }),
@@ -72,6 +79,24 @@ describe('the audio proxy', () => {
     expect(res.headers.get('accept-ranges')).toBe('bytes');
     expect(u.seen[0]?.url).toBe(`${UP}&range=50000000-60485759`);
     expect(u.seen[0]?.headers.has('range')).toBe(false);
+  });
+
+  it("sends yt-dlp's headers and waits until the URL is usable", async () => {
+    const availableAt = Date.now() + 60;
+    const { r } = resolver(1000, undefined, {
+      headers: { 'User-Agent': 'UA-of-yt-dlp' },
+      availableAt,
+    });
+    let at = 0;
+    const u = upstream();
+    const f = (async (input: string | URL | Request, init?: RequestInit) => {
+      at = Date.now();
+      return u.f(input, init);
+    }) as typeof fetch;
+    const res = await app(r, f).request(`/s/${ID}`);
+    expect(res.status).toBe(206);
+    expect(u.seen[0]?.headers.get('user-agent')).toBe('UA-of-yt-dlp');
+    expect(at).toBeGreaterThanOrEqual(availableAt);
   });
 
   it('re-resolves once on upstream 403', async () => {

@@ -19,6 +19,7 @@ export interface Config {
   neteaseUrl: string; // S5
   listenbrainzUrl: string; // Spotify-id matching for Spicy Lyrics (§4.3)
   musicbrainzUrl: string;
+  ytdlp: string; // the pinned yt-dlp binary in the image; copied to <dataDir>/bin to update itself
 }
 
 type Env = Record<string, string | undefined>;
@@ -55,6 +56,7 @@ export function loadConfig(env: Env = process.env): Config {
     ),
     musicbrainzUrl: (env.ECHO_MUSICBRAINZ_URL || 'https://musicbrainz.org').replace(/\/+$/, ''),
     spicyUrl: (env.ECHO_SPICY_URL || 'https://api.spicylyrics.org').replace(/\/+$/, ''),
+    ytdlp: env.ECHO_YTDLP || '/app/bin/yt-dlp',
   };
 }
 

@@ -43,6 +43,22 @@ const NO_USER_DATA = [
   'PUT /me/connections/navidrome',
   'POST /me/connections/navidrome/test',
   'GET /lyrics', // shared cache by design; the override in it is per user (attacked below)
+  // YouTube Music: every /youtube route answers from the caller's own catalogue (their sealed cookie,
+  // or anonymous); that per-user choice is attacked below through the library, likes and the sign-in.
+  'GET /youtube/home',
+  'GET /youtube/explore',
+  'GET /youtube/search',
+  'GET /youtube/suggest',
+  'GET /youtube/album/:id',
+  'GET /youtube/artist/:id',
+  'GET /youtube/up-next/:id',
+  'GET /youtube/related/:id',
+  'GET /youtube/lyrics/:id',
+  'POST /youtube/played/:id',
+  'POST /youtube/prepare',
+  'GET /youtube/stream/:id',
+  'GET /youtube/image',
+  'DELETE /me/connections/youtube',
   // The Wanted list is one list for everyone on the server, by the owner's choice (2026-11-03).
   'GET /wanted',
   'POST /wanted',
@@ -103,6 +119,8 @@ describe('SEC-11: isolation between users', () => {
       pinnedSource: 'lrclib',
     });
     await as(A, 'PUT', '/api/v1/me/settings', { visuals: { intensity: 'subtle' } });
+    await as(A, 'PUT', '/api/v1/me/connections/youtube', { cookie: 'SAPISID=ALICE-COOKIE' });
+    await as(A, 'PUT', '/api/v1/youtube/like/fakesong001', { like: true });
     const aPlay = {
       track: {
         provider: 'navidrome',
@@ -137,18 +155,26 @@ describe('SEC-11: isolation between users', () => {
       '/api/v1/me/wrapped',
       '/api/v1/me/sessions',
       '/api/v1/me/connections/navidrome',
+      '/api/v1/me/connections/youtube',
     ];
     for (const p of reads) {
       const body = await json(await as(B, 'GET', p));
       // Text marks only: numbers like A's position could also appear by chance (the mock's
       // random port is in B's connection answer); those are checked as fields below.
-      for (const mark of ['ALICE', 'subtle', 'navidrome-pass', ...aSessions])
+      for (const mark of ['ALICE', 'subtle', 'navidrome-pass', 'Fixture Listener', ...aSessions])
         expect(body, `${p} leaks ${mark}`).not.toContain(mark);
     }
     const field = async (p: string) =>
       JSON.parse(await json(await call(app, 'GET', p, undefined, B.cookie)));
     expect((await field('/api/v1/me/queue')).queue).toBeNull();
     expect((await field('/api/v1/me/queue/youtube')).queue).toBeNull();
+    // B is not signed in to YouTube Music: A's library, Liked music and likes stay A's.
+    expect((await as(B, 'GET', '/api/v1/youtube/library')).status).toBe(409);
+    expect((await as(B, 'GET', '/api/v1/youtube/playlist/VLLM')).status).toBe(409);
+    expect((await as(B, 'PUT', '/api/v1/youtube/like/fakesong001', { like: false })).status).toBe(
+      409,
+    );
+    expect((await field('/api/v1/me/connections/youtube')).connected).toBe(false);
     expect((await field(`/api/v1/me/tracks/navidrome:${track}/override`)).offsetMs).toBe(0);
     expect(
       JSON.parse(
@@ -236,6 +262,7 @@ describe('SEC-11: isolation between users', () => {
       ['POST', '/api/v1/admin/invites'],
       ['DELETE', '/api/v1/admin/invites/0123456789abcdef'],
       ['GET', '/api/v1/admin/audit'],
+      ['GET', '/api/v1/admin/youtube'],
       ['GET', '/api/v1/admin/spotify-matching'],
       ['POST', '/api/v1/admin/spotify-matching/run'],
       ['GET', '/api/v1/admin/spotify-matching/misses'],

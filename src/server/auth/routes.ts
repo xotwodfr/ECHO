@@ -109,6 +109,19 @@ const ENROLMENT_PATHS = [
   '/api/v1/auth/logout',
 ];
 
+/** YouTube Music mode for the client: the admin switch (admin.ts youtubeEnabled) and a saved sign-in. */
+const youtubeOf = (db: Db, userId: number) => {
+  const row = db
+    .prepare("SELECT value_json FROM server_settings WHERE key = 'youtube.enabled'")
+    .get() as { value_json: string | null } | undefined;
+  const enabled = row?.value_json !== 'false';
+  return {
+    enabled,
+    signedIn:
+      enabled && !!db.prepare('SELECT 1 FROM youtube_accounts WHERE user_id = ?').get(userId),
+  };
+};
+
 const totpForAll = (db: Db) => {
   const row = db
     .prepare("SELECT value_json FROM server_settings WHERE key = 'auth.requireTotpForAll'")
@@ -495,6 +508,7 @@ export function authRoutes(deps: AuthDeps) {
         role: user.role,
         navidrome: !!nd,
         mustEnrolTotp: !user.totpEnabled && totpForAll(db),
+        youtube: youtubeOf(db, user.id),
       });
     }
     return c.json({ status: hasAdmin(db) ? 'anonymous' : 'setup' });

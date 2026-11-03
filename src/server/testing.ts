@@ -12,6 +12,7 @@ import { createResolver } from './lyrics/resolve.ts';
 import { createSpotifyMatcher } from './lyrics/spotifyMatch.ts';
 import { fallbackPalette } from './palette/extract.ts';
 import type { PaletteService } from './palette/service.ts';
+import { createFakeCatalogue } from './youtube/fake.ts';
 
 // Test wiring for the server: an in-memory database, a random master key, a settable clock and a
 // fixed client address. Requests go through `app.request` with our own Host and Origin.
@@ -26,6 +27,12 @@ export function testDeps(over: Partial<AppDeps> = {}) {
     setup: { token: null, expiresAt: 0, pending: null },
   };
   const palette: PaletteService = { get: async () => fallbackPalette() };
+  const fakeYoutube = (cookie?: string) =>
+    createFakeCatalogue({
+      ...(cookie && { cookie }),
+      audioBase: 'http://mock.test',
+      now: auth.now,
+    });
   const deps: AppDeps = {
     palette,
     auth,
@@ -55,6 +62,13 @@ export function testDeps(over: Partial<AppDeps> = {}) {
         sweepEnabled: () => true,
         fetch: async () => new Response('{}', { status: 503 }),
       }),
+    },
+    youtube: {
+      db: auth.db,
+      sealer: auth.sealer,
+      now: auth.now,
+      catalogue: fakeYoutube,
+      resolver: fakeYoutube().resolver,
     },
     http: { publicOrigin: null, trustedProxy: [] },
     devFixtures: true,

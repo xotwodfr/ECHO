@@ -271,6 +271,7 @@ describe('sessions (§4.6)', () => {
       role: 'admin',
       navidrome: false,
       mustEnrolTotp: false,
+      youtube: { enabled: true, signedIn: false },
     });
   });
 

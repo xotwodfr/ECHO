@@ -129,6 +129,10 @@ describe('API-01: responses match the OpenAPI document', () => {
     await req('PUT', '/api/v1/me/tracks/navidrome:t1/override', { offsetMs: 50 }, admin);
     await req('GET', '/api/v1/lyrics?trackKey=navidrome:t1&title=a&artist=b', undefined, admin);
     await req('GET', '/api/v1/me/connections/navidrome', undefined, admin);
+    await req('GET', '/api/v1/me/connections/youtube', undefined, admin);
+    await req('GET', '/api/v1/youtube/home', undefined, admin);
+    await req('GET', '/api/v1/youtube/library', undefined, admin); // 409: not signed in
+    await req('GET', '/api/v1/youtube/search?q=fake', undefined, admin);
     await req('GET', '/api/v1/palette/fixture:night-sun', undefined, admin);
     await req(
       'POST',

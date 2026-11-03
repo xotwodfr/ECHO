@@ -44,6 +44,21 @@ describe('the yt-dlp resolver', () => {
     expect(got.expiresAt).toBe(EXPIRE_S * 1000);
   });
 
+  // Live 2026-11-03: googlevideo answers 403 unless the request carries yt-dlp's own User-Agent, and
+  // before `available_at` (a few seconds after extraction).
+  it('keeps the headers and the time the URL becomes usable', async () => {
+    const f = fakeRun((args) => {
+      const j = JSON.parse(json(idOf(args)));
+      j.http_headers = { 'User-Agent': 'Mozilla/5.0 Chrome/150', Accept: '*/*' };
+      j.available_at = 1_793_733_464;
+      return { code: 0, stdout: JSON.stringify(j), stderr: '' };
+    });
+    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+    const got = await r.resolve(ID);
+    expect(got.headers).toEqual({ 'User-Agent': 'Mozilla/5.0 Chrome/150', Accept: '*/*' });
+    expect(got.availableAt).toBe(1_793_733_464_000);
+  });
+
   it('takes the size from clen when yt-dlp gives none', async () => {
     const f = fakeRun((args) => {
       const j = JSON.parse(json(idOf(args)));

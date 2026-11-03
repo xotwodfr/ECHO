@@ -54,9 +54,13 @@ export async function streamAudio(
     }
     const w = byteWindow(c.req.header('range'), got.size);
     if (!w) return c.body(null, 416, { 'content-range': `bytes */${got.size}` });
+    // A fresh URL is refused for a few seconds (yt-dlp sleeps for it too).
+    const wait = got.availableAt - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
     let up: Response;
     try {
       up = await fetchImpl(`${got.url}&range=${w.start}-${w.end}`, {
+        headers: got.headers,
         redirect: 'follow',
         signal: c.req.raw.signal, // the browser gave up (a seek, Next): so does the upstream
       });

@@ -26,11 +26,15 @@ export function spicyKey(db: Db, sealer: Sealer): string | null {
 /** Admin → Server → "Match the library with Spotify track ids in the background" (on by default). */
 export const matchLibrary = (db: Db) => setting(db, 'spotify.matchLibrary', true);
 
+/** Admin → "YouTube Music for everyone" (spec call 6; on by default). */
+export const youtubeEnabled = (db: Db) => setting(db, 'youtube.enabled', true);
+
 /** The settings PUT /admin/settings takes, by section; anything else is refused. */
 const ADMIN_KEYS = {
   lyrics: ['spicyKey'],
   spotify: ['matchLibrary'],
   auth: ['requireTotpForAll'],
+  youtube: ['enabled'],
 };
 
 function setting<T>(db: Db, key: string, fallback: T): T {
@@ -64,6 +68,7 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
     lyrics: { spicyKeySaved: spicyKey(deps.db, deps.sealer) !== null },
     auth: { requireTotpForAll: requireTotpForAll(deps.db) },
     spotify: { matchLibrary: matchLibrary(deps.db) },
+    youtube: { enabled: youtubeEnabled(deps.db) },
   });
 
   app.get('/admin/settings', requireUser, requireAdmin, (c) => c.json(view()));
@@ -73,6 +78,7 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
       lyrics?: { spicyKey?: unknown };
       spotify?: { matchLibrary?: unknown };
       auth?: { requireTotpForAll?: unknown };
+      youtube?: { enabled?: unknown };
     } | null = await jsonObject(c);
     if (!b) return c.json({ error: 'bad_settings' }, 400);
     // Only known settings: an unknown one (a typo, a setting this version lacks) is refused, never
@@ -93,6 +99,8 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
     const totpAll = b.auth?.requireTotpForAll;
     if (totpAll !== undefined && typeof totpAll !== 'boolean')
       return c.json({ error: 'bad_setting' }, 400);
+    const yt = b.youtube?.enabled;
+    if (yt !== undefined && typeof yt !== 'boolean') return c.json({ error: 'bad_setting' }, 400);
     const key = b.lyrics?.spicyKey;
     if (key !== undefined) {
       if (key !== null && (typeof key !== 'string' || !/^sl_sk_[\w-]{8,200}$/.test(key.trim())))
@@ -117,6 +125,10 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
     if (typeof totpAll === 'boolean') {
       putSetting(deps.db, 'auth.requireTotpForAll', totpAll);
       audit(deps.db, deps.now(), c.var.user.id, 'admin.require_totp', { on: totpAll });
+    }
+    if (typeof yt === 'boolean') {
+      putSetting(deps.db, 'youtube.enabled', yt);
+      audit(deps.db, deps.now(), c.var.user.id, 'admin.youtube', { on: yt });
     }
     return c.json(view());
   });
