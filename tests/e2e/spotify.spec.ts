@@ -157,6 +157,28 @@ test('an old connection: Spotify mode works with what it has, and says to reconn
   }
 });
 
+test('Spotify refusing the app is named on Home, not just “Couldn’t load this.”', async ({
+  page,
+}) => {
+  const fake = await ready(page);
+  fake.refuse = {
+    status: 429,
+    body: { error: { status: 429, message: 'Too many requests', reason: 'QUOTA_EXCEEDED' } },
+  };
+  await page.goto('/');
+  await sourceButton(page, 'Spotify').click();
+  await expect(page.getByText(/quota is used up/).first()).toBeVisible();
+  // Once told to wait, ECHO does not ask again: Retry sends nothing to Spotify.
+  const asked = fake.requests.length;
+  await page.getByRole('button', { name: 'Retry' }).first().click();
+  await page.waitForTimeout(400);
+  expect(fake.requests.length).toBe(asked);
+  fake.refuse = null;
+  await page.reload();
+  await sourceButton(page, 'Spotify').click();
+  await expect(page.getByText(/quota is used up/)).toHaveCount(0); // gone once Spotify answers
+});
+
 test('BRW-02: without Widevine, the browser’s own fix is named', async ({ page, browserName }) => {
   await fakeSpotify(page);
   await page.addInitScript(() => {

@@ -4,7 +4,7 @@ import { useStore } from 'zustand';
 import type { Album, AlbumListKind, ArtistRef } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { sourceStore } from '../source.ts';
-import { spotifyScopes } from '../spotify/api.ts';
+import { spotifyProblem, spotifyScopes } from '../spotify/api.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
@@ -309,6 +309,9 @@ export function HomeView() {
   const spotify = useStore(sourceStore, (x) => x.source) === 'spotify';
   // A connection older than the newer scopes: Home says how to get the rest (shelves, hearts).
   const missingScopes = useStore(spotifyScopes, (x) => x.missing.length);
+  // Spotify refusing ECHO (quota used up, told to wait, a 403): its reason, above the shelves it
+  // keeps from loading.
+  const problem = useStore(spotifyProblem, (x) => x.message);
   const titled = (sh: Shelf): Shelf =>
     spotify && sh.kind !== 'random' ? { ...sh, title: strings.home.spotify[sh.kind] } : sh;
   const [recent, retryRecent] = useAlbumList('recent');
@@ -333,6 +336,11 @@ export function HomeView() {
           {strings.home.greeting(new Date().getHours())}
         </h1>
       </div>
+      {spotify && problem && (
+        <div className="home-reconnect" role="status">
+          <p>{problem}</p>
+        </div>
+      )}
       {spotify && missingScopes > 0 && (
         <div className="home-reconnect" role="status">
           <p>{strings.spotify.reconnectScopes}</p>

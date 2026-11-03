@@ -113,6 +113,8 @@ export interface FakeSpotify {
   device: { id: string; name: string } | null;
   /** A connection made before ECHO's newer scopes: their endpoints answer 403 "Insufficient client scope". */
   oldScopes: boolean;
+  /** Spotify refusing the whole app (a used-up quota, a penalty): every call answers this. */
+  refuse: { status: number; body: unknown; headers?: Record<string, string> } | null;
 }
 
 /** The endpoints that need the scopes added on 2026-11-02 (src/shared/spotify-scopes.ts). */
@@ -126,7 +128,7 @@ const NEW_SCOPE_PATHS = [
 
 /** Installs the fake on `page`; call before the first navigation. */
 export async function fakeSpotify(page: Page): Promise<FakeSpotify> {
-  const fake: FakeSpotify = { requests: [], device: null, oldScopes: false };
+  const fake: FakeSpotify = { requests: [], device: null, oldScopes: false, refuse: null };
   // Widevine present: the real check runs against this stand-in (BRW-02 stubs it off itself).
   await page.addInitScript(() => {
     Object.defineProperty(navigator, 'requestMediaKeySystemAccess', {
@@ -152,6 +154,13 @@ async function answer(page: Page, fake: FakeSpotify, route: Route, req: Request)
   const json = (data: unknown, status = 200) =>
     route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(data) });
   const p = url.pathname;
+  if (fake.refuse)
+    return route.fulfill({
+      status: fake.refuse.status,
+      contentType: 'application/json',
+      headers: fake.refuse.headers ?? {},
+      body: JSON.stringify(fake.refuse.body),
+    });
   if (fake.oldScopes && NEW_SCOPE_PATHS.includes(p))
     return json({ error: { status: 403, message: 'Insufficient client scope' } }, 403);
   if (method === 'GET' && p === '/v1/me') return json({ id: 'mock-user', product: 'premium' });

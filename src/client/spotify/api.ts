@@ -77,6 +77,7 @@ export function missingScopes(): string[] {
 export function forgetSpotifyToken() {
   cached = null;
   coolUntil = 0;
+  spotifyProblem.setState({ message: null });
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -114,8 +115,30 @@ const reasonOf = (res: Response) =>
     .then((b: { error?: { reason?: string } }) => b.error?.reason ?? '')
     .catch(() => '');
 
+/**
+ * Why Spotify last refused ECHO (its own words, or ours for a cooldown), for the pages to show
+ * instead of a bare "Couldn't load this.". The next good answer clears it. A missing scope is not
+ * a refusal: the reconnect prompt covers that.
+ */
+export const spotifyProblem = createStore<{ message: string | null }>()(() => ({ message: null }));
+
 /** One Web API call; JSON in and out, null for 204. */
 export async function spotifyApi<T>(
+  path: string,
+  init: { method?: string; body?: unknown; query?: Record<string, string | number> } = {},
+): Promise<T | null> {
+  try {
+    const out = await call<T>(path, init);
+    if (spotifyProblem.getState().message) spotifyProblem.setState({ message: null });
+    return out;
+  } catch (e) {
+    if (e instanceof SpotifyError && e.appError.code !== 'spotify.scope')
+      spotifyProblem.setState({ message: e.appError.userMessage });
+    throw e;
+  }
+}
+
+async function call<T>(
   path: string,
   init: { method?: string; body?: unknown; query?: Record<string, string | number> } = {},
 ): Promise<T | null> {

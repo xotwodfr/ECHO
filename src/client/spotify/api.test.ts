@@ -9,8 +9,14 @@ vi.mock('../api.ts', () => ({
   ApiError: class extends Error {},
   api: async () => ({ accessToken: 'at', expiresAt: Date.now() + 3_600_000, scopes: granted }),
 }));
-const { forgetSpotifyToken, missingScopes, spotifyApi, spotifyCooldown, spotifyToken } =
-  await import('./api.ts');
+const {
+  forgetSpotifyToken,
+  missingScopes,
+  spotifyApi,
+  spotifyCooldown,
+  spotifyProblem,
+  spotifyToken,
+} = await import('./api.ts');
 
 const answer = (status: number, body: unknown) =>
   vi.stubGlobal(
@@ -87,6 +93,18 @@ describe('spotifyApi', () => {
     });
     expect(fetchMock).toHaveBeenCalledTimes(1); // not slept through and asked again
     expect(spotifyCooldown()).toBeGreaterThan(10 * 60_000);
+  });
+
+  it('the last refusal is kept for the page to show, and cleared by the next good answer', async () => {
+    answer(403, { error: { status: 403, message: 'Active premium subscription required' } });
+    await spotifyApi('/v1/me/albums').catch(() => undefined);
+    expect(spotifyProblem.getState().message).toContain('premium subscription required');
+    answer(403, { error: { status: 403, message: 'Insufficient client scope' } });
+    await spotifyApi('/v1/me/top/tracks').catch(() => undefined);
+    expect(spotifyProblem.getState().message).toContain('premium subscription required'); // a scope is not a refusal
+    answer(200, { items: [] });
+    await spotifyApi('/v1/me/albums');
+    expect(spotifyProblem.getState().message).toBeNull();
   });
 
   it('missingScopes lists what the token lacks', async () => {
