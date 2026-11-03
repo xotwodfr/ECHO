@@ -255,7 +255,7 @@ export function youtubeRoutes(deps: YoutubeDeps, requireUser: MiddlewareHandler<
       !ids.every((x) => typeof x === 'string' && VIDEO_ID.test(x))
     )
       return c.json({ error: 'bad_ids' }, 400);
-    for (const x of ids as string[]) void deps.resolver.resolve(x).catch(() => undefined);
+    for (const x of ids as string[]) deps.resolver.prefetch(x);
     return c.body(null, 202);
   });
 

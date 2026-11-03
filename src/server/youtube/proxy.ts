@@ -48,15 +48,16 @@ export async function streamAudio(
   for (let attempt = 0; attempt < 2; attempt++) {
     let got: Resolved;
     try {
-      got = await r.resolve(videoId);
+      got = await r.resolve(videoId, { urgent: true }); // the song being played goes first
     } catch (err) {
       return problem(c, err instanceof YtAudioError ? err.code : 'youtube.failed', 502);
     }
     const w = byteWindow(c.req.header('range'), got.size);
     if (!w) return c.body(null, 416, { 'content-range': `bytes */${got.size}` });
     // A fresh URL is refused for a few seconds (yt-dlp sleeps for it too).
-    const wait = got.availableAt - Date.now();
-    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    // (A timer can fire a millisecond early by Date.now(): wait until the time has really come.)
+    for (let wait = got.availableAt - Date.now(); wait > 0; wait = got.availableAt - Date.now())
+      await new Promise((r) => setTimeout(r, wait));
     let up: Response;
     try {
       up = await fetchImpl(`${got.url}&range=${w.start}-${w.end}`, {

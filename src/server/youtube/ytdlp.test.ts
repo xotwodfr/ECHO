@@ -87,6 +87,33 @@ describe('the yt-dlp resolver', () => {
     expect(f.max()).toBeLessThanOrEqual(2);
   });
 
+  // Review 2026-11-03: prepare-ahead took both slots before the song being played asked for its own.
+  it('an urgent resolve jumps the queue', async () => {
+    const f = fakeRun(ok);
+    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+    const ids = ['aaaaaaaaaaa', 'bbbbbbbbbbb', 'ccccccccccc', 'ddddddddddd'];
+    const all = ids.map((id) => r.resolve(id));
+    all.push(r.resolve('eeeeeeeeeee', { urgent: true }));
+    await Promise.all(all);
+    expect(f.calls.map(idOf)).toEqual([
+      'aaaaaaaaaaa',
+      'bbbbbbbbbbb',
+      'eeeeeeeeeee',
+      'ccccccccccc',
+      'ddddddddddd',
+    ]);
+  });
+
+  it('prefetch drops work past a short backlog', async () => {
+    const f = fakeRun(ok);
+    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+    const ids = 'abcdefgh'.split('').map((c) => c.repeat(11));
+    for (const id of ids) r.prefetch(id);
+    await new Promise((done) => setTimeout(done, 100));
+    expect(f.calls).toHaveLength(6); // two running, four waiting; the rest dropped
+    expect(f.max()).toBeLessThanOrEqual(2);
+  });
+
   it('reuses until 30 min before expiry', async () => {
     const f = fakeRun(ok);
     let t = 0;

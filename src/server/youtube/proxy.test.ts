@@ -25,6 +25,7 @@ function resolver(size: number, fail?: YtAudioError, extra: Partial<Resolved> = 
         ...extra,
       } satisfies Resolved;
     },
+    prefetch: () => {},
     forget: (id) => void forgotten.push(id),
     status: () => ({ version: null, updatedAt: null, lastError: null }),
     note: () => {},

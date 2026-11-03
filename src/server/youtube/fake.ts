@@ -230,6 +230,9 @@ export function createFakeCatalogue(opts: {
           availableAt: 0,
         };
       },
+      prefetch(id) {
+        void this.resolve(id).catch(() => undefined);
+      },
       forget: () => {},
       status: () => ({ version: 'fixture', updatedAt: null, lastError: null }),
       note: () => {},

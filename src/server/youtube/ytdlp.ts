@@ -12,6 +12,7 @@ import type { Log } from '../log.ts';
 export const VIDEO_ID = /^[\w-]{11}$/;
 const REUSE_MARGIN_MS = 30 * 60_000;
 const MAX_RUNNING = 2;
+const MAX_WAITING = 4; // prefetches past this are dropped
 const MAX_CACHED = 500;
 const TIMEOUT_MS = 30_000;
 
@@ -42,8 +43,10 @@ export class YtAudioError extends Error {
 }
 
 export interface Resolver {
-  /** Rejects with YtAudioError. */
-  resolve(videoId: string): Promise<Resolved>;
+  /** Rejects with YtAudioError. `urgent`: the song being played, ahead of any waiting work. */
+  resolve(videoId: string, opts?: { urgent?: boolean }): Promise<Resolved>;
+  /** Resolve ahead, unless a backlog is already waiting (the work would be stale by then). */
+  prefetch(videoId: string): void;
   /** Drops the cached URL (it answered 403: expired early, or moved). */
   forget(videoId: string): void;
   status(): YtdlpStatus;
@@ -117,14 +120,18 @@ export function createYtdlpResolver(opts: {
   let running = 0;
   const waiting: (() => void)[] = [];
 
-  async function slot<T>(fn: () => Promise<T>): Promise<T> {
-    if (running >= MAX_RUNNING) await new Promise<void>((r) => waiting.push(r));
-    running++;
+  /** At most MAX_RUNNING at once; a freed slot is handed straight to the next waiter. */
+  async function slot<T>(fn: () => Promise<T>, urgent: boolean): Promise<T> {
+    if (running >= MAX_RUNNING)
+      await new Promise<void>((r) => (urgent ? waiting.unshift(r) : waiting.push(r)));
+    else running++;
     try {
       return await fn();
     } finally {
-      running--;
-      waiting.shift()?.();
+      const next = waiting.shift();
+      if (next)
+        next(); // the slot passes on: `running` stays as it is
+      else running--;
     }
   }
 
@@ -162,15 +169,15 @@ export function createYtdlpResolver(opts: {
     };
   }
 
-  return {
-    resolve(id) {
+  const resolver: Resolver = {
+    resolve(id, o = {}) {
       if (!VIDEO_ID.test(id))
         return Promise.reject(new YtAudioError('youtube.unavailable', 'not a video id'));
       const hit = done.get(id);
       if (hit && hit.expiresAt - REUSE_MARGIN_MS > opts.now()) return Promise.resolve(hit);
       const inFlight = pending.get(id);
       if (inFlight) return inFlight;
-      const p = slot(() => once(id))
+      const p = slot(() => once(id), !!o.urgent)
         .then(
           (r) => {
             done.delete(id); // re-inserted last: the oldest go first
@@ -190,6 +197,10 @@ export function createYtdlpResolver(opts: {
       pending.set(id, p);
       return p;
     },
+    prefetch(id) {
+      if (waiting.length >= MAX_WAITING && !pending.has(id)) return;
+      void resolver.resolve(id).catch(() => undefined);
+    },
     forget(id) {
       done.delete(id);
     },
@@ -198,6 +209,7 @@ export function createYtdlpResolver(opts: {
       Object.assign(status, s);
     },
   };
+  return resolver;
 }
 
 /**

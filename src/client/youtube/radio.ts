@@ -11,14 +11,15 @@ import { ytPrepare, ytUpNext } from './api.ts';
 
 const PREPARE = 3;
 
-/** On every queue change: the next three YouTube songs, resolved ahead (once per set). */
+/** On every queue change: the playing and next two YouTube songs, resolved ahead (once per set). */
 export function startYtPrepare(
   c: PlaybackController,
   prepare: (ids: string[]) => Promise<unknown> = ytPrepare,
 ) {
   let last = '';
   return c.queue.subscribe((q) => {
-    const ids = upcoming(q)
+    // The song now playing first: its stream's own resolve shares the job (the server dedupes).
+    const ids = [...(q.now ? [q.now] : []), ...upcoming(q)]
       .filter((t) => t.provider === 'youtube')
       .slice(0, PREPARE)
       .map((t) => t.id);

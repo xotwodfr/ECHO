@@ -29,15 +29,16 @@ function setup() {
 }
 
 describe('YouTube radio and prepare-ahead', () => {
-  it('prepare sends the next three youtube ids once', () => {
+  // The song now playing first (its stream's own resolve shares the job), then the next two.
+  it('prepare sends the playing song and the next two youtube ids, once', () => {
     const c = setup();
     const sent: string[][] = [];
     startYtPrepare(c, async (ids) => void sent.push(ids));
     c.playList([yt('a'), yt('b'), nd, yt('c'), yt('d'), yt('e')], 0, ctx);
     c.playList([yt('a'), yt('b'), nd, yt('c'), yt('d'), yt('e')], 0, ctx); // the same again
-    expect(sent).toEqual([['b', 'c', 'd']]);
-    c.next(); // now b: c, d, e are next
-    expect(sent.at(-1)).toEqual(['c', 'd', 'e']);
+    expect(sent).toEqual([['a', 'b', 'c']]);
+    c.next(); // now b: c and d are next
+    expect(sent.at(-1)).toEqual(['b', 'c', 'd']);
   });
 
   it('autoplay plays up next minus history', async () => {
