@@ -212,6 +212,8 @@ export const strings = {
     songs: 'Songs',
     prompt: 'Type to search your library.',
     none: (q: string) => `No results for “${q}”.`,
+    /** The same search on YouTube Music, for music that is not in Navidrome. */
+    elsewhere: 'Search YouTube Music',
     // Spoken by the results' live region; the visible text says "No results for …".
     found: (n: number) => (n === 0 ? 'No results' : n === 1 ? '1 result' : `${n} results`),
     tracks: 'Tracks',

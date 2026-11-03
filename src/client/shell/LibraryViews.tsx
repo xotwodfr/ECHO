@@ -1181,7 +1181,19 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
         }}
       />
     );
-  if (!shown) return <p className="empty">{s.none(q)}</p>;
+  if (!shown)
+    return (
+      <p className="empty">
+        {s.none(q)}{' '}
+        <a
+          href={`https://music.youtube.com/search?q=${encodeURIComponent(q)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {s.elsewhere}
+        </a>
+      </p>
+    );
   return groups.map((g, gi) => {
     const top =
       gi === 0

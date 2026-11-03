@@ -144,6 +144,19 @@ test('Browse all: genre cards lead to their albums', async ({ page }) => {
   await expect(page.locator('.tile', { hasText: 'Glass Weather' })).toHaveCount(0);
 });
 
+test('a search with no result offers the same search on YouTube Music', async ({ page }) => {
+  await signedInWithNavidrome(page, 'ytm');
+  await page.goto('/search?q=xylophone%20%26%20co');
+  await expect(page.getByText('No results for “xylophone & co”.')).toBeVisible();
+  const link = page.getByRole('link', { name: 'Search YouTube Music' });
+  await expect(link).toHaveAttribute(
+    'href',
+    'https://music.youtube.com/search?q=xylophone%20%26%20co',
+  );
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+});
+
 test('the sleep timer pauses after its minutes', async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 }); // a pill wide enough for the moon
   await page.clock.install();
