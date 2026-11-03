@@ -17,11 +17,8 @@ export interface Config {
   lrclibUrl: string; // LYRICS_INTEGRATION.md S3 (overridable for E2E mocks)
   spicyUrl: string; // S2
   neteaseUrl: string; // S5
-  listenbrainzUrl: string; // Spotify matching (§4.3)
+  listenbrainzUrl: string; // Spotify-id matching for Spicy Lyrics (§4.3)
   musicbrainzUrl: string;
-  spotifyAccountsUrl: string; // PKCE and tokens (overridable for E2E mocks)
-  spotifyApiUrl: string;
-  spotifyImageUrl: string; // where i.scdn.co covers are fetched from (overridable for E2E mocks)
 }
 
 type Env = Record<string, string | undefined>;
@@ -58,12 +55,6 @@ export function loadConfig(env: Env = process.env): Config {
     ),
     musicbrainzUrl: (env.ECHO_MUSICBRAINZ_URL || 'https://musicbrainz.org').replace(/\/+$/, ''),
     spicyUrl: (env.ECHO_SPICY_URL || 'https://api.spicylyrics.org').replace(/\/+$/, ''),
-    spotifyAccountsUrl: (env.ECHO_SPOTIFY_ACCOUNTS_URL || 'https://accounts.spotify.com').replace(
-      /\/+$/,
-      '',
-    ),
-    spotifyApiUrl: (env.ECHO_SPOTIFY_API_URL || 'https://api.spotify.com').replace(/\/+$/, ''),
-    spotifyImageUrl: (env.ECHO_SPOTIFY_IMAGE_URL || 'https://i.scdn.co').replace(/\/+$/, ''),
   };
 }
 

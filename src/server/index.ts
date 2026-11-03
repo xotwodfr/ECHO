@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serve } from '@hono/node-server';
@@ -8,7 +7,7 @@ import { type Context, Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { getCookie } from 'hono/cookie';
 import { accountRoutes } from './account.ts';
-import { adminRoutes, matchLibrary, spicyKey, spotifySettings } from './admin.ts';
+import { adminRoutes, matchLibrary, spicyKey } from './admin.ts';
 import { nightlyBackup } from './admin-cli.ts';
 import { createLoginLimiter } from './auth/ratelimit.ts';
 import { type AuthDeps, authRoutes, hasAdmin, requireUser, startSetup } from './auth/routes.ts';
@@ -37,19 +36,10 @@ import {
   navidromeUrlOf,
 } from './navidrome/routes.ts';
 import { fixtureCover, libraryCover } from './palette/covers.ts';
-import { fallbackPalette } from './palette/extract.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
-import { fetchSpotifyCover, spotifyArt } from './palette/spotify.ts';
 import { playsRoutes } from './plays.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
-import {
-  createSpotifyAppToken,
-  createSpotifyTokens,
-  type SpotifyDeps,
-  type SpotifyTokens,
-  spotifyRoutes,
-} from './spotify.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -59,9 +49,6 @@ export interface AppDeps {
   auth: AuthDeps;
   navidrome: NavidromeDeps;
   lyrics: LyricsDeps;
-  spotify: SpotifyDeps;
-  /** Shared with the server's own Spotify lookups; created from `spotify` when absent. */
-  spotifyTokens?: SpotifyTokens;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -143,21 +130,6 @@ export function createApp(deps: AppDeps) {
     const user = token ? resolveSession(deps.auth.db, token, deps.auth.now()) : null;
     // Signed in, or a development server answering for its generated covers (E2E).
     if (!user && !deps.devFixtures) return c.json({ error: 'unauthenticated' }, 401);
-    if (key.startsWith('spotify:album:')) {
-      if (!user) return c.json({ error: 'unauthenticated' }, 401);
-      // Gate G1 (PLAYBACK_ARCHITECTURE.md §4.6): off means the fallback, at once, uncached.
-      if (!spotifySettings(deps.auth.db).gates.artPalette) {
-        c.header('Cache-Control', 'no-store');
-        return c.json(fallbackPalette());
-      }
-      const art = spotifyArt(c.req.query('art'));
-      if (!art) return c.json({ error: 'bad_art_url' }, 400);
-      // Scoped by the image itself: a request naming another picture cannot repaint this album
-      // for everyone else.
-      const scope = createHash('sha256').update(art).digest('hex').slice(0, 16);
-      c.header('Cache-Control', 'private, no-cache'); // G1 may be switched off at any time
-      return c.json(await deps.palette.get(key, { userId: user.id, scope, art }));
-    }
     // A Navidrome album id means something only on its own server: scope it to the user's.
     const scope = key.startsWith('navidrome:')
       ? user
@@ -173,7 +145,6 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth)));
   app.route('/api/v1', lyricsRoutes(deps.lyrics, requireUser(deps.auth)));
-  app.route('/api/v1', spotifyRoutes(deps.spotify, requireUser(deps.auth), deps.spotifyTokens));
   app.route('/api/v1', settingsRoutes(deps.auth.db, requireUser(deps.auth)));
   app.route('/api/v1', accountRoutes(deps.auth, requireUser(deps.auth)));
   app.route(
@@ -247,8 +218,6 @@ if (import.meta.main) {
     load: async (key, ctx) => {
       const { userId } = ctx;
       if (key.startsWith('fixture:')) return fixtureCover(key.slice(8));
-      if (key.startsWith('spotify:album:'))
-        return ctx.art ? fetchSpotifyCover(ctx.art, config.spotifyImageUrl) : null;
       const fromNavidrome =
         userId !== null && key.startsWith('navidrome:') ? await cover(userId, key.slice(10)) : null;
       return fromNavidrome ?? (config.devFixtures ? libraryCover(key) : null);
@@ -284,24 +253,13 @@ if (import.meta.main) {
     if (sessions || addresses) log('info', 'pruned', { sessions, addresses });
   }, 3_600_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
-  const spotifyDeps: SpotifyDeps = {
-    db: auth.db,
-    sealer: auth.sealer,
-    now: Date.now,
-    accountsUrl: config.spotifyAccountsUrl,
-    apiUrl: config.spotifyApiUrl,
-    publicOrigin: config.publicOrigin,
-  };
-  const spotifyTokens = createSpotifyTokens(spotifyDeps);
   const matcher = createSpotifyMatcher({
     db: auth.db,
     now: Date.now,
     log,
     listenbrainzUrl: config.listenbrainzUrl,
     musicbrainzUrl: config.musicbrainzUrl,
-    spotifyApiUrl: config.spotifyApiUrl,
     userAgent,
-    spotifyAppToken: createSpotifyAppToken(spotifyDeps, log),
     sweepEnabled: () => matchLibrary(auth.db),
     // Each Navidrome server once, through the first user connected to it (admins first).
     libraries: async () => {
@@ -335,7 +293,6 @@ if (import.meta.main) {
     cache: lyricsCache,
     resolver: createResolver(),
     scopeFor: (userId) => navidromeUrlOf(auth.db, userId),
-    spotifySyncAllowed: () => spotifySettings(auth.db).gates.syncedLyrics,
     spotifyIdsFor: (userId, scope, navidromeId) =>
       matcher.idsFor(scope, navidromeId, () => navidromeClientFor(navidrome, userId)),
     matcher,
@@ -356,8 +313,6 @@ if (import.meta.main) {
     auth,
     navidrome,
     lyrics,
-    spotify: spotifyDeps,
-    spotifyTokens,
     devFixtures: config.devFixtures,
     log,
     ...(process.env.ECHO_CSP_REPORT_FILE && { cspReportFile: process.env.ECHO_CSP_REPORT_FILE }),

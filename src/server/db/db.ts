@@ -137,6 +137,15 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX plays_user_time ON plays (user_id, played_at);
   `,
+  // Spotify playback was removed: its connections (sealed refresh tokens), the app's Client ID and
+  // secret and the policy gates go, since nothing reads them. The Spotify-id matches stay (they key
+  // Spicy Lyrics) and so does `spotify.matchLibrary`, the matching sweep's switch. The `connections`
+  // CHECK still allows 'spotify': SQLite cannot alter it, and no row can use it any more.
+  `
+  DELETE FROM connections WHERE provider = 'spotify';
+  DELETE FROM server_settings
+    WHERE key IN ('spotify.clientId', 'spotify.clientSecret', 'spotify.gates.artPalette', 'spotify.gates.syncedLyrics');
+  `,
 ];
 
 export function openDb(path: string): Db {

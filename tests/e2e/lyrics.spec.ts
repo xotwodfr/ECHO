@@ -178,7 +178,7 @@ test.describe('deterministic frames', () => {
     page,
   }) => {
     const tl = timeline('duet-word');
-    const vp = page.viewportSize() as { width: number; height: number };
+    const _vp = page.viewportSize() as { width: number; height: number };
     for (const i of [1, 3, 8]) {
       const l = tl.lines[i] as LyricLine;
       await frame(page, 'duet-word', l.start + 200);

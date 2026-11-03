@@ -323,12 +323,11 @@ paths:
   /palette/{albumKey}:
     parameters:
       - { name: albumKey, in: path, required: true, schema: { type: string, pattern: '^[\w:.-]{1,200}$' } }
-      - { name: art, in: query, description: 'Spotify albums (spotify:album:…) only: the cover, an https://i.scdn.co URL, read into memory and never stored (gate G1)', schema: { type: string } }
     get:
-      summary: The album's palette (docs/VISUALIZER_SPEC.md §6), computed on a miss and cached per Navidrome server, or per Spotify cover for 30 days; the fallback while G1 is off
+      summary: The album's palette (docs/VISUALIZER_SPEC.md §6), computed on a miss and cached per Navidrome server
       responses:
         '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Palette' } } } }
-        '400': { description: Bad album key, or a Spotify cover URL that is not https://i.scdn.co }
+        '400': { description: Bad album key }
         '401': { description: No session (development servers answer for generated covers) }
 
   /me/queue:
@@ -427,7 +426,7 @@ paths:
   /lyrics:
     get:
       summary: The track's lyrics (cache first, then the sources), with the user's override for it
-      description: Provider ids are taken from trackKey (navidrome:<id>, spotify:<id>); the metadata is part of the shared cache key.
+      description: Provider ids are taken from trackKey (navidrome:<id>); the metadata is part of the shared cache key.
       parameters:
         - { name: trackKey, in: query, required: true, schema: { type: string, pattern: '^[\w:.-]{1,200}$' } }
         - { name: title, in: query, schema: { type: string } }
@@ -609,7 +608,7 @@ paths:
                     createdAt: { type: integer }
                     lastSeenAt: { type: [integer, 'null'] }
                     lockedForMs: { type: integer }
-                    connections: { type: object, properties: { navidrome: { type: boolean }, spotify: { type: boolean } } }
+                    connections: { type: object, properties: { navidrome: { type: boolean } } }
         '403': { description: Not an admin }
   /admin/users/{id}:
     parameters: [{ name: id, in: path, required: true, schema: { type: integer } }]
@@ -735,69 +734,11 @@ paths:
                 spotify:
                   type: object
                   properties:
-                    clientId: { type: [string, 'null'], pattern: '^[0-9a-f]{32}$', description: The Spotify app's Client ID (null removes it) }
-                    clientSecret: { type: [string, 'null'], pattern: '^[0-9a-f]{32}$', description: 'Optional, write-only: only for Spotify matching with an app token (null removes it)' }
-                    matchLibrary: { type: boolean, description: Match the Navidrome library with Spotify in the background }
-                    gates:
-                      type: object
-                      additionalProperties: false
-                      properties:
-                        artPalette: { type: boolean, description: 'G1: palettes from Spotify cover art' }
-                        syncedLyrics: { type: boolean, description: 'G2: timed lyrics during Spotify playback' }
+                    matchLibrary: { type: boolean, description: Match the Navidrome library with Spotify track ids in the background, for Spicy Lyrics }
       responses:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/AdminSettings' } } } }
-        '400': { description: Not a secret key, not a Client ID, or an unknown gate; nothing was saved }
+        '400': { description: Not a secret key, or an unknown setting (the removed Spotify app ones too); nothing was saved }
         '403': { description: Not an admin }
-
-  /spotify/login:
-    get:
-      summary: Start the PKCE sign-in (SETTINGS_AND_SECURITY.md §6.2); redirects to Spotify's authorize page
-      responses:
-        '302': { description: To accounts.spotify.com/authorize with the S256 challenge and a state bound to this session (10 min) }
-        '409': { description: 'spotify.not_configured (no Client ID) or spotify.seats_full (5 of 5)' }
-  /spotify/callback:
-    get:
-      summary: Spotify's redirect back; exchanges the code and seals the refresh token
-      parameters:
-        - { name: code, in: query, schema: { type: string } }
-        - { name: state, in: query, required: true, schema: { type: string } }
-        - { name: error, in: query, schema: { type: string } }
-      responses:
-        '302': { description: 'To /settings/account?spotify=connected | premium_required | not_on_user_list | seats_full | denied | bad_state | failed | not_configured' }
-  /spotify/token:
-    post:
-      summary: The current user's short-lived access token for the SDK and the Web API (never the refresh token)
-      responses:
-        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { accessToken: { type: string }, expiresAt: { type: integer, description: Unix ms } } } } } }
-        '401': { description: spotify.expired (sign-in expired; reconnect) }
-        '404': { description: spotify.not_connected }
-        '503': { description: spotify.unavailable (Spotify did not answer) }
-  /spotify/status:
-    get:
-      summary: The Spotify app's configuration, the gates, and this user's connection
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  configured: { type: boolean }
-                  clientId: { type: [string, 'null'] }
-                  gates: { type: object, properties: { artPalette: { type: boolean }, syncedLyrics: { type: boolean } } }
-                  seatsFull: { type: boolean, description: True when this user has no seat and all 5 are taken }
-                  connection:
-                    type: [object, 'null']
-                    properties:
-                      status: { enum: [connected, expired, premium_required, not_on_user_list] }
-                      displayName: { type: [string, 'null'] }
-                      product: { type: [string, 'null'] }
-  /spotify/connection:
-    delete:
-      summary: Disconnect Spotify (deletes the sealed refresh token and frees the seat)
-      responses:
-        '200': { description: Disconnected }
 
 components:
   securitySchemes:
@@ -855,10 +796,6 @@ components:
         spotify:
           type: object
           properties:
-            clientId: { type: [string, 'null'] }
-            gates: { type: object, properties: { artPalette: { type: boolean }, syncedLyrics: { type: boolean } } }
-            seats: { type: object, properties: { used: { type: integer }, max: { type: integer, const: 5 } } }
-            clientSecretSaved: { type: boolean }
             matchLibrary: { type: boolean }
     SpotifyMatching:
       type: object

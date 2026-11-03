@@ -22,9 +22,6 @@ export interface Faults {
   failStreams: number; // the next this many stream requests answer 503 (a restarting Navidrome)
   lyricsDelayMs: number; // the mock LRCLIB answers this late
   lrclibStatus: number; // and with this status (200: normal)
-  spotifyProduct: string; // the mock Spotify account's plan ('premium' | 'free')
-  spotifyMeStatus: number; // 403: the account is not on the app's user list
-  spotifyScope: string | null; // the token's granted `scope`; null: left out, as some answers do
   bigLibrary: number; // this many extra synthetic albums in the album list (LIB-02)
 }
 
@@ -139,9 +136,6 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
     failStreams: 0,
     lyricsDelayMs: 0,
     lrclibStatus: 200,
-    spotifyProduct: 'premium',
-    spotifyMeStatus: 200,
-    spotifyScope: null,
     bigLibrary: 0,
   };
   const starred = new Set<string>(['al-1-t2']);
@@ -208,44 +202,8 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       faults.failStreams = Number(q.get('failStreams') ?? 0);
       faults.lyricsDelayMs = Number(q.get('lyricsDelayMs') ?? 0);
       faults.lrclibStatus = Number(q.get('lrclibStatus') ?? 200);
-      faults.spotifyProduct = q.get('spotifyProduct') ?? 'premium';
-      faults.spotifyMeStatus = Number(q.get('spotifyMeStatus') ?? 200);
-      faults.spotifyScope = q.get('spotifyScope');
       faults.bigLibrary = Number(q.get('bigLibrary') ?? 0);
       return res.end('ok');
-    }
-    // A mock Spotify accounts service and /v1/me (ECHO_SPOTIFY_ACCOUNTS_URL, ECHO_SPOTIFY_API_URL in
-    // E2E): consent is granted at once; the browser's own Web API calls are faked by Playwright.
-    if (req.url?.startsWith('/authorize')) {
-      const q = new URL(req.url, 'http://mock').searchParams;
-      const back = new URL(q.get('redirect_uri') ?? '');
-      back.searchParams.set('code', 'mock-code');
-      back.searchParams.set('state', q.get('state') ?? '');
-      res.writeHead(302, { location: back.href });
-      return res.end();
-    }
-    if (req.url === '/api/token' && req.method === 'POST') {
-      res.writeHead(200, { 'content-type': 'application/json' });
-      return res.end(
-        JSON.stringify({
-          access_token: 'mock-access',
-          refresh_token: 'mock-refresh',
-          expires_in: 3600,
-          ...(faults.spotifyScope !== null && { scope: faults.spotifyScope }),
-        }),
-      );
-    }
-    // Spotify covers (ECHO_SPOTIFY_IMAGE_URL in E2E): any i.scdn.co path, one real image.
-    if (req.url?.startsWith('/image/')) {
-      const png = await fixtureCover('neon-magenta');
-      res.writeHead(200, { 'content-type': 'image/png' });
-      return res.end(png);
-    }
-    if (req.url === '/v1/me') {
-      res.writeHead(faults.spotifyMeStatus, { 'content-type': 'application/json' });
-      return res.end(
-        JSON.stringify({ id: 'mock-user', display_name: 'Ada', product: faults.spotifyProduct }),
-      );
     }
     // ListenBrainz and MusicBrainz (Spotify matching in E2E) know no track.
     if (req.url?.startsWith('/spotify-id-from-')) {

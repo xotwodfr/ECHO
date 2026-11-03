@@ -139,14 +139,9 @@ describe('API-01: responses match the OpenAPI document', () => {
     await req('POST', '/api/v1/me/password', { current: 'wrong wrong wrong', next: 'x' }, admin);
     await req('POST', '/api/v1/me/sessions/revoke-others', {}, admin);
 
-    // Spotify, not configured.
-    await req('GET', '/api/v1/spotify/status', undefined, admin);
-    await req('POST', '/api/v1/spotify/token', {}, admin);
-    await req('GET', '/api/v1/spotify/login', undefined, admin);
-
     // Admin.
     await req('GET', '/api/v1/admin/settings', undefined, admin);
-    await req('PUT', '/api/v1/admin/settings', { spotify: { clientId: 'a'.repeat(32) } }, admin);
+    await req('PUT', '/api/v1/admin/settings', { spotify: { matchLibrary: false } }, admin);
     await req('GET', '/api/v1/admin/users', undefined, admin);
     const inv = await req('POST', '/api/v1/admin/invites', {}, admin);
     const { token: invite } = (await inv.json()) as { token: string };
@@ -173,7 +168,6 @@ describe('API-01: responses match the OpenAPI document', () => {
     await req('POST', '/api/v1/auth/login', { username: 'bo', password: 'wrong wrong wrong' });
     await req('POST', '/api/v1/me/totp/start', { password: 'correct horse battery staple' }, bo);
     await req('POST', '/api/v1/me/totp/enable', { code: '000000' }, bo);
-    await req('DELETE', '/api/v1/spotify/connection', undefined, bo);
     await req('POST', '/api/v1/auth/totp', { challenge: 'nope', code: '000000' });
     await req('POST', '/api/v1/admin/invites', { username: 'cy' }, admin);
     const list = (await (await req('GET', '/api/v1/admin/invites', undefined, admin)).json()) as {

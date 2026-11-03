@@ -33,7 +33,6 @@ async function populated() {
   const deps = { ...t.deps, auth: { ...t.deps.auth, db, sealer: createSealer(key) } };
   deps.navidrome = { ...deps.navidrome, db, sealer: deps.auth.sealer, defaultUrl: mock.url };
   deps.lyrics = { ...deps.lyrics, db };
-  deps.spotify = { ...deps.spotify, db, sealer: deps.auth.sealer };
   const app = createApp(deps);
   const token = startSetup(deps.auth) as string;
   const s1 = await call(app, 'POST', '/api/v1/setup', {
@@ -80,7 +79,6 @@ function serverOn(file: string, key: Buffer) {
   const deps = { ...t.deps, auth: { ...t.deps.auth, db, sealer } };
   deps.navidrome = { ...deps.navidrome, db, sealer, defaultUrl: mock.url };
   deps.lyrics = { ...deps.lyrics, db };
-  deps.spotify = { ...deps.spotify, db, sealer };
   return { app: createApp(deps), db, sealer, t };
 }
 

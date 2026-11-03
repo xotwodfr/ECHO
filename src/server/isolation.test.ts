@@ -39,9 +39,6 @@ const NO_USER_DATA = [
   'POST /me/recovery-codes',
   'DELETE /me',
   'POST /me/sessions/revoke-others',
-  'GET /spotify/login',
-  'GET /spotify/callback', // its state is bound to the session that started it (spotify.test.ts)
-  'DELETE /spotify/connection',
   'DELETE /me/connections/navidrome',
   'PUT /me/connections/navidrome',
   'POST /me/connections/navidrome/test',
@@ -74,7 +71,7 @@ describe('SEC-11: isolation between users', () => {
     };
     const json = async (r: Response) => JSON.stringify(await r.json().catch(() => null));
 
-    // A's world: Navidrome, a queue, an override, settings, Spotify, a device.
+    // A's world: Navidrome, a queue, an override, settings, a device.
     expect(
       (
         await as(A, 'PUT', '/api/v1/me/connections/navidrome', {
@@ -110,9 +107,6 @@ describe('SEC-11: isolation between users', () => {
       context: { kind: 'album', id: 'ALICE-CONTEXT', title: 'ALICE-CONTEXT' },
     };
     for (let i = 0; i < 6; i++) await as(A, 'POST', '/api/v1/me/plays', aPlay);
-    db.prepare(
-      "INSERT INTO connections (user_id, provider, config_json, secret_enc, status, updated_at) VALUES (?, 'spotify', '{\"displayName\":\"ALICE-SPOTIFY\"}', 'v1:x:y', 'connected', 0)",
-    ).run(A.id);
     createSession(db, A.id, 'device', t.clock.t, { name: 'ALICE-PHONE' });
     const aSessions = db
       .prepare('SELECT id_hash FROM sessions WHERE user_id = ?')
@@ -133,7 +127,6 @@ describe('SEC-11: isolation between users', () => {
       '/api/v1/me/wrapped',
       '/api/v1/me/sessions',
       '/api/v1/me/connections/navidrome',
-      '/api/v1/spotify/status',
     ];
     for (const p of reads) {
       const body = await json(await as(B, 'GET', p));
@@ -209,9 +202,6 @@ describe('SEC-11: isolation between users', () => {
       await as(B, 'GET', `/api/v1/palette/navidrome:${mock.songs[0]?.albumId}`)
     ).json();
     expect(pal.source).toBe('fallback');
-
-    // Spotify: B gets no token of A's.
-    expect((await as(B, 'POST', '/api/v1/spotify/token', {})).status).toBe(404);
 
     // Admin routes, with A's id: B is not an admin.
     for (const [m, p] of [

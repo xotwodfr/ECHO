@@ -17,9 +17,6 @@ describe('loadConfig', () => {
       neteaseUrl: 'https://music.163.com',
       listenbrainzUrl: 'https://labs.api.listenbrainz.org',
       musicbrainzUrl: 'https://musicbrainz.org',
-      spotifyAccountsUrl: 'https://accounts.spotify.com',
-      spotifyApiUrl: 'https://api.spotify.com',
-      spotifyImageUrl: 'https://i.scdn.co',
     });
   });
 
@@ -54,9 +51,6 @@ describe('loadConfig', () => {
       neteaseUrl: 'https://music.163.com',
       listenbrainzUrl: 'https://labs.api.listenbrainz.org',
       musicbrainzUrl: 'https://musicbrainz.org',
-      spotifyAccountsUrl: 'https://accounts.spotify.com',
-      spotifyApiUrl: 'https://api.spotify.com',
-      spotifyImageUrl: 'https://i.scdn.co',
     });
   });
 

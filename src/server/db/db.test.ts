@@ -26,6 +26,38 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
+  it('the Spotify purge deletes connections and credentials, and keeps matches, the matching switch and the rest', () => {
+    const db = openDb(':memory:');
+    db.prepare(
+      "INSERT INTO users (id, username, password_hash, role, created_at) VALUES (1, 'ada', 'x', 'user', 0)",
+    ).run();
+    const conn = db.prepare(
+      'INSERT INTO connections (user_id, provider, config_json, secret_enc, status, updated_at) VALUES (1, ?, ?, ?, ?, 0)',
+    );
+    conn.run('navidrome', '{}', 'v1:nav', 'ok');
+    conn.run('spotify', '{}', 'v1:refresh-token', 'connected');
+    const setting = db.prepare(
+      'INSERT INTO server_settings (key, value_json, secret_enc) VALUES (?, ?, ?)',
+    );
+    for (const k of ['spotify.clientId', 'spotify.gates.artPalette', 'spotify.gates.syncedLyrics'])
+      setting.run(k, '"x"', null);
+    setting.run('spotify.clientSecret', null, 'v1:secret');
+    setting.run('spotify.matchLibrary', 'false', null);
+    setting.run('lyrics.spicyKey', null, 'v1:spicy');
+    db.prepare(
+      "INSERT INTO spotify_matches (scope, navidrome_id, spotify_ids, method, tried, title, artist, checked_at) VALUES ('s', 't', '[\"4uLU6hMCjMI75M1A2tKUQC\"]', 'spotify', 'spotify', 'T', 'A', 0)",
+    ).run();
+    db.pragma(`user_version = ${SCHEMA_VERSION - 1}`); // a database from before the purge
+    migrate(db);
+    expect(db.prepare('SELECT provider FROM connections').pluck().all()).toEqual(['navidrome']);
+    expect(db.prepare('SELECT key FROM server_settings ORDER BY key').pluck().all()).toEqual([
+      'lyrics.spicyKey',
+      'spotify.matchLibrary',
+    ]);
+    expect(db.prepare('SELECT COUNT(*) FROM spotify_matches').pluck().get()).toBe(1);
+    expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
+  });
+
   it('migrating again changes nothing; a newer schema is refused', () => {
     const db = openDb(':memory:');
     migrate(db);

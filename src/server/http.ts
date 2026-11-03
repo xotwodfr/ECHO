@@ -21,17 +21,17 @@ const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
 export const SECURITY_HEADERS: Record<string, string> = {
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' https://sdk.scdn.co",
-    'frame-src https://sdk.scdn.co',
-    "connect-src 'self' https://api.spotify.com",
-    "img-src 'self' https://i.scdn.co data: blob:",
+    "script-src 'self'",
+    "frame-src 'none'",
+    "connect-src 'self'",
+    "img-src 'self' data: blob:",
     "media-src 'self' blob:",
     "font-src 'self'",
     "style-src 'self'",
     "worker-src 'self' blob:",
     "frame-ancestors 'none'",
     "base-uri 'none'",
-    "form-action 'self' https://accounts.spotify.com",
+    "form-action 'self'",
     // Violations are reported to the server's log (SEC-08: none during the full E2E run).
     'report-uri /api/v1/csp-report',
   ].join('; '),

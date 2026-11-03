@@ -1,17 +1,12 @@
 # ECHO
 
-An immersive, self-hosted music player for Navidrome and Spotify: a floating, word-synchronised
+An immersive, self-hosted music player for Navidrome: a floating, word-synchronised
 lyric field in an audio-reactive room lit by the album cover.
 
 ## What it does
 
 - **Navidrome:** your own library through ECHO's proxy (raw or transcoded streams, gapless playback,
   crossfade, ReplayGain, scrobbling), with audio-reactive visuals (Reverb).
-- **Spotify:** each user connects their own account to the server's Spotify app (PKCE). Playback runs
-  through the Web Playback SDK, with Spotify's attribution rules and two admin policy switches.
-  With both connected, a switch shows one library at a time: Spotify mode has its own Home (from
-  your Spotify history), Liked Songs, playlists, followed artists, artist pages and search, and
-  hearts save to Spotify. Navidrome tracks are matched to Spotify where a source needs it.
 - **Lyrics:** the best synchronised source wins (your Navidrome files, Spicy Lyrics, NetEase,
   LRCLIB), word-timed where available, with a shared cache, credits on the Stage, per-track timing
   offsets and a static sheet when untimed.
@@ -63,12 +58,12 @@ fixtures; any fixture at any moment: `/?fixture=ballad-word&frame=60000`).
 | `ECHO_DATA_DIR` | `./data` | Database and caches (`/data` in the container) |
 | `ECHO_MASTER_KEY_FILE` | `/run/secrets/echo_master_key` | The Docker secret; the server refuses to start without it |
 | `ECHO_NAVIDROME_URL` | unset | The default Navidrome URL, always allowed (e.g. `http://navidrome:4533` on a shared Docker network) |
-| `ECHO_LRCLIB_URL`, `ECHO_SPICY_URL`, `ECHO_NETEASE_URL`, `ECHO_LISTENBRAINZ_URL`, `ECHO_MUSICBRAINZ_URL`, `ECHO_SPOTIFY_ACCOUNTS_URL`, `ECHO_SPOTIFY_API_URL`, `ECHO_SPOTIFY_IMAGE_URL` | the public services | Overridable for tests (the E2E mocks) |
+| `ECHO_LRCLIB_URL`, `ECHO_SPICY_URL`, `ECHO_NETEASE_URL`, `ECHO_LISTENBRAINZ_URL`, `ECHO_MUSICBRAINZ_URL` | the public services | Overridable for tests (the E2E mocks) |
 | `ECHO_DEV_FIXTURES`, `ECHO_CSP_REPORT_FILE` | unset | E2E only |
 
 See `.env.example`. Invalid values stop the server at start with a clear message. Secrets never go in
-environment files: the master key is a Docker secret, and the Spotify Client ID and Spicy Lyrics key
-are set in Settings → Admin.
+environment files: the master key is a Docker secret, and the Spicy Lyrics key is set in Settings →
+Admin.
 
 ## Development pages
 

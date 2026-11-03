@@ -27,24 +27,7 @@ export interface LyricsDeps {
   spotifyIdsFor?: (userId: number, scope: string, navidromeId: string) => Promise<string[]>;
   /** Admin → Server → Spotify matching; absent in tests that do not need it. */
   matcher?: SpotifyMatcher;
-  /** Gate G2 (PLAYBACK_ARCHITECTURE.md §4.6): timed lyrics for Spotify tracks. Default on. */
-  spotifySyncAllowed?: () => boolean;
   log?: Log;
-}
-
-/** G2 off: the words without their times (LYRICS_INTEGRATION.md §4.4), an untimed sheet. */
-export function untimed(doc: LyricsDoc): LyricsDoc {
-  return {
-    ...doc,
-    sync: 'none',
-    lines: doc.lines.map((l) => ({
-      text: l.text,
-      start: 0,
-      ...(l.agent && { agent: l.agent }),
-      ...(l.oppositeAligned && { oppositeAligned: true }),
-      ...(l.background && { background: l.background.map((b) => ({ text: b.text })) }),
-    })),
-  };
 }
 
 const KEY = /^[\w:.-]{1,200}$/;
@@ -98,7 +81,6 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       ...(str(q.album) && { album: str(q.album) }),
       ...(Number.isFinite(duration) && duration > 0 && { durationMs: Math.round(duration) }),
       ...(provider === 'navidrome' && providerId && { navidromeId: providerId }),
-      ...(provider === 'spotify' && providerId && { spotifyId: providerId }),
       ...(q.isrc && ISRC.test(q.isrc) && { isrc: q.isrc.toUpperCase() }),
     };
     const user = c.var.user;
@@ -131,12 +113,8 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
     const off = PRECEDENCE.filter((id) => !sources.some((s) => s.id === id));
     const key = `${scope}${trackKey}|${meta}${provider === 'navidrome' && input.spotifyId ? `|sp:${input.spotifyId}` : ''}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}${off.length ? `|-${off.join(',')}` : ''}`;
 
-    // The cache keeps the full document; G2 applies on the way out, so switching it takes effect
-    // on the next request (SP-04).
-    const deliver = (doc: LyricsDoc) =>
-      provider === 'spotify' && !(deps.spotifySyncAllowed?.() ?? true) ? untimed(doc) : doc;
     const hit = await deps.cache.get(key);
-    if (hit && 'doc' in hit) return c.json({ doc: deliver(hit.doc), override: ov });
+    if (hit && 'doc' in hit) return c.json({ doc: hit.doc, override: ov });
     if (hit) return c.json({ error: 'not_found', tried: hit.negative, override: ov }, 404);
 
     // Listeners of the same track at the same moment share one lookup.
@@ -153,7 +131,7 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
     const { doc, tried } = await p;
     if (doc) {
       await kept(deps.cache.put(key, doc));
-      return c.json({ doc: deliver(doc), override: ov });
+      return c.json({ doc, override: ov });
     }
     // A miss is remembered only when every source answered; errors and timeouts may pass.
     if (

@@ -93,9 +93,7 @@ function matcher(over: Partial<MatchDeps> & { fetch: typeof fetch }) {
     now: () => 1_800_000_000_000,
     listenbrainzUrl: 'https://lb.test',
     musicbrainzUrl: 'https://mb.test',
-    spotifyApiUrl: 'https://api.spotify.test',
     userAgent: 'ECHO/test',
-    spotifyAppToken: async () => null,
     libraries: async () => [],
     sweepEnabled: () => true,
     sleep: async () => {},
@@ -149,31 +147,6 @@ describe('on play', () => {
     expect(m.match('nd', 's1')).toMatchObject({ method: 'lb-meta', tried: ['lb-meta'] });
   });
 
-  it('with the app’s Spotify token, Spotify’s ISRC search comes first', async () => {
-    const lib = library([song(1, { isrc: 'GBAYE0601498' })]);
-    const w = web({
-      meta: { 'Song 1': [ID_B] },
-      spotify: { 'isrc:GBAYE0601498': [{ id: ID_A, name: 'Song 1', duration_ms: 200_000 }] },
-    });
-    const { m } = matcher({ fetch: w.f, spotifyAppToken: async () => 'app-token' });
-    expect(await m.idsFor('nd', 's1', async () => lib.client)).toEqual([ID_A]);
-    expect(w.urls.some((u) => u.includes('lb.test'))).toBe(false);
-  });
-
-  it('Spotify’s metadata search keeps only the right length and title', async () => {
-    const lib = library([song(1)]);
-    const w = web({
-      spotify: {
-        'track:"Song 1" artist:"Band"': [
-          { id: ID_B, name: 'Song 1', duration_ms: 260_000 }, // another version
-          { id: ID_A, name: 'Song 1', duration_ms: 201_000 },
-        ],
-      },
-    });
-    const { m } = matcher({ fetch: w.f, spotifyAppToken: async () => 'app-token' });
-    expect(await m.idsFor('nd', 's1', async () => lib.client)).toEqual([ID_A]);
-  });
-
   it('a ListenBrainz miss is asked again with the plain title', async () => {
     const lib = library([song(1, { title: 'Wolves (feat. Frank Ocean)' })]);
     const w = web({ meta: { Wolves: [ID_C] } });
@@ -187,32 +160,6 @@ describe('on play', () => {
     const { m } = matcher({ fetch: web({ fail: true }).f });
     expect(await m.idsFor('nd', 's1', async () => lib.client)).toEqual([]);
     expect(m.match('nd', 's1')?.tried).toEqual([]);
-  });
-
-  it('a track ListenBrainz missed before the client secret was saved is asked of Spotify', async () => {
-    const lib = library([song(1)]);
-    const w = web({
-      spotify: {
-        'track:"Song 1" artist:"Band"': [{ id: ID_A, name: 'Song 1', duration_ms: 200_000 }],
-      },
-    });
-    let token: string | null = null;
-    const { m } = matcher({ fetch: w.f, spotifyAppToken: async () => token });
-    expect(await m.idsFor('nd', 's1', async () => lib.client)).toEqual([]);
-    token = 'app-token';
-    expect(await m.idsFor('nd', 's1', async () => lib.client)).toEqual([ID_A]);
-  });
-
-  it('Spotify busy (429): ListenBrainz still answers, and Spotify is asked again next time', async () => {
-    const lib = library([song(1)]);
-    const inner = web({ meta: { 'Song 1': [ID_B] } });
-    const f = (async (u: string, init?: RequestInit) =>
-      String(u).includes('/v1/search')
-        ? new Response('{}', { status: 429 })
-        : inner.f(u, init)) as unknown as typeof fetch;
-    const { m } = matcher({ fetch: f, spotifyAppToken: async () => 'app-token' });
-    expect(await m.idsFor('nd', 's1', async () => lib.client)).toEqual([ID_B]);
-    expect(m.match('nd', 's1')?.tried).toEqual(['lb-meta']);
   });
 });
 
@@ -305,187 +252,6 @@ describe('the library sweep', () => {
     await broken.m.sweep();
     expect(broken.m.status().error).toContain('listenbrainz 503');
   });
-
-  it('Spotify busy (429): the track waits for the next run; ListenBrainz still runs', async () => {
-    const lib = library([song(1), song(2)]);
-    const inner = web({ meta: { 'Song 2': [ID_B] } });
-    const f = (async (u: string, init?: RequestInit) =>
-      String(u).includes('/v1/search')
-        ? new Response('{}', { status: 429, headers: { 'retry-after': '5' } })
-        : inner.f(u, init)) as unknown as typeof fetch;
-    const { m } = matcher({
-      fetch: f,
-      spotifyAppToken: async () => 'app-token',
-      libraries: async () => [{ scope: 'nd', client: lib.client }],
-    });
-    await m.sweep();
-    expect(m.status().error).toBeNull();
-    expect(m.match('nd', 's2')).toMatchObject({ ids: [ID_B], method: 'lb-meta' });
-    expect(m.match('nd', 's1')?.tried).not.toContain('spotify');
-  });
-
-  it('a short Retry-After is waited out, then Spotify is asked about the next track', async () => {
-    const lib = library([song(1), song(2)]);
-    let busy = 0;
-    const f = (async (u: string, init?: RequestInit) => {
-      if (!String(u).includes('/v1/search')) return web({}).f(u, init);
-      if (busy++ < 1) return new Response('{}', { status: 429, headers: { 'retry-after': '5' } });
-      return Response.json({
-        tracks: { items: [{ id: ID_A, name: 'Song 2', duration_ms: 200_000 }] },
-      });
-    }) as unknown as typeof fetch;
-    const slept: number[] = [];
-    const { m } = matcher({
-      fetch: f,
-      spotifyAppToken: async () => 'app-token',
-      libraries: async () => [{ scope: 'nd', client: lib.client }],
-      sleep: async (ms) => {
-        slept.push(ms);
-      },
-    });
-    await m.sweep();
-    expect(slept).toContain(5000);
-    expect(m.match('nd', 's2')).toMatchObject({ ids: [ID_A], method: 'spotify' });
-  });
-
-  it('a long Retry-After, or ten failures in a row, leaves Spotify for the next run', async () => {
-    const songs = Array.from({ length: 12 }, (_, i) => song(i));
-    const run = async (res: () => Response) => {
-      const w = web({});
-      const f = (async (u: string, init?: RequestInit) =>
-        String(u).includes('/v1/search') ? res() : w.f(u, init)) as unknown as typeof fetch;
-      const { m } = matcher({
-        fetch: f,
-        spotifyAppToken: async () => 'app-token',
-        libraries: async () => [{ scope: 'nd', client: library(songs).client }],
-      });
-      await m.sweep();
-      expect(m.status().error).toBeNull();
-      return w.urls.filter((u) => u.includes('lb.test')).length > 0; // ListenBrainz still ran
-    };
-    let searches = 0;
-    const count = (r: Response) => () => {
-      searches++;
-      return r.clone();
-    };
-    const penalty = new Response('{}', { status: 429, headers: { 'retry-after': '3600' } });
-    expect(await run(count(penalty))).toBe(true);
-    expect(searches).toBe(1);
-    searches = 0;
-    expect(await run(count(new Response('{}', { status: 503 })))).toBe(true);
-    expect(searches).toBe(10);
-  });
-
-  it('QUOTA_EXCEEDED leaves Spotify at once, and nothing asks it again, sweep or play', async () => {
-    const logs: { msg: string; extra?: Record<string, unknown> }[] = [];
-    const w = web({});
-    let searches = 0;
-    const f = (async (u: string, init?: RequestInit) => {
-      if (!String(u).includes('/v1/search')) return w.f(u, init);
-      searches++;
-      return Response.json(
-        { error: { status: 429, message: 'Too many requests', reason: 'QUOTA_EXCEEDED' } },
-        { status: 429 }, // no Retry-After: a quota has no 30 s window
-      );
-    }) as unknown as typeof fetch;
-    const lib = library([song(1), song(2), song(3)]);
-    const { m } = matcher({
-      fetch: f,
-      log: (_level, msg, extra) => logs.push({ msg, extra }),
-      spotifyAppToken: async () => 'app-token',
-      libraries: async () => [{ scope: 'nd', client: lib.client }],
-    });
-    await m.sweep();
-    expect(searches).toBe(1); // not 10 tries, not a wait and another
-    expect(logs.find((l) => l.msg.includes('leaving Spotify'))?.extra).toMatchObject({
-      detail: 'spotify search 429: QUOTA_EXCEEDED',
-    });
-    await m.idsFor('nd', 's2', async () => lib.client); // a play after it
-    expect(searches).toBe(1); // Spotify was not asked again
-  });
-
-  it('the log says why Spotify was left, with Spotify’s own words', async () => {
-    const logs: { msg: string; extra?: Record<string, unknown> }[] = [];
-    const w = web({});
-    const f = (async (u: string, init?: RequestInit) =>
-      String(u).includes('/v1/search')
-        ? new Response('{"error":{"status":429,"message":"API rate limit exceeded"}}', {
-            status: 429,
-            headers: { 'retry-after': '68167' },
-          })
-        : w.f(u, init)) as unknown as typeof fetch;
-    const { m } = matcher({
-      fetch: f,
-      log: (_level, msg, extra) => logs.push({ msg, extra }),
-      spotifyAppToken: async () => 'app-token',
-      libraries: async () => [{ scope: 'nd', client: library([song(1), song(2)]).client }],
-    });
-    await m.sweep();
-    expect(logs.find((l) => l.msg.includes('leaving Spotify'))?.extra).toMatchObject({
-      failures: 1,
-      retryAfterS: 68167,
-      detail: 'spotify search 429',
-    });
-  });
-
-  it('a refused app token is asked for once per run, and the log says so', async () => {
-    const logs: string[] = [];
-    let tokens = 0;
-    const { m } = matcher({
-      fetch: web({}).f as unknown as typeof fetch,
-      log: (_level, msg) => logs.push(msg),
-      spotifyAppToken: async () => {
-        tokens++;
-        return null;
-      },
-      // Two pages of songs: before, the token was asked for again on every page.
-      libraries: async () => [
-        { scope: 'nd', client: library(Array.from({ length: 501 }, (_, i) => song(i))).client },
-      ],
-    });
-    await m.sweep();
-    expect(tokens).toBe(1);
-    expect(logs.filter((l) => l.includes('no app token'))).toHaveLength(1);
-  });
-
-  it('an app token that expires during the sweep is renewed', async () => {
-    const lib = library([song(1), song(2), song(3)]);
-    let searches = 0;
-    const live = () => `t${Math.floor(searches / 2)}`; // a new token every two searches
-    const f = (async (u: string, init?: RequestInit) => {
-      if (!String(u).includes('/v1/search')) return web({}).f(u, init);
-      const auth = (init?.headers as Record<string, string> | undefined)?.authorization;
-      if (auth !== `Bearer ${live()}`) return new Response('{}', { status: 401 });
-      searches++;
-      const name = /track:"([^"]+)"/.exec(new URL(String(u)).searchParams.get('q') ?? '')?.[1];
-      return Response.json({ tracks: { items: [{ id: ID_A, name, duration_ms: 200_000 }] } });
-    }) as unknown as typeof fetch;
-    const { m } = matcher({
-      fetch: f,
-      spotifyAppToken: async () => live(),
-      libraries: async () => [{ scope: 'nd', client: lib.client }],
-    });
-    await m.sweep();
-    expect(m.counts('nd')).toMatchObject({ matched: 3, none: 0 });
-  });
-
-  it('Spotify is asked only for tracks with no match yet', async () => {
-    const lib = library([song(1), song(2)]);
-    const w = web({ meta: { 'Song 1': [ID_A] } });
-    let token: string | null = null;
-    const { m } = matcher({
-      fetch: w.f,
-      spotifyAppToken: async () => token,
-      libraries: async () => [{ scope: 'nd', client: lib.client }],
-    });
-    await m.sweep(); // before the client secret: ListenBrainz matches Song 1 only
-    token = 'app-token';
-    await m.sweep();
-    const asked = w.urls
-      .filter((u) => u.includes('/v1/search'))
-      .map((u) => new URL(u).searchParams.get('q'));
-    expect(asked).toEqual(['track:"Song 2" artist:"Band"']);
-  });
 });
 
 describe('corrections', () => {
@@ -561,9 +327,7 @@ describe('the lyrics route and Admin → Spotify matching', () => {
       now: () => t.clock.t,
       listenbrainzUrl: 'https://lb.test',
       musicbrainzUrl: 'https://mb.test',
-      spotifyApiUrl: 'https://api.spotify.test',
       userAgent: 'ECHO/test',
-      spotifyAppToken: async () => null,
       libraries: async () => [{ scope: 'none', client: lib.client }],
       sweepEnabled: () => true,
       sleep: async () => {},
@@ -638,17 +402,5 @@ describe('the lyrics route and Admin → Spotify matching', () => {
     expect(
       (await u.req('PUT', '/admin/spotify-matching/tracks/s1', { spotify: ID_A })).status,
     ).toBe(403);
-  });
-
-  it('the client secret is write-only and checked', async () => {
-    const a = setup('admin');
-    const bad = await a.req('PUT', '/admin/settings', { spotify: { clientSecret: 'short' } });
-    expect(bad.status).toBe(400);
-    const r = await a.req('PUT', '/admin/settings', {
-      spotify: { clientSecret: 'ab'.repeat(16), matchLibrary: false },
-    });
-    const body = await r.json();
-    expect(body.spotify).toMatchObject({ clientSecretSaved: true, matchLibrary: false });
-    expect(JSON.stringify(body)).not.toContain('ab'.repeat(16));
   });
 });

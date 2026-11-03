@@ -27,7 +27,6 @@ const intIn =
 
 const SCHEMA = {
   playback: {
-    defaultProvider: { check: oneOf('navidrome', 'spotify'), default: 'navidrome' },
     crossfadeSec: { check: intIn(0, 8), default: 0 },
     replayGain: { check: oneOf('off', 'track', 'album', 'auto'), default: 'auto' },
     scrobble: { check: bool, default: true },

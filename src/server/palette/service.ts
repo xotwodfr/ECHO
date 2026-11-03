@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { decodeCover } from './decode.ts';
 import {
@@ -24,25 +24,16 @@ export interface LoadContext {
    * of an album id on this one. Null: a global key (generated fixtures).
    */
   scope?: string | null;
-  /** Spotify: the cover URL the client supplied (validated by the route; fetched into memory). */
-  art?: string;
 }
 export type CoverLoader = (albumKey: string, ctx: LoadContext) => Promise<Buffer | null>;
 
-/** Spotify palettes live 30 days (VISUALIZER_SPEC.md §6.3); others until the algorithm changes. */
-export const SPOTIFY_PALETTE_TTL_MS = 30 * 86_400_000;
-const ttlOf = (key: string) => (key.startsWith('spotify:') ? SPOTIFY_PALETTE_TTL_MS : null);
-
-export function createPaletteService(opts: { dir: string; load: CoverLoader; now?: () => number }) {
-  const now = opts.now ?? Date.now;
+export function createPaletteService(opts: { dir: string; load: CoverLoader }) {
   const inflight = new Map<string, Promise<Palette>>();
   const file = (key: string) =>
     join(opts.dir, `${createHash('sha256').update(key).digest('hex')}.json`);
 
-  async function cached(key: string, albumKey: string): Promise<Palette | null> {
+  async function cached(key: string): Promise<Palette | null> {
     try {
-      const ttl = ttlOf(albumKey);
-      if (ttl !== null && (await stat(file(key))).mtimeMs + ttl <= now()) return null;
       const p = JSON.parse(await readFile(file(key), 'utf8')) as Palette;
       return p.version === PALETTE_VERSION ? p : null;
     } catch {
@@ -76,7 +67,7 @@ export function createPaletteService(opts: { dir: string; load: CoverLoader; now
   return {
     async get(key: string, ctx: LoadContext = { userId: null }): Promise<Palette> {
       const id = ctx.scope ? `${ctx.scope}|${key}` : key;
-      const hit = await cached(id, key);
+      const hit = await cached(id);
       if (hit) return hit;
       let p = inflight.get(id);
       if (!p) {
