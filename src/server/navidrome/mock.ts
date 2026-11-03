@@ -103,6 +103,15 @@ const albumJson = (a: (typeof ALBUMS)[number]) => ({
   genre: a.genre,
 });
 
+/** Every fake YouTube song's audio: three minutes of one tone (youtube/fake.ts sizes it). */
+export const YT_AUDIO_SECONDS = 180;
+export const YT_AUDIO_BYTES = 44 + YT_AUDIO_SECONDS * SAMPLE_RATE * 2;
+let ytWav: Buffer | null = null;
+const ytAudio = () => {
+  ytWav ??= wav(YT_AUDIO_SECONDS, 330);
+  return ytWav;
+};
+
 /** A mono 16-bit WAV: a soft tone whose pitch identifies the track. */
 function wav(seconds: number, hz: number) {
   const n = seconds * SAMPLE_RATE;
@@ -257,6 +266,17 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       res.writeHead(status, { 'content-type': 'application/json' });
       res.end(JSON.stringify(body));
     };
+    // googlevideo for YouTube Music mode's E2E (the fake catalogue's resolver points here): like the
+    // real one it refuses a Range header and serves the `range` query parameter.
+    if (url.pathname === '/videoplayback') {
+      if (req.headers.range) return json({ error: 'range header' }, 403);
+      const r = /^(\d+)-(\d+)$/.exec(q.get('range') ?? '');
+      const start = r ? Number(r[1]) : 0;
+      const end = r ? Math.min(Number(r[2]), YT_AUDIO_BYTES - 1) : YT_AUDIO_BYTES - 1;
+      const part = ytAudio().subarray(start, end + 1);
+      res.writeHead(200, { 'content-type': 'audio/wav', 'content-length': part.length });
+      return res.end(part);
+    }
     if (faults.unauthorized) return json({ error: 'unauthorized' }, 401);
     if (!url.pathname.startsWith('/rest/')) return json({ error: 'not found' }, 404);
     if (!authed(q)) return json(fail(40, 'Wrong username or password'));
