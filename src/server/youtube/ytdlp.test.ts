@@ -136,7 +136,10 @@ describe('the yt-dlp resolver', () => {
     expect(f.calls).toHaveLength(2);
   });
 
-  it('failed resolve is not cached', async () => {
+  // Review 2026-11-03: a failure was retried by the player 3 times, each a new yt-dlp run (and on
+  // a bot check, for every song in the queue); it is remembered for two minutes instead.
+  it('a failure is remembered for two minutes', async () => {
+    let t = 0;
     let first = true;
     const f = fakeRun((args) => {
       if (!first) return ok(args);
@@ -147,13 +150,36 @@ describe('the yt-dlp resolver', () => {
         stderr: "ERROR: [youtube] x: Sign in to confirm you're not a bot",
       };
     });
-    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => t, log: () => {}, run: f.run });
     const err = await r.resolve(ID).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(YtAudioError);
     expect((err as YtAudioError).code).toBe('youtube.bot_check');
     expect(r.status().lastError).toContain('Sign in to confirm');
+    t = 119_000;
+    expect(((await r.resolve(ID).catch((e: unknown) => e)) as YtAudioError).code).toBe(
+      'youtube.bot_check',
+    );
+    expect(f.calls).toHaveLength(1);
+    t = 121_000;
     await r.resolve(ID);
     expect(f.calls).toHaveLength(2);
+  });
+
+  it('a 429 is a bot check; a mere "webpage" is not unavailable', async () => {
+    const code = async (stderr: string) => {
+      const f = fakeRun(() => ({ code: 1, stdout: '', stderr }));
+      const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+      return ((await r.resolve(ID).catch((e: unknown) => e)) as YtAudioError).code;
+    };
+    expect(await code('ERROR: [youtube] x: Unable to download webpage: HTTP Error 429')).toBe(
+      'youtube.bot_check',
+    );
+    expect(await code('ERROR: [youtube] x: Unable to download webpage: timed out')).toBe(
+      'youtube.failed',
+    );
+    expect(await code('ERROR: [youtube] x: Sign in to confirm your age')).toBe(
+      'youtube.unavailable',
+    );
   });
 
   it('names unavailable songs', async () => {

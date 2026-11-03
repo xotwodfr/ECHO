@@ -236,4 +236,27 @@ describe('NavidromeProvider', () => {
     await flush();
     expect(states.at(-1)).toBe(212_500);
   });
+
+  // Review 2026-11-03: a YouTube failure said only "could not be played", probed Navidrome, and a
+  // bot check walked the whole queue. The server says why; a bot check stops.
+  it('a youtube song refused as a bot says so, without asking Navidrome', async () => {
+    vi.useFakeTimers();
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', async (u: string) => {
+      urls.push(String(u));
+      return String(u).includes('/youtube/stream/')
+        ? Response.json({ code: 'youtube.bot_check' }, { status: 502 })
+        : new Response('{}', { status: 200 });
+    });
+    void p.load(ytTrack('x'), { autoplay: true });
+    a.fail();
+    for (const wait of [500, 1000, 2000]) {
+      await vi.advanceTimersByTimeAsync(wait);
+      a.fail();
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(errors.map((e) => e.code)).toEqual(['youtube.bot_check']);
+    expect(errors[0]?.userMessage).toMatch(/bot/);
+    expect(urls.some((u) => u.includes('navidrome'))).toBe(false);
+  });
 });

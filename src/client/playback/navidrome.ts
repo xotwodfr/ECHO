@@ -142,8 +142,9 @@ export class NavidromeProvider implements PlaybackProvider {
       }
       if (!this.track) return;
       // REL-02: a broken stream is reloaded at its position up to 3 times (0.5, 1, 2 s apart);
-      // then the controller skips it. The server's reachability is checked meanwhile.
-      reportDown('navidrome');
+      // then the controller skips it. Navidrome's reachability is checked meanwhile (a YouTube
+      // song's failure is not Navidrome's; the server remembers it, so its reloads cost nothing).
+      if (this.track.provider !== 'youtube') reportDown('navidrome');
       if (this.retries < 3) {
         const t = this.track;
         const at = (this.offsetS + el.currentTime) * 1000;
@@ -162,8 +163,33 @@ export class NavidromeProvider implements PlaybackProvider {
         this.retries++;
         return;
       }
-      this.emit('error', this.streamError(el.error.message));
+      const t = this.track;
+      const detail = el.error.message;
+      if (t.provider === 'youtube')
+        void this.youtubeProblem(t, detail).then((e) => this.track === t && this.emit('error', e));
+      else this.emit('error', this.streamError(detail));
     });
+  }
+
+  /** Why the server could not play a YouTube song (its remembered failure, without a new run). */
+  private async youtubeProblem(t: Track, detail: string): Promise<AppError> {
+    const res = await fetch(`/api/v1/youtube/stream/${encodeURIComponent(t.id)}`, {
+      headers: { range: 'bytes=0-0' },
+    }).catch(() => null);
+    const body = res && !res.ok ? await res.json().catch(() => null) : null;
+    const code = (body as { code?: string } | null)?.code;
+    if (code === 'youtube.bot_check')
+      return {
+        code: 'youtube.bot_check',
+        provider: 'youtube',
+        retriable: false,
+        userMessage: strings.youtube.botCheck,
+        detail,
+      };
+    return {
+      ...this.streamError(detail),
+      ...(code === 'youtube.unavailable' && { userMessage: strings.youtube.unavailable }),
+    };
   }
 
   async connect() {}

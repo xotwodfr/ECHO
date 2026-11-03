@@ -115,6 +115,8 @@ export function createPlaybackController(opts: {
       notify(next ? strings.dock.skipped : e.userMessage);
       if (next) return load(next, true);
     }
+    // YouTube refuses this server as a bot: every song would fail alike, so stop and say why.
+    if (e.code === 'youtube.bot_check') notify(e.userMessage);
     player.setState({ status: 'error', error: e });
   }
 

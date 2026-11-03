@@ -121,6 +121,9 @@ export const strings = {
     navidrome: 'Navidrome',
     switchLabel: 'Which music',
     unplayable: 'This song can’t play from YouTube.',
+    unavailable: 'This song isn’t available on YouTube.',
+    botCheck:
+      'YouTube is asking this server to prove it isn’t a bot, so YouTube songs can’t play for now. Try again later.',
     home: 'Home',
     explore: 'Explore',
     library: 'Library',

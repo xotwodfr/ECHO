@@ -11,6 +11,8 @@ import type { Log } from '../log.ts';
 
 export const VIDEO_ID = /^[\w-]{11}$/;
 const REUSE_MARGIN_MS = 30 * 60_000;
+/** A failure is remembered this long: the player's retries and the next prefetch cost no new run. */
+const FAIL_TTL_MS = 2 * 60_000;
 const MAX_RUNNING = 2;
 const MAX_WAITING = 4; // prefetches past this are dropped
 const MAX_CACHED = 500;
@@ -88,10 +90,11 @@ export const createRun =
       );
     });
 
+/** A bot check (or YouTube's rate limit) fails every song alike; the player stops on it. */
 const codeOf = (stderr: string): YtAudioCode =>
-  /Sign in to confirm/.test(stderr)
+  /Sign in to confirm you.re not a bot|HTTP Error 429/i.test(stderr)
     ? 'youtube.bot_check'
-    : /unavailable|age|private|removed/i.test(stderr)
+    : /unavailable|confirm your age|age.restricted|private video|removed/i.test(stderr)
       ? 'youtube.unavailable'
       : 'youtube.failed';
 
@@ -115,6 +118,7 @@ export function createYtdlpResolver(opts: {
 }): Resolver {
   const run = opts.run ?? createRun({ tmp: opts.tmp, cache: opts.cache });
   const done = new Map<string, Resolved>();
+  const failed = new Map<string, { err: YtAudioError; at: number }>();
   const pending = new Map<string, Promise<Resolved>>();
   const status: YtdlpStatus = { version: null, updatedAt: null, lastError: null };
   let running = 0;
@@ -177,9 +181,12 @@ export function createYtdlpResolver(opts: {
       if (hit && hit.expiresAt - REUSE_MARGIN_MS > opts.now()) return Promise.resolve(hit);
       const inFlight = pending.get(id);
       if (inFlight) return inFlight;
+      const miss = failed.get(id);
+      if (miss && opts.now() - miss.at < FAIL_TTL_MS) return Promise.reject(miss.err);
       const p = slot(() => once(id), !!o.urgent)
         .then(
           (r) => {
+            failed.delete(id);
             done.delete(id); // re-inserted last: the oldest go first
             done.set(id, r);
             if (done.size > MAX_CACHED) done.delete(done.keys().next().value as string);
@@ -189,6 +196,8 @@ export function createYtdlpResolver(opts: {
             const e =
               err instanceof YtAudioError ? err : new YtAudioError('youtube.failed', String(err));
             status.lastError = e.message;
+            failed.set(id, { err: e, at: opts.now() });
+            if (failed.size > MAX_CACHED) failed.delete(failed.keys().next().value as string);
             opts.log('warn', 'yt-dlp failed', { id, code: e.code, detail: e.message });
             throw e;
           },
@@ -203,6 +212,7 @@ export function createYtdlpResolver(opts: {
     },
     forget(id) {
       done.delete(id);
+      failed.delete(id);
     },
     status: () => ({ ...status }),
     note(s) {

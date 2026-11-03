@@ -359,6 +359,22 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect(notes).toContain('This track could not be played. Skipped to the next.');
   });
 
+  it('a bot check stops the queue and says why', () => {
+    const { clock, provider, c, s, notes } = setup();
+    Object.assign(provider, { sources: ['navidrome', 'youtube'] });
+    c.playList([ytTrack('a'), ytTrack('b')], 0, ctx);
+    clock.advance(100);
+    const { listeners } = provider as unknown as { listeners: { error: Set<(e: object) => void> } };
+    for (const cb of listeners.error)
+      cb({
+        code: 'youtube.bot_check',
+        retriable: false,
+        userMessage: 'YouTube thinks this is a bot.',
+      });
+    expect(s()).toMatchObject({ status: 'error', track: { id: 'a' } });
+    expect(notes).toContain('YouTube thinks this is a bot.');
+  });
+
   it('plays a youtube list on a provider that lists youtube', () => {
     const { provider, c } = setup();
     Object.assign(provider, { sources: ['navidrome', 'youtube'] });
