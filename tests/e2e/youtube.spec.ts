@@ -82,3 +82,65 @@ test('phone layout has bottom tabs and the switch in the account menu', async ({
   await page.getByRole('menuitem', { name: 'Navidrome' }).click();
   await expect(page).toHaveURL(/\/$/);
 });
+
+// ---- playback ----
+
+const bar = (page: Page) => page.getByRole('region', { name: 'Player' });
+
+test('plays a song from search', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/search?q=Fake+Song+2&tab=songs');
+  await page.getByRole('button', { name: /^Play Fake Song 2\b/ }).click();
+  await expect(bar(page)).toContainText('Fake Song 2');
+  await expect(bar(page).getByText(/^0:0[1-9] \//)).toBeVisible({ timeout: 10_000 });
+});
+
+test('tapping a single song starts its radio', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt');
+  await page.getByRole('button', { name: /^Play Fake Song 3\b/ }).click();
+  await expect(bar(page)).toContainText('Fake Song 3');
+  await bar(page).getByRole('button', { name: 'Open the player' }).click();
+  const np = page.getByRole('dialog', { name: 'Now playing' });
+  await expect(np.getByRole('tab', { name: 'Up next', selected: true })).toBeVisible();
+  await expect(np.getByRole('button', { name: /^Play Fake Song 4\b/ })).toBeVisible();
+  await np.getByRole('tab', { name: 'Lyrics' }).click();
+  await expect(np.getByText(/Glass in the morning/).first()).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(np).toBeHidden();
+});
+
+test('skips a song that will not play', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/playlist/VLfakebroken1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.getByText('This track could not be played. Skipped to the next.')).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(bar(page)).toContainText('Fake Song 1');
+});
+
+test('flipping to Navidrome keeps playing', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake2');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(bar(page).getByText(/^0:0[1-9] \//)).toBeVisible({ timeout: 10_000 });
+  await page.getByRole('button', { name: 'Navidrome' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  const dock = page.getByRole('region', { name: 'Player' });
+  await expect(dock).toContainText('Fake Song 2');
+  await expect(dock).toHaveAttribute('data-status', 'playing');
+});
+
+test('like toggles, and Liked music lists the song', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await ytSignIn(page);
+  await page.goto('/yt/album/MPREb_fake3');
+  await page.getByRole('button', { name: /^Play Fake Song 3\b/ }).click();
+  const like = bar(page).getByRole('button', { name: 'Like' });
+  await expect(like).toHaveAttribute('aria-pressed', 'false');
+  await like.click();
+  await expect(like).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/yt/playlist/VLLM');
+  await expect(page.getByRole('button', { name: /^Play Fake Song 3\b/ })).toBeVisible();
+});

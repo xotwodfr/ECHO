@@ -4,6 +4,7 @@ import type { PlaybackController } from '../playback/controller.ts';
 import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { toastStore } from '../ui/logic.ts';
+import { ytAutoplay } from '../youtube/radio.ts';
 
 // Song radio, Autoplay and Smart Shuffle (Spotify's): songs like this one, from Navidrome's similar
 // songs (Last.fm) or, without them, random songs.
@@ -25,15 +26,17 @@ export async function startRadio(c: PlaybackController, library: Library, seed: 
 
 /**
  * When the queue runs out (the last track ended, nothing after it, repeat off) and Autoplay is on,
- * similar songs to the last one start, as a radio.
+ * similar songs to the last one start, as a radio: Navidrome's similar songs, or YouTube's Up next.
  */
 export function startAutoplay(c: PlaybackController, library: Library | null, on: () => boolean) {
-  if (!library?.similarSongs) return () => undefined;
   return c.player.subscribe(async (s, prev) => {
     if (s.status !== 'ended' || prev.status === 'ended' || !on()) return;
     const last = s.track;
-    if (last?.provider !== 'navidrome' || s.repeat !== 'off') return;
+    if (!last || s.repeat !== 'off') return;
     if (upcoming(c.queue.getState()).length) return;
+    // A YouTube song: YouTube's own radio for it (youtube/radio.ts, spec call 11).
+    if (last.provider === 'youtube') return void ytAutoplay(c, last);
+    if (last.provider !== 'navidrome' || !library?.similarSongs) return;
     const similar = await library.similarSongs?.(last, RADIO_SIZE).catch(() => []);
     const next = (similar ?? []).filter((t) => t.id !== last.id);
     // Something else started meanwhile: leave it.

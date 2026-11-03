@@ -142,6 +142,17 @@ export const strings = {
     failed: 'YouTube Music did not answer.',
     signInToSee: 'Sign in to YouTube Music to see this.',
     signInSettings: 'Sign in in Settings',
+    like: 'Like',
+    likeFailed: 'Couldn’t like this song on YouTube Music.',
+    openPlayer: 'Open the player',
+    closePlayer: 'Close the player',
+    nowPlaying: 'Now playing',
+    upNext: 'Up next',
+    lyrics: 'Lyrics',
+    related: 'Related',
+    nothingNext: 'Nothing after this song.',
+    noLyrics: 'No lyrics for this song.',
+    lyricsSource: (s: string) => `Source: ${s}`,
     // Settings → Account → YouTube Music (spec call 3)
     connection: {
       title: 'YouTube Music',

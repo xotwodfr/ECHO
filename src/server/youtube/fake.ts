@@ -36,9 +36,18 @@ const SONGS = Array.from({ length: 12 }, (_, i) => {
     thumb: art(i),
   });
 });
+const BROKEN = ytTrack({
+  id: 'unavailable',
+  title: 'Gone Song',
+  artists: [ARTISTS[1] as (typeof ARTISTS)[number]],
+  durationMs: YT_AUDIO_SECONDS * 1000,
+  thumb: art(6),
+});
 const PLAYLISTS = [
   { id: 'VLfakeplaylist1', title: 'Late drives', songs: SONGS.slice(0, 6) },
   { id: 'VLfakeplaylist2', title: 'My Supermix', songs: SONGS.slice(4, 12) },
+  // E2E: a song that will not play, then one that will (REL-02 for YouTube).
+  { id: 'VLfakebroken1', title: 'Broken mix', songs: [BROKEN, SONGS[0] as (typeof SONGS)[number]] },
 ];
 
 const songItem = (t: (typeof SONGS)[number]): YtItem => ({

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import './yt.css';
 import { AccountMenu } from '../shell/AccountMenu.tsx';
 import { SessionExpiredSheet } from '../shell/AuthViews.tsx';
@@ -9,6 +9,8 @@ import { Icon, type IconName } from '../ui/icons.tsx';
 import { ToastRegion } from '../ui/overlays.tsx';
 import type { Route, YtRoute } from '../view.ts';
 import { ModeSwitch } from './ModeSwitch.tsx';
+import { NowPlaying } from './NowPlaying.tsx';
+import { PlayerBar } from './PlayerBar.tsx';
 import { YtPageView } from './pages.tsx';
 import { YtSearch } from './parts.tsx';
 
@@ -45,6 +47,11 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
   const compact = useCompact();
   const main = useRef<HTMLElement>(null);
   const page = route.page;
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  // Going to a page closes the full-screen player.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: a new page is what closes it
+  useEffect(() => setOpen(false), [page]);
   // A new page starts at its top, its heading focused for keyboard and screen-reader users.
   // biome-ignore lint/correctness/useExhaustiveDependencies: a new page is what moves focus and scroll
   useEffect(() => {
@@ -71,6 +78,8 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
           <YtPageView page={page} />
         </div>
       </main>
+      {open && <NowPlaying onClose={close} />}
+      <PlayerBar compact={compact} onOpen={() => setOpen(true)} />
       {compact && <Nav page={page} className="yt-tabs" />}
       <ToastRegion />
       <SessionExpiredSheet />

@@ -25,6 +25,7 @@ import { motionLevel } from './ui/motion.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
 import { createViewStore } from './view.ts';
 import { savedMode } from './youtube/mode.ts';
+import { startYtPrepare } from './youtube/radio.ts';
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
 // development builds play the fixture library (M2 task 3); the image (ECHO_DEV_PAGES=0) has no
@@ -141,6 +142,8 @@ if ('mediaSession' in navigator) {
 
 // The queue follows a signed-in user across sessions and devices (M5).
 if (signedIn) void startQueueSync(controller, (m) => toastStore.getState().show(m));
+// YouTube Music: the next songs' audio resolved while this one plays (youtube/radio.ts).
+if (youtube) startYtPrepare(controller);
 
 // Playlists and hearts for every page (one fetch, refreshed after changes), and Autoplay: similar
 // songs when the music runs out.

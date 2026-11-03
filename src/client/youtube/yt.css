@@ -497,3 +497,225 @@
   background: var(--yt-text);
   color: var(--yt-on-light);
 }
+
+/* ---- the player bar ---- */
+
+.yt-player {
+  grid-area: player;
+  position: relative;
+  background: var(--yt-raised);
+}
+
+.yt-player-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: var(--yt-player-h);
+  padding: 0 var(--sp-4);
+}
+
+.yt[data-compact] .yt-player-row {
+  min-height: var(--yt-bar-h);
+  padding: 0 var(--sp-2);
+}
+
+.yt-transport,
+.yt-player-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.yt-player-end {
+  color: var(--yt-muted);
+}
+
+.yt-time {
+  margin-left: var(--sp-2);
+  color: var(--yt-muted);
+  font: var(--yt-type-small);
+}
+
+.yt-player-song {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  padding: var(--sp-1);
+  border: 0;
+  border-radius: var(--yt-r-ctl);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.yt[data-compact] .yt-player-song {
+  order: -1;
+  justify-content: flex-start;
+}
+
+.yt-player-song .yt-row-text {
+  flex: 0 1 auto;
+}
+
+.yt .icon-btn {
+  color: inherit;
+}
+
+.yt .icon-btn[aria-pressed="true"] {
+  color: var(--yt-text);
+}
+
+.yt-open .icon {
+  rotate: 180deg;
+}
+
+/* The progress line: YouTube's thin red rule along the bar's top edge, its thumb on hover. */
+.yt-progress {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  translate: 0 -50%;
+}
+
+.yt-progress .slider-rail {
+  height: var(--yt-progress);
+  border-radius: 0;
+  background: var(--yt-line-strong);
+}
+
+.yt-progress:hover .slider-rail {
+  height: var(--yt-progress-hover);
+}
+
+.yt-progress .slider-fill {
+  border-radius: 0;
+  background: var(--yt-red);
+}
+
+.yt-progress .slider-thumb {
+  width: var(--sp-3);
+  height: var(--sp-3);
+  background: var(--yt-red);
+  box-shadow: none;
+  opacity: 0;
+}
+
+.yt-progress .slider-thumb::after {
+  display: none;
+}
+
+.yt-progress:hover .slider-thumb,
+.yt-progress .slider:focus-visible .slider-thumb {
+  opacity: 1;
+}
+
+.yt-player .slider--volume .slider-fill,
+.yt-player .slider--volume .slider-thumb::after {
+  background: var(--yt-text);
+}
+
+/* ---- the full-screen player: over the page, under the top bar, above the player bar ---- */
+
+.yt-np {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--yt-gutter);
+  padding: var(--sp-5) var(--yt-gutter);
+  overflow: hidden;
+  background: var(--yt-ground);
+}
+
+.yt[data-compact] .yt-np {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--sp-4);
+  padding: var(--sp-4) var(--yt-gutter-phone);
+  overflow-y: auto;
+}
+
+.yt-np-close {
+  position: absolute;
+  margin: calc(var(--sp-3) * -1) 0 0 calc(var(--sp-6) * -1);
+}
+
+.yt-np-art {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  --thumb-w: var(--yt-np-art);
+  --thumb-r: var(--yt-r-ctl);
+}
+
+.yt[data-compact] .yt-np-art {
+  --thumb-w: min(100%, var(--yt-art-hero));
+}
+
+.yt-np-side {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.yt-np-tabs {
+  display: flex;
+  border-bottom: var(--rule) solid var(--yt-line);
+}
+
+.yt-np-tabs [role="tab"] {
+  flex: 1;
+  height: var(--yt-nav-h);
+  border: 0;
+  border-bottom: var(--focus-ring) solid transparent;
+  background: transparent;
+  color: var(--yt-muted);
+  font: var(--yt-type-button);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.yt-np-tabs [aria-selected="true"] {
+  border-bottom-color: var(--yt-text);
+  color: var(--yt-text);
+}
+
+.yt-np-panel {
+  flex: 1;
+  min-height: 0;
+  padding: var(--sp-3) 0;
+  overflow-y: auto;
+}
+
+.yt-lyrics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  font: var(--yt-type-h2);
+  list-style: none;
+}
+
+.yt-lyrics[data-synced] li {
+  color: var(--yt-muted);
+  transition: color var(--dur-ui) ease;
+}
+
+.yt-lyrics li[data-active] {
+  color: var(--yt-text);
+}
+
+.yt-lyrics-plain {
+  margin: 0 0 var(--sp-4);
+  font: var(--yt-type-title);
+  white-space: pre-line;
+}
