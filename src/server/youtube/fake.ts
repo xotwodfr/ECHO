@@ -108,7 +108,10 @@ export function createFakeCatalogue(opts: {
       if (!opts.cookie) throw new YtSignedOut('not signed in');
       return { name: 'Fixture Listener' };
     },
-    home: async () => home,
+    async home() {
+      if (opts.cookie?.includes('stale')) throw new YtSignedOut('signed out'); // as the real one
+      return home;
+    },
     explore: async () => ({
       title: 'Explore',
       shelves: [cards('New albums & singles', ALBUMS.map(albumItem))],

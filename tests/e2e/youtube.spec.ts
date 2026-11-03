@@ -67,6 +67,8 @@ test('signed in, the library shows; a stale cookie asks to sign in again', async
   await ytSignIn(page, 'SID=e2e; SAPISID=stale');
   await page.goto('/yt/library');
   await expect(page.getByText('Sign in to YouTube Music again.')).toBeVisible();
+  await page.goto('/yt');
+  await expect(page.getByText('Sign in to YouTube Music again.')).toBeVisible();
 });
 
 test('phone layout has bottom tabs and the switch in the account menu', async ({ page }) => {

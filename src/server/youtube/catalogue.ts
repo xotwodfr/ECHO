@@ -233,6 +233,32 @@ export function createCatalogue(opts: {
   lang?: string;
   region?: string;
 }): Catalogue {
+  // Every InnerTube answer says whether it was answered signed in (`logged_in`). With a cookie, a
+  // "0" means Google no longer accepts it (rotated): signed out, on every page, Home included.
+  let staleSeen = false;
+  const base = opts.fetch ?? fetch;
+  const checked: typeof fetch = async (input, init) => {
+    const res = await base(input, init);
+    const url = input instanceof Request ? input.url : String(input);
+    if (opts.cookie && res.ok && url.includes('/youtubei/v1/')) {
+      const body = (await res
+        .clone()
+        .json()
+        .catch(() => null)) as {
+        responseContext?: {
+          serviceTrackingParams?: { params?: { key: string; value: string }[] }[];
+        };
+      } | null;
+      const loggedIn = body?.responseContext?.serviceTrackingParams
+        ?.flatMap((p) => p.params ?? [])
+        .find((p) => p.key === 'logged_in')?.value;
+      if (loggedIn === '0') {
+        staleSeen = true;
+        throw new YtSignedOut('YouTube answered signed out');
+      }
+    }
+    return res;
+  };
   let session: Promise<Innertube> | null = null;
   const yt = () => {
     session ??= Innertube.create({
@@ -241,7 +267,7 @@ export function createCatalogue(opts: {
       lang: opts.lang ?? 'en',
       location: opts.region ?? 'SE',
       ...(opts.cookie && { cookie: opts.cookie }),
-      ...(opts.fetch && { fetch: opts.fetch }),
+      fetch: checked,
     }).catch((err: unknown) => {
       session = null; // the next call tries again
       throw err;
@@ -253,10 +279,12 @@ export function createCatalogue(opts: {
   };
   /** Runs `fn`, turning a signed-out answer into YtSignedOut. */
   async function call<T>(fn: (y: Innertube) => Promise<T>): Promise<T> {
+    staleSeen = false;
     try {
       return await fn(await yt());
     } catch (err) {
-      if (err instanceof YtSignedOut) throw err;
+      // youtubei.js may wrap what `checked` threw: the flag says it was a signed-out answer.
+      if (err instanceof YtSignedOut || staleSeen) throw new YtSignedOut('signed out');
       const e = err as { message?: string; info?: unknown };
       if (SIGNED_OUT.test(`${e.message ?? ''} ${String(e.info ?? '')}`))
         throw new YtSignedOut(e.message ?? 'signed out');

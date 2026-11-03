@@ -117,6 +117,15 @@ describe('the YouTube Music catalogue (recorded answers)', () => {
     expect((await cat().suggest('bohem')).length).toBeGreaterThan(0);
   });
 
+  // Review 2026-11-03: a cookie Google rotated still answered Home (a general feed), so "Sign in to
+  // YouTube Music again" never showed there. Every answer says logged_in; with a cookie, "0" is stale.
+  it('a stale cookie is signed out on Home too', async () => {
+    const stale = createCatalogue({ cookie: 'SAPISID=rotated', fetch: replay });
+    await expect(stale.home()).rejects.toBeInstanceOf(YtSignedOut);
+    await expect(stale.search('bohemian rhapsody', 'songs')).rejects.toBeInstanceOf(YtSignedOut);
+    expect((await cat().home()).shelves.length).toBeGreaterThan(0); // without a cookie: fine
+  });
+
   it('library without a cookie throws YtSignedOut', async () => {
     await expect(cat().library()).rejects.toBeInstanceOf(YtSignedOut);
     await expect(cat().account()).rejects.toBeInstanceOf(YtSignedOut);
