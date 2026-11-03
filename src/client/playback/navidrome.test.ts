@@ -9,6 +9,7 @@ import { NavidromeProvider } from './navidrome.ts';
 class FakeAudio extends EventTarget {
   preload = '';
   currentTime = 0;
+  duration = Number.NaN;
   paused = true;
   volume = 1;
   error: { code: number; message: string } | null = null;
@@ -222,5 +223,17 @@ describe('NavidromeProvider', () => {
     }
     await vi.advanceTimersByTimeAsync(0);
     expect(errors.map((e) => e.code)).toEqual(['youtube.stream']);
+  });
+
+  // Review 2026-11-03: YouTube's search (All tab) and artist rows carry no duration; without one the
+  // player could not seek and showed "0:37 / 0:00". The audio knows it once its metadata loads.
+  it("a youtube track without a duration takes the audio's", async () => {
+    const states: number[] = [];
+    p.on('state', (s) => states.push(s.track?.durationMs ?? -1));
+    void p.load({ ...ytTrack('x'), durationMs: 0 }, { autoplay: false });
+    a.duration = 212.5;
+    a.fire('loadedmetadata');
+    await flush();
+    expect(states.at(-1)).toBe(212_500);
   });
 });

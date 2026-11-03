@@ -290,6 +290,10 @@ export class NavidromeProvider implements PlaybackProvider {
       return;
     }
     if (!this.transcode && this.startMs) el.currentTime = this.startMs / 1000;
+    // YouTube's search and artist rows carry no duration: the audio's own stands in, so the song
+    // can be sought and its time shown.
+    if (this.track && !this.track.durationMs && Number.isFinite(el.duration) && el.duration > 0)
+      this.track = { ...this.track, durationMs: Math.round(el.duration * 1000) };
     this.loading = false;
     if (this.wantPlay) await this.play();
     else this.emitState();

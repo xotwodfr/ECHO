@@ -1,5 +1,5 @@
 import type { Track } from '../../shared/types.ts';
-import type { YtItem } from '../../shared/youtube.ts';
+import type { YtItem, YtUpNext } from '../../shared/youtube.ts';
 import type { PlaybackController } from '../playback/controller.ts';
 import { strings } from '../strings.ts';
 import { toastStore } from '../ui/logic.ts';
@@ -13,6 +13,7 @@ export async function playItem(
   c: PlaybackController,
   item: YtItem,
   list?: { tracks: Track[]; kind: 'album' | 'playlist' | 'artist'; id: string; title: string },
+  upNext: (id: string) => Promise<YtUpNext> = ytUpNext,
 ) {
   const track = item.track;
   if (!track) return;
@@ -26,8 +27,10 @@ export async function playItem(
   // Up next answers in about half a second, well inside the audio's own start-up (yt-dlp).
   const radio = { kind: 'radio', id: track.id, title: strings.radio.title(track.title) } as const;
   try {
-    const { tracks } = await ytUpNext(track.id);
-    c.playList([track, ...tracks.filter((t) => t.id !== track.id)], 0, radio);
+    const { tracks } = await upNext(track.id);
+    // Up next's copy of the song first: a search row's may lack its duration.
+    const seed = tracks.find((t) => t.id === track.id) ?? track;
+    c.playList([seed, ...tracks.filter((t) => t.id !== track.id)], 0, radio);
   } catch {
     c.playList([track], 0, radio);
     toastStore.getState().show(strings.radio.failed);
