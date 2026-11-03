@@ -77,7 +77,12 @@ test('a connection older than the newer scopes asks for a reconnect', async ({ p
 test('Spotify mode: Liked Songs, followed artists and an artist page', async ({ page }) => {
   await ready(page);
   await page.goto('/');
+  // The switch is saved in the background: a reload before that lands opens in Navidrome mode.
+  const saved = page.waitForResponse(
+    (r) => r.url().includes('/me/settings') && r.request().method() === 'PUT',
+  );
   await sourceButton(page, 'Spotify').click();
+  await saved;
   await page.goto('/collection/tracks');
   await expect(page.locator('.track-row')).toHaveCount(2);
   // Your Library → Artists lists the followed artist; their page is Spotify's.
