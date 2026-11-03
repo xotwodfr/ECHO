@@ -165,7 +165,7 @@
   --ln-search-w: 520px; --ln-control-h: 44px; --ln-nav-h: 52px; --ln-tabs-h: 56px; --ln-strip-h: 68px;
   --ln-art-row: 44px; --ln-art-strip: 40px; --ln-art-hero: 520px; --ln-art-hero-phone: 280px; --ln-spinning-phone: 144px;
   --ln-card-min: 150px; --ln-card-phone: 136px; --ln-number-w: 2rem; --ln-time-w: 3rem;
-  --ln-np-art: min(56vh, 520px); --ln-lyrics-min: 360px; --ln-leader-lift: -0.3em;
+  --ln-np-art: min(40vh, 440px); --ln-lyrics-min: 360px; --ln-leader-lift: -0.3em;
 
   /* motion */
   --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;

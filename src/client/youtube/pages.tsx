@@ -7,8 +7,7 @@ import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
 import type { YtRoute } from '../view.ts';
-import { useLike } from './likes.ts';
-import { itemOfTrack, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
+import { itemOfTrack, LikeWord, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
 import { playItem } from './play.ts';
 import { hintSong } from './radio.ts';
 
@@ -102,15 +101,6 @@ function NowSpinning({ fallback }: { fallback?: YtItem }) {
         {signedIn && <LikeWord id={t.id} />}
       </div>
     </section>
-  );
-}
-
-function LikeWord({ id }: { id: string }) {
-  const [on, toggle] = useLike(id);
-  return (
-    <button type="button" className="yt-button" aria-pressed={on} onClick={() => void toggle()}>
-      {on ? y.liked : y.like}
-    </button>
   );
 }
 

@@ -84,8 +84,8 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
           <YtPageView page={page} />
         </div>
       </main>
-      {open && <NowPlaying onClose={close} />}
-      <PlayerBar compact={compact} onOpen={() => setOpen('next')} />
+      {open && <NowPlaying onClose={close} tab={open} />}
+      <PlayerBar compact={compact} onOpen={openOn} />
       {compact && <Nav page={page} className="yt-tabs yt-tabs--bottom" icons />}
       <ToastRegion />
       <SessionExpiredSheet />

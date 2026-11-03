@@ -7,7 +7,7 @@ import type { StageMode } from './loop.ts';
 // lazily loaded engine so it costs nothing until the Stage opens.
 
 export interface StageStatus {
-  renderer: 'pending' | 'webgl' | 'css';
+  renderer: 'pending' | 'webgl' | 'css' | 'none'; // none: no room asked for (StageOptions.room)
   /** Why the CSS room is showing (VISUALIZER_SPEC.md §9). */
   reason: 'no-webgl2' | 'context-lost' | 'error' | null;
   /** The loop's pace, or Reverb when it runs with live features (VISUALIZER_SPEC.md §4). */

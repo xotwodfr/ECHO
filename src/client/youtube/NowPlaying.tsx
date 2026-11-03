@@ -4,26 +4,42 @@ import type { Track } from '../../shared/types.ts';
 import type { YtLyrics } from '../../shared/youtube.ts';
 import { usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { upcoming } from '../playback/queue.ts';
+import { sessionStore } from '../session.ts';
 import { Stage } from '../shell/Stage.tsx';
 import { LyricsView } from '../shell/StageViews.tsx';
 import { lyricsStore } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
+import { Volume } from '../ui/slider.tsx';
 import { ytLyrics } from './api.ts';
-import { itemOfTrack, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
+import { ModeWords, Progress } from './PlayerBar.tsx';
+import { itemOfTrack, LikeWord, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
 
-// YouTube Music's own full-screen player (spec: the owner chose it over ECHO's Stage): big artwork
-// beside three tabs, Up next, Lyrics and Related. It covers the page, not the player bar, so the
-// transport stays where it was. Esc or the chevron closes it.
+// YouTube Music mode's full-screen player, "Liner notes" (board F): paper. Across the top the close
+// chevron and where the music plays from; left the cover, the title, the credit, the hairline, the
+// controls; right Up next, Lyrics (ECHO's own, on paper) and Related. It covers the page, not the
+// strip. Esc or the chevron closes it.
 
 const y = strings.youtube;
 type Tab = 'next' | 'lyrics' | 'related';
 
-export function NowPlaying({ onClose }: { onClose: () => void }) {
+export function NowPlaying({
+  onClose,
+  tab: first,
+}: {
+  onClose: () => void;
+  tab: 'next' | 'lyrics';
+}) {
+  const c = usePlayback();
   const t = usePlayer((p) => p.track);
-  const [tab, setTab] = useState<Tab>('next');
+  const status = usePlayer((p) => p.status);
+  const volume = usePlayer((p) => p.volume);
+  const source = useQueue((q) => q.contextSource);
+  const session = useStore(sessionStore);
+  const [tab, setTab] = useState<Tab>(first);
   const close = useRef<HTMLButtonElement>(null);
   const id = useId();
+  useEffect(() => setTab(first), [first]);
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -43,19 +59,44 @@ export function NowPlaying({ onClose }: { onClose: () => void }) {
     ...(t.provider === 'youtube' ? [{ key: 'related' as const, label: y.related }] : []),
   ];
   const shown = tabs.some((x) => x.key === tab) ? tab : 'next';
+  const active = status === 'playing' || status === 'loading' || status === 'buffering';
+  const by = t.artists.map((a) => a.name).join(', ');
+  const signedIn = session.status === 'signedIn' && !!session.youtube?.signedIn;
 
   return (
     <div className="yt-np" role="dialog" aria-label={y.nowPlaying}>
-      <IconButton
-        ref={close}
-        className="yt-np-close"
-        label={y.closePlayer}
-        icon="chevronDown"
-        onClick={onClose}
-      />
-      <div className="yt-np-art">
-        <Thumb src={t.artwork[0]?.url ?? ''} />
+      <div className="yt-np-head">
+        <IconButton
+          ref={close}
+          className="yt-np-close"
+          label={y.closePlayer}
+          icon="chevronDown"
+          onClick={onClose}
+        />
+        {source && <span className="yt-kicker">{y.playingFrom(source.title)}</span>}
       </div>
+      <section className="yt-np-art" aria-label={t.title}>
+        <Thumb src={t.artwork[0]?.url ?? ''} />
+        <h2 className="yt-np-title">{t.title}</h2>
+        <p className="yt-hero-sub">{t.album.title ? y.credit(by, t.album.title) : by}</p>
+        <Progress className="yt-np-progress" />
+        <div className="yt-np-controls">
+          <IconButton label={strings.ui.previous} icon="previous" onClick={() => c.previous()} />
+          <IconButton
+            className="yt-np-play"
+            label={active ? strings.ui.pause : strings.ui.play}
+            icon={active ? 'pause' : 'play'}
+            size="lg"
+            onClick={() => c.toggle()}
+          />
+          <IconButton label={strings.ui.next} icon="next" onClick={() => c.next()} />
+          {t.provider === 'youtube' && signedIn && <LikeWord id={t.id} />}
+        </div>
+        <div className="yt-np-more">
+          <ModeWords />
+          <Volume value={volume} onChange={c.setVolume} />
+        </div>
+      </section>
       <div className="yt-np-side">
         <div className="yt-np-tabs" role="tablist" aria-label={y.nowPlaying}>
           {tabs.map((x) => (
@@ -116,8 +157,8 @@ function LyricsPanel({ track }: { track: Track }) {
   const missing = useStore(lyricsStore, (l) => l.trackKey === track.key && l.state === 'missing');
   if (missing && track.provider === 'youtube') return <YouTubeLyrics track={track} />;
   return (
-    <div className="yt-np-stage">
-      <Stage>
+    <div className="yt-np-stage ln-lyrics">
+      <Stage room={false}>
         <div className="ly-area">
           <LyricsView />
         </div>

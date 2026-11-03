@@ -9,6 +9,7 @@ import { Icon } from '../ui/icons.tsx';
 import { BlockError } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
 import { ytPage, ytSuggest } from './api.ts';
+import { useLike } from './likes.ts';
 import { playItem } from './play.ts';
 import { hintSong } from './radio.ts';
 
@@ -192,6 +193,16 @@ export function Shelves({ shelves }: { shelves: YtShelf[] }) {
   const first = shelves.find((s) => s.layout === 'rows')?.items[0]?.id;
   useEffect(() => void (first && hintSong(first)), [first]);
   return shelves.map((s) => <Shelf key={s.title} shelf={s} />);
+}
+
+/** Like as a word, "Liked" when it is (Now spinning, the full-screen player). */
+export function LikeWord({ id }: { id: string }) {
+  const [on, toggle] = useLike(id);
+  return (
+    <button type="button" className="yt-button" aria-pressed={on} onClick={() => void toggle()}>
+      {on ? y.liked : y.like}
+    </button>
+  );
 }
 
 /** Search, with YouTube's suggestions as you type (a combobox: arrows move, Enter searches). */

@@ -7,7 +7,16 @@ import type { FrameParams } from '../view.ts';
 // S1 Listen's stage: React mounts the engine once and never reconciles what it draws
 // (TECHNICAL_ARCHITECTURE.md §4.1). The engine and three.js load with the first visit.
 
-export function Stage({ children, frame }: { children: ReactNode; frame?: FrameParams }) {
+export function Stage({
+  children,
+  frame,
+  room = true,
+}: {
+  children: ReactNode;
+  frame?: FrameParams;
+  /** False: the lyric field without the room (YouTube Music mode's paper). */
+  room?: boolean;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const controller = usePlayback();
@@ -20,7 +29,7 @@ export function Stage({ children, frame }: { children: ReactNode; frame?: FrameP
     let cancelled = false;
     void import('../stage/engine.ts').then(({ mountStage }) => {
       if (cancelled || !root.current || !canvas.current) return;
-      const h = mountStage(root.current, canvas.current, { controller, frame });
+      const h = mountStage(root.current, canvas.current, { controller, frame, room });
       h.setChrome(!stageChrome.getState().hidden);
       handle.current = h;
     });
@@ -29,7 +38,7 @@ export function Stage({ children, frame }: { children: ReactNode; frame?: FrameP
       handle.current?.dispose();
       handle.current = null;
     };
-  }, [controller, frame]);
+  }, [controller, frame, room]);
 
   // The scrims fade with the chrome (DESIGN_SYSTEM.md §7.7).
   useEffect(() => handle.current?.setChrome(!chromeHidden), [chromeHidden]);

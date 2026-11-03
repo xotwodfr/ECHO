@@ -156,7 +156,7 @@ test('plays a song from search', async ({ page }) => {
   await page.goto('/yt/search?q=Fake+Song+2&tab=songs');
   await page.getByRole('button', { name: /^Play Fake Song 2\b/ }).click();
   await expect(bar(page)).toContainText('Fake Song 2');
-  await expect(bar(page).getByText(/^0:0[1-9] \//)).toBeVisible({ timeout: 10_000 });
+  await expect(bar(page).getByText(/^0:0[1-9]$/)).toBeVisible({ timeout: 10_000 });
 });
 
 test('tapping a single song starts its radio', async ({ page }) => {
@@ -165,7 +165,7 @@ test('tapping a single song starts its radio', async ({ page }) => {
   await page.goto('/yt');
   await page.getByRole('button', { name: /^Play Fake Song 3\b/ }).click();
   await expect(bar(page)).toContainText('Fake Song 3');
-  await bar(page).getByRole('button', { name: 'Open the player' }).click();
+  await bar(page).getByRole('button', { name: 'Up next' }).click();
   const np = page.getByRole('dialog', { name: 'Now playing' });
   await expect(np.getByRole('tab', { name: 'Up next', selected: true })).toBeVisible();
   await expect(np.getByRole('button', { name: /^Play Fake Song 4\b/ })).toBeVisible();
@@ -193,7 +193,7 @@ test('flipping to Navidrome keeps playing', async ({ page }) => {
   await signedIn(page, 'yt');
   await page.goto('/yt/album/MPREb_fake2');
   await page.getByRole('button', { name: 'Play', exact: true }).click();
-  await expect(bar(page).getByText(/^0:0[1-9] \//)).toBeVisible({ timeout: 10_000 });
+  await expect(bar(page).getByText(/^0:0[1-9]$/)).toBeVisible({ timeout: 10_000 });
   await page.getByRole('button', { name: 'Navidrome' }).click();
   await expect(page).toHaveURL(/\/$/);
   const dock = page.getByRole('region', { name: 'Player' });
@@ -230,4 +230,70 @@ test('like toggles, and Liked music lists the song', async ({ page }) => {
   );
   await page.goto('/yt/playlist/VLLM');
   await expect(page.getByRole('button', { name: /^Play Fake Song 3\b/ })).toBeVisible();
+});
+
+// ---- the ink strip and the paper player (Liner notes, board F) ----
+
+test('the strip: play, title, hairline, words', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake2');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  const strip = bar(page);
+  await expect(strip.getByText(/^0:0[1-9]$/)).toBeVisible({ timeout: 10_000 });
+  for (const name of ['Pause', 'Previous', 'Next', 'Up next', 'Lyrics', 'Shuffle'])
+    await expect(strip.getByRole('button', { name, exact: true })).toBeVisible();
+  await expect(strip.getByRole('button', { name: /^Repeat/ })).toBeVisible();
+  await expect(strip.getByRole('slider', { name: 'Seek' })).toBeVisible();
+  await expect(strip.getByRole('slider', { name: 'Volume' })).toBeVisible();
+  await expect(strip.locator('.yt-thumb')).toBeVisible(); // the cover stays on wide screens
+});
+
+test("Lyrics opens the paper player on its tab, and ECHO's lyrics view keeps its room", async ({
+  page,
+}) => {
+  clearLyricsCache();
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(bar(page).getByText(/^0:0[1-9]$/)).toBeVisible({ timeout: 10_000 });
+  await bar(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
+  const np = page.getByRole('dialog', { name: 'Now playing' });
+  await expect(np.getByRole('tab', { name: 'Lyrics', selected: true })).toBeVisible();
+  await expect(np.locator('.ly-field')).toBeAttached();
+  await expect(np.locator('.stage')).toHaveAttribute('data-renderer', 'none'); // no room on paper
+  await expect(np.getByRole('list', { name: 'Lyrics' }).getByRole('listitem').first()).toHaveText(
+    'Glass in the morning, Fake Song 1',
+  );
+  expect(await np.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+    'rgb(243, 238, 230)',
+  );
+  // Far lines stay crisp on paper: no depth blur on any line.
+  await page.waitForTimeout(1500);
+  expect(
+    await np
+      .locator('.ly-line')
+      .evaluateAll((els) => els.some((e) => !!(e as HTMLElement).style.filter)),
+  ).toBe(false);
+  // Navidrome mode's lyrics view still draws its room.
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Navidrome' }).click();
+  await page.goto('/listen');
+  await expect(page.locator('.stage')).not.toHaveAttribute('data-renderer', 'none');
+  await expect(page.locator('.stage')).not.toHaveAttribute('data-renderer', 'pending');
+});
+
+test('phone: the paper player scrolls down to the whole lyrics stage', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await bar(page)
+    .getByRole('button', { name: /Fake Song 1/ })
+    .click();
+  const np = page.getByRole('dialog', { name: 'Now playing' });
+  await np.getByRole('tab', { name: 'Lyrics' }).click();
+  await np.evaluate((el) => el.scrollTo(0, el.scrollHeight));
+  const stage = await np.locator('.yt-np-stage').boundingBox();
+  const strip = await bar(page).boundingBox();
+  expect(stage && strip && stage.y + stage.height <= strip.y + 1).toBe(true);
 });

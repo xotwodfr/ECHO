@@ -605,7 +605,6 @@
 
 .yt-player-row {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-3) var(--sp-5);
   min-height: var(--ln-strip-h);
@@ -613,7 +612,6 @@
 }
 
 .yt[data-compact] .yt-player-row {
-  flex-wrap: nowrap;
   padding: var(--sp-2) var(--ln-gutter-phone);
 }
 
@@ -650,6 +648,23 @@
   cursor: pointer;
 }
 
+/* The song keeps room for its title on mid widths; the words wrap before it shrinks away. */
+.yt:not([data-compact]) .yt-player-song {
+  min-width: 11rem;
+}
+
+/* Title and artist share a line, the artist wrapping under the title when the strip is tight. */
+.yt-strip-text {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--sp-2);
+  min-width: 0;
+}
+
+.yt[data-compact] .yt-strip-text {
+  flex-wrap: nowrap;
+}
+
 .yt-strip-title {
   overflow: hidden;
   white-space: nowrap;
@@ -675,8 +690,69 @@
   color: var(--ln-vermilion-on-ink);
 }
 
-.yt-open .icon {
-  rotate: 180deg;
+/* Play: an outlined ring on the ink. */
+.yt-play {
+  border: var(--rule) solid var(--ln-on-ink);
+  border-radius: 50%;
+}
+
+.yt-strip-dash {
+  color: var(--ln-vermilion-on-ink);
+}
+
+.yt-strip-progress {
+  display: flex;
+  flex: 1 1 12rem;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 9rem;
+}
+
+/* Mid widths: the volume keeps its mute button (and the arrow keys); the slider goes. */
+@media (max-width: 1099.98px) {
+  .yt-player .slider--volume {
+    display: none;
+  }
+}
+
+.yt-strip-progress .slider-rail {
+  height: var(--rule);
+  background: var(--ln-muted);
+}
+
+.yt-strip-progress .slider-fill,
+.yt-strip-progress .slider-thumb::after {
+  background: var(--ln-vermilion-on-ink);
+}
+
+.yt-strip-progress .slider-thumb {
+  box-shadow: none;
+}
+
+/* Words for buttons (Previous, Next, Up next, Lyrics, Shuffle, Repeat), underlined when on. */
+.yt-strip-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-4);
+}
+
+.yt-word {
+  min-height: var(--ln-control-h);
+  padding: 0;
+  border: 0;
+  border-bottom: var(--ln-rule-strong) solid transparent;
+  background: none;
+  color: inherit;
+  font: var(--ln-type-small);
+  cursor: pointer;
+}
+
+.yt-word:hover {
+  color: var(--ln-on-ink);
+}
+
+.yt-word[aria-pressed="true"] {
+  border-bottom-color: var(--ln-vermilion-on-ink);
 }
 
 /* The progress line: a hairline across the strip's top, vermilion as it plays. */
@@ -686,6 +762,11 @@
   left: 0;
   right: 0;
   translate: 0 -50%;
+}
+
+/* On phones the line is bare; the slider still speaks its times. */
+.yt-progress .yt-time {
+  display: none;
 }
 
 .yt-progress .slider-rail {
@@ -733,7 +814,8 @@
   z-index: 2;
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
-  gap: var(--sp-8);
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: var(--sp-6) var(--sp-8);
   padding: var(--sp-6) var(--ln-gutter);
   overflow: hidden;
   background: var(--ln-paper);
@@ -742,26 +824,107 @@
 .yt[data-compact] .yt-np {
   grid-row: 2;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  /* Rows take their content: the whole page scrolls, so the lyrics stage keeps its height. */
+  grid-template-rows: none;
+  grid-auto-rows: max-content;
   gap: var(--sp-4);
   padding: var(--sp-4) var(--ln-gutter-phone);
   overflow-y: auto;
 }
 
+.yt-np-head {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  padding-bottom: var(--sp-3);
+  border-bottom: var(--ln-rule-strong) solid var(--ln-ink);
+}
+
 .yt-np-close {
-  position: absolute;
-  margin: calc(var(--sp-4) * -1) 0 0 calc(var(--sp-7) * -1);
+  border: var(--rule) solid var(--ln-ink);
+  border-radius: 50%;
 }
 
 .yt-np-art {
-  --thumb-w: var(--ln-np-art);
-  display: grid;
-  place-items: start center;
+  --thumb-w: min(100%, var(--ln-np-art));
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
   min-height: 0;
+  overflow-y: auto;
+}
+
+.yt-np-title {
+  margin: var(--sp-2) 0 0;
+  font: var(--ln-type-h1);
+  letter-spacing: var(--tracking-ln-display);
+}
+
+.yt[data-compact] .yt-np-title {
+  font: var(--ln-type-h1-phone);
+}
+
+.yt-np-progress {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.yt-np-progress .yt-time {
+  color: var(--ln-muted);
+}
+
+.yt-np .yt-np-progress .slider-rail {
+  height: var(--ln-rule-strong);
+  background: var(--ln-rule);
+}
+
+.yt-np .yt-np-progress .slider-fill,
+.yt-np .yt-np-progress .slider-thumb::after {
+  background: var(--ln-vermilion);
+}
+
+.yt .yt-np .yt-np-progress .slider-thumb {
+  box-shadow: none;
+}
+
+.yt-np-controls,
+.yt-np-more {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-4);
+}
+
+.yt-np-play {
+  background: var(--ln-ink);
+  color: var(--ln-paper);
+  border-radius: 50%;
+}
+
+.yt-np .icon-btn[aria-pressed="true"],
+.yt-np .yt-word[aria-pressed="true"] {
+  color: var(--ln-ink);
+  border-bottom-color: var(--ln-vermilion);
+}
+
+.yt-np .yt-word:hover {
+  color: var(--ln-ink);
+}
+
+.yt-np .slider--volume .slider-rail {
+  background: var(--ln-rule);
+}
+
+.yt-np .slider--volume .slider-fill,
+.yt-np .slider--volume .slider-thumb::after {
+  background: var(--ln-ink);
 }
 
 .yt[data-compact] .yt-np-art {
-  --thumb-w: min(100%, var(--ln-art-hero-phone));
+  --thumb-w: var(--ln-spinning-phone);
+  overflow: visible;
 }
 
 .yt-np-side {
@@ -815,4 +978,36 @@
   margin: 0 0 var(--sp-4);
   font: var(--ln-type-credit);
   white-space: pre-line;
+}
+
+/* ECHO's lyrics on paper (board F): the Stage's lyric field without its room, in Fraunces and ink.
+   Sung words solid ink, the words to come faded, the sweep's edge in vermilion, no glow. */
+.ln-lyrics {
+  --text: var(--ln-ink);
+  --art-highlight: var(--ln-ink);
+  --art-accent: var(--ln-ink-2);
+  --art-room: var(--ln-paper);
+  --lyric-ink-active: var(--ln-faded-2);
+  --art-glow-solid: transparent;
+  --muted: var(--ln-muted);
+  --faint: var(--ln-muted);
+  --font: var(--ln-serif);
+  --dock: var(--sp-4);
+}
+
+.ln-lyrics .ly-field {
+  --lit-edge: var(--ln-vermilion);
+}
+
+.ln-lyrics .ly-w.glow {
+  filter: none;
+}
+
+.ln-lyrics .stage {
+  background: transparent;
+}
+
+.ln-lyrics .stage-canvas,
+.ln-lyrics .stage-room-css {
+  display: none;
 }

@@ -88,6 +88,11 @@ export interface StageOptions {
   env?: LoopEnv;
   /** Deterministic mode (§10): one frame at `frame.ms`, no loop. */
   frame?: FrameParams;
+  /**
+   * The room (the WebGL backdrop, its contrast solver). False: the lyric field alone, on whatever
+   * is behind it (YouTube Music mode's paper, the Liner notes spec). Default true.
+   */
+  room?: boolean;
 }
 
 /**
@@ -122,16 +127,18 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   set({ renderer: 'pending', reason: null, mode: modeNow(), cover: 'none' });
 
   let renderer: StageRenderer | null = null;
-  try {
-    renderer = new StageRenderer(canvas, tier);
-    // First run on this device: T0 on a discrete GPU, T1 otherwise.
-    if (!manualTier && !rememberedTier()) {
-      tier = firstTier(renderer.gpuName());
-      renderer.setTier(tier);
+  if (opts.room === false) set({ renderer: 'none' });
+  else
+    try {
+      renderer = new StageRenderer(canvas, tier);
+      // First run on this device: T0 on a discrete GPU, T1 otherwise.
+      if (!manualTier && !rememberedTier()) {
+        tier = firstTier(renderer.gpuName());
+        renderer.setTier(tier);
+      }
+    } catch {
+      set({ renderer: 'css', reason: 'no-webgl2' });
     }
-  } catch {
-    set({ renderer: 'css', reason: 'no-webgl2' });
-  }
   const governor = frame ? null : createGovernor({ tier, manual: !!manualTier, now: env.now });
   let trackStartedAt = env.now();
   let rememberAt = manualTier ? 0 : env.now() + 20_000; // a tier held 20 s is this device's
@@ -296,6 +303,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     if (!el) return;
     field = createLyricField(el, {
       tier,
+      blur: opts.room !== false, // no room, no depth: far lines stay crisp (paper)
       announce: lyricPrefs.getState().announce,
       onLine: (ms) => {
         c.seek(ms + lyricOffset());

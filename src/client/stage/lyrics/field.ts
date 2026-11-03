@@ -83,12 +83,14 @@ export function createLyricField(
   opts: {
     tier: Tier;
     announce?: boolean;
+    /** Depth blur on far lines (default: by tier). Off on paper, where it reads as a smudge. */
+    blur?: boolean;
     onReady?: () => void;
     /** A click on a timed line: its start, ms (the player jumps there and plays). */
     onLine?: (startMs: number) => void;
   },
 ) {
-  const blurs = BLURS[opts.tier];
+  const blurs = opts.blur !== false && BLURS[opts.tier];
   host.classList.add('ly-field');
   // The animated field is hidden from assistive technology; the transcript and the live region
   // beside it are not (§11).
