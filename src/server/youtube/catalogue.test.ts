@@ -1,7 +1,13 @@
 import { readFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { describe, expect, it } from 'vitest';
-import { type Catalogue, createCatalogue, likeStatusOf, YtSignedOut } from './catalogue.ts';
+import {
+  allItems,
+  type Catalogue,
+  createCatalogue,
+  likeStatusOf,
+  YtSignedOut,
+} from './catalogue.ts';
 import { createFakeCatalogue } from './fake.ts';
 
 // The catalogue against InnerTube answers recorded once from the live service (fixtures/, by
@@ -82,6 +88,20 @@ describe('the YouTube Music catalogue (recorded answers)', () => {
     expect(page.tracks?.length).toBeGreaterThan(0);
     expect(page.shelves.find((s) => s.title === 'Top songs')?.layout).toBe('rows');
     expect(page.shelves.some((s) => s.items.some((i) => i.kind === 'album'))).toBe(true);
+  });
+
+  // Review 2026-11-03: Liked music and long playlists stopped at YouTube's first page (~100).
+  it('follows a playlist past its first page, up to a cap', async () => {
+    const page = (n: number, more: number): Parameters<typeof allItems>[0] => ({
+      items: Array.from({ length: 100 }, (_, i) => ({ id: `${n}-${i}` })),
+      has_continuation: more > 0,
+      getContinuation: async () => page(n + 1, more - 1),
+    });
+    expect(await allItems(page(0, 2))).toHaveLength(300);
+    expect(await allItems(page(0, 50), 1000)).toHaveLength(1000);
+    expect(await allItems({ items: [{ id: 'x' }] })).toHaveLength(1);
+    const broken = { ...page(0, 1), getContinuation: () => Promise.reject(new Error('offline')) };
+    expect(await allItems(broken)).toHaveLength(100); // the pages so far, not an error
   });
 
   it('maps a playlist page', async () => {

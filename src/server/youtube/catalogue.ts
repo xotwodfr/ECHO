@@ -405,7 +405,8 @@ export function createCatalogue(opts: {
     playlist: (id) =>
       call(async (y) => {
         if (id === 'VLLM') signedIn(); // Liked music is the user's own
-        const p = raw(await y.music.getPlaylist(id));
+        const first = await y.music.getPlaylist(id);
+        const p = raw(first);
         const h = p.header;
         const thumb = thumbOf(h);
         return {
@@ -415,7 +416,7 @@ export function createCatalogue(opts: {
           subtitle: [text(h?.subtitle), text(h?.second_subtitle)].filter(Boolean).join(' • '),
           description: descriptionOf(h),
           thumb,
-          tracks: (p.items ?? p.contents ?? [])
+          tracks: (await allItems(first as unknown as Pages))
             .map((n) => trackOf(n, { thumb }))
             .filter((t): t is Track => !!t),
           shelves: [],
@@ -462,6 +463,26 @@ export function createCatalogue(opts: {
         await info.addToWatchHistory();
       }),
   };
+}
+
+/** A list YouTube answers a page at a time (a playlist: about 100 songs a page). */
+interface Pages {
+  items?: Raw[];
+  has_continuation?: boolean;
+  getContinuation?: () => Promise<Pages>;
+}
+
+/** A list's items and the pages after it, up to `max` (Liked music can be long). */
+export async function allItems(first: Pages, max = 1000): Promise<Raw[]> {
+  const out = [...(first.items ?? [])];
+  let page = first;
+  while (out.length < max && page.has_continuation && page.getContinuation) {
+    const next = await page.getContinuation().catch(() => null);
+    if (!next) break; // the pages so far are still a playlist
+    page = next;
+    out.push(...(page.items ?? []));
+  }
+  return out.slice(0, max);
 }
 
 /** A `likeStatus` of LIKE anywhere in an answer (the player overlay's like button). */
