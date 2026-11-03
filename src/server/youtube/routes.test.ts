@@ -129,6 +129,26 @@ describe('browsing YouTube Music', () => {
     expect((await get('/up-next/--exec=sh')).status).toBe(400);
   });
 
+  // Security review 2026-11-03: catalogues were cached by user id alone, and ids are reused after a
+  // delete, so a new account could browse with a deleted user's YouTube sign-in.
+  it('a reused user id never inherits the old sign-in', async () => {
+    const s = setup();
+    const ada = s.user('ada');
+    await call(s.app, 'PUT', '/api/v1/me/connections/youtube', { cookie: COOKIE }, ada.cookie);
+    expect(
+      (await call(s.app, 'GET', '/api/v1/youtube/library', undefined, ada.cookie)).status,
+    ).toBe(200);
+    s.db.prepare('DELETE FROM users WHERE id = ?').run(ada.id); // the account and its sign-in go
+    s.db
+      .prepare(
+        "INSERT INTO users (id, username, password_hash, role, created_at) VALUES (?, 'eve', 'x', 'user', 1)",
+      )
+      .run(ada.id);
+    const { createSession } = await import('../auth/sessions.ts');
+    const eve = `__Host-echo_session=${createSession(s.db, ada.id, 'web', s.clock.t)}`;
+    expect((await call(s.app, 'GET', '/api/v1/youtube/library', undefined, eve)).status).toBe(409);
+  });
+
   it('likes go to the account', async () => {
     const s = setup();
     const ada = s.user('ada');

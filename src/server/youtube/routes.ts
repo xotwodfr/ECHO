@@ -61,17 +61,24 @@ export function youtubeRoutes(deps: YoutubeDeps, requireUser: MiddlewareHandler<
     }
   };
 
-  // One catalogue per user (a youtubei.js session each), dropped when the sign-in changes.
+  // One catalogue per sign-in (a youtubei.js session each). The cache is checked against the stored
+  // row on every request (its sealed value), never trusted by user id alone: ids are reused after a
+  // delete, and a new account must not browse with the old one's cookie.
   const anonymous = deps.catalogue();
-  const mine = new Map<number, Catalogue>();
+  const mine = new Map<number, { sealed: string; cat: Catalogue }>();
   const catalogueFor = (userId: number) => {
-    let c = mine.get(userId);
-    if (!c) {
-      const cookie = cookieOf(userId);
-      c = cookie ? deps.catalogue(cookie) : anonymous;
-      mine.set(userId, c);
+    const r = row(userId);
+    if (!r) {
+      mine.delete(userId);
+      return anonymous;
     }
-    return c;
+    const hit = mine.get(userId);
+    if (hit?.sealed === r.cookie_enc) return hit.cat;
+    const cookie = cookieOf(userId);
+    if (!cookie) return anonymous;
+    const cat = deps.catalogue(cookie);
+    mine.set(userId, { sealed: r.cookie_enc, cat });
+    return cat;
   };
 
   // ---- the sign-in ----
