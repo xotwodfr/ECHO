@@ -125,6 +125,28 @@ test('keys: space pauses, but not while typing', async ({ page }) => {
   await expect(bar).toHaveAttribute('data-status', 'paused');
 });
 
+test('Today: now spinning and a numbered tracklist', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt');
+  const spinning = page.getByRole('region', { name: 'Now spinning' });
+  await expect(spinning).toContainText('Fake Song 1'); // nothing plays: the first Quick pick
+  await expect(spinning.getByRole('button', { name: 'Start the radio' })).toBeVisible();
+  const picks = page.getByRole('list', { name: 'Quick picks' });
+  await expect(picks.getByRole('listitem')).toHaveCount(8);
+  await expect(picks.getByRole('listitem').first()).toHaveText(/^01/);
+});
+
+test('a spread for an album', async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await expect(page.getByRole('heading', { name: 'Low Sun', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Shuffle', exact: true })).toBeVisible();
+  const list = page.getByRole('list', { name: 'Low Sun' });
+  await expect(list.getByRole('listitem')).toHaveCount(4);
+  for (const [i, n] of ['01', '02', '03', '04'].entries())
+    await expect(list.getByRole('listitem').nth(i)).toHaveText(new RegExp(`^${n}`));
+});
+
 // ---- playback ----
 
 const bar = (page: Page) => page.getByRole('region', { name: 'Player' });

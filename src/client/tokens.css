@@ -163,7 +163,7 @@
   --ln-type-lyrics: 600 2.25rem/1.15 var(--ln-serif); --ln-type-strip: 600 0.8125rem/1.2 var(--ln-sans);
   --ln-rule-strong: 2px; --ln-dot: 8px; --ln-gutter: 56px; --ln-gutter-phone: 16px; --ln-page-w: 1480px;
   --ln-search-w: 520px; --ln-control-h: 44px; --ln-nav-h: 52px; --ln-tabs-h: 56px; --ln-strip-h: 68px;
-  --ln-art-row: 44px; --ln-art-strip: 40px; --ln-art-hero: 520px; --ln-art-hero-phone: 280px;
+  --ln-art-row: 44px; --ln-art-strip: 40px; --ln-art-hero: 520px; --ln-art-hero-phone: 280px; --ln-spinning-phone: 144px;
   --ln-card-min: 150px; --ln-card-phone: 136px; --ln-number-w: 2rem; --ln-time-w: 3rem;
   --ln-np-art: min(56vh, 520px); --ln-lyrics-min: 360px; --ln-leader-lift: -0.3em;
 

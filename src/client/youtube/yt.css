@@ -368,6 +368,42 @@
   margin-top: var(--sp-2);
 }
 
+/* Today: Now spinning beside Quick picks. */
+.yt-today {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-7);
+}
+
+.yt-today > .yt-shelf {
+  flex: 999 1 26rem;
+  min-width: 0;
+}
+
+.yt-spinning {
+  --thumb-w: 100%;
+  display: flex;
+  flex: 1 1 18rem;
+  flex-direction: column;
+  gap: var(--sp-3);
+  max-width: var(--ln-art-hero);
+}
+
+.yt-spinning-title {
+  margin: var(--sp-2) 0 0;
+  font: var(--ln-type-h1);
+  letter-spacing: var(--tracking-ln-display);
+}
+
+.yt[data-compact] .yt-spinning {
+  --thumb-w: var(--ln-spinning-phone);
+}
+
+.yt[data-compact] .yt-spinning-title {
+  font: var(--ln-type-h1-phone);
+}
+
 /* Rows: a tracklist. Number in vermilion, title, a dotted leader, the artist in italic, the time. */
 .yt-rows {
   margin: 0;
@@ -377,7 +413,7 @@
 
 .yt-row-play {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--sp-4);
   width: 100%;
   min-width: 0;
@@ -404,6 +440,17 @@
   font-variant-numeric: tabular-nums;
 }
 
+.yt-row-leader {
+  flex: 1 1 var(--sp-5);
+  min-width: var(--sp-4);
+  border-bottom: var(--rule) dotted var(--ln-leader);
+  translate: 0 var(--ln-leader-lift);
+}
+
+.yt[data-compact] .yt-row-leader {
+  display: none;
+}
+
 .yt-row-text {
   display: flex;
   flex: 1;
@@ -421,6 +468,8 @@
 }
 
 .yt-row-title {
+  flex: 0 1 auto;
+  min-width: 0;
   font: var(--ln-type-title);
 }
 
@@ -429,8 +478,16 @@
 }
 
 .yt-row-sub {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 40%;
   color: var(--ln-ink-2);
   font: var(--ln-type-artist);
+}
+
+.yt[data-compact] .yt-row-sub {
+  flex: 1 1 auto;
+  text-align: right;
 }
 
 .yt-row-time {

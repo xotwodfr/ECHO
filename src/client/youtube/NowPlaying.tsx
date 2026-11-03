@@ -99,6 +99,7 @@ function UpNext() {
           // biome-ignore lint/suspicious/noArrayIndexKey: the queue may hold the same song twice
           key={`${t.key}:${i}`}
           item={itemOfTrack(t)}
+          index={i}
           onPlay={() => c.jump(i)}
         />
       ))}

@@ -1,10 +1,13 @@
 import { useEffect } from 'react';
-import { YT_TABS, type YtPage, type YtTab } from '../../shared/youtube.ts';
-import { usePlayback } from '../playback/context.tsx';
+import { useStore } from 'zustand';
+import { YT_TABS, type YtItem, type YtPage, type YtTab } from '../../shared/youtube.ts';
+import { usePlayback, usePlayer } from '../playback/context.tsx';
+import { sessionStore } from '../session.ts';
 import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
 import type { YtRoute } from '../view.ts';
+import { useLike } from './likes.ts';
 import { itemOfTrack, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
 import { playItem } from './play.ts';
 import { hintSong } from './radio.ts';
@@ -17,15 +20,12 @@ const y = strings.youtube;
 export function YtPageView({ page }: { page: YtRoute }) {
   switch (page.kind) {
     case 'home':
+      return <TodayPage />;
     case 'explore':
     case 'library':
       return <ShelvesPage path={page.kind} title={y[page.kind]} />;
     case 'search':
-      return page.q ? (
-        <SearchPage q={page.q} tab={page.tab} />
-      ) : (
-        <ShelvesPage path="home" title={y.home} />
-      );
+      return page.q ? <SearchPage q={page.q} tab={page.tab} /> : <TodayPage />;
     case 'album':
     case 'playlist':
     case 'artist':
@@ -42,6 +42,75 @@ function ShelvesPage({ path, title }: { path: string; title: string }) {
       </h1>
       <PageState state={state}>{(p) => <Shelves shelves={p.shelves} />}</PageState>
     </>
+  );
+}
+
+/**
+ * Today (board C): Now spinning beside Quick picks, then the other shelves. The first shelf of
+ * songs sits beside Now spinning; without one, the shelves follow it.
+ */
+function TodayPage() {
+  const state = useYtPage('home');
+  return (
+    <>
+      <h1 className="visually-hidden" tabIndex={-1}>
+        {y.home}
+      </h1>
+      <PageState state={state}>
+        {(p) => {
+          const picks = p.shelves.find((x) => x.layout === 'rows');
+          const rest = p.shelves.filter((x) => x !== picks);
+          return (
+            <>
+              <div className="yt-today">
+                <NowSpinning fallback={picks?.items[0]} />
+                {picks && <Shelves shelves={[picks]} />}
+              </div>
+              <Shelves shelves={rest} />
+            </>
+          );
+        }}
+      </PageState>
+    </>
+  );
+}
+
+/** The song playing, else the first Quick pick: its cover, title, credit, radio and like. */
+function NowSpinning({ fallback }: { fallback?: YtItem }) {
+  const c = usePlayback();
+  const playing = usePlayer((p) => p.track);
+  const session = useStore(sessionStore);
+  const t = playing?.provider === 'youtube' ? playing : fallback?.track;
+  if (!t) return null;
+  const item = playing?.provider === 'youtube' ? itemOfTrack(playing) : (fallback as YtItem);
+  const by = t.artists.map((a) => a.name).join(', ');
+  const signedIn = session.status === 'signedIn' && !!session.youtube?.signedIn;
+  return (
+    <section className="yt-spinning" aria-label={y.nowSpinning}>
+      <span className="yt-kicker">{y.nowSpinning}</span>
+      <Thumb src={t.artwork[0]?.url ?? ''} />
+      <h2 className="yt-spinning-title">{t.title}</h2>
+      <p className="yt-hero-sub">{t.album.title ? y.credit(by, t.album.title) : by}</p>
+      <div className="yt-actions">
+        <button
+          type="button"
+          className="yt-button yt-button--light"
+          onClick={() => void playItem(c, { ...item, track: t })}
+        >
+          {y.startRadio}
+        </button>
+        {signedIn && <LikeWord id={t.id} />}
+      </div>
+    </section>
+  );
+}
+
+function LikeWord({ id }: { id: string }) {
+  const [on, toggle] = useLike(id);
+  return (
+    <button type="button" className="yt-button" aria-pressed={on} onClick={() => void toggle()}>
+      {on ? y.liked : y.like}
+    </button>
   );
 }
 
@@ -134,7 +203,7 @@ function Detail({
               // biome-ignore lint/suspicious/noArrayIndexKey: a playlist may hold the same song twice
               key={`${t.key}:${i}`}
               item={itemOfTrack(t)}
-              index={kind === 'album' ? i : undefined}
+              index={i}
               onPlay={() => void playItem(c, itemOfTrack(t), { tracks, ...context })}
             />
           ))}

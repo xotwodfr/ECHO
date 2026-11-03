@@ -94,8 +94,11 @@ const routeOf = (item: YtItem): Route | null =>
     ? { view: 'yt', page: { kind: item.kind, id: item.id } }
     : null;
 
-/** A song: a tap plays it (its radio, or the list it is in). */
-export function Row({ item, onPlay, index }: { item: YtItem; onPlay: () => void; index?: number }) {
+/**
+ * A song in a tracklist (the liner notes' Side A): its number in vermilion, the title, a dotted
+ * leader to the artist in italic, the time. A tap plays it (its radio, or the list it is in).
+ */
+export function Row({ item, onPlay, index }: { item: YtItem; onPlay: () => void; index: number }) {
   const playing = useQueue((q) => !!item.track && q.now?.key === item.track.key);
   const label = `${y.play} ${item.title}${item.subtitle ? `, ${item.subtitle}` : ''}`;
   return (
@@ -108,21 +111,12 @@ export function Row({ item, onPlay, index }: { item: YtItem; onPlay: () => void;
         onFocus={() => hintSong(item.id)}
         aria-label={label}
       >
-        {index !== undefined ? (
-          <span className="yt-row-index" aria-hidden="true">
-            {index + 1}
-          </span>
-        ) : (
-          <Thumb src={item.thumb} />
-        )}
-        <span className="yt-row-text" aria-hidden="true">
-          <span className="yt-row-title">{item.title}</span>
-          <span className="yt-row-sub">{item.subtitle}</span>
-        </span>
+        <span className="yt-row-index">{String(index + 1).padStart(2, '0')}</span>
+        <span className="yt-row-title">{item.title}</span>
+        <span className="yt-row-leader" aria-hidden="true" />
+        <span className="yt-row-sub">{item.subtitle}</span>
         {item.track && item.track.durationMs > 0 && (
-          <span className="yt-row-time" aria-hidden="true">
-            {time(item.track.durationMs)}
-          </span>
+          <span className="yt-row-time">{time(item.track.durationMs)}</span>
         )}
       </button>
     </li>
@@ -168,15 +162,16 @@ export function Shelf({ shelf }: { shelf: YtShelf }) {
       {shelf.strapline && <p className="yt-strap">{shelf.strapline}</p>}
       <h2 id={id}>{shelf.title}</h2>
       {shelf.layout === 'rows' ? (
-        <ul className="yt-rows">
-          {shelf.items.map((item) => (
+        <ol className="yt-rows" aria-labelledby={id}>
+          {shelf.items.map((item, i) => (
             <Row
               key={`${item.kind}:${item.id}`}
               item={item}
+              index={i}
               onPlay={() => void playItem(c, item)}
             />
           ))}
-        </ul>
+        </ol>
       ) : (
         <ul className="yt-cards">
           {shelf.items.map((item) => (
