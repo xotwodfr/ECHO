@@ -159,7 +159,7 @@ server refreshes per user when fewer than 5 minutes remain.
 
 ### 4.5 Web API usage
 
-All calls go **from the browser** with the short-lived access token. The refresh token never leaves
+All calls go **from the browser** with the short-lived access token. A Navidrome page load makes none: Spotify's playlists, hearts and saved albums load when the Spotify source is open or a heart for one of its items is on screen. The refresh token never leaves
 the server. Rate limiting: on `429`, a `Retry-After` up to 30 s is slept through once; a longer one,
 a second `429`, or a Development Mode quota (`{"error":{"reason":"QUOTA_EXCEEDED"}}`, which has no
 30 s window and is shared by the developer's apps) starts a page-wide cooldown (the `Retry-After`;

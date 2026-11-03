@@ -1,5 +1,23 @@
 # Spotify streaming outage: overnight report (2026-11-02 → 03)
 
+## Update 2026-11-03 09:20: the cause is confirmed
+
+- **Server, 08:47 UTC** (first sweep after the deploy): the app's search answered
+  `429 QUOTA_EXCEEDED`, Retry-After **22168 s** (6 h 9 min, so about **14:56 UTC**), on its first call.
+- **Browser, 09:08** (owner's Network tab): all six calls on a Spotify page load answered **429**,
+  `/v1/me` included, so the refusal covers the whole app, not one endpoint.
+- **Who spent it** (inference): the source switch (`6b96aa1`, live 2026-11-02 15:31) made
+  `startCollections` fetch **both** sources' playlists and hearts at **every page load**: every liked
+  song at 50 a call, saved albums, followed artists, playlists, even in Navidrome mode. Fixed in
+  `d7124a2`: Spotify's collections load when its source is open or a Spotify heart is on screen.
+  Another dev app on the same developer account would share the quota too; I cannot see that.
+- Nothing in ECHO can lift a spent quota: it comes back by itself. `4c14fb8` makes Spotify Home say
+  why; `d7124a2` stops ECHO spending it on pages that do not show Spotify.
+- The Liked Songs e2e flake was a test race (the switch is saved in the background), fixed in
+  `b576bad`.
+
+The sections below are the overnight analysis, written before this was confirmed.
+
 ## Bottom line
 
 **I could not confirm the root cause from here, and I did not fix the outage itself.** Everything on
