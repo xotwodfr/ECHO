@@ -22,12 +22,6 @@ export const strings = {
     newest: 'New in your library',
     frequent: 'Your most played',
     random: 'Something different',
-    spotify: {
-      recent: 'Jump back in',
-      newest: 'Saved albums',
-      frequent: 'From your top tracks',
-      artists: 'Your top artists',
-    },
     playlists: 'Your playlists',
     artists: 'Artists you play',
     showAll: 'Show all',
@@ -269,7 +263,7 @@ export const strings = {
     visuals: 'Visuals',
     mode: 'Stage visuals',
     modeNames: { auto: 'Auto', reverb: 'Reverb', ambient: 'Ambient', still: 'Still' },
-    modeHint: 'Reverb follows the music where ECHO can hear it (Navidrome); Spotify stays Ambient.',
+    modeHint: 'Reverb follows the music where ECHO can hear it; Ambient and Still do not.',
     intensity: 'Reverb intensity',
     intensityNames: { subtle: 'Subtle', balanced: 'Balanced', expressive: 'Expressive' },
     motion: 'Motion',
@@ -308,7 +302,7 @@ export const strings = {
     about: 'About',
     aboutText: [
       'ECHO 0.1 — free software under the AGPL-3.0, self-hosted and non-commercial.',
-      'Spotify playback uses this server’s own Spotify app. Lyrics come from your library, Spicy Lyrics, NetEase Cloud Music and LRCLIB, credited on the Stage.',
+      'Lyrics come from your library, Spicy Lyrics, NetEase Cloud Music and LRCLIB, credited on the Stage.',
     ],
   },
   account: {
@@ -461,75 +455,6 @@ export const strings = {
       `Connected · Navidrome ${version}${tracks ? ` · ${tracks.toLocaleString('en')} tracks` : ''}`,
     secretSaved: '•••••••• Saved',
     reload: 'Connected. Loading your library…',
-  },
-  source: {
-    label: 'Library',
-    navidrome: 'Navidrome',
-    spotify: 'Spotify',
-    menu: { navidrome: 'Navidrome library', spotify: 'Spotify library' },
-  },
-  spotify: {
-    title: 'Spotify',
-    connect: 'Connect Spotify',
-    reconnect: 'Reconnect',
-    disconnect: 'Disconnect',
-    notConfigured: 'The admin has not set up a Spotify app on this server yet.',
-    reconnectScopes: 'Reconnect Spotify to finish setting it up.',
-    seatsFull: 'All 5 Spotify seats on this server are taken. Ask the admin to free one.',
-    connected: (name: string | null) => `Connected${name ? ` as ${name}` : ''}`,
-    status: {
-      connected: 'Connected',
-      expired: 'Sign-in expired',
-      premium_required: 'Spotify playback needs Premium.',
-      not_on_user_list:
-        "This Spotify account isn't on the app's user list. Ask the ECHO admin to add it in the Spotify Developer Dashboard.",
-    } as Record<string, string>,
-    result: {
-      denied: 'Spotify sign-in was cancelled.',
-      bad_state: 'That Spotify sign-in expired or came from another session. Start again.',
-      failed: "Couldn't finish the Spotify sign-in. Try again.",
-      seats_full: 'All 5 Spotify seats on this server are taken.',
-      not_configured: 'The admin has not set up a Spotify app on this server yet.',
-    } as Record<string, string>,
-    reconnecting: 'Reconnecting to Spotify…',
-    retry: 'Retry',
-    expired: 'Spotify sign-in expired.',
-    premium: 'Spotify playback needs Premium.',
-    playbackFailed: "Spotify couldn't play this track.",
-    unavailable: "Spotify isn't answering. Try again in a moment.",
-    /** Spotify's 429 with a Retry-After too long to wait out on this page, or its quota used up. */
-    rateLimited: (seconds: number, quota = false) => {
-      const [n, unit] =
-        seconds >= 3600
-          ? [Math.round(seconds / 3600), 'hour']
-          : seconds >= 60
-            ? [Math.round(seconds / 60), 'minute']
-            : [Math.ceil(seconds), 'second'];
-      const wait = `${n} ${unit}${n === 1 ? '' : 's'}`;
-      return quota
-        ? `Spotify says this app's quota is used up. ECHO will ask again in ${wait}.`
-        : `Spotify is limiting this app and asks ECHO to wait ${wait}.`;
-    },
-    /** A 403 that is neither a missing scope nor the user list: Spotify's own reason. */
-    refused: (why: string) => `Spotify refused ECHO: ${why}`,
-    playingOn: (device: string) => `Playing on ${device}`,
-    playHere: 'Play here',
-    queueNote: 'Queue managed by Spotify. Items can be added but not reordered.',
-    playNextBecomesAdd: 'Spotify can only add to the end of its queue.',
-    replaceQueue: (provider: string) => `Replace the queue with this ${provider} music?`,
-    replace: 'Replace',
-    replaceConsequence:
-      'One queue holds music from one service. What is queued now will be cleared.',
-    cancel: 'Cancel',
-    openIn: 'Open in Spotify',
-    drm: {
-      firefox:
-        'Firefox needs DRM turned on to play Spotify: Settings → General → Digital Rights Management (DRM) Content → "Play DRM-controlled content". Then reload ECHO.',
-      chromium:
-        'This Chromium has no Widevine, which Spotify needs. On Arch, install chromium-widevine from the AUR (or use Google Chrome), then restart the browser.',
-      other:
-        "This browser can't play protected audio (Widevine), which Spotify needs. Try Chrome or Firefox.",
-    },
   },
   dock: {
     label: 'Player',
