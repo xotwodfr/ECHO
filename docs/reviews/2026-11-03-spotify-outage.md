@@ -1,5 +1,22 @@
 # Spotify streaming outage: overnight report (2026-11-02 → 03)
 
+## Update 2026-11-03 10:05: Spotify was removed
+
+The owner decided almost nothing they play is missing from Navidrome, so Spotify was taken out
+instead of waiting for the quota (`824eeb9` web client, `8f2c1b2` server, `ed07e04` the YouTube Music
+link, plus docs). Gone: the Web Playback SDK provider, the Web API helper, Spotify Home and library,
+the Navidrome|Spotify switch, the Spotify connection and app settings (Client ID, secret, seats, the
+two policy gates), the OAuth and token routes, the Spotify palette path and the CSP's Spotify hosts.
+Kept: matching Navidrome tracks to Spotify **ids** for Spicy Lyrics (ListenBrainz and MusicBrainz,
+about 95% of the matches; the 688 Spotify-search matches stay), the admin "Spotify matching" screen
+and its manual fix.
+
+**On deploy, a migration deletes** every stored Spotify connection (sealed refresh tokens) and the
+app's Client ID, client secret and gate settings. It keeps `spotify_matches` and
+`spotify.matchLibrary`. It cannot be undone; reconnecting would mean entering the Client ID and
+signing in again. Tests: 1371 unit, 252 Chromium e2e (4 failures: the Home screenshots that fail
+whenever the greeting reads "Good morning", documented), 13 isolated.
+
 ## Update 2026-11-03 09:20: the cause is confirmed
 
 - **Server, 08:47 UTC** (first sweep after the deploy): the app's search answered

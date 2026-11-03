@@ -1,9 +1,13 @@
 # ECHO — Documentation
 
-ECHO is a premium, immersive music player for **Navidrome** and **Spotify**. Its signature feature
+ECHO is a premium, immersive music player for **Navidrome**. Its signature feature
 is a floating, word-synchronised lyric field in an audio-reactive environment lit by the album
 cover. Design direction: **Reverb Chamber**, a dark acoustic room where sound arrives as light,
 peaks and decays.
+
+**Spotify was removed on 2026-11-03** (see [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)):
+Development Mode's quota ran out and almost nothing the owner plays is missing from Navidrome.
+Everything below that describes Spotify playback, the library switch or Spotify Home is history.
 
 **Project status (2026-11-02):** milestones **M1–M9 are built and tested**, and ECHO is
 **deployed** at https://echo.folk3s.com (M5 task 12). Since then: the Material 3 shell (2026-10-25),

@@ -109,33 +109,27 @@ no connection) and is gone. Now (`src/server/lyrics/spotifyMatch.ts`):
 | Matcher | How | Needs |
 |---|---|---|
 | `manual` | An admin pastes a Spotify link (Admin → Server → Spotify matching, or the Stage's ⓘ → "Fix Spotify match…") | admin |
-| `spotify` | Spotify `GET /v1/search`: `isrc:<ISRC>`, else `track:"…" artist:"<primary>"`, duration ±2 s, title similarity ≥ 0.9 | the app's **client secret** (client-credentials token; no user account involved) |
+| `spotify` | **Removed 2026-11-03.** Spotify `GET /v1/search` (ISRC, else title and artist); the 688 matches it made stay, nothing asks Spotify any more | — |
 | `lb-mbid` | ISRC → MusicBrainz `GET /ws/2/isrc/{isrc}` → recording MBID → ListenBrainz `POST /spotify-id-from-mbid/json` | nothing; MusicBrainz 1 req/s |
 | `lb-meta` | ListenBrainz `POST labs.api.listenbrainz.org/spotify-id-from-metadata/json` (artist, release, title), batches of 100. A miss whose title carries a credit or same-recording tag ("feat. …", "Album Version", "Remastered", "Explicit") is asked again without it; remix, live, demo and edit tags are kept (other timings) | nothing |
 
-- **On play** (`GET /lyrics` for a `navidrome:` track): the stored match, else the fast matchers not
-  yet tried (`spotify` if configured, then `lb-meta`) within 1.5 s; a Spotify failure falls through to
-  `lb-meta`. The matched ID is part of the lyrics cache key, so a new or corrected match is looked up
+- **On play** (`GET /lyrics` for a `navidrome:` track): the stored match, else the fast matcher
+  (`lb-meta`) within 1.5 s. The matched ID is part of the lyrics cache key, so a new or corrected match is looked up
   afresh. Spicy tries up to 3 of the IDs, in order, on 404.
 - **The sweep**: a minute after start and daily, each Navidrome server once (through its first
-  connected user, admins first), `search3` with an empty query in pages of 500: pass 1 the fast
-  matchers (`spotify` only for tracks with no match yet), pass 2 MusicBrainz for what is left and has
-  an ISRC or recording ID. Resumable: nothing is asked twice. A Spotify failure never ends the sweep:
-  that track waits for the next run, a `429` Retry-After up to 2 min is waited out, and a longer one,
-  a Development Mode quota (`QUOTA_EXCEEDED`: no 30 s window, shared by the developer's apps), a
-  refused app token, or 10 failures in a row leave Spotify for the run. A pause longer than a sweep
-  sleeps also holds for plays (the quota's default is 15 min). Each exit is a `warn` line in the log
-  ("spotify matching: leaving Spotify until the next run", "spotify app token refused") with
-  Spotify's status, Retry-After and message. The app token is fetched per track (cached until it
-  expires; a sweep outlasts it). Admin → Server shows progress, "Match now" and the misses;
-  "Match the Navidrome library with Spotify in the background" switches it off (default on).
+  connected user, admins first), `search3` with an empty query in pages of 500: pass 1 `lb-meta`,
+  pass 2 MusicBrainz for what is left and has an ISRC or recording ID. Resumable: nothing is asked
+  twice. Admin → Server shows progress, "Match now" and the misses; "Match the Navidrome library
+  with Spotify track ids in the background" switches it off (default on).
 - **Measured 2026-10-24** on the owner's library (22,689 tracks, 74% with ISRC): `lb-meta` 60% on a
   300-track sample (0.7 s per 100); `lb-mbid` 6 of 10 sampled ISRCs. Odesli/song.link was tried and
   is closed (`PUBLIC_API_ACCESS_DEPRECATED`).
 - **Privacy.** The sweep sends the library's titles, artists, albums and ISRCs to ListenBrainz and
-  MusicBrainz (and Spotify, with a client secret). The admin switch says so.
+  MusicBrainz. The admin switch says so.
 
 ### 4.4 Spotify tracks
+
+> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
 
 S2 by native ID, S3 by metadata. S1/S4 don't apply. **Gate G2** (`PLAYBACK_ARCHITECTURE.md` §4.6;
 **on** by owner decision) allows full word/line timing for Spotify tracks. If the admin switches G2

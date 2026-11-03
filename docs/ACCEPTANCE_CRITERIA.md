@@ -1,5 +1,12 @@
 # ECHO — Acceptance Criteria
 
+> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> this document that describe Spotify playback, its connection, the policy gates or the library
+> source switch are kept as a record of what was built and why it went; the code is in git before
+> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
+> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+
 Status: **Draft 2** (criteria unchanged; status below) · Last reviewed 2026-10-28
 Every criterion is testable. **Method:** U = Vitest unit, E = Playwright E2E, V = Playwright visual
 snapshot (deterministic mode), M = manual checklist, I = inspection (code/config review or a script),
@@ -268,6 +275,8 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | REL-06 | 8 h soak test (continuous album playback at T0): no crash, no memory growth > 50 MB, no audio dropouts attributable to ECHO | M + P | M9 |
 
 ## 12. Spotify compliance
+
+> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
 
 | ID | Criterion | Method | MS |
 |---|---|---|---|

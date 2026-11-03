@@ -1,5 +1,12 @@
 # ECHO — Playback Architecture
 
+> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> this document that describe Spotify playback, its connection, the policy gates or the library
+> source switch are kept as a record of what was built and why it went; the code is in git before
+> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
+> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+
 Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §5 (types, clock, stores) · [Settings & security](SETTINGS_AND_SECURITY.md) (credentials, OAuth) · [Visualizer](VISUALIZER_SPEC.md) §2 (analysis per provider) · [Lyrics integration](LYRICS_INTEGRATION.md)
 
@@ -91,6 +98,8 @@ One implementation per provider. No factory or plugin registry: the controller h
 
 ## 4. Spotify adapter
 
+> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
+
 ### 4.1 Requirements and eligibility
 
 | Requirement | Fact | ECHO behaviour |
@@ -159,7 +168,7 @@ server refreshes per user when fewer than 5 minutes remain.
 
 ### 4.5 Web API usage
 
-All calls go **from the browser** with the short-lived access token. A Navidrome page load makes none: Spotify's playlists, hearts and saved albums load when the Spotify source is open or a heart for one of its items is on screen. The refresh token never leaves
+All calls go **from the browser** with the short-lived access token. The refresh token never leaves
 the server. Rate limiting: on `429`, a `Retry-After` up to 30 s is slept through once; a longer one,
 a second `429`, or a Development Mode quota (`{"error":{"reason":"QUOTA_EXCEEDED"}}`, which has no
 30 s window and is shared by the developer's apps) starts a page-wide cooldown (the `Retry-After`;

@@ -1,5 +1,12 @@
 # ECHO — Implementation Plan
 
+> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> this document that describe Spotify playback, its connection, the policy gates or the library
+> source switch are kept as a record of what was built and why it went; the code is in git before
+> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
+> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+
 Status: **Draft 2**, with progress through M9 and the deployment · Last reviewed 2026-10-24
 Related: [Acceptance criteria](ACCEPTANCE_CRITERIA.md) (IDs referenced below) · [Technical architecture](TECHNICAL_ARCHITECTURE.md) · [Product spec](PRODUCT_SPEC.md) §10 (MVP releases)
 
@@ -247,6 +254,8 @@ reached.**
 ---
 
 ## M7 — Spotify within confirmed capabilities
+
+> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
 
 **Deliverables:** the server-level Spotify app configuration with seat count, per-user Spotify
 connection (PKCE), the SDK device, Web API control, the Spotify library subset, compliance, gates

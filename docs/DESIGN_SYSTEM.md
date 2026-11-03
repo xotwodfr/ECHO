@@ -1,5 +1,12 @@
 # ECHO — Design System
 
+> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> this document that describe Spotify playback, its connection, the policy gates or the library
+> source switch are kept as a record of what was built and why it went; the code is in git before
+> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
+> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+
 Status: **Draft 6** · 2026-10-30: the web client in Fluent 2 with Mica (owner decision;
 `docs/superpowers/specs/2026-10-29-fluent-web-design.md`). Draft 5 (2026-10-29): ECHO redesigned
 after Spotify, web and Android, liquid glass dropped for performance (§7.11). The Android app keeps

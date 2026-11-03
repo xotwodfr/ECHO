@@ -1,5 +1,12 @@
 # ECHO — Technical Architecture
 
+> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> this document that describe Spotify playback, its connection, the policy gates or the library
+> source switch are kept as a record of what was built and why it went; the code is in git before
+> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
+> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+
 Status: **Draft 2** (revised after product-owner decisions, 2026-10-22) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Playback](PLAYBACK_ARCHITECTURE.md) · [Lyrics integration](LYRICS_INTEGRATION.md) · [Settings & security](SETTINGS_AND_SECURITY.md) · [Visualizer](VISUALIZER_SPEC.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
 

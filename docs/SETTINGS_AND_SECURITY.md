@@ -1,5 +1,12 @@
 # ECHO — Settings & Security
 
+> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> this document that describe Spotify playback, its connection, the policy gates or the library
+> source switch are kept as a record of what was built and why it went; the code is in git before
+> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
+> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+
 Status: **Draft 2** (revised for a public, multi-user deployment, 2026-10-22) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2, §5.5, §6 (deployment, DB, API) · [Playback](PLAYBACK_ARCHITECTURE.md) §4.2, §5.2 · [Lyrics integration](LYRICS_INTEGRATION.md) §2
 
@@ -259,6 +266,8 @@ server: validate URL (rules below) → test (PLAYBACK_ARCHITECTURE.md §5.3)
 - Secret fields are write-only in the UI ("•••••••• Saved").
 
 ### 6.2 Spotify
+
+> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
 
 **Admin, once:**
 1. Create a Spotify app in the Developer Dashboard (owner: the admin, who must have Premium [C]).
