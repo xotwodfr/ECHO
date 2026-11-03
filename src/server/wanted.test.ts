@@ -169,6 +169,32 @@ describe('the routes', () => {
     expect((await call(s.app, 'GET', '/api/v1/wanted')).status).toBe(401);
   });
 
+  it('only the server’s own library marks items found: not another server a user connected', async () => {
+    const s = setup();
+    const ada = await s.user('ada'); // connected to the default Navidrome
+    // The default changes: Ada's server is now someone else's, and must not fill the shared list.
+    s.deps.navidrome.defaultUrl = 'http://navidrome.invalid:4533';
+    // Still allowed, so Ada keeps playing from it: only the trust is gone.
+    s.db
+      .prepare("INSERT INTO server_settings (key, value_json) VALUES ('navidrome.allowList', ?)")
+      .run(JSON.stringify([mock.url]));
+    expect((await (await s.add('Harbour Lights', ada)).json()).found).toBeNull();
+    s.clock.t += 10 * 60_000 + 1;
+    expect((await s.list(ada))[0]?.found).toBeNull();
+  });
+
+  it('a user adds at most 200 items', async () => {
+    const s = setup();
+    const ada = await s.user('ada', false);
+    const insert = s.db.prepare(
+      'INSERT INTO wanted (text, norm, added_by, added_at) VALUES (?, ?, ?, 0)',
+    );
+    for (let i = 0; i < 200; i++) insert.run(`item ${i}`, `item ${i}`, ada.id);
+    expect((await s.add('one more', ada)).status).toBe(409);
+    const bo = await s.user('bo', false);
+    expect((await s.add('one more', bo)).status).toBe(201);
+  });
+
   it('a deleted user’s items stay on the list, added by nobody', async () => {
     const s = setup();
     const ada = await s.user('ada');

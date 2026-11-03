@@ -2,14 +2,18 @@ import { Hono, type MiddlewareHandler } from 'hono';
 import { type AuthEnv, jsonObject } from './auth/routes.ts';
 import type { Db } from './db/db.ts';
 import type { SubsonicClient } from './navidrome/client.ts';
+import { navidromeUrlOf } from './navidrome/routes.ts';
 
 // The Wanted list: one list for everyone on this server, of music that is not in Navidrome yet
 // (it replaced Spotify for that, 2026-11-03). An item is free text. ECHO searches the library for
 // each item still missing, when the list is opened (an item at most every ten minutes) and daily,
 // and marks it found when an album, else a song, has every word of it in its artist and title.
-// ponytail: one found state for the server; with several Navidrome servers the last check wins.
+// Only the server's own library does that (security review): the default Navidrome, else the
+// first admin's. A user connected to another server never fills the shared list, and nobody's
+// text is searched with another server's credentials.
 
 const MAX_TEXT = 200;
+const MAX_PER_USER = 200;
 export const RECHECK_MS = 10 * 60_000;
 const FALLBACK_WORDS = 3;
 
@@ -20,6 +24,19 @@ export interface Found {
   artist: string;
   /** A song's album, to play it in its album. */
   albumId?: string;
+}
+
+/** The library the shared list is checked against: the default Navidrome, else the first admin's. */
+export function wantedScope(db: Db, defaultUrl: string | null): string | null {
+  if (defaultUrl) return defaultUrl.replace(/\/+$/, '');
+  const admin = db
+    .prepare(
+      `SELECT c.user_id FROM connections c JOIN users u ON u.id = c.user_id
+       WHERE c.provider = 'navidrome' AND u.role = 'admin' ORDER BY u.id LIMIT 1`,
+    )
+    .pluck()
+    .get() as number | undefined;
+  return admin === undefined ? null : navidromeUrlOf(db, admin);
 }
 
 /** Lower-case words, accents and punctuation dropped: what an item and a library entry compare by. */
@@ -115,12 +132,19 @@ export function wantedRoutes(
     db: Db;
     now: () => number;
     navidrome: (userId: number) => Promise<SubsonicClient | null>;
+    /** ECHO_NAVIDROME_URL, read on each request. */
+    defaultUrl: () => string | null;
   },
   requireUser: MiddlewareHandler<AuthEnv>,
 ) {
   const { db, now } = deps;
   const app = new Hono<AuthEnv>();
-  const client = (userId: number) => deps.navidrome(userId).catch(() => null);
+  // The user's own Navidrome, when it is the server's library (wantedScope); else no check.
+  const client = (userId: number) => {
+    const scope = wantedScope(db, deps.defaultUrl());
+    if (scope === null || navidromeUrlOf(db, userId) !== scope) return Promise.resolve(null);
+    return deps.navidrome(userId).catch(() => null);
+  };
   const items = (id?: number) =>
     (
       db
@@ -160,6 +184,9 @@ export function wantedRoutes(
       | number
       | undefined;
     if (known !== undefined) return c.json(items(known)[0]);
+    const mine = db.prepare('SELECT COUNT(*) FROM wanted WHERE added_by = ?').pluck();
+    if ((mine.get(c.var.user.id) as number) >= MAX_PER_USER)
+      return c.json({ error: 'wanted_full', detail: `at most ${MAX_PER_USER} items each` }, 409);
     const id = Number(
       db
         .prepare('INSERT INTO wanted (text, norm, added_by, added_at) VALUES (?, ?, ?, ?)')

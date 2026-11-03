@@ -357,7 +357,7 @@ paths:
 
   /wanted:
     get:
-      summary: The Wanted list, newest first; what is still missing is looked for in the user's Navidrome first (an item at most every 10 minutes)
+      summary: The Wanted list, newest first; what is still missing is looked for first (an item at most every 10 minutes), when the user's Navidrome is the server's own (the default, else the first admin's)
       description: One list for everyone on the server. An item is found when an album, else a song, has every word of its text in its artist and title.
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/WantedItem' } } } } }
@@ -372,6 +372,7 @@ paths:
         '201': { description: Added (and looked for at once), content: { application/json: { schema: { $ref: '#/components/schemas/WantedItem' } } } }
         '200': { description: Already on the list, content: { application/json: { schema: { $ref: '#/components/schemas/WantedItem' } } } }
         '400': { description: 'bad_wanted: empty, without words, or over 200 characters' }
+        '409': { description: 'wanted_full: the user already has 200 items on the list' }
   /wanted/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer } }

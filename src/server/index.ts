@@ -40,7 +40,7 @@ import { createPaletteService, type PaletteService } from './palette/service.ts'
 import { playsRoutes } from './plays.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
-import { checkWanted, wantedRoutes } from './wanted.ts';
+import { checkWanted, wantedRoutes, wantedScope } from './wanted.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -166,6 +166,7 @@ export function createApp(deps: AppDeps) {
         db: deps.auth.db,
         now: deps.auth.now,
         navidrome: (id) => navidromeClientFor(deps.navidrome, id),
+        defaultUrl: () => deps.navidrome.defaultUrl,
       },
       requireUser(deps.auth),
     ),
@@ -302,8 +303,9 @@ if (import.meta.main) {
   setInterval(() => void matcher.sweep(), 86_400_000).unref();
   // The Wanted list: what is still missing is looked for daily too, not only when the list is opened.
   const checkWantedDaily = async () => {
-    for (const { client } of await libraries().catch(() => []))
-      await checkWanted(auth.db, client, Date.now());
+    const scope = wantedScope(auth.db, navidrome.defaultUrl); // the server's own library only
+    for (const lib of await libraries().catch(() => []))
+      if (lib.scope === scope) await checkWanted(auth.db, lib.client, Date.now());
   };
   setTimeout(() => void checkWantedDaily(), 90_000).unref();
   setInterval(() => void checkWantedDaily(), 86_400_000).unref();
