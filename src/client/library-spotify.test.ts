@@ -53,6 +53,16 @@ describe('createSpotifyLibrary', () => {
     expect(trackOf(track('t1')).artists).toEqual([{ id: 'spotify:kite', name: 'Kite Weather' }]);
   });
 
+  it('asks Spotify for nothing until a page reads the saved albums, then once', async () => {
+    const lib = createSpotifyLibrary();
+    await new Promise((r) => setTimeout(r, 0));
+    expect(calls).toHaveLength(0); // a Navidrome-mode page load costs Spotify's quota nothing
+    expect(lib.albums).toEqual([]); // reading starts the load
+    await vi.waitFor(() => expect(lib.albums.map((a) => a.id)).toEqual(['spotify:ns']));
+    lib.album('spotify:ns');
+    expect(calls.filter((c) => c.path === '/v1/me/albums')).toHaveLength(1);
+  });
+
   it('starredAll: saved tracks, saved albums and followed artists, with prefixed ids', async () => {
     const lib = createSpotifyLibrary();
     const s = await lib.starredAll?.();

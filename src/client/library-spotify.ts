@@ -130,19 +130,32 @@ export function createSpotifyLibrary(): Library {
       if (!r.next) break;
     }
   }
-  const saved = loadSaved();
+  // Nothing is asked of Spotify until a page reads the saved albums: ECHO opens this library on
+  // every page load, even in Navidrome mode, and a Development Mode quota is shared and small.
+  let saved: Promise<void> | null = null;
+  const ensureSaved = () => {
+    saved ??= loadSaved();
+    return saved;
+  };
 
   const lib: Library = {
     get albums() {
+      void ensureSaved();
       return albums;
     },
-    album: (id) => byId.get(id),
+    album(id) {
+      void ensureSaved();
+      return byId.get(id);
+    },
     search: () => ({ tracks: [], albums: [] }),
-    status: () => status,
+    status() {
+      void ensureSaved();
+      return status;
+    },
     retry() {
       status = 'loading';
       changed();
-      void loadSaved();
+      saved = loadSaved();
     },
     async loadAlbum(id) {
       if (loaded.has(id) || !id.startsWith(PREFIX)) return byId.get(id);
@@ -275,7 +288,7 @@ export function createSpotifyLibrary(): Library {
         if (!r?.artists.next || !after) break;
       }
       const tracks = (await lib.starred?.()) ?? [];
-      if (status === 'loading') await saved;
+      if (status === 'loading') await ensureSaved();
       return { tracks, albums, artists };
     },
     // Hearts save to the user's Spotify library: one generic endpoint for every kind (Feb 2026).
@@ -334,7 +347,7 @@ export function createSpotifyLibrary(): Library {
         return unique(r?.items ?? []);
       }
       if (kind === 'newest' || kind === 'starred') {
-        if (status === 'loading') await saved;
+        if (status === 'loading') await ensureSaved();
         return albums.slice(0, size);
       }
       return [];

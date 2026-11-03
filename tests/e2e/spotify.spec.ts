@@ -157,6 +157,20 @@ test('an old connection: Spotify mode works with what it has, and says to reconn
   }
 });
 
+test('in Navidrome mode a page load asks Spotify for nothing, and Spotify mode loads it', async ({
+  page,
+}) => {
+  const fake = await ready(page);
+  fake.requests.length = 0; // ready() opened the app once itself
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+  await page.waitForTimeout(500);
+  expect(fake.requests.filter((r) => r.path.startsWith('/v1/'))).toEqual([]); // the quota is shared
+  await sourceButton(page, 'Spotify').click();
+  await expect(page.getByText('Northern Static').first()).toBeVisible(); // the shelf has loaded
+  expect(fake.requests.filter((r) => r.path === '/v1/me/albums')).toHaveLength(1);
+});
+
 test('Spotify refusing the app is named on Home, not just “Couldn’t load this.”', async ({
   page,
 }) => {

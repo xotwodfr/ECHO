@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { Track } from '../../shared/types.ts';
@@ -26,13 +27,27 @@ const active = () => sourceStore.getState().source;
 const put = (s: Source, patch: Partial<Lists>) =>
   collections.setState((c) => ({ [s]: { ...c[s], ...patch } }) as Partial<Collections>);
 
+const loaded = new Set<Source>();
+
+/** A source's playlists and hearts, fetched once, the first time something needs them. */
+export function loadCollections(s: Source) {
+  if (!libraries[s] || loaded.has(s)) return;
+  loaded.add(s);
+  void refreshPlaylists(s);
+  void refreshStarred(s);
+}
+
 export function startCollections(libs: Libraries) {
   libraries = libs;
-  for (const s of ['navidrome', 'spotify'] as const) {
-    if (!libs[s]) continue;
-    void refreshPlaylists(s);
-    void refreshStarred(s);
-  }
+  loaded.clear();
+  loadCollections('navidrome');
+  // Spotify's cost a Development Mode quota that is shared and small (every liked song is a call
+  // per 50, on every page load): fetched when its source is open, or when a heart for one of its
+  // items is on screen (useStarred), not for a Navidrome page that never shows any of it.
+  const openSpotify = () =>
+    sourceStore.getState().source === 'spotify' && loadCollections('spotify');
+  sourceStore.subscribe(openSpotify);
+  openSpotify();
 }
 
 /** A source, or the active one: also when called as an event handler (`onRetry={refreshPlaylists}`). */
@@ -77,6 +92,7 @@ export async function setStar<K extends StarKind>(kind: K, item: Item[K], on: bo
   const s = sourceOfItem(kind, item);
   const lib = libraries[s];
   if (!lib?.setStar) return;
+  loadCollections(s);
   const before = collections.getState()[s].starred;
   const now = before === 'error' || !before ? EMPTY : before;
   const list = now[LIST[kind]] as Item[K][];
@@ -99,6 +115,7 @@ export function useStarred<K extends StarKind>(
   id: string | undefined,
   source: Source = id ? sourceOf(id) : 'navidrome',
 ): boolean {
+  useEffect(() => loadCollections(source), [source]);
   return useStore(collections, (c) => {
     const st = c[source].starred;
     return id && st !== null && st !== 'error' ? st[LIST[kind]].some((x) => x.id === id) : false;
