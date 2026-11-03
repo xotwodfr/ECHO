@@ -146,6 +146,20 @@ const MIGRATIONS: string[] = [
   DELETE FROM server_settings
     WHERE key IN ('spotify.clientId', 'spotify.clientSecret', 'spotify.gates.artPalette', 'spotify.gates.syncedLyrics');
   `,
+  // The Wanted list (wanted.ts): one list for everyone, of music to add to Navidrome. `norm` is the
+  // text's words, lower-case and accent-free, so the same words are one item. `found_json` is the
+  // library's match once there is one; `checked_at` when the library was last asked.
+  `
+  CREATE TABLE wanted (
+    id INTEGER PRIMARY KEY,
+    text TEXT NOT NULL,
+    norm TEXT NOT NULL UNIQUE,
+    added_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    added_at INTEGER NOT NULL,
+    found_json TEXT,
+    checked_at INTEGER NOT NULL DEFAULT 0
+  );
+  `,
 ];
 
 export function openDb(path: string): Db {
@@ -157,11 +171,12 @@ export function openDb(path: string): Db {
   return db;
 }
 
-export function migrate(db: Db) {
+/** Applies the migrations not yet applied, up to `to` (tests stop early to stand in for an old database). */
+export function migrate(db: Db, to = MIGRATIONS.length) {
   const current = db.pragma('user_version', { simple: true }) as number;
   if (current > MIGRATIONS.length)
     throw new Error(`database is from a newer ECHO (schema ${current} > ${MIGRATIONS.length})`);
-  for (let v = current; v < MIGRATIONS.length; v++)
+  for (let v = current; v < to; v++)
     db.transaction(() => {
       db.exec(MIGRATIONS[v] as string);
       db.pragma(`user_version = ${v + 1}`);

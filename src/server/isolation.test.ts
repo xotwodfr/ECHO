@@ -43,6 +43,10 @@ const NO_USER_DATA = [
   'PUT /me/connections/navidrome',
   'POST /me/connections/navidrome/test',
   'GET /lyrics', // shared cache by design; the override in it is per user (attacked below)
+  // The Wanted list is one list for everyone on the server, by the owner's choice (2026-11-03).
+  'GET /wanted',
+  'POST /wanted',
+  'DELETE /wanted/:id',
 ];
 
 describe('SEC-11: isolation between users', () => {

@@ -1,3 +1,4 @@
+import Database from 'better-sqlite3';
 import { describe, expect, it } from 'vitest';
 import { migrate, openDb, SCHEMA_VERSION } from './db.ts';
 
@@ -21,13 +22,15 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'track_overrides',
       'user_settings',
       'users',
+      'wanted',
     ]);
     expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1);
   });
 
   it('the Spotify purge deletes connections and credentials, and keeps matches, the matching switch and the rest', () => {
-    const db = openDb(':memory:');
+    const db = new Database(':memory:'); // a database from before the purge (schema 4)
+    migrate(db, 4);
     db.prepare(
       "INSERT INTO users (id, username, password_hash, role, created_at) VALUES (1, 'ada', 'x', 'user', 0)",
     ).run();
@@ -47,7 +50,6 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
     db.prepare(
       "INSERT INTO spotify_matches (scope, navidrome_id, spotify_ids, method, tried, title, artist, checked_at) VALUES ('s', 't', '[\"4uLU6hMCjMI75M1A2tKUQC\"]', 'spotify', 'spotify', 'T', 'A', 0)",
     ).run();
-    db.pragma(`user_version = ${SCHEMA_VERSION - 1}`); // a database from before the purge
     migrate(db);
     expect(db.prepare('SELECT provider FROM connections').pluck().all()).toEqual(['navidrome']);
     expect(db.prepare('SELECT key FROM server_settings ORDER BY key').pluck().all()).toEqual([

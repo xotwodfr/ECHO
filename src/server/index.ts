@@ -40,6 +40,7 @@ import { createPaletteService, type PaletteService } from './palette/service.ts'
 import { playsRoutes } from './plays.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
+import { checkWanted, wantedRoutes } from './wanted.ts';
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
@@ -158,6 +159,17 @@ export function createApp(deps: AppDeps) {
       requireUser(deps.auth),
     ),
   );
+  app.route(
+    '/api/v1',
+    wantedRoutes(
+      {
+        db: deps.auth.db,
+        now: deps.auth.now,
+        navidrome: (id) => navidromeClientFor(deps.navidrome, id),
+      },
+      requireUser(deps.auth),
+    ),
+  );
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory.
@@ -253,6 +265,28 @@ if (import.meta.main) {
     if (sessions || addresses) log('info', 'pruned', { sessions, addresses });
   }, 3_600_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
+  // Each Navidrome server once, through the first user connected to it (admins first).
+  const libraries = async () => {
+    const users = auth.db
+      .prepare(
+        `SELECT c.user_id FROM connections c JOIN users u ON u.id = c.user_id
+         WHERE c.provider = 'navidrome' AND c.status = 'ok' AND u.disabled = 0
+         ORDER BY u.role = 'admin' DESC, u.id`,
+      )
+      .pluck()
+      .all() as number[];
+    const seen = new Set<string>();
+    const out = [];
+    for (const id of users) {
+      const scope = navidromeUrlOf(auth.db, id);
+      if (seen.has(scope)) continue;
+      const client = await navidromeClientFor(navidrome, id).catch(() => null);
+      if (!client) continue;
+      seen.add(scope);
+      out.push({ scope, client });
+    }
+    return out;
+  };
   const matcher = createSpotifyMatcher({
     db: auth.db,
     now: Date.now,
@@ -261,32 +295,18 @@ if (import.meta.main) {
     musicbrainzUrl: config.musicbrainzUrl,
     userAgent,
     sweepEnabled: () => matchLibrary(auth.db),
-    // Each Navidrome server once, through the first user connected to it (admins first).
-    libraries: async () => {
-      const users = auth.db
-        .prepare(
-          `SELECT c.user_id FROM connections c JOIN users u ON u.id = c.user_id
-           WHERE c.provider = 'navidrome' AND c.status = 'ok' AND u.disabled = 0
-           ORDER BY u.role = 'admin' DESC, u.id`,
-        )
-        .pluck()
-        .all() as number[];
-      const seen = new Set<string>();
-      const out = [];
-      for (const id of users) {
-        const scope = navidromeUrlOf(auth.db, id);
-        if (seen.has(scope)) continue;
-        const client = await navidromeClientFor(navidrome, id).catch(() => null);
-        if (!client) continue;
-        seen.add(scope);
-        out.push({ scope, client });
-      }
-      return out;
-    },
+    libraries,
   });
   // The library sweep: a minute after start (let the server settle), then daily.
   setTimeout(() => void matcher.sweep(), 60_000).unref();
   setInterval(() => void matcher.sweep(), 86_400_000).unref();
+  // The Wanted list: what is still missing is looked for daily too, not only when the list is opened.
+  const checkWantedDaily = async () => {
+    for (const { client } of await libraries().catch(() => []))
+      await checkWanted(auth.db, client, Date.now());
+  };
+  setTimeout(() => void checkWantedDaily(), 90_000).unref();
+  setInterval(() => void checkWantedDaily(), 86_400_000).unref();
   const lyrics: LyricsDeps = {
     db: auth.db,
     log,

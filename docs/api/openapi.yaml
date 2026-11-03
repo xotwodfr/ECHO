@@ -355,6 +355,31 @@ paths:
         '400': { description: Not a queue }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
+  /wanted:
+    get:
+      summary: The Wanted list, newest first; what is still missing is looked for in the user's Navidrome first (an item at most every 10 minutes)
+      description: One list for everyone on the server. An item is found when an album, else a song, has every word of its text in its artist and title.
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/WantedItem' } } } } }
+    post:
+      summary: Add to the Wanted list; the same words (case, accents and punctuation aside) are the same item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [text], properties: { text: { type: string, minLength: 1, maxLength: 200 } } }
+      responses:
+        '201': { description: Added (and looked for at once), content: { application/json: { schema: { $ref: '#/components/schemas/WantedItem' } } } }
+        '200': { description: Already on the list, content: { application/json: { schema: { $ref: '#/components/schemas/WantedItem' } } } }
+        '400': { description: 'bad_wanted: empty, without words, or over 200 characters' }
+  /wanted/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    delete:
+      summary: Remove an item (anyone may; the list is shared)
+      responses:
+        '200': { description: Removed }
+        '404': { description: No such item }
   /me/plays:
     post:
       summary: Record a play (a Navidrome song past its scrobble point) for the user's history
@@ -788,6 +813,21 @@ components:
       properties:
         version: { const: 2 }
         lyrics: { type: object, properties: { disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off, default: [] } } }
+    WantedItem:
+      type: object
+      properties:
+        id: { type: integer }
+        text: { type: string }
+        addedBy: { type: [string, 'null'], description: The username; null once that user is deleted }
+        addedAt: { type: integer }
+        found:
+          type: [object, 'null']
+          properties:
+            kind: { enum: [album, song] }
+            id: { type: string }
+            title: { type: string }
+            artist: { type: string }
+            albumId: { type: string, description: A song's album }
     AdminSettings:
       type: object
       properties:
