@@ -1,5 +1,5 @@
 import { expect, type Page, test } from '@playwright/test';
-import { signedIn } from './helpers.ts';
+import { clearLyricsCache, signedIn } from './helpers.ts';
 
 // YouTube Music mode (docs/superpowers/specs/2026-11-03-youtube-music-design.md) against the
 // server's fake catalogue (ECHO_DEV_FIXTURES=1): its songs play from the mock Subsonic's
@@ -98,6 +98,7 @@ test('plays a song from search', async ({ page }) => {
 });
 
 test('tapping a single song starts its radio', async ({ page }) => {
+  clearLyricsCache(); // an earlier run may have cached "none" for the fake songs
   await signedIn(page, 'yt');
   await page.goto('/yt');
   await page.getByRole('button', { name: /^Play Fake Song 3\b/ }).click();
@@ -106,8 +107,12 @@ test('tapping a single song starts its radio', async ({ page }) => {
   const np = page.getByRole('dialog', { name: 'Now playing' });
   await expect(np.getByRole('tab', { name: 'Up next', selected: true })).toBeVisible();
   await expect(np.getByRole('button', { name: /^Play Fake Song 4\b/ })).toBeVisible();
+  // The lyrics are ECHO's own (the owner, 2026-11-03): its lyric field, with its transcript.
   await np.getByRole('tab', { name: 'Lyrics' }).click();
-  await expect(np.getByText(/Glass in the morning/).first()).toBeVisible();
+  await expect(np.locator('.stage .ly-field')).toBeAttached();
+  await expect(np.getByRole('list', { name: 'Lyrics' }).getByRole('listitem').first()).toHaveText(
+    'Glass in the morning, Fake Song 3',
+  );
   await page.keyboard.press('Escape');
   await expect(np).toBeHidden();
 });

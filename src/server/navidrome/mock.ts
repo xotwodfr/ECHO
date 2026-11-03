@@ -231,7 +231,8 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       res.writeHead(200, { 'content-type': 'application/json' });
       return res.end(req.url.startsWith('/api/search/get') ? '{"result":{"songs":[]}}' : '[]');
     }
-    // A mock LRCLIB (ECHO_LRCLIB_URL in E2E): "Glass Weather" tracks have synced lyrics.
+    // A mock LRCLIB (ECHO_LRCLIB_URL in E2E): "Glass Weather" tracks (and the fake YouTube songs)
+    // have synced lyrics.
     if (req.url?.startsWith('/api/get')) {
       const q = new URL(req.url, 'http://mock').searchParams;
       await new Promise((r) => setTimeout(r, faults.lyricsDelayMs));
@@ -242,7 +243,11 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       if (faults.lrclibStatus !== 200)
         return send(faults.lrclibStatus, { message: 'mock failure' });
       const title = q.get('track_name') ?? '';
-      const song = SONGS.find((x) => x.title === title && x.album === 'Glass Weather');
+      // The fake YouTube Music catalogue's songs (youtube/fake.ts) have synced lyrics too.
+      const fakeYt = /^Fake Song \d+$/.test(title)
+        ? { title, artist: q.get('artist_name') ?? '', album: '', duration: 180 }
+        : undefined;
+      const song = SONGS.find((x) => x.title === title && x.album === 'Glass Weather') ?? fakeYt;
       if (!song) return send(404, { code: 404, name: 'TrackNotFound' });
       return send(200, {
         trackName: song.title,

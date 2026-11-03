@@ -133,7 +133,7 @@ function NowPlayingSide() {
  * interlude dots, with "Finding lyrics…" from 1.5 s; Cover mode with "No lyrics found" when there
  * are none (§9.4). A late answer replaces Cover mode as soon as it arrives.
  */
-function LyricsView() {
+export function LyricsView() {
   const { doc, state, since } = useStore(lyricsStore);
   const motionOff = useStore(prefsStore, (p) => p.visuals.motion === 'off');
   useTicker(state === 'waiting', 100);

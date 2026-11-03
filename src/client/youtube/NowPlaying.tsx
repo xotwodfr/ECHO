@@ -2,9 +2,11 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { YtLyrics } from '../../shared/youtube.ts';
-import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
+import { usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { upcoming } from '../playback/queue.ts';
-import { lyricOffset, lyricsStore } from '../stage/status.ts';
+import { Stage } from '../shell/Stage.tsx';
+import { LyricsView } from '../shell/StageViews.tsx';
+import { lyricsStore } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { ytLyrics } from './api.ts';
@@ -104,19 +106,28 @@ function UpNext() {
   );
 }
 
-/** ECHO's lyrics for the song (synced lines follow the music); YouTube's plain ones otherwise. */
+/**
+ * ECHO's own lyrics (the owner, 2026-11-03: "the same" as in Navidrome mode): the Stage's lyric
+ * field, on its room, with its attribution and source menu. Only when ECHO's sources have none
+ * do YouTube's plain lyrics stand in.
+ */
 function LyricsPanel({ track }: { track: Track }) {
-  const c = usePlayback();
-  const ly = useStore(lyricsStore);
-  const doc = ly.trackKey === track.key ? ly.doc : null;
-  const waiting = ly.trackKey === track.key && ly.state === 'waiting';
-  const [plain, setPlain] = useState<{ key: string; lyrics: YtLyrics | null } | null>(null);
-  const active = useRef<HTMLLIElement>(null);
-  const synced = !!doc && doc.sync !== 'none';
-  useTicker(synced, 250);
+  const missing = useStore(lyricsStore, (l) => l.trackKey === track.key && l.state === 'missing');
+  if (missing && track.provider === 'youtube') return <YouTubeLyrics track={track} />;
+  return (
+    <div className="yt-np-stage">
+      <Stage>
+        <div className="ly-area">
+          <LyricsView />
+        </div>
+      </Stage>
+    </div>
+  );
+}
 
+function YouTubeLyrics({ track }: { track: Track }) {
+  const [plain, setPlain] = useState<{ key: string; lyrics: YtLyrics | null } | null>(null);
   useEffect(() => {
-    if (doc || waiting || track.provider !== 'youtube') return;
     let live = true;
     ytLyrics(track.id).then(
       (lyrics) => live && setPlain({ key: track.key, lyrics }),
@@ -125,46 +136,21 @@ function LyricsPanel({ track }: { track: Track }) {
     return () => {
       live = false;
     };
-  }, [doc, waiting, track]);
-
-  const now = c.songTime() - lyricOffset();
-  const at = synced && doc ? doc.lines.findLastIndex((l) => l.start <= now) : -1;
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a new line is what scrolls
-  useEffect(() => active.current?.scrollIntoView({ block: 'center', behavior: 'smooth' }), [at]);
-
-  if (doc)
-    return (
-      <>
-        <ol className="yt-lyrics" data-synced={synced || undefined}>
-          {doc.lines.map((l, i) => (
-            <li
-              // biome-ignore lint/suspicious/noArrayIndexKey: lines repeat (choruses)
-              key={i}
-              ref={i === at ? active : undefined}
-              data-active={i === at || undefined}
-            >
-              {l.text}
-            </li>
-          ))}
-        </ol>
-        <p className="yt-strap">{doc.attribution.text}</p>
-      </>
-    );
+  }, [track]);
   const mine = plain?.key === track.key ? plain : null;
-  if (mine?.lyrics)
-    return (
-      <>
-        <p className="yt-lyrics-plain">{mine.lyrics.text}</p>
-        <p className="yt-strap">{y.lyricsSource(mine.lyrics.source)}</p>
-      </>
-    );
-  if (waiting || (track.provider === 'youtube' && !mine))
+  if (!mine)
     return (
       <div className="yt-loading" aria-busy="true">
         <span className="visually-hidden">{y.loading}</span>
       </div>
     );
-  return <p className="yt-empty">{y.noLyrics}</p>;
+  if (!mine.lyrics) return <p className="yt-empty">{y.noLyrics}</p>;
+  return (
+    <>
+      <p className="yt-lyrics-plain">{mine.lyrics.text}</p>
+      <p className="yt-strap">{y.lyricsSource(mine.lyrics.source)}</p>
+    </>
+  );
 }
 
 function Related({ id }: { id: string }) {

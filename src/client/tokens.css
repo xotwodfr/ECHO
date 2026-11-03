@@ -163,7 +163,7 @@
   --yt-art-row: 48px; --yt-art-bar: 40px; --yt-art-hero: 264px; --yt-art-hero-phone: 200px;
   --yt-card-min: 168px; --yt-card-phone: 144px; --yt-row-min: 300px;
   --yt-r-art: 4px; --yt-r-card: 6px; --yt-r-ctl: 8px; --yt-progress: 2px; --yt-progress-hover: 4px;
-  --yt-np-art: min(56vh, 520px);
+  --yt-np-art: min(56vh, 520px); --yt-np-lyrics-min: 360px;
 
   /* motion */
   --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;
