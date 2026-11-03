@@ -155,6 +155,22 @@ describe('backup and restore drill (DEP-03)', () => {
     expect(verify(p.db, createSealer(next))).toEqual({ total: 3, unreadable: [] });
     expect(verify(p.db, createSealer(p.key)).unreadable).toHaveLength(3);
   });
+
+  it('rotating the master key re-seals the YouTube Music cookies too', () => {
+    const db = openDb(':memory:');
+    const key = randomBytes(32);
+    db.prepare(
+      "INSERT INTO users (id, username, password_hash, role, created_at) VALUES (7, 'ada', 'x', 'user', 0)",
+    ).run();
+    const where = { table: 'youtube_accounts', rowId: 7, column: 'cookie_enc' };
+    db.prepare(
+      "INSERT INTO youtube_accounts (user_id, cookie_enc, name, updated_at) VALUES (7, ?, 'Ada', 0)",
+    ).run(createSealer(key).seal('SAPISID=abc; SID=def', where));
+    const next = randomBytes(32);
+    expect(rotate(db, createSealer(key), createSealer(next))).toEqual({ resealed: 1, skipped: [] });
+    const sealed = db.prepare('SELECT cookie_enc FROM youtube_accounts').pluck().get() as string;
+    expect(createSealer(next).open(sealed, where)).toBe('SAPISID=abc; SID=def');
+  });
 });
 
 describe('nightly backup', () => {

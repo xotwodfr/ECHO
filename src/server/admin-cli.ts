@@ -38,6 +38,13 @@ const SEALED = [
     key: 'key',
     rowId: (r: Row) => r.key as string,
   },
+  // YouTube Music sign-ins (youtube/routes.ts seals them with rowId = the user id).
+  {
+    table: 'youtube_accounts',
+    column: 'cookie_enc',
+    key: 'user_id',
+    rowId: (r: Row) => r.user_id as number,
+  },
 ] as const;
 type Row = Record<string, unknown>;
 
