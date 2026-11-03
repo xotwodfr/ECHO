@@ -137,7 +137,8 @@ test('flipping to Navidrome keeps playing', async ({ page }) => {
   await expect(dock.getByRole('link', { name: 'Fake Song 2' })).toHaveCount(0);
   const panel = page.locator('.right-panel');
   await page.waitForTimeout(500); // the panel, if open, has mounted
-  if ((await panel.count()) === 0) await dock.getByRole('button', { name: 'Now playing view' }).click();
+  if ((await panel.count()) === 0)
+    await dock.getByRole('button', { name: 'Now playing view' }).click();
   await expect(panel).toContainText('Fake Song 2');
   await expect(panel.getByRole('link', { name: 'Fake Song 2' })).toHaveCount(0);
   await expect(panel.getByRole('link', { name: 'Ada Varga' })).toHaveCount(0);
@@ -156,7 +157,10 @@ test('like toggles, and Liked music lists the song', async ({ page }) => {
   // After a reload the button shows YouTube's own state, not a guess.
   await page.goto('/yt/album/MPREb_fake3');
   await page.getByRole('button', { name: /^Play Fake Song 3\b/ }).click();
-  await expect(bar(page).getByRole('button', { name: 'Like' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(bar(page).getByRole('button', { name: 'Like' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.goto('/yt/playlist/VLLM');
   await expect(page.getByRole('button', { name: /^Play Fake Song 3\b/ })).toBeVisible();
 });
