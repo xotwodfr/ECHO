@@ -4,7 +4,7 @@ import { sessionExpired } from '../session.ts';
 import { ManualClock } from './clock.ts';
 import { createPlaybackController } from './controller.ts';
 import { FakeProvider } from './fake.ts';
-import { savedQueue, startQueueSync, trimQueue } from './queueSync.ts';
+import { queueSlot, savedQueue, startQueueSync, trimQueue } from './queueSync.ts';
 
 const track = (i: number): Track => ({
   key: `navidrome:t${i}`,
@@ -15,6 +15,29 @@ const track = (i: number): Track => ({
   album: { id: 'al', title: 'Some Album With A Name', key: 'navidrome:al' },
   durationMs: 200_000,
   artwork: [{ url: `/api/v1/navidrome/cover/al?size=600` }],
+});
+
+const ytTrack = (id: string): Track => ({
+  ...track(0),
+  key: `youtube:${id}`,
+  provider: 'youtube',
+  id,
+});
+
+describe('the queue slot (spec call 16)', () => {
+  const q = (over: Partial<QueueState>): QueueState => ({
+    provider: 'navidrome',
+    now: track(0),
+    nextUp: [],
+    context: [track(1)],
+    history: [],
+    ...over,
+  });
+  it('queueSlot picks youtube for any youtube track', () => {
+    expect(queueSlot(q({}))).toBe('/me/queue');
+    expect(queueSlot(q({ nextUp: [ytTrack('y')] }))).toBe('/me/queue/youtube');
+    expect(queueSlot(q({ now: ytTrack('y'), provider: 'youtube' }))).toBe('/me/queue/youtube');
+  });
 });
 
 describe('queue trimming (64 KB bodies)', () => {
@@ -114,6 +137,23 @@ describe('queue sync start', () => {
     c.seek(100_000);
     await vi.advanceTimersByTimeAsync(2500);
     expect(puts.slice(1).map((p) => Math.round(p.positionMs / 1000))).toEqual([30, 100]);
+  });
+
+  it('restores the newer of the two slots', async () => {
+    vi.stubGlobal('addEventListener', () => {});
+    const nav = { provider: 'navidrome', now: track(1), nextUp: [], context: [], history: [] };
+    const yt = { provider: 'youtube', now: ytTrack('y'), nextUp: [], context: [], history: [] };
+    vi.stubGlobal('fetch', async (url: string) =>
+      url.endsWith('/me/queue/youtube')
+        ? Response.json({ queue: yt, positionMs: 0, updatedAt: 9 })
+        : Response.json({ queue: nav, positionMs: 0, updatedAt: 5 }),
+    );
+    const clock = new ManualClock();
+    const provider = new FakeProvider({ clock, loadMs: 0 });
+    Object.assign(provider, { sources: ['navidrome', 'youtube'] });
+    const c = createPlaybackController({ provider, clock });
+    await startQueueSync(c, () => {});
+    expect(c.queue.getState().now?.key).toBe('youtube:y');
   });
 
   // QA 2026-10-28: with the session ended, a save would go out under whoever signs in next on the

@@ -93,6 +93,11 @@ describe('SEC-11: isolation between users', () => {
       provider: 'navidrome',
     };
     await as(A, 'PUT', '/api/v1/me/queue', { queue: aQueue, positionMs: 1234, baseUpdatedAt: 0 });
+    await as(A, 'PUT', '/api/v1/me/queue/youtube', {
+      queue: { ...aQueue, now: { key: 'youtube:x', title: 'ALICE-YT' }, provider: 'youtube' },
+      positionMs: 1234,
+      baseUpdatedAt: 0,
+    });
     await as(A, 'PUT', `/api/v1/me/tracks/navidrome:${track}/override`, {
       offsetMs: 450,
       pinnedSource: 'lrclib',
@@ -123,6 +128,7 @@ describe('SEC-11: isolation between users', () => {
     // B reads: nothing of A's comes back.
     const reads = [
       '/api/v1/me/queue',
+      '/api/v1/me/queue/youtube',
       `/api/v1/me/tracks/navidrome:${track}/override`,
       '/api/v1/me/settings',
       '/api/v1/me/plays/recent',
@@ -142,6 +148,7 @@ describe('SEC-11: isolation between users', () => {
     const field = async (p: string) =>
       JSON.parse(await json(await call(app, 'GET', p, undefined, B.cookie)));
     expect((await field('/api/v1/me/queue')).queue).toBeNull();
+    expect((await field('/api/v1/me/queue/youtube')).queue).toBeNull();
     expect((await field(`/api/v1/me/tracks/navidrome:${track}/override`)).offsetMs).toBe(0);
     expect(
       JSON.parse(
@@ -151,6 +158,11 @@ describe('SEC-11: isolation between users', () => {
 
     // B writes with A's identifiers: A's data is unchanged.
     await as(B, 'PUT', '/api/v1/me/queue', { queue: null, positionMs: 0, baseUpdatedAt: 0 });
+    await as(B, 'PUT', '/api/v1/me/queue/youtube', {
+      queue: null,
+      positionMs: 0,
+      baseUpdatedAt: 0,
+    });
     await as(B, 'PUT', `/api/v1/me/tracks/navidrome:${track}/override`, { offsetMs: -50 });
     await as(B, 'PUT', '/api/v1/me/settings', { visuals: { intensity: 'balanced' } });
     await as(B, 'POST', '/api/v1/me/plays', { ...aPlay, track: { ...aPlay.track, title: 'B' } });
@@ -160,6 +172,11 @@ describe('SEC-11: isolation between users', () => {
       JSON.parse(await json(await call(app, 'GET', '/api/v1/me/queue', undefined, A.cookie))).queue
         .now.title,
     ).toBe('ALICE-QUEUE');
+    expect(
+      JSON.parse(
+        await json(await call(app, 'GET', '/api/v1/me/queue/youtube', undefined, A.cookie)),
+      ).queue.now.title,
+    ).toBe('ALICE-YT');
     expect(
       JSON.parse(
         await json(

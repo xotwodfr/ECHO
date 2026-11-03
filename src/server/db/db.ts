@@ -160,6 +160,23 @@ const MIGRATIONS: string[] = [
     checked_at INTEGER NOT NULL DEFAULT 0
   );
   `,
+  // YouTube Music mode (youtube/): each user's own sign-in, a cookie pasted from a signed-in
+  // music.youtube.com tab, sealed like the Navidrome secret (its own table: the `connections` CHECK
+  // cannot be altered). A queue holding YouTube songs is kept in its own web-only slot, so the
+  // Android app, which reads `queue_state`, never meets one.
+  `
+  CREATE TABLE youtube_accounts (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    cookie_enc TEXT NOT NULL,
+    name TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE queue_state_youtube (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export function openDb(path: string): Db {

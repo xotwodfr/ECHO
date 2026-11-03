@@ -287,11 +287,12 @@ export function createPlaybackController(opts: {
 
     /** A saved queue (another session, another device), loaded paused at `positionMs`. */
     restore(q: QueueState, positionMs: number) {
-      if (!provider || (q.provider && q.provider !== provider.id)) return;
+      const from = q.provider ?? provider?.id;
+      if (!provider || !from || !(provider.sources ?? [provider.id]).includes(from)) return;
       // A shuffled queue comes back shuffled, and the dock says so.
       player.setState({ shuffle: !!q.shuffleOrder });
-      if (!q.now) return queue.setState({ ...q, provider: provider.id }, true);
-      load({ ...q, provider: provider.id }, false, positionMs);
+      if (!q.now) return queue.setState({ ...q, provider: from }, true);
+      load({ ...q, provider: from }, false, positionMs);
     },
 
     /** Load `tracks[index]` paused at `startMs` (deterministic mode, VISUALIZER_SPEC.md §10). */

@@ -52,16 +52,31 @@ export function trimQueue(q: QueueState): QueueState {
   return out;
 }
 
+type Slot = '/me/queue' | '/me/queue/youtube';
+type Saved = { queue: QueueState | null; positionMs: number; updatedAt: number };
+
+/**
+ * Where a queue is saved: one holding any YouTube song goes to the web-only slot, so the Android
+ * app (which reads `/me/queue` and plays Navidrome alone) never restores one (spec call 16).
+ */
+export function queueSlot(q: QueueState): Slot {
+  const all = [q.now, ...q.nextUp, ...q.context, ...q.history];
+  return all.some((t) => t?.provider === 'youtube') ? '/me/queue/youtube' : '/me/queue';
+}
+
 export async function startQueueSync(c: PlaybackController, notify: (message: string) => void) {
-  let base = 0;
+  const base: Record<Slot, number> = { '/me/queue': 0, '/me/queue/youtube': 0 };
   // An unreachable server (a restart) is asked again, 1, 2, 4 … 30 s apart; a refusal (not signed
-  // in) means the queue does not follow this session.
+  // in) means the queue does not follow this session. Both slots are read; the newer one plays.
   for (let wait = 1000; ; wait = Math.min(30_000, wait * 2)) {
     try {
-      const saved = await api<{ queue: QueueState | null; positionMs: number; updatedAt: number }>(
-        '/me/queue',
-      );
-      base = saved.updatedAt;
+      const [nav, yt] = await Promise.all([
+        api<Saved>('/me/queue'),
+        api<Saved>('/me/queue/youtube'),
+      ]);
+      base['/me/queue'] = nav.updatedAt;
+      base['/me/queue/youtube'] = yt.updatedAt;
+      const saved = yt.queue?.now && yt.updatedAt > nav.updatedAt ? yt : nav;
       if (saved.queue?.now && !c.player.getState().track)
         c.restore(savedQueue(saved.queue), saved.positionMs);
       break;
@@ -77,21 +92,22 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
     // The session ended: whoever signs in next must not receive this queue (REL-05).
     if (sessionExpired.getState().expired) return;
     const p = c.player.getState();
+    const queue = trimQueue(c.queue.getState());
+    const slot = queueSlot(queue);
     const body = {
-      queue: trimQueue(c.queue.getState()),
+      queue,
       positionMs: positionNow(p, performance.now()),
-      baseUpdatedAt: base,
+      baseUpdatedAt: base[slot],
     };
     try {
-      base = (await api<{ updatedAt: number }>('/me/queue', { method: 'PUT', body, keepalive }))
-        .updatedAt;
+      base[slot] = (
+        await api<{ updatedAt: number }>(slot, { method: 'PUT', body, keepalive })
+      ).updatedAt;
     } catch (err) {
       if (!(err instanceof ApiError) || err.status !== 409) return;
       notify('Your queue changed on another device.');
-      const newer = await api<{ queue: QueueState | null; positionMs: number; updatedAt: number }>(
-        '/me/queue',
-      );
-      base = newer.updatedAt;
+      const newer = await api<Saved>(slot);
+      base[slot] = newer.updatedAt;
       // The device that is playing keeps its queue (and wins on its next save).
       if (p.status !== 'playing' && newer.queue)
         c.restore(savedQueue(newer.queue), newer.positionMs);

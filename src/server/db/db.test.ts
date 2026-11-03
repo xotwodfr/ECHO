@@ -15,6 +15,7 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'invites',
       'plays',
       'queue_state',
+      'queue_state_youtube',
       'recovery_codes',
       'server_settings',
       'sessions',
@@ -23,6 +24,7 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'user_settings',
       'users',
       'wanted',
+      'youtube_accounts',
     ]);
     expect(db.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION);
     expect(db.pragma('foreign_keys', { simple: true })).toBe(1);

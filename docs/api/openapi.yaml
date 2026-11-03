@@ -355,6 +355,31 @@ paths:
         '400': { description: Not a queue }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
+  /me/queue/youtube:
+    get:
+      summary: The user's saved queue that holds YouTube songs (web only; Android never reads it)
+      responses:
+        '200':
+          description: OK (queue null when none)
+          content: { application/json: { schema: { type: object, properties: { queue: { type: [object, 'null'] }, positionMs: { type: number }, updatedAt: { type: integer } } } } }
+    put:
+      summary: Save a queue that holds YouTube songs (compare-and-set on updatedAt)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [queue, baseUpdatedAt]
+              properties:
+                queue: { type: [object, 'null'], description: null clears the saved queue }
+                positionMs: { type: number }
+                baseUpdatedAt: { type: integer, description: The updatedAt this device last saw }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { type: object, properties: { updatedAt: { type: integer } } } } } }
+        '400': { description: Not a queue }
+        '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
+
   /wanted:
     get:
       summary: The Wanted list, newest first; what is still missing is looked for first (an item at most every 10 minutes), when the user's Navidrome is the server's own (the default, else the first admin's)

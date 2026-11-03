@@ -109,4 +109,34 @@ describe('the queue follows the user', () => {
     ])
       expect((await call(s.app, 'PUT', '/api/v1/me/queue', body, ada)).status).toBe(400);
   });
+
+  it('keeps the youtube slot apart', async () => {
+    const s = setup();
+    const ada = s.cookieFor('ada');
+    await call(s.app, 'PUT', '/api/v1/me/queue', { queue: Q('a'), baseUpdatedAt: 0 }, ada);
+    const put = await call(
+      s.app,
+      'PUT',
+      '/api/v1/me/queue/youtube',
+      { queue: Q('y'), positionMs: 5, baseUpdatedAt: 0 },
+      ada,
+    );
+    expect(put.status).toBe(200);
+    const nav = (await (await call(s.app, 'GET', '/api/v1/me/queue', undefined, ada)).json()) as {
+      queue: unknown;
+    };
+    expect(nav.queue).toEqual(Q('a'));
+    const yt = (await (
+      await call(s.app, 'GET', '/api/v1/me/queue/youtube', undefined, ada)
+    ).json()) as { queue: unknown; positionMs: number };
+    expect(yt).toMatchObject({ queue: Q('y'), positionMs: 5 });
+    const stale = await call(
+      s.app,
+      'PUT',
+      '/api/v1/me/queue/youtube',
+      { queue: Q('z'), baseUpdatedAt: 0 },
+      ada,
+    );
+    expect(stale.status).toBe(409);
+  });
 });
