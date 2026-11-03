@@ -9,6 +9,7 @@ import type {
 } from '../../shared/types.ts';
 import { api } from '../api.ts';
 import { reportDown } from '../connection.ts';
+import { strings } from '../strings.ts';
 import { AnalyserFeatures } from './analyser.ts';
 import { createAudioGraph } from './audio.ts';
 
@@ -34,6 +35,8 @@ const SCROBBLE_MS = 4 * 60_000;
 
 export class NavidromeProvider implements PlaybackProvider {
   readonly id = 'navidrome' as const;
+  /** YouTube songs stream through ECHO's proxy too (src/server/youtube), so the same voices play them. */
+  readonly sources = ['navidrome', 'youtube'] as const;
   readonly capabilities = NAVIDROME_CAPABILITIES;
   readonly label = 'Navidrome';
 
@@ -159,13 +162,7 @@ export class NavidromeProvider implements PlaybackProvider {
         this.retries++;
         return;
       }
-      this.emit('error', {
-        code: 'navidrome.stream',
-        provider: 'navidrome',
-        retriable: true,
-        userMessage: 'This track could not be played from Navidrome.',
-        detail: el.error.message,
-      });
+      this.emit('error', this.streamError(el.error.message));
     });
   }
 
@@ -183,6 +180,9 @@ export class NavidromeProvider implements PlaybackProvider {
 
   /** The stream URL, and whether it is a transcode (which cannot seek). */
   private srcFor(track: NavidromeTrack, offsetS: number) {
+    // The proxy answers Range itself, so YouTube audio always plays raw and seeks natively.
+    if (track.provider === 'youtube')
+      return { src: `/api/v1/youtube/stream/${encodeURIComponent(track.id)}`, transcode: false };
     const quality = this.opts.quality ?? 'auto';
     const playable = !!track.contentType && this.el.canPlayType(track.contentType) !== '';
     const raw = playable && (quality === 'auto' || quality === 'raw');
@@ -195,6 +195,24 @@ export class NavidromeProvider implements PlaybackProvider {
       src: `/api/v1/navidrome/stream/${encodeURIComponent(track.id)}?${q}`,
       transcode: !raw,
     };
+  }
+
+  private streamError(detail: string): AppError {
+    return this.track?.provider === 'youtube'
+      ? {
+          code: 'youtube.stream',
+          provider: 'youtube',
+          retriable: true,
+          userMessage: strings.youtube.unplayable,
+          detail,
+        }
+      : {
+          code: 'navidrome.stream',
+          provider: 'navidrome',
+          retriable: true,
+          userMessage: 'This track could not be played from Navidrome.',
+          detail,
+        };
   }
 
   private applyGain(t: NavidromeTrack, mode: 'album' | 'track' | 'off') {
@@ -300,13 +318,7 @@ export class NavidromeProvider implements PlaybackProvider {
       // source interrupted this play, which is not a broken stream.
       if (e instanceof DOMException && (e.name === 'NotAllowedError' || e.name === 'AbortError'))
         return;
-      this.emit('error', {
-        code: 'navidrome.stream',
-        provider: 'navidrome',
-        retriable: true,
-        userMessage: 'This track could not be played from Navidrome.',
-        detail: String(e),
-      });
+      this.emit('error', this.streamError(String(e)));
     });
   }
 
@@ -375,6 +387,15 @@ export class NavidromeProvider implements PlaybackProvider {
         method: 'POST',
         body: {},
       }).catch(() => undefined);
+    // A YouTube play goes to the user's YouTube history instead, once (spec call 5).
+    if (t.provider === 'youtube') {
+      if (this.scrobbled === 'none')
+        void api(`/youtube/played/${encodeURIComponent(t.id)}`, { method: 'POST', body: {} }).catch(
+          () => undefined,
+        );
+      this.scrobbled = 'done';
+      return;
+    }
     if (this.scrobbled === 'none') {
       this.scrobbled = 'now';
       void post(false);

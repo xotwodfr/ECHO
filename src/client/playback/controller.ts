@@ -48,6 +48,9 @@ export function createPlaybackController(opts: {
   features?: FeatureSource;
 }) {
   const provider = opts.provider;
+  /** Whether the provider plays this track's source (Navidrome's voices also play YouTube). */
+  const plays = (t: Track) =>
+    !!provider && (provider.sources ?? [provider.id]).includes(t.provider);
   const clock = opts.clock ?? realClock;
   const random = opts.random ?? Math.random;
   const notify = opts.notify ?? (() => {});
@@ -107,7 +110,7 @@ export function createPlaybackController(opts: {
   function onError(e: import('../../shared/types.ts').AppError) {
     // REL-02: a stream that fails after its reloads is skipped, with a toast; with nothing after
     // it, the toast says what failed (Play asks for it again), never that it skipped.
-    if (e.code === 'navidrome.stream') {
+    if (e.code === 'navidrome.stream' || e.code === 'youtube.stream') {
       const next = Q.advance(queue.getState());
       notify(next ? strings.dock.skipped : e.userMessage);
       if (next) return load(next, true);
@@ -176,7 +179,7 @@ export function createPlaybackController(opts: {
       source.tracks,
       start,
       source.context,
-      provider.id,
+      source.tracks[0]?.provider ?? provider.id,
       s,
       random,
     );
@@ -216,7 +219,7 @@ export function createPlaybackController(opts: {
   function enqueue(q: QueueState) {
     if (q.now || !provider) return queue.setState(q);
     const cued = Q.advance(q);
-    if (cued) load({ ...cued, provider: provider.id }, false);
+    if (cued) load({ ...cued, provider: cued.now?.provider ?? provider.id }, false);
   }
 
   function seek(ms: number) {
@@ -249,7 +252,8 @@ export function createPlaybackController(opts: {
 
   /** Starts `tracks` at once. */
   function playList(tracks: Track[], index: number | 'shuffle', context: PlayContext) {
-    if (!provider || tracks[0]?.provider !== provider.id) return;
+    const first = tracks[0];
+    if (!provider || !first || !plays(first)) return;
     if (index === 'shuffle') {
       player.setState({ shuffle: true });
       index = Math.floor(random() * tracks.length);
@@ -258,7 +262,7 @@ export function createPlaybackController(opts: {
     source = { tracks, context };
     const { shuffle } = player.getState();
     load(
-      Q.startContext(queue.getState(), tracks, index, context, provider.id, shuffle, random),
+      Q.startContext(queue.getState(), tracks, index, context, first.provider, shuffle, random),
       true,
     );
   }

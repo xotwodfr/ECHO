@@ -1,7 +1,7 @@
 // Shared types (TECHNICAL_ARCHITECTURE.md §5.1, PLAYBACK_ARCHITECTURE.md §2 and §6,
 // VISUALIZER_SPEC.md §3.4, LYRICS_INTEGRATION.md §5). Written as specified there.
 
-export type ProviderId = 'navidrome';
+export type ProviderId = 'navidrome' | 'youtube';
 
 export interface Track {
   key: string; // `${provider}:${providerTrackId}`
@@ -121,6 +121,8 @@ export type Unsubscribe = () => void;
 
 export interface PlaybackProvider {
   readonly id: ProviderId;
+  /** The sources it plays; absent means its own id only. */
+  readonly sources?: readonly ProviderId[];
   readonly capabilities: ProviderCapabilities;
 
   connect(): Promise<void>;

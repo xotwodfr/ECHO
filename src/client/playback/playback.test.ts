@@ -16,6 +16,16 @@ const track = (n: number, durationMs = 200_000): Track => ({
   artwork: [],
 });
 const album = [1, 2, 3, 4, 5].map((n) => track(n));
+const ytTrack = (id: string): Track => ({
+  key: `youtube:${id}`,
+  provider: 'youtube',
+  id,
+  title: `Song ${id}`,
+  artists: [{ name: 'Artist' }],
+  album: { title: 'Album', key: `youtube:${id}` },
+  durationMs: 200_000,
+  artwork: [],
+});
 const ctx = { kind: 'album', id: 'a', title: 'Album' } as const;
 const titles = (ts: Track[]) => ts.map((t) => t.id);
 const random = () => Q.seededRandom(7);
@@ -335,6 +345,32 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect(notes).toContain('This track could not be played. Skipped to the next.');
     fail('navidrome.auth'); // other errors are shown, not skipped
     expect(s()).toMatchObject({ status: 'error', track: { id: 't2' } });
+  });
+
+  it('youtube.stream skips', () => {
+    const { clock, provider, c, s, notes } = setup();
+    Object.assign(provider, { sources: ['navidrome', 'youtube'] });
+    c.playList([ytTrack('a'), ytTrack('b')], 0, ctx);
+    clock.advance(100);
+    const { listeners } = provider as unknown as { listeners: { error: Set<(e: object) => void> } };
+    for (const cb of listeners.error)
+      cb({ code: 'youtube.stream', retriable: true, userMessage: 'x' });
+    expect(s().track?.id).toBe('b');
+    expect(notes).toContain('This track could not be played. Skipped to the next.');
+  });
+
+  it('plays a youtube list on a provider that lists youtube', () => {
+    const { provider, c } = setup();
+    Object.assign(provider, { sources: ['navidrome', 'youtube'] });
+    c.playList([ytTrack('a'), ytTrack('b')], 0, ctx);
+    expect(c.queue.getState().now?.key).toBe('youtube:a');
+    expect(c.queue.getState().provider).toBe('youtube');
+  });
+
+  it('refuses youtube on a provider without it', () => {
+    const { c } = setup();
+    c.playList([ytTrack('a')], 0, ctx);
+    expect(c.queue.getState().now).toBeNull();
   });
 
   // QA 2026-10-28: the last track failing said "Skipped to the next" with nothing to skip to.

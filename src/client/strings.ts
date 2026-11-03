@@ -116,6 +116,9 @@ export const strings = {
     missing: 'This playlist does not exist.',
     failedLoad: "Couldn't load this playlist.",
   },
+  youtube: {
+    unplayable: 'This song can’t play from YouTube.',
+  },
   radio: {
     go: 'Go to song radio',
     title: (t: string) => `${t} Radio`,

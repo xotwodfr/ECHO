@@ -75,6 +75,17 @@ const track = (n: number): Track => ({
   artwork: [],
 });
 
+const ytTrack = (id: string): Track => ({
+  key: `youtube:${id}`,
+  provider: 'youtube',
+  id,
+  title: `Song ${id}`,
+  artists: [{ name: 'A' }],
+  album: { title: 'Album', key: `youtube:${id}` },
+  durationMs: 200_000,
+  artwork: [],
+});
+
 const flush = () => new Promise<void>((r) => setTimeout(r, 0));
 
 describe('NavidromeProvider', () => {
@@ -173,5 +184,43 @@ describe('NavidromeProvider', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(a.paused).toBe(false); // playing on the reload
     expect(errors).toEqual([]);
+  });
+
+  it('streams youtube tracks through the youtube route', async () => {
+    void p.load(ytTrack('x'), { autoplay: true });
+    await flush();
+    expect(a.src).toMatch(/\/api\/v1\/youtube\/stream\/x$/);
+  });
+
+  it('pings youtube history, never the Navidrome scrobble', async () => {
+    const urls: string[] = [];
+    vi.stubGlobal('fetch', async (u: string) => {
+      urls.push(String(u));
+      return new Response('{}', { status: 200 });
+    });
+    const els = [a, new FakeAudio()] as unknown as [HTMLAudioElement, HTMLAudioElement];
+    p = new NavidromeProvider(els, { transcodeOffset: true, scrobble: true });
+    void p.load(ytTrack('x'), { autoplay: true });
+    a.fire('loadedmetadata');
+    await flush();
+    a.paused = false;
+    a.fire('playing');
+    a.currentTime = 150;
+    a.fire('timeupdate');
+    await flush();
+    expect(urls.filter((u) => u.includes('/youtube/played/x'))).toHaveLength(1);
+    expect(urls.some((u) => u.includes('/navidrome/rest/scrobble'))).toBe(false);
+  });
+
+  it('a youtube stream that fails for good is reported as youtube.stream', async () => {
+    vi.useFakeTimers();
+    void p.load(ytTrack('x'), { autoplay: true });
+    a.fail();
+    for (const wait of [500, 1000, 2000]) {
+      await vi.advanceTimersByTimeAsync(wait);
+      a.fail();
+    }
+    await vi.advanceTimersByTimeAsync(0);
+    expect(errors.map((e) => e.code)).toEqual(['youtube.stream']);
   });
 });
