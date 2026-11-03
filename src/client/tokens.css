@@ -148,6 +148,22 @@
      docs/superpowers/specs/2026-11-03-youtube-music-design.md, not Fluent. */
   --yt-red: #ff0033;
   --yt-dot: 8px;
+  --yt-ground: #030303; --yt-raised: #212121; --yt-raised-2: #383838;
+  --yt-hover: #ffffff1a; --yt-line: #ffffff1a; --yt-line-strong: #ffffff33;
+  --yt-text: #ffffff; --yt-muted: #aaaaaa; --yt-on-light: #030303; --yt-avatar: #7b3fa0;
+  --yt-font: Roboto, Arial, sans-serif;
+  --yt-type-h1: 700 2.25rem/1.15 var(--yt-font); --yt-type-h2: 700 1.5rem/1.25 var(--yt-font);
+  --yt-type-wordmark: 700 1.5rem/1 var(--yt-font);
+  --yt-type-title: 500 1rem/1.35 var(--yt-font); --yt-type-body: 400 1rem/1.4 var(--yt-font);
+  --yt-type-small: 400 0.875rem/1.35 var(--yt-font); --yt-type-button: 500 0.875rem/1 var(--yt-font);
+  --yt-type-strap: 400 0.8125rem/1.3 var(--yt-font); --yt-type-tab: 400 0.75rem/1.2 var(--yt-font);
+  --yt-bar-h: 64px; --yt-nav-w: 240px; --yt-nav-h: 48px; --yt-player-h: 72px; --yt-tabs-h: 56px;
+  --yt-search-w: 480px; --yt-search-h: 40px; --yt-chip-h: 36px; --yt-button-h: 36px;
+  --yt-gutter: 48px; --yt-gutter-phone: 16px; --yt-page-w: 1480px;
+  --yt-art-row: 48px; --yt-art-bar: 40px; --yt-art-hero: 264px; --yt-art-hero-phone: 200px;
+  --yt-card-min: 168px; --yt-card-phone: 144px; --yt-row-min: 300px;
+  --yt-r-art: 4px; --yt-r-card: 6px; --yt-r-ctl: 8px; --yt-progress: 2px; --yt-progress-hover: 4px;
+  --yt-np-art: min(56vh, 520px);
 
   /* motion */
   --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;

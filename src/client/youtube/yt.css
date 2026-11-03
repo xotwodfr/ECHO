@@ -1,0 +1,499 @@
+/* YouTube Music mode (YtFrame.tsx): YouTube Music's look, mockup A of the design
+   (docs/superpowers/specs/2026-11-03-youtube-music-design.md), not Fluent. Every value is a --yt-*
+   token (tokens.css, DS-01). No live blur (echo-no-glass), no glows. */
+
+.yt {
+  display: grid;
+  grid-template:
+    "bar bar" var(--yt-bar-h)
+    "nav main" minmax(0, 1fr)
+    "player player" auto
+    / var(--yt-nav-w) minmax(0, 1fr);
+  height: 100dvh;
+  background: var(--yt-ground);
+  color: var(--yt-text);
+  font: var(--yt-type-body);
+}
+
+.yt[data-compact] {
+  grid-template:
+    "bar" var(--yt-bar-h)
+    "main" minmax(0, 1fr)
+    "player" auto
+    "tabs" var(--yt-tabs-h)
+    / minmax(0, 1fr);
+}
+
+.yt a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.yt :focus-visible {
+  outline: var(--focus-ring) solid var(--yt-text);
+  outline-offset: var(--trace);
+}
+
+/* ---- the top bar ---- */
+
+.yt-bar {
+  grid-area: bar;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  border-bottom: var(--rule) solid var(--yt-line);
+  min-width: 0;
+}
+
+.yt-wordmark {
+  flex: none;
+  width: calc(var(--yt-nav-w) - var(--sp-4) * 2);
+  font: var(--yt-type-wordmark);
+}
+
+.yt[data-compact] .yt-wordmark {
+  width: auto;
+}
+
+.yt[data-compact] .yt-bar {
+  gap: var(--sp-3);
+}
+
+.yt-bar-end {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-left: auto;
+}
+
+.yt .mode-switch {
+  display: flex;
+  margin: 0;
+  padding: var(--sp-1);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: var(--yt-hover);
+}
+
+.yt .mode-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--yt-button-h);
+  padding: 0 var(--sp-4);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--yt-muted);
+  font: var(--yt-type-button);
+  cursor: pointer;
+}
+
+.yt .mode-btn[aria-pressed="true"] {
+  background: var(--yt-text);
+  color: var(--yt-on-light);
+}
+
+.yt .avatar {
+  background: var(--yt-avatar);
+  color: var(--yt-text);
+}
+
+/* Search, with suggestions under it. */
+.yt-search {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: var(--yt-search-w);
+}
+
+.yt-search form {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: var(--yt-search-h);
+  padding: 0 var(--sp-4);
+  border: var(--rule) solid var(--yt-line);
+  border-radius: var(--yt-r-ctl);
+  background: var(--yt-hover);
+  color: var(--yt-muted);
+}
+
+.yt-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--yt-text);
+  font: var(--yt-type-body);
+}
+
+.yt-search input:focus-visible {
+  outline: 0; /* the box shows focus (below) */
+}
+
+.yt-search form:focus-within {
+  border-color: var(--yt-line-strong);
+  background: var(--yt-raised);
+}
+
+.yt-suggest {
+  position: absolute;
+  top: calc(100% + var(--sp-1));
+  left: 0;
+  right: 0;
+  z-index: 3;
+  margin: 0;
+  padding: var(--sp-2) 0;
+  border-radius: var(--yt-r-ctl);
+  background: var(--yt-raised);
+  list-style: none;
+}
+
+.yt-suggest [role="option"] {
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--yt-text);
+  cursor: pointer;
+}
+
+.yt-suggest [role="option"]:hover,
+.yt-suggest [aria-selected="true"] {
+  background: var(--yt-hover);
+}
+
+/* ---- the menu: a left column on wide screens, tabs at the bottom on phones ---- */
+
+.yt-nav {
+  grid-area: nav;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  padding: var(--sp-3) var(--sp-2);
+  border-right: var(--rule) solid var(--yt-line);
+}
+
+.yt-nav-link {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5);
+  height: var(--yt-nav-h);
+  padding: 0 var(--sp-4);
+  border-radius: var(--yt-r-ctl);
+  font: var(--yt-type-body);
+}
+
+.yt-nav .yt-nav-link:hover,
+.yt-nav .yt-nav-link[aria-current="page"] {
+  background: var(--yt-hover);
+}
+
+.yt-tabs {
+  grid-area: tabs;
+  display: flex;
+  border-top: var(--rule) solid var(--yt-line);
+  background: var(--yt-raised);
+}
+
+.yt-tabs .yt-nav-link {
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--sp-1);
+  height: 100%;
+  padding: 0;
+  border-radius: 0;
+  color: var(--yt-muted);
+  font: var(--yt-type-tab);
+}
+
+.yt-tabs .yt-nav-link[aria-current="page"] {
+  color: var(--yt-text);
+}
+
+/* ---- the page ---- */
+
+.yt-main {
+  grid-area: main;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.yt-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-6);
+  max-width: var(--yt-page-w);
+  padding: var(--sp-5) var(--yt-gutter) var(--yt-gutter);
+}
+
+.yt[data-compact] .yt-page {
+  padding: var(--sp-4) var(--yt-gutter-phone) var(--yt-gutter);
+}
+
+.yt h1 {
+  margin: 0;
+  font: var(--yt-type-h1);
+}
+
+.yt h1:focus {
+  outline: 0;
+}
+
+.yt-shelf h2 {
+  margin: 0 0 var(--sp-4);
+  font: var(--yt-type-h2);
+}
+
+.yt-strap {
+  margin: 0 0 var(--sp-1);
+  color: var(--yt-muted);
+  font: var(--yt-type-strap);
+  text-transform: uppercase;
+}
+
+.yt-loading {
+  height: calc(var(--yt-art-hero) * 2);
+  border-radius: var(--yt-r-card);
+  background: var(--yt-hover);
+}
+
+.yt-empty {
+  color: var(--yt-muted);
+}
+
+.yt-signin {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-4);
+  padding: var(--sp-5) 0;
+  font: var(--yt-type-title);
+}
+
+/* Thumbnails: square, an artist's round. */
+.yt-thumb {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--thumb-w, var(--yt-art-row));
+  aspect-ratio: 1;
+  border-radius: var(--thumb-r, var(--yt-r-art));
+  object-fit: cover;
+  background: var(--yt-raised);
+  color: var(--yt-muted);
+}
+
+.yt-thumb[data-round] {
+  border-radius: 50%;
+}
+
+/* An album's, playlist's or artist's header. */
+.yt-hero {
+  --thumb-w: var(--yt-art-hero);
+  --thumb-r: var(--yt-r-card);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-5);
+}
+
+.yt-hero-text {
+  display: flex;
+  flex: 1 1 var(--yt-row-min);
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.yt-hero-sub,
+.yt-hero-desc {
+  margin: 0;
+  color: var(--yt-muted);
+}
+
+.yt-hero-desc {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font: var(--yt-type-small);
+}
+
+.yt-actions {
+  display: flex;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+/* Rows: songs. A grid of them on shelves, one column in a list. */
+.yt-rows {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--yt-row-min), 1fr));
+  gap: var(--sp-1) var(--sp-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.yt-rows--list {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.yt-row-play {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-1) var(--sp-2);
+  border: 0;
+  border-radius: var(--yt-r-ctl);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.yt-row-play:hover {
+  background: var(--yt-hover);
+}
+
+.yt-row-index {
+  flex: none;
+  width: var(--yt-art-row);
+  color: var(--yt-muted);
+  text-align: center;
+}
+
+.yt-row-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.yt-row-title,
+.yt-row-sub,
+.yt-card-title,
+.yt-card-sub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.yt-row-title {
+  font: var(--yt-type-title);
+}
+
+.yt-row[data-playing] .yt-row-title {
+  color: var(--yt-red);
+}
+
+.yt-row-sub,
+.yt-row-time,
+.yt-card-sub {
+  color: var(--yt-muted);
+  font: var(--yt-type-small);
+}
+
+.yt-row-time {
+  flex: none;
+}
+
+/* Cards: albums, playlists, artists, on a shelf that scrolls sideways. */
+.yt-cards {
+  display: grid;
+  grid-auto-columns: var(--yt-card-min);
+  grid-auto-flow: column;
+  gap: var(--sp-5);
+  margin: 0;
+  padding: 0 0 var(--sp-2);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  list-style: none;
+}
+
+.yt[data-compact] .yt-hero {
+  --thumb-w: var(--yt-art-hero-phone);
+}
+
+.yt[data-compact] .yt-cards {
+  grid-auto-columns: var(--yt-card-phone);
+  gap: var(--sp-3);
+}
+
+.yt-card {
+  --thumb-w: 100%;
+  --thumb-r: var(--yt-r-card);
+  scroll-snap-align: start;
+  min-width: 0;
+}
+
+.yt-card-open {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.yt-card-title {
+  font: var(--yt-type-title);
+}
+
+/* Buttons and chips. */
+.yt-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: var(--yt-button-h);
+  padding: 0 var(--sp-4);
+  border: var(--rule) solid var(--yt-line-strong);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--yt-text);
+  font: var(--yt-type-button);
+  cursor: pointer;
+}
+
+.yt-button:hover {
+  background: var(--yt-hover);
+}
+
+.yt-button--light,
+.yt-button--light:hover {
+  border-color: var(--yt-text);
+  background: var(--yt-text);
+  color: var(--yt-on-light);
+}
+
+.yt-tabs-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+}
+
+.yt-chip {
+  display: inline-flex;
+  align-items: center;
+  height: var(--yt-chip-h);
+  padding: 0 var(--sp-3);
+  border-radius: var(--yt-r-ctl);
+  background: var(--yt-hover);
+  font: var(--yt-type-button);
+}
+
+.yt-chip[aria-current="page"] {
+  background: var(--yt-text);
+  color: var(--yt-on-light);
+}

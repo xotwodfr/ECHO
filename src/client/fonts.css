@@ -29,3 +29,17 @@
   font-style: normal;
   font-display: swap;
 }
+
+/*
+ * YouTube Music mode's typeface (youtube/yt.css): Roboto, as YouTube Music uses. The latin subset of
+ * Google Fonts' variable Roboto (v51, weights 100–900 in one file), redistributed unmodified. SIL
+ * OFL 1.1, Copyright 2011 The Roboto Project Authors: see fonts/OFL-Roboto.txt.
+ */
+
+@font-face {
+  font-family: "Roboto";
+  src: url("./fonts/roboto-latin.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}

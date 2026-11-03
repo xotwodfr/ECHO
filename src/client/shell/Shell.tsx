@@ -387,11 +387,14 @@ function Frame() {
       if (!(slash || k) || (slash && isTextField(e.target as Element))) return;
       e.preventDefault();
       const visible = () =>
-        [...document.querySelectorAll<HTMLInputElement>('.search-field input[type="search"]')].find(
-          (el) => el.offsetParent !== null,
-        );
+        [
+          ...document.querySelectorAll<HTMLInputElement>(
+            '.search-field input[type="search"], .yt-search input[type="search"]',
+          ),
+        ].find((el) => el.offsetParent !== null);
       const field = visible();
       if (field) return field.focus();
+      if (document.querySelector('.yt')) return; // YouTube Music mode's search is always shown
       navigate({ view: 'search', q: '' });
       requestAnimationFrame(() => visible()?.focus());
     };
