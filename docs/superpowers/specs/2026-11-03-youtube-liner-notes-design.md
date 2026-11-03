@@ -1,6 +1,6 @@
 # YouTube Music mode, Liner notes — design
 
-Status: **draft** 2026-11-03, waiting for the owner's approval.
+Status: **approved** by the owner 2026-11-03.
 Builds on `2026-11-03-youtube-music-design.md` (live since 2026-11-03, `main` e8daea6), which this
 replaces where it speaks about the look.
 Mockups: https://claude.ai/artifact/8yTf8MWLVBU9TQqsDvfcWm, board **C** (Home) and board **F**
