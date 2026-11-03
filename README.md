@@ -14,8 +14,11 @@ lyric field in an audio-reactive room lit by the album cover.
   on Your Library → Wanted or from a search that finds nothing (which also links to the same
   search on YouTube Music); ECHO marks what the library gets, and plays it.
 - **YouTube Music (web):** a switch in the top bar turns ECHO into a YouTube Music app: its
-  Home, Explore, search and your own Library (sign in by pasting a cookie in Settings → Account),
-  YouTube Music's look and its full-screen player with Up next, Lyrics and Related. Songs play
+  Today, Explore, search and Your shelf (sign in by pasting a cookie in Settings → Account), in
+  its own magazine look, "Liner notes": paper and ink, serif titles, numbered tracklists, an ink
+  strip along the bottom and a paper full-screen player with Up next, Lyrics and Related. Its
+  Lyrics tab is ECHO's own lyrics view printed on paper, word by word from Spicy Lyrics and the
+  other word-synced sources (YouTube songs get Spotify ids through ListenBrainz). Songs play
   through ECHO's own player: the server fetches each song's audio with yt-dlp (anonymously, never
   with your cookie) and streams it like a Navidrome song. That breaks YouTube's terms; an admin
   can turn the mode off for everyone. yt-dlp updates itself daily in the data volume.
@@ -29,9 +32,9 @@ lyric field in an audio-reactive room lit by the album cover.
   into the lyrics view, queue rows glide); Settings → Motion tones it down or turns it off.
 
 Typefaces (web): **Segoe UI** where installed, otherwise **Selawik**, its open fallback, shipped
-for everything, lyrics included, and **Roboto** in YouTube Music mode (the Android app's are in
-`docs/ANDROID_CLIENT.md`). Licence:
-[AGPL-3.0](LICENSE). Fonts: SIL OFL 1.1 (`src/client/fonts/OFL-*.txt`).
+for everything, lyrics included, and **Fraunces** with **Instrument Sans** in YouTube Music mode
+(the Android app's are in `docs/ANDROID_CLIENT.md`). Licence: [AGPL-3.0](LICENSE). Fonts: SIL
+OFL 1.1 (`src/client/fonts/OFL-*.txt`).
 
 The design, plan and acceptance criteria live in [`docs/`](docs/README.md), the source of truth;
 each milestone's record, including what is still open, is in [`docs/reviews/`](docs/reviews/).

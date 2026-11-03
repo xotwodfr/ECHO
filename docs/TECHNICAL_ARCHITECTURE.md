@@ -405,8 +405,12 @@ Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`; plan:
   `range` parameter, 206 answers) and thumbnails; `routes.ts` is the API; `fake.ts` is the fixed
   catalogue development and E2E use (`ECHO_DEV_FIXTURES=1`), its audio from the mock Subsonic's
   `/videoplayback`.
-- **Client** (`src/client/youtube/`): a separate frame (`YtFrame.tsx`, YouTube Music's look, tokens
-  `--yt-*`, Roboto) under `/yt/...` routes; the switch is per device (`localStorage` `echo.mode`).
+- **Client** (`src/client/youtube/`): a separate frame (`YtFrame.tsx`, its own "Liner notes" look:
+  paper and ink, tokens `--ln-*`, Fraunces and Instrument Sans) under `/yt/...` routes; the switch is
+  per device (`localStorage` `echo.mode`). The full-screen player's Lyrics tab mounts ECHO's Stage
+  with `room={false}` (no WebGL room, contrast solver or depth blur) inside the `.ln-lyrics` scope,
+  which recolours the lyric field for paper. YouTube songs get Spotify ids for Spicy Lyrics from
+  ListenBrainz (`spotify_matches` scope `youtube`), the details always from the catalogue.
   YouTube songs are ordinary `Track`s (`provider: 'youtube'`) played by the same `<audio>` provider
   (`navidrome.ts` picks `/api/v1/youtube/stream/:id` for them), so the queue, Media Session and
   lyrics carry on when the switch flips. A queue holding YouTube songs is saved to
