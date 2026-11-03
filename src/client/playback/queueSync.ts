@@ -76,8 +76,6 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
     timer = null;
     // The session ended: whoever signs in next must not receive this queue (REL-05).
     if (sessionExpired.getState().expired) return;
-    // Spotify keeps its own queue across devices; the saved queue stays the library's.
-    if (c.queue.getState().provider === 'spotify') return;
     const p = c.player.getState();
     const body = {
       queue: trimQueue(c.queue.getState()),

@@ -99,7 +99,6 @@ export function QueueList({ scope }: { scope: string }) {
           </>
         )}
       </div>
-      {q.provider === 'spotify' && <p className="queue-note">{strings.spotify.queueNote}</p>}
       {/* Destructive, with confirmation (DESIGN_SYSTEM.md §9). */}
       {canEdit && total > 0 && (
         <Button variant="destructive" onClick={() => setClearing(true)}>

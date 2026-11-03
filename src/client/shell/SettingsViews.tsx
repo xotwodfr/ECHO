@@ -77,13 +77,6 @@ export function PreferencesSection() {
           hint={t.perDevice}
           onChange={(v) => save('playback', 'quality', v)}
         />
-        <Choice
-          label={t.defaultProvider}
-          value={p.playback.defaultProvider}
-          options={['navidrome', 'spotify'] as const}
-          names={(v) => (v === 'navidrome' ? 'Navidrome' : 'Spotify')}
-          onChange={(v) => save('playback', 'defaultProvider', v)}
-        />
         <Toggle
           label={t.scrobble}
           checked={p.playback.scrobble}

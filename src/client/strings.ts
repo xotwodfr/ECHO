@@ -242,7 +242,6 @@ export const strings = {
       '192': '192 kbps',
       '128': '128 kbps',
     },
-    defaultProvider: 'Default service',
     scrobble: 'Scrobble plays to Navidrome',
     autoplay: 'Autoplay',
     autoplayHint: 'When your music ends, similar songs play. This device only.',

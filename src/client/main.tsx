@@ -6,23 +6,18 @@ import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
 import { createNavidromeLibrary } from './library-navidrome.ts';
-import { createSpotifyLibrary } from './library-spotify.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
-import { SpotifyProvider } from './playback/spotify.ts';
 import { loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { startCollections } from './shell/collections.ts';
 import { startHistory } from './shell/mixes.ts';
 import { pageTransition } from './shell/page-transition.ts';
-import { confirmReplace } from './shell/ReplaceQueue.tsx';
 import { startAutoplay } from './shell/radio.ts';
 import { Shell } from './shell/Shell.tsx';
-import { spotifyStatus } from './shell/SpotifyViews.tsx';
-import { type Libraries, setSource, startSource } from './source.ts';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
 import { toastStore } from './ui/logic.ts';
 import { motionLevel } from './ui/motion.ts';
@@ -89,27 +84,7 @@ const ownLibrary = session?.status === 'signedIn' && session.navidrome;
 if (session?.status === 'signedIn') await loadPrefs();
 const prefs = () => prefsStore.getState();
 
-// Spotify joins once the user has connected it (M7); its SDK loads on the first Spotify play.
-const spotifyState =
-  session?.status === 'signedIn' ? await spotifyStatus().catch(() => null) : null;
-const spotify =
-  spotifyState?.connection?.status === 'connected'
-    ? new SpotifyProvider({ gates: spotifyState.gates })
-    : null;
-// One library at a time (source.ts): both kept, the switch (Settings → Default service) picks.
-const libraries: Libraries = {
-  navidrome: ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null),
-  spotify: spotify ? createSpotifyLibrary() : null,
-};
-startSource(libraries, store, {
-  remembered: () => prefs().playback.defaultProvider,
-  remember: (s) => void setPref('playback', 'defaultProvider', s).catch(() => undefined),
-});
-prefsStore.subscribe(
-  (s, prev) =>
-    s.playback.defaultProvider !== prev.playback.defaultProvider &&
-    setSource(s.playback.defaultProvider),
-);
+const library = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null);
 
 const controller = createPlaybackController({
   provider: ownLibrary
@@ -124,8 +99,6 @@ const controller = createPlaybackController({
       })
     : (fixtures?.createFixtureProvider() ?? null),
   replayGain: () => prefs().playback.replayGain,
-  spotify,
-  confirmReplace,
   notify: (message) => toastStore.getState().show(message),
   features,
 });
@@ -139,7 +112,7 @@ controller.player.subscribe(
 // Lyrics: the guide tracks sing their fixture documents (LYRICS_EXPERIENCE.md §16) until the
 // lyrics loader arrives (M6).
 // A signed-in user with Navidrome gets them from the server (M6).
-if (ownLibrary || spotify) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
+if (ownLibrary) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
 else {
   const showLyrics = (track: ReturnType<typeof controller.player.getState>['track']) => {
     const doc = fixtures?.fixtureLyrics(track) ?? null;
@@ -160,8 +133,8 @@ if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().sho
 
 // Playlists and hearts for every page (one fetch, refreshed after changes), and Autoplay: similar
 // songs when the music runs out.
-startCollections(libraries);
-startAutoplay(controller, libraries.navidrome, () => prefs().playback.autoplay);
+startCollections(library);
+startAutoplay(controller, library, () => prefs().playback.autoplay);
 startHistory(controller, !!ownLibrary);
 
 // The album's palette on :root (VISUALIZER_SPEC.md §6.4); deterministic frames show it at once.
@@ -186,7 +159,7 @@ if (root)
       {unreachable ? (
         <ServerUnreachable />
       ) : (
-        <Shell store={store} controller={controller} libraries={libraries} />
+        <Shell store={store} controller={controller} library={library} />
       )}
     </AppErrorBoundary>,
   );

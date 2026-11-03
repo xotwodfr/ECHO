@@ -16,7 +16,6 @@ import { Button, Field } from '../ui/controls.tsx';
 import { Sheet } from '../ui/overlays.tsx';
 import { SectionLoading } from '../ui/states.tsx';
 import { AccountBlocks } from './AccountViews.tsx';
-import { SpotifyConnection } from './SpotifyViews.tsx';
 
 // Sign-in, first-start setup and the Account section (SETTINGS_AND_SECURITY.md §4, §6.1, §7.3). A
 // successful sign-in or connection reloads the page: the playback provider is chosen at start.
@@ -243,7 +242,6 @@ export function AccountSection() {
       )}
       <AccountBlocks />
       <NavidromeConnection />
-      <SpotifyConnection />
     </>
   );
 }

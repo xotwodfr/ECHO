@@ -1,71 +1,39 @@
-import { useEffect } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import type { Track } from '../../shared/types.ts';
-import type { Album, ArtistRef, Playlist, StarKind, Starred } from '../library.ts';
-import { type Libraries, type Source, sourceOf, sourceStore } from '../source.ts';
-import { spotifyScopes } from '../spotify/api.ts';
+import type { Album, ArtistRef, Library, Playlist, StarKind, Starred } from '../library.ts';
 import { strings } from '../strings.ts';
 import { toastStore } from '../ui/logic.ts';
 
 // The user's playlists and everything they have hearted, shared by Your Library, the pages and
-// every heart button: one fetch per source at start, refreshed after a change, hearts updated at
-// once and put back if the server refuses. Kept per source (Navidrome, Spotify): pages show the
-// active source's; a heart goes to its item's own source, whichever is active.
+// every heart button: one fetch at start, refreshed after a change, hearts updated at once and put
+// back if the server refuses.
 
-interface Lists {
+interface Collections {
   playlists: Playlist[] | 'error' | null;
   starred: Starred | 'error' | null;
 }
-type Collections = Record<Source, Lists>;
 
-const NONE: Lists = { playlists: null, starred: null };
-export const collections = createStore<Collections>()(() => ({ navidrome: NONE, spotify: NONE }));
+export const collections = createStore<Collections>()(() => ({ playlists: null, starred: null }));
 
-let libraries: Libraries = { navidrome: null, spotify: null };
-const active = () => sourceStore.getState().source;
-const put = (s: Source, patch: Partial<Lists>) =>
-  collections.setState((c) => ({ [s]: { ...c[s], ...patch } }) as Partial<Collections>);
+let library: Library | null = null;
 
-const loaded = new Set<Source>();
-
-/** A source's playlists and hearts, fetched once, the first time something needs them. */
-export function loadCollections(s: Source) {
-  if (!libraries[s] || loaded.has(s)) return;
-  loaded.add(s);
-  void refreshPlaylists(s);
-  void refreshStarred(s);
+export function startCollections(lib: Library | null) {
+  library = lib;
+  void refreshPlaylists();
+  void refreshStarred();
 }
 
-export function startCollections(libs: Libraries) {
-  libraries = libs;
-  loaded.clear();
-  loadCollections('navidrome');
-  // Spotify's cost a Development Mode quota that is shared and small (every liked song is a call
-  // per 50, on every page load): fetched when its source is open, or when a heart for one of its
-  // items is on screen (useStarred), not for a Navidrome page that never shows any of it.
-  const openSpotify = () =>
-    sourceStore.getState().source === 'spotify' && loadCollections('spotify');
-  sourceStore.subscribe(openSpotify);
-  openSpotify();
+export async function refreshPlaylists() {
+  if (!library?.playlists) return collections.setState({ playlists: [] });
+  const playlists = await library.playlists().catch(() => 'error' as const);
+  collections.setState({ playlists });
 }
 
-/** A source, or the active one: also when called as an event handler (`onRetry={refreshPlaylists}`). */
-const sourceOrActive = (s: unknown): Source =>
-  s === 'navidrome' || s === 'spotify' ? s : active();
-
-export async function refreshPlaylists(source?: Source) {
-  const s = sourceOrActive(source);
-  const lib = libraries[s];
-  if (!lib?.playlists) return put(s, { playlists: [] });
-  put(s, { playlists: await lib.playlists().catch(() => 'error' as const) });
-}
-
-export async function refreshStarred(source?: Source) {
-  const s = sourceOrActive(source);
-  const lib = libraries[s];
-  if (!lib?.starredAll) return put(s, { starred: EMPTY });
-  put(s, { starred: await lib.starredAll().catch(() => 'error' as const) });
+export async function refreshStarred() {
+  if (!library?.starredAll) return collections.setState({ starred: EMPTY });
+  const starred = await library.starredAll().catch(() => 'error' as const);
+  collections.setState({ starred });
 }
 
 const EMPTY: Starred = { tracks: [], albums: [], artists: [] };
@@ -73,70 +41,42 @@ const LIST = { track: 'tracks', album: 'albums', artist: 'artists' } as const;
 
 type Item = { track: Track; album: Album; artist: ArtistRef };
 
-/** An item's own source: a track by its provider, the rest by their id (Spotify's are prefixed). */
-export function sourceOfItem<K extends StarKind>(kind: K, item: Item[K]): Source {
-  if (kind === 'track') return (item as Track).provider === 'spotify' ? 'spotify' : 'navidrome';
-  return sourceOf(item.id);
-}
-
-/**
- * Whether `source`'s library can heart (the active one when not given). Spotify's hearts wait until
- * the connection has the scopes for them (a reconnect, SpotifyViews.tsx).
- */
-export const canStar = (source: Source = active()) =>
-  !!libraries[source]?.setStar &&
-  (source !== 'spotify' || spotifyScopes.getState().missing.length === 0);
+export const canStar = () => !!library?.setStar;
 
 /** Heart or un-heart; the heart changes at once and changes back if the server says no. */
 export async function setStar<K extends StarKind>(kind: K, item: Item[K], on: boolean) {
-  const s = sourceOfItem(kind, item);
-  const lib = libraries[s];
-  if (!lib?.setStar) return;
-  loadCollections(s);
-  const before = collections.getState()[s].starred;
+  if (!library?.setStar) return;
+  const before = collections.getState().starred;
   const now = before === 'error' || !before ? EMPTY : before;
   const list = now[LIST[kind]] as Item[K][];
   const next = on
     ? [item, ...list.filter((x) => x.id !== item.id)]
     : list.filter((x) => x.id !== item.id);
-  put(s, { starred: { ...now, [LIST[kind]]: next } });
+  collections.setState({ starred: { ...now, [LIST[kind]]: next } });
   toastStore.getState().show(on ? strings.liked.added : strings.liked.removed);
   try {
-    await lib.setStar(kind, item.id, on);
+    await library.setStar(kind, item.id, on);
   } catch {
-    put(s, { starred: before });
+    collections.setState({ starred: before });
     toastStore.getState().show(strings.liked.failed);
   }
 }
 
-/** Whether an item is hearted, in `source` (by default: a prefixed id's, else Navidrome). */
-export function useStarred<K extends StarKind>(
-  kind: K,
-  id: string | undefined,
-  source: Source = id ? sourceOf(id) : 'navidrome',
-): boolean {
-  useEffect(() => loadCollections(source), [source]);
-  return useStore(collections, (c) => {
-    const st = c[source].starred;
-    return id && st !== null && st !== 'error' ? st[LIST[kind]].some((x) => x.id === id) : false;
-  });
+export function useStarred<K extends StarKind>(kind: K, id: string | undefined): boolean {
+  return useStore(collections, (s) =>
+    id && s.starred !== null && s.starred !== 'error'
+      ? s.starred[LIST[kind]].some((x) => x.id === id)
+      : false,
+  );
 }
 
-const useActive = () => useStore(sourceStore, (s) => s.source);
-export const usePlaylists = () => {
-  const s = useActive();
-  return useStore(collections, (c) => c[s].playlists);
-};
-export const useStarredAll = () => {
-  const s = useActive();
-  return useStore(collections, (c) => c[s].starred);
-};
+export const usePlaylists = () => useStore(collections, (s) => s.playlists);
+export const useStarredAll = () => useStore(collections, (s) => s.starred);
 
 /** A new playlist ("My Playlist #n", as Spotify), optionally with tracks; resolves with its id. */
 export async function createPlaylist(tracks: Track[] = []): Promise<string | null> {
-  const library = libraries[active()];
   if (!library?.createPlaylist) return null;
-  const have = collections.getState()[active()].playlists;
+  const have = collections.getState().playlists;
   const n = (Array.isArray(have) ? have.length : 0) + 1;
   try {
     const id = await library.createPlaylist(
@@ -152,7 +92,6 @@ export async function createPlaylist(tracks: Track[] = []): Promise<string | nul
 }
 
 export async function addToPlaylist(playlist: Playlist, tracks: Track[]) {
-  const library = libraries[active()];
   if (!library?.updatePlaylist) return;
   try {
     await library.updatePlaylist(playlist.id, { add: tracks.map((t) => t.id) });

@@ -1,15 +1,15 @@
 import { lazy, Suspense, type UIEvent, useCallback, useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
+import type { Library } from '../library.ts';
 import { PlaybackContext, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
-import { logout, sessionStore } from '../session.ts';
-import { type Libraries, setSource, sourceStore } from '../source.ts';
+import { sessionStore } from '../session.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
 import { useSlide } from '../ui/motion.ts';
-import { Menu, ToastRegion } from '../ui/overlays.tsx';
+import { ToastRegion } from '../ui/overlays.tsx';
 import {
   LIBRARY_TABS,
   type LibraryTab,
@@ -42,10 +42,8 @@ import { Mica } from './Mica.tsx';
 import { MixView, WrappedView } from './MixViews.tsx';
 import { PlaylistPicker } from './PlaylistPicker.tsx';
 import { panels } from './panels.ts';
-import { ReplaceQueueDialog } from './ReplaceQueue.tsx';
 import { RightPanel } from './RightPanel.tsx';
 import { PreferencesSection } from './SettingsViews.tsx';
-import { SourceSwitch } from './SourceSwitch.tsx';
 import { Stage } from './Stage.tsx';
 import { StageChrome, StageContent } from './StageViews.tsx';
 
@@ -107,7 +105,6 @@ function TopBar({ route }: { route: Route }) {
         >
           <Icon name="home" solid={home} />
         </Link>
-        <SourceSwitch />
         <SearchField className="topbar-search" />
       </nav>
       <AccountMenu />
@@ -319,8 +316,6 @@ function Frame() {
   const route = useView((s) => s.route);
   const navigate = useView((s) => s.navigate);
   const playing = usePlayer((p) => p.status === 'playing');
-  // Spotify's artwork and metadata must stay visible while it plays (DESIGN_SYSTEM.md §8).
-  const attribution = usePlayer((p) => p.capabilities.requiresAttribution === 'spotify');
   const chromeHidden = useStore(stageChrome, (s) => s.hidden);
   const right = useStore(panels, (s) => s.right);
   useChromeIdle(route.view === 'listen' && playing);
@@ -405,7 +400,6 @@ function Frame() {
       data-view={route.view}
       data-right={!listen && right ? right : undefined}
       data-chrome={listen && chromeHidden ? 'hidden' : undefined}
-      data-attribution={attribution || undefined}
     >
       <Mica />
       {!listen && <TopBar route={route} />}
@@ -418,7 +412,6 @@ function Frame() {
       {!listen && <TabBar route={route} />}
       <ToastRegion />
       <PlaylistPicker />
-      <ReplaceQueueDialog />
       <SessionExpiredSheet />
     </div>
   );
@@ -427,13 +420,11 @@ function Frame() {
 export function Shell(props: {
   store: ViewStore;
   controller: PlaybackController;
-  libraries: Libraries;
+  library: Library | null;
 }) {
   return (
     <ViewContext.Provider value={props.store}>
-      <PlaybackContext.Provider
-        value={{ controller: props.controller, libraries: props.libraries }}
-      >
+      <PlaybackContext.Provider value={{ controller: props.controller, library: props.library }}>
         <Frame />
       </PlaybackContext.Provider>
     </ViewContext.Provider>

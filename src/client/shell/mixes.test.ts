@@ -72,10 +72,9 @@ describe('startHistory', () => {
     expect(posted.map((p) => p.track.id)).toEqual(['long', 'long']);
   });
 
-  it('leaves out short songs, paused songs and Spotify', async () => {
+  it('leaves out short songs and paused songs', async () => {
     await at(song('jingle', 20_000), 15_000);
     await at(song('paused', 200_000), 150_000, 'paused');
-    await at(song('sp', 200_000, 'spotify'), 150_000);
     expect(posted).toEqual([]);
   });
 });

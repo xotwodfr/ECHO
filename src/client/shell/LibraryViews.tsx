@@ -1,26 +1,16 @@
-import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
-import { useStore } from 'zustand';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import {
   ALBUM_SORTS,
   type Album,
   type ArtistInfo,
   albumDurationMs,
-  type Genre,
   type PlaylistDetail,
 } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
-import { sourceStore } from '../source.ts';
 import { strings } from '../strings.ts';
-import { Button, buttonClass, Field, IconButton, ProviderMark } from '../ui/controls.tsx';
+import { Button, buttonClass, Field, IconButton } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
 import { formatTime, toastStore } from '../ui/logic.ts';
 import {
@@ -156,13 +146,12 @@ function useTrackMenu() {
   const library = useLibrary();
   const navigate = useView((s) => s.navigate);
   return (t: Track, extra: MenuItem[] = []): MenuItem[] => {
-    const nav = t.provider === 'navidrome';
     return [
-      ...(nav && library?.updatePlaylist
+      ...(library?.updatePlaylist
         ? [{ label: strings.playlist.addTo, onSelect: () => openPicker([t]) }]
         : []),
       ...extra,
-      ...(nav && library?.similarSongs
+      ...(library?.similarSongs
         ? [{ label: strings.radio.go, onSelect: () => void startRadio(c, library, t) }]
         : []),
       { label: strings.album.playNext, onSelect: () => c.playNext([t], t.title) },
@@ -262,7 +251,6 @@ export function useAlbumMenu() {
     return full?.tracks ?? [];
   };
   return (a: Album): MenuItem[] => {
-    const nav = !a.id.startsWith('spotify:');
     const saved = starred && starred !== 'error' && starred.albums.some((x) => x.id === a.id);
     return [
       {
@@ -273,7 +261,7 @@ export function useAlbumMenu() {
         label: s.addToQueue,
         onSelect: () => void tracks(a).then((t) => t.length && c.addToQueue(t, a.title)),
       },
-      ...(nav && library?.updatePlaylist
+      ...(library?.updatePlaylist
         ? [
             {
               label: strings.playlist.addTo,
@@ -281,7 +269,7 @@ export function useAlbumMenu() {
             },
           ]
         : []),
-      ...(nav && library?.setStar
+      ...(library?.setStar
         ? [
             {
               label: saved ? strings.liked.removeAlbum : strings.liked.saveAlbum,
@@ -542,7 +530,7 @@ export function AlbumView({ id }: { id: string }) {
             label={s.more(a.title)}
             items={[
               { label: s.addToQueue, onSelect: () => c.addToQueue(a.tracks, a.title) },
-              ...(library?.updatePlaylist && !a.id.startsWith('spotify:')
+              ...(library?.updatePlaylist
                 ? [{ label: strings.playlist.addTo, onSelect: () => openPicker(a.tracks) }]
                 : []),
               ...(a.artistId
@@ -613,12 +601,6 @@ export function ArtistView({ id }: { id: string }) {
   const top: Track[] | null = Array.isArray(popular) ? popular : null;
   const first = typeof artist === 'object' && artist ? artist.albums[0] : undefined;
   const s = strings.artist;
-  // Spotify has no artist top tracks for this app: the user's own liked songs by them instead.
-  const starredAll = useStarredAll();
-  const liked =
-    !library?.topSongs && starredAll && starredAll !== 'error'
-      ? starredAll.tracks.filter((t) => t.artists.some((a) => a.id === id))
-      : [];
   const { live, playing } = useContextPlaying((x) => x?.kind === 'artist' && x.id === id);
   const following = useStarred('artist', id);
   const shown = top?.length ? top : null;
@@ -703,14 +685,6 @@ export function ArtistView({ id }: { id: string }) {
             )}
           </section>
         )}
-        {liked.length > 0 && (
-          <section className="shelf" aria-labelledby="artist-liked">
-            <h2 id="artist-liked">{s.likedBy}</h2>
-            <TrackList label={s.likedBy}>
-              <Rows tracks={liked} context={ctx} numbered art />
-            </TrackList>
-          </section>
-        )}
         <section className="shelf" aria-labelledby="artist-discography">
           <h2 id="artist-discography">{s.discography}</h2>
           <Albums
@@ -777,7 +751,7 @@ export function PlaylistView({ id }: { id: string }) {
     library?.playlist ? ((await library.playlist(id)) ?? null) : null,
   );
   const load = () => void reload();
-  const firstAlbum = typeof p === 'object' && p ? p.entries[0]?.album.key : undefined;
+  const _firstAlbum = typeof p === 'object' && p ? p.entries[0]?.album.key : undefined;
   const { live, playing } = useContextPlaying((x) => x?.kind === 'playlist' && x.id === id);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -1067,11 +1041,7 @@ const genreColour = (name: string) =>
 
 function BrowseAll() {
   const library = useLibrary();
-  // Genres are Navidrome's: per source, so Spotify mode never shows them from the cache.
-  const source = useStore(sourceStore, (x) => x.source);
-  const [v, reload] = useFresh(`genres:${source}`, async () =>
-    library?.genres ? library.genres() : [],
-  );
+  const [v, reload] = useFresh('genres', async () => (library?.genres ? library.genres() : []));
   const genres = v === 'loading' ? null : v;
   const load = () => void reload();
   if (genres === null) return <GridLoading count={8} />;
@@ -1125,7 +1095,6 @@ export function GenreView({ name }: { name: string }) {
 }
 
 const RESULTS = 6; // per group (PRODUCT_SPEC.md §6.4)
-const PROVIDER_NAMES = { navidrome: 'Navidrome', spotify: 'Spotify' } as const;
 
 /**
  * Search: Browse all (genre cards) until something is typed, then the results. One live region
@@ -1156,8 +1125,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
   const c = usePlayback();
   const s = strings.search;
   // A server library searches on the server, 200 ms after typing stops (PRODUCT_SPEC.md §6.4).
-  // Each answer names the library that gave it: after the switch flips, the other source's results
-  // are never shown while the new search runs.
+  // Each answer names the library that gave it, so a slow answer for another library is dropped.
   const [remote, setRemote] = useState<
     (Found & { q: string; from: unknown; failed?: boolean }) | null
   >(null);
@@ -1187,19 +1155,14 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
         ? remote
         : null
       : (library?.search(q) ?? { tracks: [], albums: [] });
-  // Grouped by provider, Navidrome first, each group marked when both appear (SRCH-02).
-  const groups = (['navidrome', 'spotify'] as const)
-    .map((provider) => ({
-      provider,
-      tracks: (found?.tracks ?? []).filter((t) => t.provider === provider).slice(0, RESULTS),
-      albums: (found?.albums ?? [])
-        .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
-        .slice(0, RESULTS),
-      artists: (found?.artists ?? [])
-        .filter((a) => a.id.startsWith('spotify:') === (provider === 'spotify'))
-        .slice(0, RESULTS),
-    }))
-    .filter((g) => g.tracks.length || g.albums.length || g.artists.length);
+  const groups = [
+    {
+      provider: 'navidrome' as const,
+      tracks: (found?.tracks ?? []).slice(0, RESULTS),
+      albums: (found?.albums ?? []).slice(0, RESULTS),
+      artists: (found?.artists ?? []).slice(0, RESULTS),
+    },
+  ].filter((g) => g.tracks.length || g.albums.length || g.artists.length);
   const shown = groups.reduce(
     (n, g) => n + g.tracks.length + g.albums.length + g.artists.length,
     0,
@@ -1219,9 +1182,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
       />
     );
   if (!shown) return <p className="empty">{s.none(q)}</p>;
-  const marked = groups.length > 1;
   return groups.map((g, gi) => {
-    const mark = marked ? <ProviderMark>{PROVIDER_NAMES[g.provider]}</ProviderMark> : null;
     const top =
       gi === 0
         ? g.artists[0]
@@ -1268,9 +1229,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
             )}
             {g.tracks.length > 0 && (
               <section className="results" aria-labelledby={`results-tracks-${g.provider}`}>
-                <h2 id={`results-tracks-${g.provider}`}>
-                  {s.songs} {mark}
-                </h2>
+                <h2 id={`results-tracks-${g.provider}`}>{s.songs}</h2>
                 <TrackList label={s.tracks}>
                   <Rows tracks={g.tracks.slice(0, 4)} context={{ kind: 'search', title: q }} art />
                 </TrackList>
@@ -1298,9 +1257,7 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
         )}
         {g.albums.length > 0 && (
           <section className="results" aria-labelledby={`results-albums-${g.provider}`}>
-            <h2 id={`results-albums-${g.provider}`}>
-              {s.albums} {mark}
-            </h2>
+            <h2 id={`results-albums-${g.provider}`}>{s.albums}</h2>
             <Albums albums={g.albums} />
           </section>
         )}

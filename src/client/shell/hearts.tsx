@@ -1,16 +1,12 @@
 import type { AnimationEvent } from 'react';
-import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { Album } from '../library.ts';
-import { sourceOf } from '../source.ts';
-import { spotifyScopes } from '../spotify/api.ts';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
-import { canStar, setStar, sourceOfItem, useStarred } from './collections.ts';
+import { canStar, setStar, useStarred } from './collections.ts';
 
-// Spotify's heart (a song) and save-to-library check (an album): outline when not saved, filled
-// when saved. Each saves to its item's own source (a Navidrome star, Spotify's library), whichever
-// source is active.
+// A heart (a song) and a save-to-library check (an album): outline when not saved, filled when
+// saved (a Navidrome star).
 
 // A heart pops when it is clicked (main.css, data-pop), never when a page shows it already saved.
 const pop = (el: HTMLElement, on: boolean) => {
@@ -21,10 +17,8 @@ const popped = (e: AnimationEvent<HTMLButtonElement>) => {
 };
 
 export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'md' | 'lg' }) {
-  const source = sourceOfItem('track', t);
-  const on = useStarred('track', t.id, source);
-  useStore(spotifyScopes); // re-render once the connection's scopes are known
-  if (!canStar(source)) return null;
+  const on = useStarred('track', t.id);
+  if (!canStar()) return null;
   return (
     <button
       type="button"
@@ -45,8 +39,7 @@ export function HeartButton({ track: t, size = 'md' }: { track: Track; size?: 'm
 
 export function SaveAlbumButton({ album: a }: { album: Album }) {
   const on = useStarred('album', a.id);
-  useStore(spotifyScopes);
-  if (!canStar(sourceOf(a.id))) return null;
+  if (!canStar()) return null;
   return (
     <button
       type="button"

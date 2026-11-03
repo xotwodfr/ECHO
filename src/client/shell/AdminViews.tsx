@@ -4,10 +4,10 @@ import { strings } from '../strings.ts';
 import { Button, Field, Pill } from '../ui/controls.tsx';
 import { ConfirmDialog } from '../ui/overlays.tsx';
 import { BlockError, SectionLoading } from '../ui/states.tsx';
-import { AdminServerSection, SpotifyMatchingSection } from './SpotifyViews.tsx';
+import { AdminServerSection, SpotifyMatchingSection } from './LyricsAdminViews.tsx';
 
 // Settings → Admin (SETTINGS_AND_SECURITY.md §4.2, §7.2, §7.3; IMPLEMENTATION_PLAN.md M8 task 3):
-// Server (the Spotify app, gates, Spicy key, "require TOTP for all"), Users & invites, Audit log.
+// Server (the Spicy key, library matching, "require TOTP for all"), Users & invites, Audit log.
 
 const t = strings.admin;
 
@@ -20,7 +20,7 @@ interface User {
   createdAt: number;
   lastSeenAt: number | null;
   lockedForMs: number;
-  connections: { navidrome: boolean; spotify: boolean };
+  connections: { navidrome: boolean };
 }
 interface Invite {
   id: string;
@@ -102,7 +102,6 @@ function UsersSection() {
                   u.totpEnabled ? t.totpOn : t.totpOff,
                   u.lastSeenAt ? t.lastSeen(when(u.lastSeenAt)) : t.neverSeen,
                   u.connections.navidrome && 'Navidrome',
-                  u.connections.spotify && 'Spotify',
                 ]
                   .filter(Boolean)
                   .join(' · ')}

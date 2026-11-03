@@ -20,9 +20,6 @@ export const FAKE_CAPABILITIES: ProviderCapabilities = {
   canRemoveFromQueue: true,
   canCrossfade: false,
   audioFeatures: false, // no audio, so no analyser
-  artPaletteAllowed: true,
-  syncedLyricsAllowed: true,
-  requiresAttribution: null,
 };
 
 type Events = { state: ProviderState; ended: undefined; error: AppError };

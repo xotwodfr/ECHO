@@ -134,7 +134,6 @@
   --tile-play: 48px; --search-h: 48px; --menu-item-h: 40px; --chip-h: 32px;
   --tile-min: 180px; --art-row: 40px; --art-list: 48px; --art-dock: 56px; --art-detail: 232px;
   --art-cover-max: 560px; --art-np: 100%; --art-shortcut: 64px; --art-shortcut-phone: 56px;
-  --spotify-logo: 80px; /* Spotify Design Guidelines: the full logo is never under 70px wide */
   --scrub-track: 4px; --scrub-thumb: 20px; --scrub-thumb-ring: 5px; --scrub-thumb-ring-hover: 4px; --scrub-hit: 24px; --volume-w: 84px;
   --toggle-w: 32px; --toggle-h: 18px; --toggle-knob: 14px;
   --tile-min-compact: 140px;

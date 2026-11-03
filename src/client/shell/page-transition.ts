@@ -16,15 +16,10 @@ import { type Route, routePath } from '../view.ts';
 
 const motionFull = () => document.documentElement.dataset.motion === 'full';
 
-// Spotify's artwork stays in its original form (Design Guidelines, PLAYBACK_ARCHITECTURE.md):
-// it never flies or scales, it only fades with its page.
-const SPOTIFY_TILE = '.tile[data-provider="spotify"]';
-const spotifyPlaying = () => !!document.querySelector('.shell[data-attribution]');
-
 /** The cover of a card on screen that leads to `path`: where a page's header cover flies back to. */
 export function cardFor(root: ParentNode, path: string): HTMLElement | null {
   for (const link of root.querySelectorAll<HTMLAnchorElement>('.tile .tile-link')) {
-    if (link.getAttribute('href') !== path || link.closest(SPOTIFY_TILE)) continue;
+    if (link.getAttribute('href') !== path) continue;
     const art = link.closest('.tile')?.querySelector<HTMLElement>('.art');
     const r = art?.getBoundingClientRect();
     if (art && r && r.width > 0 && r.bottom > 0 && r.top < window.innerHeight) return art;
@@ -48,7 +43,7 @@ export function pageTransition(update: () => void, from: Route, to: Route) {
   if (stage) return stageTransition(update, to.view === 'listen');
   if (!document.startViewTransition) return update();
   const tile = lastClicked?.closest('.tile');
-  const card = tile?.matches(SPOTIFY_TILE) ? null : tile?.querySelector<HTMLElement>('.art');
+  const card = tile?.querySelector<HTMLElement>('.art');
   lastClicked = null;
   const named: HTMLElement[] = [];
   const name = (el: HTMLElement, n: string) => {
@@ -112,7 +107,7 @@ function stageTransition(update: () => void, opening: boolean) {
         fill: 'forwards',
       });
       const big = document.querySelector<HTMLElement>('.np-side .art--cover');
-      if (from && big && !spotifyPlaying()) ends.push(fly(from, big, timing('spring')));
+      if (from && big) ends.push(fly(from, big, timing('spring')));
       const rising = document.querySelectorAll<HTMLElement>('.np-titles, .np-progress, .ly-area');
       rising.forEach((el, i) => {
         const delay = { delay: (i + 1) * 3 * tokenMs('--stagger') }; // after the cover sets off
@@ -150,8 +145,8 @@ function stageTransition(update: () => void, opening: boolean) {
         }),
       );
     }
-    if (big && to && !spotifyPlaying()) ends.push(fly(big, to, timing('exit-big')));
-    // The page comes back up into place: moving, never scaling (it may hold Spotify artwork).
+    if (big && to) ends.push(fly(big, to, timing('exit-big')));
+    // The page comes back up into place: moving, never scaling.
     for (const el of document.querySelectorAll<HTMLElement>(
       '.topbar, .library-panel, .canvas, .right-panel',
     )) {

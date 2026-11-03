@@ -1,7 +1,7 @@
 // Shared types (TECHNICAL_ARCHITECTURE.md §5.1, PLAYBACK_ARCHITECTURE.md §2 and §6,
 // VISUALIZER_SPEC.md §3.4, LYRICS_INTEGRATION.md §5). Written as specified there.
 
-export type ProviderId = 'navidrome' | 'spotify';
+export type ProviderId = 'navidrome';
 
 export interface Track {
   key: string; // `${provider}:${providerTrackId}`
@@ -13,7 +13,6 @@ export interface Track {
   durationMs: number;
   artwork: { url: string; width?: number; height?: number }[];
   isrc?: string;
-  spotifyId?: string;
   replayGain?: { trackGain?: number; albumGain?: number; trackPeak?: number; albumPeak?: number };
 }
 
@@ -28,13 +27,10 @@ export interface AppError {
 export interface ProviderCapabilities {
   canSeek: boolean;
   canSetVolume: boolean;
-  canReorderQueue: boolean; // Spotify: false
-  canRemoveFromQueue: boolean; // Spotify: false
-  canCrossfade: boolean; // Navidrome only
+  canReorderQueue: boolean;
+  canRemoveFromQueue: boolean;
+  canCrossfade: boolean;
   audioFeatures: boolean; // VISUALIZER_SPEC.md §2.1
-  artPaletteAllowed: boolean; // PLAYBACK_ARCHITECTURE.md §4.6 gate G1
-  syncedLyricsAllowed: boolean; // §4.6 gate G2
-  requiresAttribution: 'spotify' | null;
 }
 
 export interface PlaybackState {
@@ -56,10 +52,6 @@ export interface ProviderState {
   positionAt: number;
   paused: boolean;
   buffering: boolean;
-  /** Spotify plays its own queue: what it says comes next, and its shuffle and repeat. */
-  upcoming?: Track[];
-  shuffle?: boolean;
-  repeat?: 'off' | 'all' | 'one';
 }
 
 export interface Features {
@@ -144,15 +136,6 @@ export interface PlaybackProvider {
   seek(ms: number): Promise<void>;
   setVolume(v: number): Promise<void>; // 0..1 UI value
   preload?(next: Track): Promise<void>;
-
-  /** Spotify plays lists server-side: an album or playlist by its URI, other lists as track URIs. */
-  playContext?(ctx: PlayContext, offset: number, tracks: Track[]): Promise<void>;
-  enqueue?(track: Track): Promise<void>;
-  /** Providers that own their queue (Spotify) move through it themselves. */
-  skipNext?(): Promise<void>;
-  skipPrevious?(): Promise<void>;
-  setShuffle?(on: boolean): Promise<void>;
-  setRepeat?(mode: 'off' | 'all' | 'one'): Promise<void>;
 
   on(event: 'state', cb: (s: ProviderState) => void): Unsubscribe;
   on(event: 'ended', cb: () => void): Unsubscribe;

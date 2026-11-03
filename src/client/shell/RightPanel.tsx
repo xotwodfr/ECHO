@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { ArtistInfo } from '../library.ts';
-import { useLibraryOf, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
+import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
@@ -129,7 +129,7 @@ function NowPlayingPane() {
 
 /** The artist's picture and bio, when Navidrome knows them (Last.fm): in either mode. */
 function AboutArtist({ track: t }: { track: Track }) {
-  const library = useLibraryOf('navidrome');
+  const library = useLibrary();
   const id = t.provider === 'navidrome' ? t.artists[0]?.id : undefined;
   const [info, setInfo] = useState<ArtistInfo | null>(null);
   useEffect(() => {

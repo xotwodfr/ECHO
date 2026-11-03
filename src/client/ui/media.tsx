@@ -192,13 +192,7 @@ export function AlbumTile(p: {
   menu?: MenuItem[];
 }) {
   return (
-    <li
-      className="tile"
-      data-force={p.force}
-      data-round={p.round || undefined}
-      // Spotify's own covers carry nothing over them (DESIGN_SYSTEM.md §8).
-      data-provider={p.id.startsWith('spotify:') ? 'spotify' : undefined}
-    >
+    <li className="tile" data-force={p.force} data-round={p.round || undefined}>
       <span className="tile-cover">
         {p.art ?? <Artwork size="grid" src={p.cover} title={p.title} />}
         {p.onPlay && (

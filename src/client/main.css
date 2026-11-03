@@ -317,23 +317,6 @@ a {
   }
 }
 
-/* Spotify Home, a connection older than the newer scopes: what to do, and the button to do it. */
-.home-reconnect {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-5);
-  padding: var(--sp-3) var(--sp-4);
-  border: var(--rule) solid var(--fl-stroke);
-  border-radius: var(--r-card);
-  background: var(--raised);
-}
-
-.home-reconnect p {
-  margin: 0;
-}
-
 /* Home's head on phones: the avatar (account menu) before the greeting, as in Spotify's app. */
 .home-head {
   display: flex;
@@ -991,11 +974,6 @@ a {
   container: pill / inline-size;
 }
 
-/* The provider's name only matters next to Spotify's attribution. */
-.shell:not([data-attribution]) .dock .provider-mark {
-  display: none;
-}
-
 /* A narrow pill (a wide panel beside it) keeps the transport and lets the extras go first. */
 @container pill (max-width: 839.98px) {
   .dock-sleep {
@@ -1060,18 +1038,6 @@ a {
   font: var(--fl-type-caption) var(--font-ui);
 }
 
-/* Spotify's full logo: at least 70px wide, white on the dark player (Design Guidelines). */
-.spotify-logo {
-  display: inline-block;
-  margin-top: var(--sp-1);
-  line-height: 0;
-}
-
-.spotify-logo img {
-  width: var(--spotify-logo);
-  height: auto;
-}
-
 /* The transport keeps its 40px targets (A11Y-07) inside the 72px pill. */
 .dock .dock-transport .icon-btn {
   width: var(--hit-transport);
@@ -1121,11 +1087,6 @@ a {
   color: var(--warning);
   font: var(--fl-type-caption) var(--font-ui);
   white-space: nowrap;
-}
-
-.queue-note {
-  color: var(--muted);
-  font: var(--fl-type-caption) var(--font-ui);
 }
 
 /* "Clear queue" under the upcoming rows (QUE-01). */
@@ -1181,14 +1142,13 @@ a {
 }
 
 /* Auto-hide (PRODUCT_SPEC.md §6.1): the pill fades out after idle and returns at once on movement;
-   hidden controls take no pointer input. Spotify's artwork and metadata never hide
-   (data-attribution, DESIGN_SYSTEM.md §8). */
+   hidden controls take no pointer input. */
 .dock,
 .stage-chrome :is(.stage-btn, .stage-brightness) {
   transition: opacity var(--dur-pop) var(--ease-out);
 }
 
-.shell[data-chrome="hidden"]:not([data-attribution]) .dock,
+.shell[data-chrome="hidden"] .dock,
 .shell[data-chrome="hidden"] .stage-chrome :is(.stage-btn, .stage-brightness) {
   opacity: 0;
   pointer-events: none;

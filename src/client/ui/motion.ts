@@ -359,7 +359,6 @@ export function useCoverChange(host: RefObject<HTMLElement | null>, key: string 
     const art = host.current?.querySelector<HTMLElement>('.art');
     if (!art || !key || !before) return;
     art.animate([{ opacity: 0 }, { opacity: 1 }], timing('fade'));
-    if (!document.querySelector('.shell[data-attribution]'))
-      art.animate([{ scale: 0.9 }, { scale: 1 }], timing('spring'));
+    art.animate([{ scale: 0.9 }, { scale: 1 }], timing('spring'));
   }, [host, key]);
 }

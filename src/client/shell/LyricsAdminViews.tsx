@@ -3,156 +3,43 @@ import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { ApiError, api } from '../api.ts';
 import { sessionStore } from '../session.ts';
-import { missingScopes, spotifyToken } from '../spotify/api.ts';
-import { type DrmResult, drmGuidance, probeWidevine } from '../spotify/drm.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Toggle } from '../ui/controls.tsx';
 import { BlockError, SectionLoading } from '../ui/states.tsx';
 
-// Settings → Account → Spotify (SETTINGS_AND_SECURITY.md §6.2, §8) and, for admins, Admin → Server
-// → Spotify app and Lyrics (§6.3, §7.2). Connecting is a top-level navigation to ECHO's server,
-// which runs PKCE with Spotify and returns here with `?spotify=<result>`.
-
-const t = strings.spotify;
-
-export interface SpotifyStatus {
-  configured: boolean;
-  clientId: string | null;
-  gates: { artPalette: boolean; syncedLyrics: boolean };
-  seatsFull: boolean;
-  connection: {
-    status: 'connected' | 'expired' | 'premium_required' | 'not_on_user_list';
-    displayName: string | null;
-    product: string | null;
-  } | null;
-}
-
-export const spotifyStatus = () => api<SpotifyStatus>('/spotify/status');
-
-/** The sign-in result Spotify's round trip came back with, read before the URL is tidied. */
-const RESULT =
-  typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('spotify');
-
-export function SpotifyConnection() {
-  const [st, setSt] = useState<SpotifyStatus | null>(null);
-  const [drm, setDrm] = useState<DrmResult | null>(null);
-  const result = RESULT;
-
-  // A connection made before ECHO asked for its newer scopes: a reconnect grants them.
-  const [needsScopes, setNeedsScopes] = useState(false);
-  useEffect(() => {
-    void spotifyStatus().then(
-      (s) => {
-        setSt(s);
-        if (s.connection?.status === 'connected')
-          void spotifyToken().then(
-            () => setNeedsScopes(missingScopes().length > 0),
-            () => undefined,
-          );
-      },
-      () => undefined,
-    );
-    void probeWidevine().then(setDrm);
-  }, []);
-  if (!st) return <SectionLoading title={t.title} />;
-
-  const resultText = result && (t.result[result] ?? null);
-  const c = st.connection;
-  const connect = () => window.location.assign('/api/v1/spotify/login');
-  const disconnect = async () => {
-    await api('/spotify/connection', { method: 'DELETE' });
-    window.location.assign('/settings/account');
-  };
-
-  return (
-    <section className="connection" aria-labelledby="sp-title">
-      <h3 id="sp-title">{t.title}</h3>
-      {resultText && <p role="status">{resultText}</p>}
-      {drm && !drm.ok && (
-        <p className="field-error" data-testid="drm-guidance">
-          {drmGuidance(drm)}
-        </p>
-      )}
-      {!st.configured ? (
-        <p>{t.notConfigured}</p>
-      ) : c ? (
-        <>
-          <p role="status">
-            {c.status === 'connected' ? t.connected(c.displayName) : t.status[c.status]}
-          </p>
-          {needsScopes && <p>{t.reconnectScopes}</p>}
-          <div className="actions">
-            {(c.status !== 'connected' || needsScopes) && (
-              <Button variant="primary" onClick={connect}>
-                {t.reconnect}
-              </Button>
-            )}
-            <Button variant="tertiary" onClick={disconnect}>
-              {t.disconnect}
-            </Button>
-          </div>
-        </>
-      ) : st.seatsFull ? (
-        <p>{t.seatsFull}</p>
-      ) : (
-        <Button variant="primary" onClick={connect}>
-          {t.connect}
-        </Button>
-      )}
-    </section>
-  );
-}
+// Admin → Server (the Spicy Lyrics key, matching the library for lyrics, "require TOTP for all")
+// and Admin → Spotify matching: which Spotify track id each Navidrome track has, since that id is
+// what Spicy Lyrics looks word-timed lyrics up by (LYRICS_INTEGRATION.md §4.3).
 
 interface AdminSettings {
   lyrics: { spicyKeySaved: boolean };
   auth: { requireTotpForAll: boolean };
-  spotify: {
-    clientId: string | null;
-    gates: { artPalette: boolean; syncedLyrics: boolean };
-    seats: { used: number; max: number };
-    clientSecretSaved: boolean;
-    matchLibrary: boolean;
-  };
+  spotify: { matchLibrary: boolean };
 }
 
 const a = {
   title: 'Server',
-  clientId: 'Spotify app Client ID',
-  clientIdHint:
-    'From your app in the Spotify Developer Dashboard. Redirect URI: this server’s address + /api/v1/spotify/callback.',
-  seats: (used: number, max: number) => `Spotify seats: ${used} of ${max}`,
-  artPalette: 'Colours from Spotify cover art (G1)',
-  syncedLyrics: 'Timed lyrics during Spotify playback (G2)',
-  clientSecret: 'Spotify app Client secret (optional)',
-  clientSecretHint:
-    'Only for matching your Navidrome library with Spotify’s own search, the most precise way. Without it ECHO uses ListenBrainz and MusicBrainz.',
-  secretSaved: '•••••••• Saved',
-  matchLibrary: 'Match the Navidrome library with Spotify in the background',
+  matchLibrary: 'Match the Navidrome library with Spotify track ids in the background',
   matchLibraryHint:
-    'Sends track titles, artists, albums and ISRCs to ListenBrainz and MusicBrainz (and Spotify, with a client secret) so Spicy Lyrics can find word-timed lyrics for your files.',
+    'Sends track titles, artists, albums and ISRCs to ListenBrainz and MusicBrainz so Spicy Lyrics can find word-timed lyrics for your files.',
   spicyKey: 'Spicy Lyrics secret key',
   spicySaved: '•••••••• Saved',
   save: 'Save',
   saved: 'Saved',
 };
 
-/** Admin → Server: the Spotify app, the policy gates and the Spicy key. Admins only. */
+/** Admin → Server: the Spicy key, library matching and two-factor policy. Admins only. */
 export function AdminServerSection() {
   const session = useStore(sessionStore);
   const [s, setS] = useState<AdminSettings | null>(null);
-  const [clientId, setClientId] = useState('');
   const [spicy, setSpicy] = useState('');
-  const [secret, setSecret] = useState('');
   const [note, setNote] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const isAdmin = session.status === 'signedIn' && session.role === 'admin';
 
   useEffect(() => {
     if (!isAdmin) return;
-    void api<AdminSettings>('/admin/settings').then((r) => {
-      setS(r);
-      setClientId(r.spotify.clientId ?? '');
-    });
+    void api<AdminSettings>('/admin/settings').then(setS);
   }, [isAdmin]);
   if (!isAdmin) return null;
   if (!s) return <SectionLoading title={a.title} rows={4} />;
@@ -169,40 +56,14 @@ export function AdminServerSection() {
 
   function save(e: FormEvent) {
     e.preventDefault();
-    void put({
-      spotify: {
-        clientId: clientId.trim() || null,
-        ...(secret && { clientSecret: secret.trim() }),
-      },
-      ...(spicy && { lyrics: { spicyKey: spicy.trim() } }),
-    }).then(() => {
-      setSpicy('');
-      setSecret('');
-    });
+    if (!spicy) return;
+    void put({ lyrics: { spicyKey: spicy.trim() } }).then(() => setSpicy(''));
   }
 
   return (
     <section className="connection" aria-labelledby="admin-title">
       <h3 id="admin-title">{a.title}</h3>
       <form onSubmit={save}>
-        <Field
-          label={a.clientId}
-          hint={a.clientIdHint}
-          autoComplete="off"
-          spellCheck={false}
-          value={clientId}
-          onChange={(e) => setClientId(e.target.value)}
-        />
-        <p>{a.seats(s.spotify.seats.used, s.spotify.seats.max)}</p>
-        <Field
-          label={a.clientSecret}
-          hint={a.clientSecretHint}
-          secret
-          autoComplete="off"
-          placeholder={s.spotify.clientSecretSaved ? a.secretSaved : undefined}
-          value={secret}
-          onChange={(e) => setSecret(e.target.value)}
-        />
         <Field
           label={a.spicyKey}
           secret
@@ -216,16 +77,6 @@ export function AdminServerSection() {
           {a.save}
         </Button>
       </form>
-      <Toggle
-        label={a.artPalette}
-        checked={s.spotify.gates.artPalette}
-        onChange={(v) => void put({ spotify: { gates: { artPalette: v } } })}
-      />
-      <Toggle
-        label={a.syncedLyrics}
-        checked={s.spotify.gates.syncedLyrics}
-        onChange={(v) => void put({ spotify: { gates: { syncedLyrics: v } } })}
-      />
       <Toggle
         label={a.matchLibrary}
         checked={s.spotify.matchLibrary}

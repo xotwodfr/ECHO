@@ -1,10 +1,6 @@
 import type React from 'react';
-import { useCallback, useEffect, useState } from 'react';
-import { useStore } from 'zustand';
-import type { Album, AlbumListKind, ArtistRef } from '../library.ts';
+import type { Album, AlbumListKind } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
-import { sourceStore } from '../source.ts';
-import { spotifyProblem, spotifyScopes } from '../spotify/api.ts';
 import { strings } from '../strings.ts';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
@@ -40,9 +36,7 @@ const SHELVES: Shelf[] = [
 
 function useAlbumList(kind: AlbumListKind) {
   const library = useLibrary();
-  // Per source: after the switch flips, the other source's shelves are never shown.
-  const source = useStore(sourceStore, (x) => x.source);
-  const [v, reload] = useFresh(`home:${source}:${kind}`, async () =>
+  const [v, reload] = useFresh(`home:${kind}`, async () =>
     library?.albumList ? library.albumList(kind, SHELF) : (library?.albums.slice(0, SHELF) ?? []),
   );
   return [v === 'loading' ? null : v, () => void reload()] as const;
@@ -241,41 +235,6 @@ function PlaylistShelf() {
   );
 }
 
-/** Spotify's own top artists (Spotify Home), round, each leading to their page. */
-function TopArtistShelf() {
-  const library = useLibrary();
-  const [artists, setArtists] = useState<ArtistRef[]>([]);
-  useEffect(() => {
-    let current = true;
-    void library?.topArtists?.(SHELF).then(
-      (a) => current && setArtists(a),
-      () => undefined, // a connection without the scope yet: no shelf (Settings asks to reconnect)
-    );
-    return () => {
-      current = false;
-    };
-  }, [library]);
-  if (artists.length < 2) return null;
-  return (
-    <section className="shelf" aria-labelledby="shelf-top-artists">
-      <h2 id="shelf-top-artists">{strings.home.spotify.artists}</h2>
-      <ul className="album-grid card-row" aria-label={strings.home.spotify.artists}>
-        {artists.map((a) => (
-          <AlbumTile
-            key={a.id}
-            id={a.id}
-            title={a.name}
-            artist={strings.artist.title}
-            cover={a.image}
-            round
-            to={{ view: 'artist', id: a.id }}
-          />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
 /** Artists of the most played albums, each once. */
 function ArtistShelf({ albums }: { albums: Album[] }) {
   const seen = new Map<string, Album>();
@@ -304,16 +263,6 @@ function ArtistShelf({ albums }: { albums: Album[] }) {
 export function HomeView() {
   const library = useLibrary();
   const compact = useCompact();
-  // Spotify Home: its shelves come from the user's Spotify history; ECHO's own play history (mixes,
-  // Jump back in) is Navidrome's.
-  const spotify = useStore(sourceStore, (x) => x.source) === 'spotify';
-  // A connection older than the newer scopes: Home says how to get the rest (shelves, hearts).
-  const missingScopes = useStore(spotifyScopes, (x) => x.missing.length);
-  // Spotify refusing ECHO (quota used up, told to wait, a 403): its reason, above the shelves it
-  // keeps from loading.
-  const problem = useStore(spotifyProblem, (x) => x.message);
-  const titled = (sh: Shelf): Shelf =>
-    spotify && sh.kind !== 'random' ? { ...sh, title: strings.home.spotify[sh.kind] } : sh;
   const [recent, retryRecent] = useAlbumList('recent');
   const [newest, retryNewest] = useAlbumList('newest');
   const [frequent, retryFrequent] = useAlbumList('frequent');
@@ -330,29 +279,12 @@ export function HomeView() {
   return (
     <div className="home">
       <div className="home-head">
-        {/* Phones have no top bar: the account menu (and the library switch) opens from here. */}
+        {/* Phones have no top bar: the account menu opens from here. */}
         {compact && <AccountMenu />}
         <h1 className="home-greeting" tabIndex={-1}>
           {strings.home.greeting(new Date().getHours())}
         </h1>
       </div>
-      {spotify && problem && (
-        <div className="home-reconnect" role="status">
-          <p>{problem}</p>
-        </div>
-      )}
-      {spotify && missingScopes > 0 && (
-        <div className="home-reconnect" role="status">
-          <p>{strings.spotify.reconnectScopes}</p>
-          <button
-            type="button"
-            className={buttonClass('secondary')}
-            onClick={() => window.location.assign('/api/v1/spotify/login')}
-          >
-            {strings.spotify.reconnect}
-          </button>
-        </div>
-      )}
       {!library ? (
         <BlockEmpty
           text={strings.library.empty}
@@ -368,30 +300,16 @@ export function HomeView() {
       ) : (
         <>
           <Shortcuts recent={shortcutsFrom} />
-          {!spotify && <MadeForYouShelf />}
-          {!spotify && <JumpBackInShelf />}
+          <MadeForYouShelf />
+          <JumpBackInShelf />
           {SHELVES.slice(0, 2).map((s) => (
-            <AlbumShelf
-              key={s.kind}
-              shelf={titled(s)}
-              albums={lists[s.kind]}
-              retry={retries[s.kind]}
-            />
+            <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />
           ))}
           <PlaylistShelf />
           {SHELVES.slice(2).map((s) => (
-            <AlbumShelf
-              key={s.kind}
-              shelf={titled(s)}
-              albums={lists[s.kind]}
-              retry={retries[s.kind]}
-            />
+            <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />
           ))}
-          {spotify ? (
-            <TopArtistShelf />
-          ) : (
-            Array.isArray(frequent) && <ArtistShelf albums={frequent} />
-          )}
+          {Array.isArray(frequent) && <ArtistShelf albums={frequent} />}
         </>
       )}
     </div>

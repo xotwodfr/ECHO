@@ -13,8 +13,8 @@ import { Icon } from '../ui/icons.tsx';
 import { formatTime } from '../ui/logic.ts';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
+import { fixTrackStore } from './LyricsAdminViews.tsx';
 import { Link, useView } from './link.tsx';
-import { fixTrackStore } from './SpotifyViews.tsx';
 
 // What sits on the lyrics view above the room (the cover, blurred and drifting): the top chrome,
 // the song on the left and the lyric column on the right. The lyric field itself is drawn by the

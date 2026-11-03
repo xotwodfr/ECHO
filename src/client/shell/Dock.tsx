@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
-import type { Track } from '../../shared/types.ts';
 import { connectionStore } from '../connection.ts';
 import { lineAt, nudgeLyrics } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { upcoming } from '../playback/queue.ts';
-import { type SpotifyProvider, spotifyStore } from '../playback/spotify.ts';
 import {
   lyricOffset,
   lyricsStore,
@@ -16,12 +14,12 @@ import {
   stageView,
 } from '../stage/status.ts';
 import { strings } from '../strings.ts';
-import { Button, IconButton, PlayButton, ProviderMark } from '../ui/controls.tsx';
+import { IconButton, PlayButton } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { useCoverChange } from '../ui/motion.ts';
 import { Menu, Sheet } from '../ui/overlays.tsx';
 import { Scrubber, Volume } from '../ui/slider.tsx';
-import { collections, setStar, sourceOfItem } from './collections.ts';
+import { collections, setStar } from './collections.ts';
 import { useCompact, useWide } from './compact.ts';
 import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
@@ -31,7 +29,6 @@ import { QueueSheet } from './Queue.tsx';
 import { toggleFullscreen } from './StageViews.tsx';
 import { keyTarget, type Shortcut, shortcutFor } from './shortcuts.ts';
 import { SLEEP_MINUTES, setSleep, sleepLabel, sleepStore } from './sleep.ts';
-import spotifyLogo from './spotify-logo-white.svg';
 
 // The player (DESIGN_SYSTEM.md §5, §9.2; PRODUCT_SPEC.md §6.1), after Spotify's: the song and its
 // heart, the transport over the progress bar, and the view buttons (Now Playing, lyrics, queue,
@@ -97,34 +94,30 @@ export function Dock({ stage }: { stage: boolean }) {
         ) : (
           <span className="art art--dock" aria-hidden="true" />
         )}
-        {t?.provider === 'spotify' ? (
-          <SpotifyMeta track={t} titleId={idleId} />
-        ) : (
-          <div className="dock-text">
-            <p className="dock-title" id={idleId}>
-              {t ? (
-                t.album.id ? (
-                  <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link>
-                ) : (
-                  t.title
-                )
+        <div className="dock-text">
+          <p className="dock-title" id={idleId}>
+            {t ? (
+              t.album.id ? (
+                <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link>
               ) : (
-                strings.dock.idle
-              )}
-            </p>
-            {t && (
-              <p className="dock-sub">
-                {/* Artists with an id lead to their page (S6). */}
-                {t.artists.map((a, i) => (
-                  <span key={a.id ?? a.name}>
-                    {i > 0 && ', '}
-                    {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
-                  </span>
-                ))}
-              </p>
+                t.title
+              )
+            ) : (
+              strings.dock.idle
             )}
-          </div>
-        )}
+          </p>
+          {t && (
+            <p className="dock-sub">
+              {/* Artists with an id lead to their page (S6). */}
+              {t.artists.map((a, i) => (
+                <span key={a.id ?? a.name}>
+                  {i > 0 && ', '}
+                  {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
+                </span>
+              ))}
+            </p>
+          )}
+        </div>
         {t && <HeartButton track={t} />}
       </div>
 
@@ -180,8 +173,6 @@ export function Dock({ stage }: { stage: boolean }) {
 
       <div className="dock-right">
         <Reachability />
-        <SpotifyLine />
-        {c.providerLabel && <ProviderMark>{c.providerLabel}</ProviderMark>}
         {!stage && (
           <IconButton
             className="dock-wide"
@@ -294,7 +285,7 @@ function useShortcuts(stage: boolean, toggleQueue: () => void, openHelp: () => v
       like: () => {
         const t = c.player.getState().track;
         if (!t) return;
-        const s = collections.getState()[sourceOfItem('track', t)].starred;
+        const s = collections.getState().starred;
         const on = !!s && s !== 'error' && s.tracks.some((x) => x.id === t.id);
         void setStar('track', t, !on);
       },
@@ -347,86 +338,4 @@ function Reachability() {
       {strings.dock.unreachable(server.down ? 'ECHO server' : 'Navidrome', s)}
     </p>
   );
-}
-
-const OPEN = 'https://open.spotify.com';
-
-/**
- * Spotify's metadata (Policy II.4, II.5; SP-01, SP-02): title, artists and album link back to
- * open.spotify.com, with the official logo; the dock keeps it visible when the chrome hides.
- */
-function SpotifyMeta({ track: t, titleId }: { track: Track; titleId: string }) {
-  const ext = { target: '_blank', rel: 'noopener noreferrer' };
-  return (
-    <div className="dock-text">
-      <p className="dock-title" id={titleId}>
-        <a href={`${OPEN}/track/${t.id}`} {...ext}>
-          {t.title}
-        </a>
-      </p>
-      <p className="dock-sub">
-        {t.artists.map((a, i) => (
-          <span key={a.id ?? a.name}>
-            {i > 0 && ', '}
-            {a.id ? (
-              <a href={`${OPEN}/artist/${a.id.replace(/^spotify:/, '')}`} {...ext}>
-                {a.name}
-              </a>
-            ) : (
-              a.name
-            )}
-          </span>
-        ))}{' '}
-        —{' '}
-        {t.album.id ? (
-          <a href={`${OPEN}/album/${t.album.id.replace(/^spotify:/, '')}`} {...ext}>
-            {t.album.title}
-          </a>
-        ) : (
-          t.album.title
-        )}
-      </p>
-      <a className="spotify-logo" href={OPEN} {...ext}>
-        <img src={spotifyLogo} alt="Spotify" width={80} height={22} />
-      </a>
-    </div>
-  );
-}
-
-/** The Spotify device's state (PLAYBACK_ARCHITECTURE.md §4.7, §8; PLAY-09, REL-04). */
-function SpotifyLine() {
-  const c = usePlayback();
-  const sp = useStore(spotifyStore);
-  const spotify = c.provider?.id === 'spotify' ? (c.provider as unknown as SpotifyProvider) : null;
-  if (!spotify) return null;
-  if (sp.remoteDevice)
-    return (
-      <p className="dock-reach" role="status">
-        {strings.spotify.playingOn(sp.remoteDevice)}{' '}
-        <Button variant="tertiary" onClick={() => void spotify.playHere()}>
-          {strings.spotify.playHere}
-        </Button>
-      </p>
-    );
-  if (sp.status === 'reconnecting')
-    return (
-      <p className="dock-reach" role="status">
-        {strings.spotify.reconnecting}{' '}
-        {sp.offerRetry && (
-          <Button variant="tertiary" onClick={() => spotify.retry()}>
-            {strings.spotify.retry}
-          </Button>
-        )}
-      </p>
-    );
-  if (sp.status === 'error' && sp.error)
-    return (
-      <p className="dock-reach" role="alert">
-        {sp.error.userMessage}{' '}
-        {sp.error.code === 'spotify.expired' && (
-          <Link to={{ view: 'settings', section: 'account' }}>{strings.spotify.reconnect}</Link>
-        )}
-      </p>
-    );
-  return null;
 }

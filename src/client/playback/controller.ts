@@ -15,10 +15,8 @@ import * as Q from './queue.ts';
 import { createSongClock, positionNow } from './songClock.ts';
 
 // PlaybackController (PLAYBACK_ARCHITECTURE.md §1, §3): the only thing the UI talks to. It owns
-// playerStore and queueStore and drives one provider at a time: the library's (Navidrome, or the
-// fixtures) and, once connected, Spotify. A queue never mixes them (§6.1, QUE-03): playing the other
-// provider's music asks to replace the queue. Spotify owns its queue, so the controller sends it
-// transport and additions and mirrors what it reports. Providers never touch the stores.
+// playerStore and queueStore and drives the library's provider (Navidrome, or the fixtures).
+// Providers never touch the stores.
 
 const NO_CAPABILITIES: ProviderCapabilities = {
   canSeek: false,
@@ -27,9 +25,6 @@ const NO_CAPABILITIES: ProviderCapabilities = {
   canRemoveFromQueue: false,
   canCrossfade: false,
   audioFeatures: false,
-  artPaletteAllowed: false,
-  syncedLyricsAllowed: false,
-  requiresAttribution: null,
 };
 
 /** Previous restarts the track when more than this has played (§3). */
@@ -37,16 +32,12 @@ export const RESTART_AFTER_MS = 3000;
 
 export { positionNow };
 
-type Provider = PlaybackProvider & { label?: string };
+type Provider = PlaybackProvider;
 
 const PRELOAD_IN_MS = 5000;
 
 export function createPlaybackController(opts: {
   provider: Provider | null;
-  /** Spotify, when the user has connected it (M7). */
-  spotify?: Provider | null;
-  /** Asks before the queue is replaced by the other provider's music; resolves true to go ahead. */
-  confirmReplace?: (provider: Provider) => Promise<boolean>;
   clock?: Clock;
   random?: () => number;
   /** Short confirmations ("Added to queue"), shown as a toast by the shell. */
@@ -56,11 +47,7 @@ export function createPlaybackController(opts: {
   /** Deterministic mode's recorded Features (VISUALIZER_SPEC.md §10), in place of the provider's. */
   features?: FeatureSource;
 }) {
-  const primary = opts.provider;
-  /** The provider playing the current queue. */
-  let provider = primary;
-  const providers = [primary, opts.spotify].filter((p): p is Provider => !!p);
-  const confirmReplace = opts.confirmReplace ?? (async () => true);
+  const provider = opts.provider;
   const clock = opts.clock ?? realClock;
   const random = opts.random ?? Math.random;
   const notify = opts.notify ?? (() => {});
@@ -92,18 +79,10 @@ export function createPlaybackController(opts: {
     () => clock.now(),
   );
 
-  /** Events count only from the provider playing the current queue. */
-  const fromActive =
-    <T>(p: Provider, cb: (e: T) => void) =>
-    (e: T) => {
-      if (p === provider) cb(e);
-    };
-  for (const p of providers) {
-    p.on('state', fromActive(p, onState));
-    p.on('ended', () => {
-      if (p === provider) void onEnded();
-    });
-    p.on('error', fromActive(p, onError));
+  if (provider) {
+    provider.on('state', onState);
+    provider.on('ended', () => void onEnded());
+    provider.on('error', onError);
   }
 
   function onState(s: import('../../shared/types.ts').ProviderState) {
@@ -122,18 +101,7 @@ export function createPlaybackController(opts: {
       positionMs: s.positionMs,
       positionAt: s.positionAt,
       status,
-      ...(s.shuffle !== undefined && { shuffle: s.shuffle }),
-      ...(s.repeat !== undefined && { repeat: s.repeat }),
     });
-    // A provider that owns its queue reports it: mirror it (§6.3).
-    if (s.upcoming && provider)
-      queue.setState({
-        ...queue.getState(),
-        provider: provider.id,
-        now: s.track,
-        nextUp: [],
-        context: s.upcoming,
-      });
   }
 
   function onError(e: import('../../shared/types.ts').AppError) {
@@ -145,23 +113,6 @@ export function createPlaybackController(opts: {
       if (next) return load(next, true);
     }
     player.setState({ status: 'error', error: e });
-  }
-
-  /** Makes `want` the provider of a fresh, empty queue. */
-  function switchTo(want: Provider) {
-    if (want === provider) return;
-    void provider?.pause();
-    provider = want;
-    source = null;
-    queue.setState(Q.emptyQueue(), true);
-    player.setState({
-      status: 'idle',
-      track: null,
-      positionMs: 0,
-      positionAt: clock.now(),
-      capabilities: want.capabilities,
-      error: undefined,
-    });
   }
 
   const isActive = () => ['playing', 'loading', 'buffering'].includes(player.getState().status);
@@ -296,60 +247,20 @@ export function createPlaybackController(opts: {
     void provider?.setVolume(volume);
   }
 
-  /** Starts `tracks` at once, or after asking when they would replace the other provider's queue. */
-  function playList(
-    tracks: Track[],
-    index: number | 'shuffle',
-    context: PlayContext,
-  ): Promise<void> | undefined {
-    const want = providers.find((p) => p.id === tracks[0]?.provider);
-    if (!want) return;
-    if (want !== provider && queue.getState().now)
-      return confirmReplace(want).then((ok) => {
-        if (ok) start(want, tracks, index, context);
-      });
-    start(want, tracks, index, context);
-  }
-
-  function start(p: Provider, tracks: Track[], index: number | 'shuffle', context: PlayContext) {
-    switchTo(p);
+  /** Starts `tracks` at once. */
+  function playList(tracks: Track[], index: number | 'shuffle', context: PlayContext) {
+    if (!provider || tracks[0]?.provider !== provider.id) return;
     if (index === 'shuffle') {
       player.setState({ shuffle: true });
-      void p.setShuffle?.(true);
       index = Math.floor(random() * tracks.length);
     }
     if (!tracks[index]) return;
     source = { tracks, context };
     const { shuffle } = player.getState();
-    const q = Q.startContext(queue.getState(), tracks, index, context, p.id, shuffle, random);
-    if (p.playContext) {
-      // Spotify plays the list itself; the queue shows it until Spotify reports its own.
-      queue.setState(q, true);
-      loading = true;
-      player.setState({
-        status: 'loading',
-        track: q.now,
-        positionMs: 0,
-        positionAt: clock.now(),
-      });
-      return void p.playContext(context, index, tracks);
-    }
-    load(q, true);
-  }
-
-  /** Music from the provider not playing the queue is played (asking first), never mixed in. */
-  const otherProvider = (tracks: Track[]) =>
-    !!provider && !!tracks[0] && tracks[0].provider !== provider.id;
-
-  /**
-   * Additions to a queue its provider owns (Spotify): sent there, one by one. Music from the other
-   * provider is never added (§6.1); the caller plays it instead, which asks to replace the queue.
-   */
-  function spotifyQueue(tracks: Track[]) {
-    if (!provider?.enqueue || !queue.getState().now) return false;
-    if (tracks[0]?.provider !== provider.id) return false;
-    for (const t of tracks) if (t.provider === provider.id) void provider.enqueue(t);
-    return true;
+    load(
+      Q.startContext(queue.getState(), tracks, index, context, provider.id, shuffle, random),
+      true,
+    );
   }
 
   return {
@@ -359,11 +270,7 @@ export function createPlaybackController(opts: {
     songTime: () => songClock.now(),
     /** The active provider's features (Stage loop step 2). */
     features: () => opts.features ?? provider?.features() ?? SILENT_FEATURES,
-    /** Text for the dock's provider mark. */
-    get providerLabel() {
-      return provider?.label ?? null;
-    },
-    /** The provider playing the current queue (the dock's Spotify parts read it). */
+    /** The provider playing the queue. */
     get provider() {
       return provider;
     },
@@ -376,8 +283,7 @@ export function createPlaybackController(opts: {
 
     /** A saved queue (another session, another device), loaded paused at `positionMs`. */
     restore(q: QueueState, positionMs: number) {
-      // Spotify keeps its own queue across devices; a saved queue is the library's.
-      if (!provider || provider !== primary || (q.provider && q.provider !== primary?.id)) return;
+      if (!provider || (q.provider && q.provider !== provider.id)) return;
       // A shuffled queue comes back shuffled, and the dock says so.
       player.setState({ shuffle: !!q.shuffleOrder });
       if (!q.now) return queue.setState({ ...q, provider: provider.id }, true);
@@ -398,7 +304,6 @@ export function createPlaybackController(opts: {
     toggle,
 
     next() {
-      if (provider?.skipNext) return void provider.skipNext();
       const next =
         Q.advance(queue.getState()) ?? (player.getState().repeat === 'all' ? wrap() : null);
       if (next) load(next, isActive());
@@ -407,7 +312,6 @@ export function createPlaybackController(opts: {
     /** True when Next has somewhere to go (§3: nextUp, then the context, then repeat-all). */
     hasNext() {
       const q = queue.getState();
-      if (provider?.skipNext) return q.context.length > 0;
       return Q.upcoming(q).length > 0 || (player.getState().repeat === 'all' && source !== null);
     },
 
@@ -419,8 +323,6 @@ export function createPlaybackController(opts: {
     previous() {
       const s = player.getState();
       if (!s.track) return;
-      if (provider?.skipPrevious && positionNow(s, clock.now()) <= RESTART_AFTER_MS)
-        return void provider.skipPrevious();
       const prev = positionNow(s, clock.now()) > RESTART_AFTER_MS ? null : Q.back(queue.getState());
       if (prev) return load(prev, isActive());
       seek(0);
@@ -438,7 +340,6 @@ export function createPlaybackController(opts: {
     toggleShuffle() {
       const shuffle = !player.getState().shuffle;
       player.setState({ shuffle });
-      if (provider?.setShuffle) return void provider.setShuffle(shuffle);
       queue.setState(Q.setShuffle(queue.getState(), shuffle, random), true);
     },
 
@@ -446,17 +347,10 @@ export function createPlaybackController(opts: {
       const order = { off: 'all', all: 'one', one: 'off' } as const;
       const repeat = order[player.getState().repeat];
       player.setState({ repeat });
-      void provider?.setRepeat?.(repeat);
     },
 
     /** "Play next": before anything already queued. `label` names it in the notice. */
     playNext(tracks: Track[], label: string) {
-      if (otherProvider(tracks)) return void playList(tracks, 0, { kind: 'search', title: label });
-      if (spotifyQueue(tracks)) {
-        // Spotify's queue only appends (§6.1): "Play next" becomes "Add to queue", with a note.
-        notify(`${strings.playback.added(label)} ${strings.spotify.playNextBecomesAdd}`);
-        return;
-      }
       let q = queue.getState();
       for (const t of [...tracks].reverse()) q = Q.playNext(q, t);
       enqueue(q);
@@ -465,8 +359,6 @@ export function createPlaybackController(opts: {
 
     /** "Add to queue": after everything already queued. */
     addToQueue(tracks: Track[], label: string) {
-      if (otherProvider(tracks)) return void playList(tracks, 0, { kind: 'search', title: label });
-      if (spotifyQueue(tracks)) return notify(strings.playback.added(label));
       let q = queue.getState();
       for (const t of tracks) q = Q.addToQueue(q, t);
       enqueue(q);
@@ -475,15 +367,6 @@ export function createPlaybackController(opts: {
 
     /** Play an upcoming track now (`index` into `upcoming()`), skipping the ones before it. */
     jump(index: number) {
-      // A provider that owns its queue (Spotify) skips through it: loading the one track would
-      // replace its context (QUE-04).
-      const own = provider;
-      if (own?.skipNext) {
-        void (async () => {
-          for (let i = 0; i <= index; i++) await own.skipNext?.();
-        })();
-        return;
-      }
       const next = Q.jump(queue.getState(), index);
       if (next) load(next, true);
     },

@@ -1,12 +1,12 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore } from 'react';
 import { useStore } from 'zustand';
 import type { PlaybackState, QueueState } from '../../shared/types.ts';
-import { type Libraries, type Source, sourceStore } from '../source.ts';
+import type { Library } from '../library.ts';
 import type { PlaybackController } from './controller.ts';
 
 export const PlaybackContext = createContext<{
   controller: PlaybackController;
-  libraries: Libraries;
+  library: Library | null;
 } | null>(null);
 
 function usePlaybackContext() {
@@ -19,17 +19,9 @@ export const usePlayback = () => usePlaybackContext().controller;
 const noop = () => () => {};
 const zero = () => 0;
 
-/** One source's library, whichever is active: the player's own song (its artist, its album). */
-export function useLibraryOf(source: Source) {
-  const library = usePlaybackContext().libraries[source];
-  useSyncExternalStore(library?.subscribe ?? noop, library?.version ?? zero);
-  return library;
-}
-
-/** The active source's library (source.ts), re-rendering when it loads more or the switch flips. */
+/** The library, re-rendering whenever a server library has loaded more. */
 export function useLibrary() {
-  const source = useStore(sourceStore, (s) => s.source);
-  const library = usePlaybackContext().libraries[source];
+  const library = usePlaybackContext().library;
   useSyncExternalStore(library?.subscribe ?? noop, library?.version ?? zero);
   return library;
 }

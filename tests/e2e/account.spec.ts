@@ -55,7 +55,6 @@ test('sign in, connect Navidrome, play a track from it', async ({ page }) => {
   const dock = page.getByRole('region', { name: 'Player' });
   await expect(dock).toHaveAttribute('data-status', 'playing');
   await expect(dock).toContainText('Harbour Lights 1');
-  await expect(dock).toContainText('Navidrome');
   // Real audio through the proxy: song time moves on the scrubber (the clock follows the element).
   const seek = dock.getByRole('slider', { name: 'Seek' });
   const t0 = Number(await seek.getAttribute('aria-valuenow'));

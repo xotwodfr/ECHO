@@ -1108,10 +1108,6 @@
   translate: 0 0;
 }
 
-.tile[data-provider="spotify"] .tile-play {
-  display: none;
-}
-
 .tile-play:hover {
   scale: 1.04;
   background: var(--green-hover);

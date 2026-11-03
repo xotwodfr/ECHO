@@ -24,9 +24,6 @@ export const NAVIDROME_CAPABILITIES: ProviderCapabilities = {
   canRemoveFromQueue: true,
   canCrossfade: false,
   audioFeatures: true,
-  artPaletteAllowed: true,
-  syncedLyricsAllowed: true,
-  requiresAttribution: null,
 };
 
 type Events = { state: ProviderState; ended: undefined; error: AppError };

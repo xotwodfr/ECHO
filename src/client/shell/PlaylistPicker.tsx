@@ -35,24 +35,22 @@ export function PlaylistPicker() {
               {s.newPlaylist}
             </button>
           </li>
-          {(Array.isArray(playlists) ? playlists : [])
-            .filter((p) => !p.id.startsWith('spotify:'))
-            .map((p) => (
-              <li key={p.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    close();
-                    void addToPlaylist(p, tracks);
-                  }}
-                >
-                  <span className="picker-icon" aria-hidden="true">
-                    <Icon name="music" />
-                  </span>
-                  {p.name}
-                </button>
-              </li>
-            ))}
+          {(Array.isArray(playlists) ? playlists : []).map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  close();
+                  void addToPlaylist(p, tracks);
+                }}
+              >
+                <span className="picker-icon" aria-hidden="true">
+                  <Icon name="music" />
+                </span>
+                {p.name}
+              </button>
+            </li>
+          ))}
         </ul>
       )}
     </Sheet>

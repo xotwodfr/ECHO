@@ -8,7 +8,6 @@ import { api } from './api.ts';
 
 export interface Prefs {
   playback: {
-    defaultProvider: 'navidrome' | 'spotify';
     crossfadeSec: number;
     replayGain: 'off' | 'track' | 'album' | 'auto';
     scrobble: boolean;
@@ -37,7 +36,6 @@ export interface Prefs {
 
 export const DEFAULT_PREFS: Prefs = {
   playback: {
-    defaultProvider: 'navidrome',
     crossfadeSec: 0,
     replayGain: 'auto',
     scrobble: true,

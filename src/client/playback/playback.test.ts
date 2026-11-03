@@ -519,7 +519,6 @@ describe('PlaybackController (§3 transport rules)', () => {
     c.next();
     c.seek(100);
     expect(c.player.getState()).toMatchObject({ status: 'idle', track: null });
-    expect(c.providerLabel).toBeNull();
   });
 
   it('serves recorded Features (deterministic mode) in place of the provider’s', () => {
