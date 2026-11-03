@@ -373,18 +373,38 @@ export function createSpotifyMatcher(deps: MatchDeps) {
      * The Spotify ids for a Navidrome track (best first): stored, or matched now with the fast
      * matchers from Navidrome's own metadata. Empty when none is known; errors match nothing.
      */
-    async idsFor(scope: string, navidromeId: string, client: () => Promise<SubsonicClient | null>) {
-      const row = getRow(scope, navidromeId);
-      // Done once ListenBrainz has had its turn.
+    /** A Navidrome track's ids, its details from its own Navidrome (getSong) when not stored. */
+    idsFor(scope: string, navidromeId: string, client: () => Promise<SubsonicClient | null>) {
+      return this.idsForTrack(scope, navidromeId, async () => {
+        const c = await client();
+        if (!c) return null;
+        const r = await c.call('getSong', { id: navidromeId });
+        const t = metaOf((r.song ?? {}) as Record<string, unknown>);
+        return t.title && t.artist ? t : null;
+      });
+    },
+
+    /**
+     * A track's Spotify ids: stored, or matched now from the details `load` gives (its own library's
+     * or YouTube's, never a request's). Done once ListenBrainz has had its turn; the wait is
+     * capped (the lyrics resolver's budget) while the match carries on.
+     */
+    async idsForTrack(
+      scope: string,
+      id: string,
+      load: () => Promise<TrackMeta | null>,
+      timeoutMs = ON_PLAY_TIMEOUT_MS,
+    ): Promise<string[]> {
+      const row = getRow(scope, id);
       const tried = triedOf(row);
       if (idsOf(row).length || tried.has('lb-meta')) return idsOf(row);
-      const key = `${scope}|${navidromeId}`;
+      const key = `${scope}|${id}`;
       let p = inflight.get(key);
       if (!p) {
         p = (async () => {
           let t: TrackMeta | null = row
             ? {
-                id: navidromeId,
+                id,
                 title: row.title,
                 artist: row.artist,
                 ...(row.album && { album: row.album }),
@@ -393,21 +413,20 @@ export function createSpotifyMatcher(deps: MatchDeps) {
               }
             : null;
           if (!t) {
-            const c = await client();
-            if (!c) return [];
-            const r = await c.call('getSong', { id: navidromeId });
-            t = metaOf((r.song ?? {}) as Record<string, unknown>);
-            if (!t.title || !t.artist) return [];
+            t = await load();
+            if (!t?.title || !t.artist) return [];
+            t = { ...t, id };
             saveMeta(scope, t);
           }
           await matchNow(scope, t);
-          return idsOf(getRow(scope, navidromeId));
+          return idsOf(getRow(scope, id));
         })()
           .catch(() => [])
           .finally(() => inflight.delete(key));
         inflight.set(key, p);
       }
-      const timeout = new Promise<string[]>((r) => setTimeout(() => r([]), ON_PLAY_TIMEOUT_MS));
+      if (!Number.isFinite(timeoutMs)) return p;
+      const timeout = new Promise<string[]>((r) => setTimeout(() => r([]), timeoutMs));
       return Promise.race([p, timeout]);
     },
 

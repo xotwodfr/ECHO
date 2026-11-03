@@ -200,10 +200,13 @@ describe('browsing YouTube Music', () => {
       seen.push(id);
       return resolve(id);
     };
+    const matched: string[] = [];
+    s.deps.youtube.matchAhead = (id) => void matched.push(id);
     const post = (ids: unknown) =>
       call(s.app, 'POST', '/api/v1/youtube/prepare', { ids }, ada.cookie);
     expect((await post(['fakesong001', 'fakesong002'])).status).toBe(202);
     expect(seen).toEqual(['fakesong001', 'fakesong002']);
+    expect(matched).toEqual(['fakesong001', 'fakesong002']); // Spicy matching starts early too
     expect((await post(['a', 'b', 'c', 'd'])).status).toBe(400);
     expect((await post(['fakesong001', 'fakesong002', 'fakesong003', 'fakesong004'])).status).toBe(
       400,

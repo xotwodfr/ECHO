@@ -140,6 +140,19 @@ describe('the YouTube Music catalogue (recorded answers)', () => {
     expect(likeStatusOf({ likeStatus: 'DISLIKE' })).toBe(false);
   });
 
+  // Spicy matching takes a song's details from YouTube, and only for songs with an album.
+  it('meta is null for a video', async () => {
+    expect(await cat().meta('fJ9rUzIMcZQ')).toBeNull(); // the recorded official video
+    const f = createFakeCatalogue({ audioBase: 'http://mock' });
+    expect(await f.meta('fakesong001')).toEqual({
+      title: 'Fake Song 1',
+      artist: 'Kasimir Vale',
+      album: 'Low Sun',
+      durationMs: 180_000,
+    });
+    expect(await f.meta('unavailable')).toBeNull(); // no album
+  });
+
   it('maps suggestions', async () => {
     expect((await cat().suggest('bohem')).length).toBeGreaterThan(0);
   });

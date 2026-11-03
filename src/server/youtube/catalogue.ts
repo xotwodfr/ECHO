@@ -37,6 +37,10 @@ export interface Catalogue {
   upNext(videoId: string): Promise<YtUpNext>;
   related(videoId: string): Promise<YtPage>;
   lyrics(videoId: string): Promise<YtLyrics | null>;
+  /** A song's own details for Spotify matching; null without an album (a video or an upload). */
+  meta(
+    videoId: string,
+  ): Promise<{ title: string; artist: string; album: string; durationMs: number } | null>;
   like(videoId: string, on: boolean): Promise<void>;
   /** Whether the user likes the song (false when signed out). */
   liked(videoId: string): Promise<boolean>;
@@ -429,6 +433,21 @@ export function createCatalogue(opts: {
           .map((n) => trackOf(n))
           .filter((t): t is Track => !!t),
       })),
+
+    meta: (videoId) =>
+      call(async (y) => {
+        // Up next's first entry is the song itself, with its album when it is a song.
+        const seed = (raw(await y.music.getUpNext(videoId, false)).contents ?? [])
+          .map((n) => trackOf(n))
+          .find((t) => t?.id === videoId);
+        if (!seed?.album.title) return null;
+        return {
+          title: seed.title,
+          artist: seed.artists.map((a) => a.name).join(', '),
+          album: seed.album.title,
+          durationMs: seed.durationMs,
+        };
+      }),
 
     related: (videoId) =>
       call(async (y) => {

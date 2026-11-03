@@ -147,6 +147,28 @@ describe('on play', () => {
     expect(m.match('nd', 's1')).toMatchObject({ method: 'lb-meta', tried: ['lb-meta'] });
   });
 
+  // YouTube songs (Liner notes spec): details from YouTube's catalogue, scope `youtube`.
+  it('idsForTrack loads once and keeps the match', async () => {
+    const w = web({ meta: { 'Song 1': [ID_A] } });
+    const { m } = matcher({ fetch: w.f });
+    let loads = 0;
+    const load = async () => {
+      loads++;
+      return { id: 'vid12345678', title: 'Song 1', artist: 'Band', album: 'Record' };
+    };
+    expect(await m.idsForTrack('youtube', 'vid12345678', load)).toEqual([ID_A]);
+    expect(await m.idsForTrack('youtube', 'vid12345678', load)).toEqual([ID_A]);
+    expect(loads).toBe(1);
+    expect(m.match('youtube', 'vid12345678')).toMatchObject({ method: 'lb-meta' });
+  });
+
+  it('a video is never matched', async () => {
+    const w = web({ meta: { 'Song 1': [ID_A] } });
+    const { m } = matcher({ fetch: w.f });
+    expect(await m.idsForTrack('youtube', 'vid12345678', async () => null)).toEqual([]);
+    expect(w.urls).toHaveLength(0);
+  });
+
   it('a ListenBrainz miss is asked again with the plain title', async () => {
     const lib = library([song(1, { title: 'Wolves (feat. Frank Ocean)' })]);
     const w = web({ meta: { Wolves: [ID_C] } });

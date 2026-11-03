@@ -25,6 +25,8 @@ export interface LyricsDeps {
   scopeFor: (userId: number) => string;
   /** A Navidrome track's Spotify ids, best first, so Spicy can serve it (§4.3, spotifyMatch.ts). */
   spotifyIdsFor?: (userId: number, scope: string, navidromeId: string) => Promise<string[]>;
+  /** A YouTube song's Spotify ids (for Spicy), matched from YouTube's own details. */
+  youtubeSpotifyIdsFor?: (videoId: string) => Promise<string[]>;
   /** Admin → Server → Spotify matching; absent in tests that do not need it. */
   matcher?: SpotifyMatcher;
   log?: Log;
@@ -99,19 +101,24 @@ export function lyricsRoutes(deps: LyricsDeps, requireUser: MiddlewareHandler<Au
       )
       .digest('hex')
       .slice(0, 16);
-    // The Navidrome track's Spotify match picks the Spicy answer, so it is part of the key: a new
-    // or corrected match is looked up afresh.
-    if (provider === 'navidrome' && providerId && deps.spotifyIdsFor) {
-      const ids = await deps.spotifyIdsFor(user.id, deps.scopeFor(user.id), providerId);
-      if (ids[0]) {
-        input.spotifyId = ids[0];
-        input.spotifyAlt = ids.slice(1);
-      }
+    // The track's Spotify match picks the Spicy answer, so it is part of the key: a new or
+    // corrected match is looked up afresh.
+    // A YouTube song's match comes from YouTube's own details (the catalogue), never from this
+    // request's title and artist: matches are shared by everyone.
+    const ids =
+      provider === 'navidrome' && providerId && deps.spotifyIdsFor
+        ? await deps.spotifyIdsFor(user.id, deps.scopeFor(user.id), providerId)
+        : provider === 'youtube' && providerId && deps.youtubeSpotifyIdsFor
+          ? await deps.youtubeSpotifyIdsFor(providerId)
+          : [];
+    if (ids[0]) {
+      input.spotifyId = ids[0];
+      input.spotifyAlt = ids.slice(1);
     }
     // Sources the user turned off: their answers must not come back from the shared cache.
     const sources = deps.sourcesFor(user.id);
     const off = PRECEDENCE.filter((id) => !sources.some((s) => s.id === id));
-    const key = `${scope}${trackKey}|${meta}${provider === 'navidrome' && input.spotifyId ? `|sp:${input.spotifyId}` : ''}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}${off.length ? `|-${off.join(',')}` : ''}`;
+    const key = `${scope}${trackKey}|${meta}${input.spotifyId ? `|sp:${input.spotifyId}` : ''}${ov.pinnedSource ? `|${ov.pinnedSource}` : ''}${off.length ? `|-${off.join(',')}` : ''}`;
 
     const hit = await deps.cache.get(key);
     if (hit && 'doc' in hit) return c.json({ doc: hit.doc, override: ov });

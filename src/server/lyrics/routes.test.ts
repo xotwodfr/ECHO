@@ -198,3 +198,32 @@ describe('the shared cache cannot be poisoned (security review)', () => {
     expect(seen).toHaveLength(2);
   });
 });
+
+describe('YouTube songs and Spicy Lyrics (Liner notes spec)', () => {
+  it('matches from the catalogue, never from the request', async () => {
+    const seen: { spotifyId?: string; title?: string }[] = [];
+    const spy: Source = {
+      ...src('spicy', () => ({ kind: 'notFound' })).s,
+      fetch: async (input) => {
+        seen.push({ spotifyId: input.spotifyId, title: input.title });
+        return { kind: 'notFound' };
+      },
+    };
+    const s = setup([spy]);
+    const asked: unknown[][] = [];
+    s.deps.lyrics.youtubeSpotifyIdsFor = async (...args: unknown[]) => {
+      asked.push(args);
+      return ['4uLU6hMCjMI75M1A2tKUQC'];
+    };
+    const app = createApp(s.deps);
+    await call(
+      app,
+      'GET',
+      '/api/v1/lyrics?trackKey=youtube:fakesong001&title=Wrong&artist=Wrong&durationMs=180000',
+      undefined,
+      s.cookie,
+    );
+    expect(asked).toEqual([['fakesong001']]);
+    expect(seen[0]?.spotifyId).toBe('4uLU6hMCjMI75M1A2tKUQC');
+  });
+});

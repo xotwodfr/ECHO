@@ -219,6 +219,16 @@ export function createFakeCatalogue(opts: {
       account();
       likes.set(videoId, on);
     },
+    async meta(videoId) {
+      const t = [...SONGS, BROKEN].find((x) => x.id === videoId);
+      if (!t?.album.title) return null;
+      return {
+        title: t.title,
+        artist: t.artists.map((a) => a.name).join(', '),
+        album: t.album.title,
+        durationMs: t.durationMs,
+      };
+    },
     liked: async (videoId) => likes.get(videoId) ?? false,
     played: async () => {},
     resolver: {

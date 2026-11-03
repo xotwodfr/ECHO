@@ -357,12 +357,22 @@ if (import.meta.main) {
       resolver,
     };
   }
+  // Spicy Lyrics for YouTube songs: matched from YouTube's own details (public, so the anonymous
+  // catalogue), songs with an album only; early when a song is looked up ahead.
+  const ytDetails = youtube.catalogue();
+  const ytTrackMeta = (id: string) => async () => {
+    const m = await ytDetails.meta(id).catch(() => null);
+    return m && { id, ...m };
+  };
+  youtube.matchAhead = (id) =>
+    void matcher.idsForTrack('youtube', id, ytTrackMeta(id), Number.POSITIVE_INFINITY);
   const lyrics: LyricsDeps = {
     db: auth.db,
     log,
     cache: lyricsCache,
     resolver: createResolver(),
     scopeFor: (userId) => navidromeUrlOf(auth.db, userId),
+    youtubeSpotifyIdsFor: (id) => matcher.idsForTrack('youtube', id, ytTrackMeta(id)),
     spotifyIdsFor: (userId, scope, navidromeId) =>
       matcher.idsFor(scope, navidromeId, () => navidromeClientFor(navidrome, userId)),
     matcher,

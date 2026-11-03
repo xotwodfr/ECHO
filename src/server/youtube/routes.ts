@@ -24,6 +24,8 @@ export interface YoutubeDeps {
   /** A catalogue for this cookie, or an anonymous one. */
   catalogue: (cookie?: string) => Catalogue;
   resolver: Resolver;
+  /** Start a song's Spotify match (for Spicy Lyrics) while its audio is looked up ahead. */
+  matchAhead?: (videoId: string) => void;
   /** The proxies' upstream fetch (tests). */
   fetch?: typeof fetch;
 }
@@ -260,7 +262,10 @@ export function youtubeRoutes(deps: YoutubeDeps, requireUser: MiddlewareHandler<
       !ids.every((x) => typeof x === 'string' && VIDEO_ID.test(x))
     )
       return c.json({ error: 'bad_ids' }, 400);
-    for (const x of ids as string[]) deps.resolver.prefetch(x);
+    for (const x of ids as string[]) {
+      deps.resolver.prefetch(x);
+      deps.matchAhead?.(x);
+    }
     return c.body(null, 202);
   });
 
