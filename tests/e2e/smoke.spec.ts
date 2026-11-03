@@ -43,11 +43,15 @@ test('the type is Segoe UI, falling back to Selawik', async ({ page }) => {
   await page.evaluate(() => document.fonts.ready);
   const r = await page.evaluate(() => {
     const families = [...document.fonts].map((f) => f.family.replaceAll('"', ''));
+    const loaded = [...document.fonts]
+      .filter((f) => f.status === 'loaded')
+      .map((f) => f.family.replaceAll('"', ''));
     return {
       token: getComputedStyle(document.documentElement).getPropertyValue('--font').trim(),
       computed: getComputedStyle(document.querySelector('h1') as HTMLElement).fontFamily,
       dock: getComputedStyle(document.querySelector('.dock-meta') as HTMLElement).fontFamily,
       families: [...new Set(families)].sort(),
+      loaded: [...new Set(loaded)].sort(),
       check: document.fonts.check('600 16px "Selawik"', 'ECHO'),
     };
   });
@@ -55,6 +59,9 @@ test('the type is Segoe UI, falling back to Selawik', async ({ page }) => {
   expect(stack).toMatch(/^Segoe UI Variable Text, Segoe UI, Selawik,/);
   expect(r.computed.replaceAll('"', '')).toBe(stack);
   expect(r.dock.replaceAll('"', '')).toBe(stack);
-  expect(r.families).toEqual(['Selawik']); // the test box has no Segoe UI
+  // Roboto is declared for YouTube Music mode (youtube/yt.css) and never loaded here; the test box
+  // has no Segoe UI.
+  expect(r.families).toEqual(['Roboto', 'Selawik']);
+  expect(r.loaded).toEqual(['Selawik']);
   expect(r.check).toBe(true);
 });
