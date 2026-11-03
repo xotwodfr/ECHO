@@ -24,6 +24,7 @@ import { toastStore } from './ui/logic.ts';
 import { motionLevel } from './ui/motion.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
 import { createViewStore } from './view.ts';
+import { savedMode } from './youtube/mode.ts';
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
 // development builds play the fixture library (M2 task 3); the image (ECHO_DEV_PAGES=0) has no
@@ -80,7 +81,14 @@ if (session?.status === 'signedIn' && session.mustEnrolTotp)
 // Production, and the server did not answer at start (a restart behind Caddy): say so and recover on
 // its own, not an empty shell with no library (ON-UI-1). Development builds play the fixtures.
 const unreachable = !fixtures && session?.status === 'offline';
-const ownLibrary = session?.status === 'signedIn' && session.navidrome;
+const signedIn = session?.status === 'signedIn';
+const ownLibrary = signedIn && session.navidrome;
+// YouTube Music mode (src/client/youtube): this device's last world, while the admin switch is on.
+const youtube = signedIn && !!session.youtube?.enabled;
+if (youtube && route.view === 'home' && savedMode() === 'youtube')
+  store.getState().navigate({ view: 'yt', page: { kind: 'home' } }, { replace: true });
+if (!youtube && route.view === 'yt' && session?.status !== 'offline')
+  store.getState().navigate({ view: 'home' }, { replace: true });
 // Preferences (Settings → Preferences): the server's for a signed-in user, this device's own.
 if (session?.status === 'signedIn') await loadPrefs();
 const prefs = () => prefsStore.getState();
@@ -88,7 +96,9 @@ const prefs = () => prefsStore.getState();
 const library = ownLibrary ? createNavidromeLibrary() : (fixtures?.fixtureLibrary ?? null);
 
 const controller = createPlaybackController({
-  provider: ownLibrary
+  // Signed in: ECHO's <audio> provider, which plays Navidrome and YouTube songs alike (Navidrome
+  // only once connected; YouTube Music needs no connection to search and play).
+  provider: signedIn
     ? new NavidromeProvider(undefined, {
         transcodeOffset: true,
         get scrobble() {
@@ -113,7 +123,7 @@ controller.player.subscribe(
 // Lyrics: the guide tracks sing their fixture documents (LYRICS_EXPERIENCE.md §16) until the
 // lyrics loader arrives (M6).
 // A signed-in user with Navidrome gets them from the server (M6).
-if (ownLibrary) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
+if (signedIn) startLyricsLoader(controller, (m) => toastStore.getState().show(m));
 else {
   const showLyrics = (track: ReturnType<typeof controller.player.getState>['track']) => {
     const doc = fixtures?.fixtureLyrics(track) ?? null;
@@ -130,7 +140,7 @@ if ('mediaSession' in navigator) {
 }
 
 // The queue follows a signed-in user across sessions and devices (M5).
-if (ownLibrary) void startQueueSync(controller, (m) => toastStore.getState().show(m));
+if (signedIn) void startQueueSync(controller, (m) => toastStore.getState().show(m));
 
 // Playlists and hearts for every page (one fetch, refreshed after changes), and Autoplay: similar
 // songs when the music runs out.

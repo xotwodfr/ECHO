@@ -97,7 +97,7 @@ export function Dock({ stage }: { stage: boolean }) {
         <div className="dock-text">
           <p className="dock-title" id={idleId}>
             {t ? (
-              t.album.id ? (
+              t.album.id && t.provider === 'navidrome' ? (
                 <Link to={{ view: 'album', id: t.album.id }}>{t.title}</Link>
               ) : (
                 t.title
@@ -112,13 +112,18 @@ export function Dock({ stage }: { stage: boolean }) {
               {t.artists.map((a, i) => (
                 <span key={a.id ?? a.name}>
                   {i > 0 && ', '}
-                  {a.id ? <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link> : a.name}
+                  {a.id && t.provider === 'navidrome' ? (
+                    <Link to={{ view: 'artist', id: a.id }}>{a.name}</Link>
+                  ) : (
+                    a.name
+                  )}
                 </span>
               ))}
             </p>
           )}
         </div>
-        {t && <HeartButton track={t} />}
+        {/* A YouTube song playing in Navidrome mode (spec call 17): no Navidrome links or heart. */}
+        {t?.provider === 'navidrome' && <HeartButton track={t} />}
       </div>
 
       <div className="dock-transport">

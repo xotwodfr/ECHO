@@ -1,4 +1,5 @@
 import { createStore } from 'zustand/vanilla';
+import { YT_TABS, type YtTab } from '../shared/youtube.ts';
 import type { Tier } from './stage/renderer.ts';
 
 // viewStore (TECHNICAL_ARCHITECTURE.md §5.4): the current view and its params, kept in sync with
@@ -31,6 +32,14 @@ export interface FrameParams {
   other?: string;
 }
 
+/** A page of YouTube Music mode (src/client/youtube), under /yt. */
+export type YtRoute =
+  | { kind: 'home' }
+  | { kind: 'explore' }
+  | { kind: 'library' }
+  | { kind: 'search'; q: string; tab: YtTab }
+  | { kind: 'album' | 'artist' | 'playlist'; id: string };
+
 export type Route =
   | { view: 'home' }
   | { view: 'listen'; frame?: FrameParams }
@@ -48,6 +57,7 @@ export type Route =
   | { view: 'login' }
   | { view: 'setup' } // the one-time admin setup; its token travels in the fragment
   | { view: 'invite' } // redeeming an invite; its token travels in the fragment too
+  | { view: 'yt'; page: YtRoute }
   | { view: 'notFound'; path: string };
 
 const isOneOf = <T extends string>(list: readonly T[], v: string | undefined): v is T =>
@@ -119,6 +129,18 @@ export function parseRoute(pathname: string, search = ''): Route {
   if (head === 'search' && a === undefined) {
     return { view: 'search', q: new URLSearchParams(search).get('q') ?? '' };
   }
+  if (head === 'yt') {
+    const yt = (page: YtRoute): Route => ({ view: 'yt', page });
+    if (a === undefined) return yt({ kind: 'home' });
+    if ((a === 'explore' || a === 'library') && b === undefined) return yt({ kind: a });
+    if (a === 'search' && b === undefined) {
+      const p = new URLSearchParams(search);
+      const tab = p.get('tab') ?? 'all';
+      return yt({ kind: 'search', q: p.get('q') ?? '', tab: isOneOf(YT_TABS, tab) ? tab : 'all' });
+    }
+    if ((a === 'album' || a === 'artist' || a === 'playlist') && b && rest.length === 0)
+      return yt({ kind: a, id: b });
+  }
   if (head === 'settings') {
     if (a === undefined) return { view: 'settings', section: 'preferences' };
     if (isOneOf(SETTINGS_SECTIONS, a) && b === undefined) return { view: 'settings', section: a };
@@ -170,8 +192,27 @@ export function routePath(route: Route): string {
       return '/setup';
     case 'invite':
       return '/invite';
+    case 'yt':
+      return ytPath(route.page);
     case 'notFound':
       return route.path;
+  }
+}
+
+function ytPath(p: YtRoute): string {
+  switch (p.kind) {
+    case 'home':
+      return '/yt';
+    case 'explore':
+    case 'library':
+      return `/yt/${p.kind}`;
+    case 'search': {
+      const q = new URLSearchParams({ q: p.q });
+      if (p.tab !== 'all') q.set('tab', p.tab);
+      return `/yt/search?${q}`;
+    }
+    default:
+      return `/yt/${p.kind}/${encodeURIComponent(p.id)}`;
   }
 }
 

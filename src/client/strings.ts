@@ -117,7 +117,42 @@ export const strings = {
     failedLoad: "Couldn't load this playlist.",
   },
   youtube: {
+    name: 'YouTube Music',
+    navidrome: 'Navidrome',
+    switchLabel: 'Which music',
     unplayable: 'This song can’t play from YouTube.',
+    // Settings → Account → YouTube Music (spec call 3)
+    connection: {
+      title: 'YouTube Music',
+      intro:
+        'Sign in to see your own YouTube Music: your likes, playlists and recommendations. Without it, YouTube Music mode still searches and plays.',
+      steps: [
+        'Open music.youtube.com in a browser where you are signed in.',
+        'Open the developer tools (F12) and go to Network.',
+        'Type browse in the filter box, then reload the page.',
+        'Click any browse request, find Request Headers, and copy the whole value of Cookie.',
+      ],
+      cookie: 'Cookie header',
+      privacy:
+        'ECHO stores it encrypted and uses it only to browse YouTube Music for you. Songs are always fetched without it.',
+      save: 'Sign in',
+      signedInAs: (name: string) => `Signed in as ${name}`,
+      signOut: 'Sign out of YouTube Music',
+      reentry:
+        'Your YouTube Music sign-in could not be read after a restore. Paste the cookie again.',
+    },
+    admin: {
+      enabled: 'YouTube Music for everyone',
+      enabledHint:
+        'Adds a YouTube Music switch to the top bar. Songs are fetched by yt-dlp on this server, which YouTube’s terms do not allow.',
+      ytdlp: 'yt-dlp',
+      version: (v: string | null) => (v ? `Version ${v}` : 'Version unknown'),
+      updated: (at: number | null) =>
+        at
+          ? `Last updated ${new Date(at).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}`
+          : 'Not updated yet (it updates itself daily)',
+      lastError: (e: string) => `Last error: ${e}`,
+    },
   },
   radio: {
     go: 'Go to song radio',

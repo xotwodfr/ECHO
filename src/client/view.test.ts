@@ -59,6 +59,14 @@ const CANONICAL: [string, Route][] = [
   ['/settings', { view: 'settings', section: 'preferences' }],
   ['/settings/account', { view: 'settings', section: 'account' }],
   ['/__ui', { view: 'ui' }],
+  ['/yt', { view: 'yt', page: { kind: 'home' } }],
+  ['/yt/explore', { view: 'yt', page: { kind: 'explore' } }],
+  ['/yt/library', { view: 'yt', page: { kind: 'library' } }],
+  ['/yt/search?q=a+b', { view: 'yt', page: { kind: 'search', q: 'a b', tab: 'all' } }],
+  ['/yt/search?q=a+b&tab=songs', { view: 'yt', page: { kind: 'search', q: 'a b', tab: 'songs' } }],
+  ['/yt/album/MPREb_x1', { view: 'yt', page: { kind: 'album', id: 'MPREb_x1' } }],
+  ['/yt/artist/UCabc', { view: 'yt', page: { kind: 'artist', id: 'UCabc' } }],
+  ['/yt/playlist/VLLM', { view: 'yt', page: { kind: 'playlist', id: 'VLLM' } }],
 ];
 
 describe('parseRoute / routePath', () => {
@@ -93,6 +101,15 @@ describe('parseRoute / routePath', () => {
     '/library/album/%E0%A4%A',
   ])('%s is not found', (path) => {
     expect(parseRoute(path)).toEqual({ view: 'notFound', path });
+  });
+
+  it('reads an unknown YouTube search tab as all, and a bare /yt/album as not found', () => {
+    expect(parseRoute('/yt/search', '?q=a&tab=nope')).toEqual({
+      view: 'yt',
+      page: { kind: 'search', q: 'a', tab: 'all' },
+    });
+    expect(parseRoute('/yt/album/', '').view).toBe('notFound');
+    expect(parseRoute('/yt/nope', '').view).toBe('notFound');
   });
 });
 

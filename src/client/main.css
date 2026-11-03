@@ -366,6 +366,61 @@ a {
   margin-left: auto;
 }
 
+/* Navidrome | YouTube Music (youtube/ModeSwitch.tsx) in the Fluent top bar; YouTube Music mode
+   styles its own (youtube/yt.css). Phones have it in the account menu (the bar is hidden). */
+.mode-switch {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  margin: 0;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--chip);
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--muted);
+  font: var(--fl-type-body) var(--font-ui);
+  cursor: pointer;
+}
+
+.mode-btn:hover {
+  color: var(--text);
+}
+
+.mode-btn[aria-pressed="true"] {
+  background: var(--raised);
+  color: var(--text);
+}
+
+.mode-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff0033;
+}
+
+.yt-steps {
+  margin: 0 0 var(--sp-3);
+  padding-left: var(--sp-5);
+}
+
+.yt-cookie {
+  min-height: 6rem;
+  resize: vertical;
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+}
+
 /* The panels: M3 panes, one tone above the frame, rounded, each scrolling on its own. */
 .library-panel,
 .canvas,

@@ -2,10 +2,11 @@ import { type FormEvent, useCallback, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { createStore } from 'zustand/vanilla';
 import { ApiError, api } from '../api.ts';
-import { sessionStore } from '../session.ts';
+import { loadSession, sessionStore } from '../session.ts';
 import { strings } from '../strings.ts';
 import { Button, Field, Toggle } from '../ui/controls.tsx';
 import { BlockError, SectionLoading } from '../ui/states.tsx';
+import { YtdlpStatusBlock } from '../youtube/Connection.tsx';
 
 // Admin → Server (the Spicy Lyrics key, matching the library for lyrics, "require TOTP for all")
 // and Admin → Spotify matching: which Spotify track id each Navidrome track has, since that id is
@@ -15,6 +16,7 @@ interface AdminSettings {
   lyrics: { spicyKeySaved: boolean };
   auth: { requireTotpForAll: boolean };
   spotify: { matchLibrary: boolean };
+  youtube: { enabled: boolean };
 }
 
 const a = {
@@ -88,6 +90,13 @@ export function AdminServerSection() {
         checked={s.auth.requireTotpForAll}
         onChange={(v) => void put({ auth: { requireTotpForAll: v } })}
       />
+      <Toggle
+        label={strings.youtube.admin.enabled}
+        checked={s.youtube.enabled}
+        onChange={(v) => void put({ youtube: { enabled: v } }).then(() => loadSession())}
+      />
+      <p className="field-hint">{strings.youtube.admin.enabledHint}</p>
+      {s.youtube.enabled && <YtdlpStatusBlock />}
       {note && <p role="status">{note}</p>}
     </section>
   );

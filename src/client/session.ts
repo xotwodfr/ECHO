@@ -17,6 +17,8 @@ export type SessionState =
       navidrome: boolean;
       /** "Require TOTP for all" is on and this user has none yet: Account is all they can use. */
       mustEnrolTotp?: boolean;
+      /** YouTube Music mode: the admin switch, and whether this user saved a sign-in. */
+      youtube?: { enabled: boolean; signedIn: boolean };
     };
 
 export const sessionStore = createStore<SessionState>()(() => ({ status: 'unknown' }));

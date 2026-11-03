@@ -19,6 +19,8 @@ import {
   type SettingsSection,
   type ViewStore,
 } from '../view.ts';
+import { ModeSwitch } from '../youtube/ModeSwitch.tsx';
+import { YtFrame } from '../youtube/YtFrame.tsx';
 import { AccountMenu } from './AccountMenu.tsx';
 import { InviteView } from './AccountViews.tsx';
 import { AdminSection } from './AdminViews.tsx';
@@ -107,6 +109,7 @@ function TopBar({ route }: { route: Route }) {
         </Link>
         <SearchField className="topbar-search" />
       </nav>
+      <ModeSwitch />
       <AccountMenu />
     </header>
   );
@@ -287,6 +290,8 @@ function View({ route }: { route: Route }) {
           </Suspense>
         );
       return <View route={{ view: 'notFound', path: '/__ui' }} />;
+    case 'yt': // its own frame (Frame below)
+      return null;
     case 'notFound':
       return (
         <>
@@ -318,6 +323,7 @@ const TITLES: Record<Route['view'], string> = {
   setup: strings.auth.setupTitle,
   invite: strings.account.inviteTitle,
   notFound: strings.notFound.title,
+  yt: strings.youtube.name,
 };
 
 function Frame() {
@@ -392,6 +398,9 @@ function Frame() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [navigate]);
+
+  // YouTube Music mode is its own world (spec): its own frame, the same player underneath.
+  if (route.view === 'yt') return <YtFrame route={route} />;
 
   // Signing in and setting up stand alone: no panels, no player.
   if (route.view === 'login' || route.view === 'setup' || route.view === 'invite')
