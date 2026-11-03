@@ -9,10 +9,10 @@ import { canStar, setStar, useStarred } from './collections.ts';
 // saved (a Navidrome star).
 
 // A heart pops when it is clicked (main.css, data-pop), never when a page shows it already saved.
-const pop = (el: HTMLElement, on: boolean) => {
+export const pop = (el: HTMLElement, on: boolean) => {
   el.dataset.pop = on ? 'in' : 'out';
 };
-const popped = (e: AnimationEvent<HTMLButtonElement>) => {
+export const popped = (e: AnimationEvent<HTMLButtonElement>) => {
   if (e.animationName !== 'heart-ring') delete e.currentTarget.dataset.pop;
 };
 

@@ -1,11 +1,21 @@
-import { type KeyboardEvent, type ReactNode, useCallback, useEffect, useId, useState } from 'react';
+import {
+  type KeyboardEvent,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import type { Track } from '../../shared/types.ts';
 import type { YtItem, YtPage, YtShelf } from '../../shared/youtube.ts';
 import { ApiError } from '../api.ts';
 import { usePlayback, useQueue } from '../playback/context.tsx';
+import { pop, popped } from '../shell/hearts.tsx';
 import { Link, useView } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
+import { noteLoading, useArrival } from '../ui/motion.ts';
 import { BlockError } from '../ui/states.tsx';
 import type { Route } from '../view.ts';
 import { ytPage, ytSuggest } from './api.ts';
@@ -48,6 +58,11 @@ export function PageState({
   if (state.error instanceof ApiError && state.error.code === 'youtube.signed_out')
     return <SignInPrompt message={state.error.userMessage ?? y.signInToSee} />;
   if (state.error) return <BlockError what={y.failed} onRetry={() => state.retry()} />;
+  return <Loading />;
+}
+
+function Loading() {
+  useEffect(noteLoading, []); // what replaces it arrives in a wave (useArrival)
   return (
     <div className="yt-loading" aria-busy="true">
       <span className="visually-hidden">{y.loading}</span>
@@ -158,12 +173,14 @@ export function Card({ item, onPlay }: { item: YtItem; onPlay: () => void }) {
 export function Shelf({ shelf }: { shelf: YtShelf }) {
   const c = usePlayback();
   const id = useId();
+  const list = useRef<HTMLOListElement & HTMLUListElement>(null);
+  useArrival(list);
   return (
     <section className="yt-shelf" aria-labelledby={id}>
       {shelf.strapline && <p className="yt-strap">{shelf.strapline}</p>}
       <h2 id={id}>{shelf.title}</h2>
       {shelf.layout === 'rows' ? (
-        <ol className="yt-rows" aria-labelledby={id}>
+        <ol className="yt-rows" aria-labelledby={id} ref={list}>
           {shelf.items.map((item, i) => (
             <Row
               key={`${item.kind}:${item.id}`}
@@ -174,7 +191,7 @@ export function Shelf({ shelf }: { shelf: YtShelf }) {
           ))}
         </ol>
       ) : (
-        <ul className="yt-cards">
+        <ul className="yt-cards" ref={list}>
           {shelf.items.map((item) => (
             <Card
               key={`${item.kind}:${item.id}`}
@@ -199,7 +216,16 @@ export function Shelves({ shelves }: { shelves: YtShelf[] }) {
 export function LikeWord({ id }: { id: string }) {
   const [on, toggle] = useLike(id);
   return (
-    <button type="button" className="yt-button" aria-pressed={on} onClick={() => void toggle()}>
+    <button
+      type="button"
+      className="yt-button"
+      aria-pressed={on}
+      onClick={(e) => {
+        pop(e.currentTarget, !on);
+        void toggle();
+      }}
+      onAnimationEnd={popped}
+    >
       {on ? y.liked : y.like}
     </button>
   );

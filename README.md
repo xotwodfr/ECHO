@@ -15,8 +15,10 @@ lyric field in an audio-reactive room lit by the album cover.
   search on YouTube Music); ECHO marks what the library gets, and plays it.
 - **YouTube Music (web):** a switch in the top bar turns ECHO into a YouTube Music app: its
   Today, Explore, search and Your shelf (sign in by pasting a cookie in Settings → Account), in
-  its own magazine look, "Liner notes": paper and ink, serif titles, numbered tracklists, an ink
-  strip along the bottom and a paper full-screen player with Up next, Lyrics and Related. Its
+  its own magazine look, "Liner notes": paper and ink (and a night edition, from the moon in the
+  masthead or the device's dark setting), serif titles, numbered tracklists, an ink strip along
+  the bottom and a paper full-screen player with Up next, Lyrics and Related, all on ECHO's
+  springs. Its
   Lyrics tab is ECHO's own lyrics view printed on paper, word by word from Spicy Lyrics and the
   other word-synced sources (YouTube songs get Spotify ids through ListenBrainz). Songs play
   through ECHO's own player: the server fetches each song's audio with yt-dlp (anonymously, never

@@ -17,6 +17,11 @@
   font: var(--ln-type-body);
 }
 
+/* The night edition (tokens.css swaps the paper colours): scrollbars and fields follow. */
+.yt[data-edition="night"] {
+  color-scheme: dark;
+}
+
 .yt[data-compact] {
   grid-template:
     "mast" auto
@@ -208,13 +213,14 @@
 }
 
 .yt-nav-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: var(--sp-2);
   min-height: var(--ln-nav-h);
-  border-bottom: var(--ln-rule-strong) solid transparent;
   color: var(--ln-muted);
   font: var(--ln-type-ui);
+  transition: scale var(--spring); /* presses spring */
 }
 
 .yt-nav-link:hover {
@@ -222,8 +228,17 @@
 }
 
 .yt-nav-link[aria-current="page"] {
-  border-bottom-color: var(--ln-ink);
   color: var(--ln-ink);
+}
+
+/* The chosen tab's underline; it slides from the last one on the spring (useSlide). */
+.yt-tabs:not(.yt-tabs--bottom) .yt-nav-link[aria-current="page"]::after,
+.yt-np-tabs [aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: var(--ln-rule-strong);
+  background: var(--ln-ink);
 }
 
 .yt-tabs--bottom {
@@ -257,6 +272,11 @@
   gap: var(--sp-7);
   max-width: var(--ln-page-w);
   padding: var(--sp-6) var(--ln-gutter) var(--sp-7);
+}
+
+/* A YouTube page fades out and the new one rises in, as ECHO's pages do (pageTransition). */
+.vt .yt-page {
+  view-transition-name: page;
 }
 
 .yt[data-compact] .yt-page {
@@ -599,8 +619,17 @@
 .yt-player {
   grid-area: player;
   position: relative;
-  background: var(--ln-ink);
+  background: var(--ln-strip);
   color: var(--ln-on-ink);
+  /* It rises in when music starts. */
+  transition:
+    opacity var(--fade),
+    translate var(--spring);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--sp-6);
+  }
 }
 
 .yt-player-row {
@@ -831,6 +860,24 @@
   padding: var(--sp-6) var(--ln-gutter);
   overflow: hidden;
   background: var(--ln-paper);
+  /* It rises over the page on the spring and sinks away when closed (useExit, data-leaving). */
+  transition:
+    opacity var(--fade),
+    translate var(--spring);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--sp-6);
+  }
+}
+
+.yt-np[data-leaving] {
+  opacity: 0;
+  translate: 0 var(--sp-6);
+  pointer-events: none;
+  transition:
+    opacity var(--exit),
+    translate var(--exit-move);
 }
 
 .yt[data-compact] .yt-np {
@@ -909,7 +956,8 @@
   gap: var(--sp-2) var(--sp-4);
 }
 
-.yt-np-play {
+/* Inverse: paper on ink (`.yt .icon-btn` would make the glyph ink on ink). */
+.yt .yt-np-play {
   background: var(--ln-ink);
   color: var(--ln-paper);
   border-radius: 50%;
@@ -952,10 +1000,10 @@
 }
 
 .yt-np-tabs [role="tab"] {
+  position: relative;
   min-height: var(--ln-control-h);
   padding: 0;
   border: 0;
-  border-bottom: var(--ln-rule-strong) solid transparent;
   background: transparent;
   color: var(--ln-muted);
   font: var(--ln-type-ui);
@@ -963,8 +1011,19 @@
 }
 
 .yt-np-tabs [aria-selected="true"] {
-  border-bottom-color: var(--ln-ink);
   color: var(--ln-ink);
+}
+
+/* A tab's page springs in under it (opacity fades, §11.2). */
+.yt-np-panel > * {
+  transition:
+    opacity var(--fade),
+    translate var(--spring);
+
+  @starting-style {
+    opacity: 0;
+    translate: 0 var(--sp-3);
+  }
 }
 
 .yt-np-panel {
@@ -1031,4 +1090,46 @@
 .ln-lyrics .stage-canvas,
 .ln-lyrics .stage-room-css {
   display: none;
+}
+
+/* ---- motion (DESIGN_SYSTEM.md §11, the owner's spring) ---- */
+
+/* Presses spring. */
+.yt-word,
+.yt-button,
+.yt-row-play,
+.yt-np-tabs [role="tab"] {
+  transition: scale var(--spring);
+}
+
+.yt-word:active,
+.yt-button:active,
+.yt-nav-link:active,
+.yt-np-tabs [role="tab"]:active {
+  scale: 0.94;
+}
+
+.yt-row-play:active {
+  scale: 0.985;
+}
+
+/* A like pops when clicked (data-pop, shell/hearts.tsx), never when a page shows it liked. */
+.yt [data-pop="in"] {
+  animation: like-pop var(--spring);
+}
+
+.yt [data-pop="out"] {
+  animation: like-out var(--exit-move);
+}
+
+@keyframes like-pop {
+  from {
+    scale: 0.6;
+  }
+}
+
+@keyframes like-out {
+  50% {
+    scale: 0.85;
+  }
 }

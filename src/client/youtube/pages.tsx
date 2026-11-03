@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useStore } from 'zustand';
 import { YT_TABS, type YtItem, type YtPage, type YtTab } from '../../shared/youtube.ts';
 import { usePlayback, usePlayer } from '../playback/context.tsx';
@@ -6,6 +6,7 @@ import { sessionStore } from '../session.ts';
 import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
+import { useCoverChange } from '../ui/motion.ts';
 import type { YtRoute } from '../view.ts';
 import { itemOfTrack, LikeWord, PageState, Row, Shelves, Thumb, useYtPage } from './parts.tsx';
 import { playItem } from './play.ts';
@@ -80,12 +81,14 @@ function NowSpinning({ fallback }: { fallback?: YtItem }) {
   const playing = usePlayer((p) => p.track);
   const session = useStore(sessionStore);
   const t = playing?.provider === 'youtube' ? playing : fallback?.track;
+  const spinning = useRef<HTMLElement>(null);
+  useCoverChange(spinning, t?.key, '.yt-thumb');
   if (!t) return null;
   const item = playing?.provider === 'youtube' ? itemOfTrack(playing) : (fallback as YtItem);
   const by = t.artists.map((a) => a.name).join(', ');
   const signedIn = session.status === 'signedIn' && !!session.youtube?.signedIn;
   return (
-    <section className="yt-spinning" aria-label={y.nowSpinning}>
+    <section className="yt-spinning" aria-label={y.nowSpinning} ref={spinning}>
       <span className="yt-kicker">{y.nowSpinning}</span>
       <Thumb src={t.artwork[0]?.url ?? ''} />
       <h2 className="yt-spinning-title">{t.title}</h2>

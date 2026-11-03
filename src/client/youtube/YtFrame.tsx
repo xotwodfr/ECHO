@@ -5,9 +5,12 @@ import { SessionExpiredSheet } from '../shell/AuthViews.tsx';
 import { useCompact } from '../shell/compact.ts';
 import { Link } from '../shell/link.tsx';
 import { strings } from '../strings.ts';
+import { IconButton } from '../ui/controls.tsx';
 import { Icon, type IconName } from '../ui/icons.tsx';
+import { useExit, useSlide } from '../ui/motion.ts';
 import { ToastRegion } from '../ui/overlays.tsx';
 import type { Route, YtRoute } from '../view.ts';
+import { setEdition, useEdition } from './edition.ts';
 import { useYtShortcuts } from './keys.ts';
 import { ModeSwitch } from './ModeSwitch.tsx';
 import { NowPlaying, type Tab } from './NowPlaying.tsx';
@@ -16,8 +19,8 @@ import { YtPageView } from './pages.tsx';
 import { YtSearch } from './parts.tsx';
 
 // YouTube Music mode's frame, "Liner notes" (board C of the Liner notes spec): a masthead (ECHO, the
-// edition, search, the switch, the account), the tabs under it (at the bottom on phones), the page,
-// and the ink strip.
+// edition, search, the switch, the night switch, the account), the tabs under it (at the bottom on
+// phones), the page, and the ink strip.
 // Only what is drawn differs from Navidrome mode: the player and queue underneath are the same.
 
 const y = strings.youtube;
@@ -28,8 +31,10 @@ const NAV: { kind: 'home' | 'explore' | 'library'; icon: IconName }[] = [
 ];
 
 function Nav({ page, className, icons }: { page: YtRoute; className: string; icons: boolean }) {
+  const nav = useRef<HTMLElement>(null);
+  useSlide(nav, '[aria-current="page"]', page.kind, '::after');
   return (
-    <nav className={className} aria-label={y.name}>
+    <nav className={className} aria-label={y.name} ref={nav}>
       {NAV.map((n) => (
         <Link
           key={n.kind}
@@ -50,6 +55,12 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
   const main = useRef<HTMLElement>(null);
   const page = route.page;
   const [open, setOpen] = useState<Tab | null>(null);
+  // The player keeps its last tab while it sinks away (useExit).
+  const lastTab = useRef<Tab>('next');
+  if (open) lastTab.current = open;
+  const player = useRef<HTMLDivElement>(null);
+  const playerShown = useExit(open !== null, player);
+  const edition = useEdition();
   const close = useCallback(() => setOpen(null), []);
   const openOn = useCallback((tab: Tab) => setOpen(tab), []);
   useYtShortcuts(openOn);
@@ -66,15 +77,21 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
   const day = new Date().toLocaleDateString('en-GB', { weekday: 'long' });
 
   return (
-    <div className="yt" data-compact={compact || undefined}>
+    <div className="yt" data-compact={compact || undefined} data-edition={edition}>
       <header className="yt-masthead">
         <Link className="yt-mast-title" to={{ view: 'yt', page: { kind: 'home' } }}>
           <span className="yt-mast-name">{strings.app}</span>
-          <span className="yt-kicker">{y.edition(day)}</span>
+          <span className="yt-kicker">{y.edition(day, edition === 'night')}</span>
         </Link>
         <YtSearch initial={page.kind === 'search' ? page.q : ''} />
         <div className="yt-bar-end">
           {!compact && <ModeSwitch />}
+          <IconButton
+            label={y.nightEdition}
+            icon="moon"
+            pressed={edition === 'night'}
+            onClick={(e) => setEdition(edition === 'night' ? 'day' : 'night', e.currentTarget)}
+          />
           <AccountMenu />
         </div>
       </header>
@@ -84,7 +101,9 @@ export function YtFrame({ route }: { route: Extract<Route, { view: 'yt' }> }) {
           <YtPageView page={page} />
         </div>
       </main>
-      {open && <NowPlaying onClose={close} tab={open} onTab={openOn} />}
+      {playerShown && (
+        <NowPlaying ref={player} onClose={close} tab={open ?? lastTab.current} onTab={openOn} />
+      )}
       <PlayerBar compact={compact} onOpen={openOn} />
       {compact && <Nav page={page} className="yt-tabs yt-tabs--bottom" icons />}
       <ToastRegion />

@@ -102,3 +102,11 @@ export function clearSpotifyMatches() {
   db.prepare('DELETE FROM spotify_matches').run();
   db.close();
 }
+
+/** Signs the current ECHO user in to YouTube Music with a fixture cookie (Settings → Account). */
+export async function ytSignIn(page: Page, cookie = 'SID=e2e; SAPISID=e2e/abc') {
+  await page.goto('/settings/account');
+  await page.getByLabel('Cookie header').fill(cookie);
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await expect(page.getByText('Signed in as Fixture Listener')).toBeVisible();
+}

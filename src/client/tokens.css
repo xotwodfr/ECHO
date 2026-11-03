@@ -150,6 +150,7 @@
   --ln-rule: #d8d0c2; --ln-leader: #b3aa9a; --ln-hover: #1b1a170d;
   --ln-faded: #c9c0b0; --ln-faded-2: #a69d8c; --ln-faded-3: #8f877a;
   --ln-vermilion: #b8391a; --ln-vermilion-on-ink: #e0896f; --ln-on-ink: #f3eee6; --ln-on-ink-2: #c9c1b3;
+  --ln-strip: #1b1a17;
   --ln-serif: Fraunces, Georgia, "Times New Roman", serif;
   --ln-sans: "Instrument Sans", system-ui, sans-serif;
   --ln-type-mast: 800 2.75rem/1 var(--ln-serif); --ln-type-mast-phone: 800 1.75rem/1 var(--ln-serif);
@@ -287,6 +288,17 @@
 
 
 .num { font-variant-numeric: tabular-nums; }
+
+/* YouTube Music mode's night edition (youtube/edition.ts): the paper turns warm near-black, the type
+   cream, vermilion lifts; the strip stays a band a shade above the page. Contrast: muted 5.9:1,
+   vermilion 7.1:1, the strip's words 6.9:1. */
+.yt[data-edition="night"] {
+  --ln-paper: #171512; --ln-ink: #ece5d8; --ln-ink-2: #c8bfae; --ln-muted: #9b9384;
+  --ln-rule: #38342d; --ln-leader: #5b554b; --ln-hover: #ece5d80f;
+  --ln-faded: #4a453d; --ln-faded-2: #6c655a; --ln-faded-3: #847c6f;
+  --ln-vermilion: #e0896f; --ln-vermilion-on-ink: #e0896f; --ln-on-ink: #ece5d8; --ln-on-ink-2: #b4ab9b;
+  --ln-strip: #24211c;
+}
 
 /* How much moves (§11.2; <html data-motion>, motionLevel() in ui/motion.ts): less motion keeps
    fades and colour, nothing travels or springs; off stops UI motion altogether. */

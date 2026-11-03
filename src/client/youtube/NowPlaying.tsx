@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { type Ref, useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Track } from '../../shared/types.ts';
 import type { YtLyrics } from '../../shared/youtube.ts';
@@ -10,6 +10,7 @@ import { LyricsView } from '../shell/StageViews.tsx';
 import { lyricsStore } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
+import { useCoverChange, useSlide } from '../ui/motion.ts';
 import { Volume } from '../ui/slider.tsx';
 import { ytLyrics } from './api.ts';
 import { ModeWords, Progress } from './PlayerBar.tsx';
@@ -24,10 +25,12 @@ const y = strings.youtube;
 export type Tab = 'next' | 'lyrics' | 'related';
 
 export function NowPlaying({
+  ref,
   onClose,
   tab,
   onTab,
 }: {
+  ref: Ref<HTMLDivElement>;
   onClose: () => void;
   tab: Tab;
   onTab: (tab: Tab) => void;
@@ -40,6 +43,10 @@ export function NowPlaying({
   const session = useStore(sessionStore);
   const close = useRef<HTMLButtonElement>(null);
   const id = useId();
+  const tablist = useRef<HTMLDivElement>(null);
+  const art = useRef<HTMLElement>(null);
+  useSlide(tablist, '[aria-selected="true"]', tab, '::after');
+  useCoverChange(art, t?.key, '.yt-thumb');
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
@@ -64,7 +71,7 @@ export function NowPlaying({
   const signedIn = session.status === 'signedIn' && !!session.youtube?.signedIn;
 
   return (
-    <div className="yt-np" role="dialog" aria-label={y.nowPlaying}>
+    <div className="yt-np" role="dialog" aria-label={y.nowPlaying} ref={ref}>
       <div className="yt-np-head">
         <IconButton
           ref={close}
@@ -75,7 +82,7 @@ export function NowPlaying({
         />
         {source && <span className="yt-kicker">{y.playingFrom(source.title)}</span>}
       </div>
-      <section className="yt-np-art" aria-label={t.title}>
+      <section className="yt-np-art" aria-label={t.title} ref={art}>
         <Thumb src={t.artwork[0]?.url ?? ''} />
         <h2 className="yt-np-title">{t.title}</h2>
         <p className="yt-hero-sub">{t.album.title ? y.credit(by, t.album.title) : by}</p>
@@ -98,7 +105,7 @@ export function NowPlaying({
         </div>
       </section>
       <div className="yt-np-side">
-        <div className="yt-np-tabs" role="tablist" aria-label={y.nowPlaying}>
+        <div className="yt-np-tabs" role="tablist" aria-label={y.nowPlaying} ref={tablist}>
           {tabs.map((x) => (
             <button
               key={x.key}

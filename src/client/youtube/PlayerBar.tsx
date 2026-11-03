@@ -1,10 +1,13 @@
+import { useRef } from 'react';
 import { useStore } from 'zustand';
 import { usePlayback, usePlayer, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
 import { sessionStore } from '../session.ts';
+import { pop, popped } from '../shell/hearts.tsx';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { formatTime } from '../ui/logic.ts';
+import { useCoverChange } from '../ui/motion.ts';
 import { Slider, Volume } from '../ui/slider.tsx';
 import { useLike } from './likes.ts';
 import { Thumb } from './parts.tsx';
@@ -19,7 +22,18 @@ const y = strings.youtube;
 
 export function LikeButton({ id }: { id: string }) {
   const [on, toggle] = useLike(id);
-  return <IconButton label={y.like} icon="heart" pressed={on} onClick={() => void toggle()} />;
+  return (
+    <IconButton
+      label={y.like}
+      icon="heart"
+      pressed={on}
+      onClick={(e) => {
+        pop(e.currentTarget, !on);
+        void toggle();
+      }}
+      onAnimationEnd={popped}
+    />
+  );
 }
 
 /** The song's hairline with its times (the strip and the full-screen player). */
@@ -91,13 +105,15 @@ export function PlayerBar({
   const status = usePlayer((p) => p.status);
   const volume = usePlayer((p) => p.volume);
   const session = useStore(sessionStore);
+  const strip = useRef<HTMLElement>(null);
+  useCoverChange(strip, t?.key, '.yt-thumb');
   if (!t) return null;
   const active = status === 'playing' || status === 'loading' || status === 'buffering';
   const signedIn = session.status === 'signedIn' && !!session.youtube?.signedIn;
   const by = t.artists.map((a) => a.name).join(', ');
 
   return (
-    <section className="yt-player" aria-label={strings.dock.label} data-status={status}>
+    <section className="yt-player" aria-label={strings.dock.label} data-status={status} ref={strip}>
       {compact && <Progress className="yt-progress" />}
       <div className="yt-player-row">
         <IconButton

@@ -1,18 +1,11 @@
 import { expect, type Page, test } from '@playwright/test';
-import { clearLyricsCache, signedIn } from './helpers.ts';
+import { clearLyricsCache, signedIn, ytSignIn } from './helpers.ts';
 
 // YouTube Music mode (docs/superpowers/specs/2026-11-03-youtube-music-design.md) against the
 // server's fake catalogue (ECHO_DEV_FIXTURES=1): its songs play from the mock Subsonic's
 // /videoplayback, which behaves like googlevideo. No test talks to YouTube.
 
 const ytNav = (page: Page) => page.getByRole('navigation', { name: 'YouTube Music' });
-
-async function ytSignIn(page: Page, cookie = 'SID=e2e; SAPISID=e2e/abc') {
-  await page.goto('/settings/account');
-  await page.getByLabel('Cookie header').fill(cookie);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-  await expect(page.getByText('Signed in as Fixture Listener')).toBeVisible();
-}
 
 test('the switch opens YouTube Music and remembers it', async ({ page }) => {
   await signedIn(page, 'yt');
@@ -355,4 +348,17 @@ test('a song change on paper recedes without blur', async ({ page }) => {
   await expect
     .poll(() => page.evaluate(() => (window as unknown as { farBlur: string[] }).farBlur))
     .toEqual(['0px']);
+});
+
+test("the paper player's play button shows its icon", async ({ page }) => {
+  await signedIn(page, 'yt');
+  await page.goto('/yt/album/MPREb_fake1');
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await bar(page).getByRole('button', { name: 'Up next', exact: true }).click();
+  const play = page.locator('.yt-np-play');
+  const [ink, ground] = await play.evaluate((b) => [
+    getComputedStyle(b).color,
+    getComputedStyle(b).backgroundColor,
+  ]);
+  expect(ink).not.toBe(ground);
 });

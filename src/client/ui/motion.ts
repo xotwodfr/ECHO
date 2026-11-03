@@ -347,18 +347,22 @@ export function useSlide(
 }
 
 /**
- * A new song's cover (the first `.art` under `host`) arrives on the spring when `key` changes,
- * not when it first shows. Spotify's artwork only fades (its Design Guidelines).
+ * A new song's cover (the first `art` under `host`, `.art` by default) arrives on the spring when
+ * `key` changes, not when it first shows.
  */
-export function useCoverChange(host: RefObject<HTMLElement | null>, key: string | undefined) {
+export function useCoverChange(
+  host: RefObject<HTMLElement | null>,
+  key: string | undefined,
+  art = '.art',
+) {
   const shown = useRef(key);
   useLayoutEffect(() => {
     if (shown.current === key) return;
     const before = shown.current;
     shown.current = key;
-    const art = host.current?.querySelector<HTMLElement>('.art');
-    if (!art || !key || !before) return;
-    art.animate([{ opacity: 0 }, { opacity: 1 }], timing('fade'));
-    art.animate([{ scale: 0.9 }, { scale: 1 }], timing('spring'));
-  }, [host, key]);
+    const el = host.current?.querySelector<HTMLElement>(art);
+    if (!el || !key || !before) return;
+    el.animate([{ opacity: 0 }, { opacity: 1 }], timing('fade'));
+    el.animate([{ scale: 0.9 }, { scale: 1 }], timing('spring'));
+  }, [host, key, art]);
 }

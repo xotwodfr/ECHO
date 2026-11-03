@@ -127,7 +127,9 @@ export const strings = {
     home: 'Today',
     explore: 'Explore',
     library: 'Your shelf',
-    edition: (day: string) => `YouTube Music · ${day} edition`,
+    edition: (day: string, night = false) =>
+      `YouTube Music · ${day}${night ? ' night' : ''} edition`,
+    nightEdition: 'Night edition',
     search: 'Search YouTube Music',
     searchPlaceholder: 'Search songs, albums, artists',
     suggestions: 'Suggestions',
