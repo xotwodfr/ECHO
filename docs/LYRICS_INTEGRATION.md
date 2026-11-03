@@ -1,7 +1,7 @@
 # ECHO — Lyrics Integration
 
 Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
-Related: [Lyrics experience](LYRICS_EXPERIENCE.md) (how lyrics are shown) · [Settings & security](SETTINGS_AND_SECURITY.md) §6.3 (Spicy Lyrics key) · [Playback](PLAYBACK_ARCHITECTURE.md) §4.6 (gate G2 for Spotify tracks)
+Related: [Lyrics experience](LYRICS_EXPERIENCE.md) (how lyrics are shown) · [Settings & security](SETTINGS_AND_SECURITY.md) §6.3 (Spicy Lyrics key)
 
 Labels: **[C]** confirmed in a primary source (`DESIGN_RESEARCH.md` §5), **[R]** reported, **[A]**
 assumption to verify in the named milestone.
@@ -42,14 +42,14 @@ allow.
   Errors carry `Body.error` codes (`lyrics_not_found`, `rate_limited`, `key_revoked`, …).
 - **Rate limits:** no published numbers. Responses carry `RateLimit-*` headers and `Retry-After` on
   `429` [C]. ECHO honours them (§6) and makes **at most one request per track play** (cache first).
-- **Spotify ID requirement:** for Spotify tracks the ID is native. For Navidrome tracks, see §4.3.
-  Without a Spotify ID, S2 is skipped.
+- **Spotify ID requirement:** a Navidrome track gets one by matching (§4.3; no Spotify account is
+  involved). Without a Spotify ID, S2 is skipped.
 
 ---
 
 ## 3. Inputs to a lookup
 
-`GET /api/v1/lyrics?trackKey=&title=&artist=&album=&durationMs=`. Provider ids are derived from the track key on the server (`navidrome:<id>`, `spotify:<id>`), never taken from free-form parameters, and the normalised metadata is part of the shared cache key, so one user's request cannot fill another track's entry (M6 security review). The server
+`GET /api/v1/lyrics?trackKey=&title=&artist=&album=&durationMs=`. Provider ids are derived from the track key on the server (`navidrome:<id>`), never taken from free-form parameters, and the normalised metadata is part of the shared cache key, so one user's request cannot fill another track's entry (M6 security review). The server
 resolves and returns a `LyricsDoc` (§5) or `404 { tried: [{ source, outcome }] }`.
 
 Normalisation for matching (server-side):
@@ -127,14 +127,9 @@ no connection) and is gone. Now (`src/server/lyrics/spotifyMatch.ts`):
 - **Privacy.** The sweep sends the library's titles, artists, albums and ISRCs to ListenBrainz and
   MusicBrainz. The admin switch says so.
 
-### 4.4 Spotify tracks
+### 4.4 Spotify tracks (removed)
 
-> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
-
-S2 by native ID, S3 by metadata. S1/S4 don't apply. **Gate G2** (`PLAYBACK_ARCHITECTURE.md` §4.6;
-**on** by owner decision) allows full word/line timing for Spotify tracks. If the admin switches G2
-off, resolved docs are delivered with `sync` forced to `'none'` and the stage renders an untimed
-sheet.
+Removed 2026-11-03 with Spotify playback, and gate G2 with it.
 
 ---
 
@@ -224,8 +219,8 @@ and `fetchedAt` stored:
 | Spicy Lyrics doc | **30 days, hard** (refetch or delete) | Spicy terms §7 [C] |
 | LRCLIB doc | 30 days | Freshness; community data changes |
 | Navidrome doc | 1 day, then revalidate | The user may edit their files |
-| Negative ("not found") | 3 days per source (Spotify-ID mapping "none": 7 days) | Avoid hammering sources for instrumental tracks |
-| Spotify ID mapping | 30 days | §4.3 |
+| Negative ("not found") | 3 days per source | Avoid hammering sources for instrumental tracks |
+| Spotify ID match | kept until corrected; "none found" is asked again after 30 days | §4.3 |
 | Per-track offset & source pin | never expires (per-user data in the `track_overrides` table, not cache) | |
 
 - The lyric cache is **shared across the server's users** (lyrics are not user data). Fetching is

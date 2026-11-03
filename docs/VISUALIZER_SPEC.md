@@ -1,11 +1,9 @@
 # ECHO — Visual Environment & Visualizer Specification
 
-> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
-> this document that describe Spotify playback, its connection, the policy gates or the library
-> source switch are kept as a record of what was built and why it went; the code is in git before
-> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
-> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
-> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Every
+> track is Navidrome's now, so Reverb applies whenever the audio can be analysed; the Spotify parts
+> of §2 are kept as the reason Ambient exists.
 
 Status: **Draft 2** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design system](DESIGN_SYSTEM.md) §3.3, §7 (palette roles, permitted light effects) · [Lyrics experience](LYRICS_EXPERIENCE.md) §12 (how the lyric field uses features) · [Playback](PLAYBACK_ARCHITECTURE.md) · [Technical architecture](TECHNICAL_ARCHITECTURE.md) §4.2 (frame order)
@@ -38,25 +36,19 @@ through the room the way a sound reflects off walls.
 |---|---|---|---|
 | **Navidrome** stream through ECHO's same-origin proxy | **Yes.** `<audio>` → `MediaElementAudioSourceNode` → `AnalyserNode`. Same-origin, so not CORS-tainted (Web Audio spec: cross-origin resources without CORS output silence [C]) | Yes: the user's own files on the user's own server | **Reverb** |
 | **Dev fixtures** (local files in M3) | Yes, same pipeline | Yes | Reverb |
-| **Spotify** Web Playback SDK | **No.** Audio is decrypted and played inside the EME/Widevine pipeline. The SDK exposes no PCM, analyser or audio-graph access [C: SDK reference lists no such API] | **No.** Developer Policy III.13: "Do not analyze the Spotify Content…" [C]. Audio Features/Analysis endpoints are unavailable to new apps since 2024-11-27 [C] | **Ambient** |
+| **Spotify** Web Playback SDK *(removed 2026-11-03)* | **No.** Audio is decrypted and played inside the EME/Widevine pipeline. The SDK exposes no PCM, analyser or audio-graph access [C: SDK reference lists no such API] | **No.** Developer Policy III.13: "Do not analyze the Spotify Content…" [C]. Audio Features/Analysis endpoints are unavailable to new apps since 2024-11-27 [C] | **Ambient** |
 
-### 2.2 What Ambient means for Spotify
+### 2.2 What Ambient means for Spotify (removed)
 
-- `Features.available = false`. All beat terms are zero (`LYRICS_EXPERIENCE.md` §12.2).
-- The room moves on its own slow internal time (§4.2), **not** on song position, beats or tempo, so
-  ECHO does not "synchronize sound recordings with visual media" (Developer Policy III.6 [C]).
-- The room colour comes from the Spotify cover while gate G1 is on (the default by owner decision,
-  `PLAYBACK_ARCHITECTURE.md` §4.6). If G1 is switched off it falls back to Sodium.
-- A one-time explanation appears (`PRODUCT_SPEC.md` J2). The Settings → Visuals page repeats it.
+Removed 2026-11-03 with Spotify. Ambient stays: it is what the room does when no analysis exists
+(an analysis failure) or when the user chooses it, with `Features.available = false` and all beat
+terms zero (`LYRICS_EXPERIENCE.md` §12.2).
 
 ### 2.3 System or tab audio capture: excluded
 
-Capturing Spotify's output through `getDisplayMedia({audio:true})` or a loopback device is **not
-implemented**:
+Capturing system or tab audio through `getDisplayMedia({audio:true})` or a loopback device is **not
+implemented** (it was considered for Spotify, whose terms forbid it):
 
-- **Policy.** The Developer Terms require cooperation against "ripping or other capture of streamed
-  content" (VI.5) and forbid analysing Spotify Content (Policy III.13) [C]. ECHO's reading is that
-  capturing to analyse is prohibited. This is unresolved (Q-VZ-1), but ECHO does not ship it.
 - **UX.** It needs a screen-share permission prompt each session, captures every sound on the
   system, and on Linux tab-audio capture is unreliable.
 
@@ -140,12 +132,12 @@ ECHO's responsive (not predictive) visuals. Candidate for after M9.
 | Mode | When | Character |
 |---|---|---|
 | **Reverb** | Default when `available` | The room light field plus **wavefront rings** from onsets, with a feedback buffer that lets light decay like a reverb tail. Bass breathes the exposure. |
-| **Ambient** | Default when not `available` (Spotify), or chosen | The room light field only, moving on internal time at a slow constant rate. No rings, no feedback, no beat terms. |
+| **Ambient** | Default when not `available` (an analysis failure), or chosen | The room light field only, moving on internal time at a slow constant rate. No rings, no feedback, no beat terms. |
 | **Still** | Reduced motion, Motion = Off, battery-saver choice, tier T3 | One rendered frame of the room. It re-renders only on palette change (with the 1200 ms interpolation shown at 30 fps, then idle at 0 fps). |
 
 The user can choose `Auto` (default: Reverb if available, else Ambient), `Reverb`, `Ambient` or
-`Still` in Settings → Visuals. Choosing Reverb on a Spotify track shows Ambient with a note. Rings
-without features would be fake.
+`Still` in Settings → Visuals. Choosing Reverb when no analysis exists shows
+Ambient with a note. Rings without features would be fake.
 
 ### 4.1 Room light field (all modes)
 
@@ -291,9 +283,6 @@ work.
 
 - **Navidrome:** the server fetches `getCoverArt?id=…&size=256` directly from Navidrome over the
   compose network, using the requesting user's credentials.
-- **Spotify** (gate G1, on by default): the server fetches the `i.scdn.co` image URL supplied by the
-  client (validated: host must be `i.scdn.co`, https), keeps it in memory only, and discards it after
-  extraction (`PLAYBACK_ARCHITECTURE.md` §4.6, caching).
 - **Decode:** `sharp` → resize to 128×128 (`fit: 'fill'`, sRGB), raw RGBA pixels. Target ≤ 150 ms
   per cover on the OptiPlex (i7-3770), including fetch from the local Navidrome (VIS-03).
 
@@ -330,8 +319,7 @@ Output: `Palette { room, accent, highlight, glow, shadow, inkActive, source: 'ar
 
 `GET /api/v1/palette/:albumKey` returns the cached palette, or computes and caches it on a miss
 (concurrent requests for the same key share one computation). The cache is shared across users,
-because a palette contains no user data. TTL: none for Navidrome albums (invalidated by
-`palette.version`), 30 days for Spotify albums. Colour arrives in one round trip, typically before
+because a palette contains no user data. TTL: none (invalidated by `palette.version`). Colour arrives in one round trip, typically before
 the artwork pixels. Targets, measured at the client: ready ≤ 150 ms after a track change when
 cached, ≤ 600 ms when not (`ACCEPTANCE_CRITERIA.md` VIS-03).
 

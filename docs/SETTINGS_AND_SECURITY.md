@@ -1,14 +1,12 @@
 # ECHO — Settings & Security
 
-> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
-> this document that describe Spotify playback, its connection, the policy gates or the library
-> source switch are kept as a record of what was built and why it went; the code is in git before
-> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
-> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
-> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). A migration
+> deleted its stored connections and app credentials. Removed sections are one-line stubs so
+> section numbers stay put; their full text is in git before those commits.
 
 Status: **Draft 2** (revised for a public, multi-user deployment, 2026-10-22) · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
-Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2, §5.5, §6 (deployment, DB, API) · [Playback](PLAYBACK_ARCHITECTURE.md) §4.2, §5.2 · [Lyrics integration](LYRICS_INTEGRATION.md) §2
+Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2, §5.5, §6 (deployment, DB, API) · [Playback](PLAYBACK_ARCHITECTURE.md) §5.2 · [Lyrics integration](LYRICS_INTEGRATION.md) §2
 
 ECHO runs on a home server (Docker Compose, behind Caddy) and is **reachable from the public
 internet**. It has a small number of users: the owner (admin) and possibly a few invited people.
@@ -25,7 +23,7 @@ internet**. It has a small number of users: the owner (admin) and possibly a few
 | XSS / malicious lyric text | Lyrics containing `<script>` | All lyric and metadata text inserted with `textContent` only; strict CSP (§5.4) |
 | Cross-user access | User B reads user A's Navidrome password or queue | Every query scoped by `userId`; isolation test suite (§2.3) |
 | Secret disclosure at rest | DB file copied from a backup | AES-256-GCM encryption of every secret column with a master key stored separately (§3) |
-| Secret disclosure in transit to the browser | Navidrome token in DevTools | Secrets never leave the server; the browser holds only short-lived Spotify access tokens (§3.1) |
+| Secret disclosure in transit to the browser | Navidrome token in DevTools | Secrets never leave the server; the browser holds none (§3.1) |
 | Secret disclosure via logs | Signed stream URL in an access log | Redaction (§9) |
 | SSRF via the Navidrome URL field | A user sets the "Navidrome URL" to `http://169.254.169.254/` | URL allow-rules (§6.1) |
 | Abusing ECHO as an open proxy | Requests for arbitrary Subsonic methods or hosts | Method allow-list; each user can reach only their own configured Navidrome URL |
@@ -43,18 +41,17 @@ Out of scope: an attacker with root on the OptiPlex, and DDoS (handled, if at al
 
 | Role | Can |
 |---|---|
-| **admin** (exactly one at setup; more can be promoted) | Everything a user can, plus: server settings (public origin display, Spotify Client ID, Spicy Lyrics key, gate switches), invite/disable/delete users, view the audit log, see per-user connection *status* (never secrets) |
-| **user** | Own account (password, TOTP, sessions), own connections (Navidrome, Spotify), own settings, queue and lyric overrides |
+| **admin** (exactly one at setup; more can be promoted) | Everything a user can, plus: server settings (public origin display, Spicy Lyrics key, library matching, the TOTP policy), invite/disable/delete users, view the audit log, see per-user connection *status* (never secrets) |
+| **user** | Own account (password, TOTP, sessions), own Navidrome connection, own settings, queue and lyric overrides |
 
 ### 2.2 What is per-user vs server-wide
 
 | Per-user | Server-wide (admin) |
 |---|---|
 | Navidrome connection (own Navidrome account) | Default internal Navidrome URL (`ECHO_NAVIDROME_URL`) |
-| Spotify connection (own Spotify account, own refresh token) | **Spotify app Client ID** (one app, owned by the admin) |
 | Preferences, queue, lyric offsets and pins | **Spicy Lyrics secret key** |
-| Sessions and devices, TOTP | Policy gates G1/G2 kill switches (`PLAYBACK_ARCHITECTURE.md` §4.6) |
-| — | Shared caches: palettes, lyrics, Spotify-ID mappings |
+| Sessions and devices, TOTP | Library matching for Spicy Lyrics (`LYRICS_INTEGRATION.md` §4.3) |
+| — | Shared caches: palettes, lyrics, Spotify-id matches |
 
 ### 2.3 Isolation rule
 
@@ -76,12 +73,7 @@ signed URLs). Every call must fail (`ACCEPTANCE_CRITERIA.md` SEC-11).
 | Recovery codes | user | Argon2id hashes (low-cost params) | once, at generation |
 | Session ids / device tokens | user | SHA-256 hashes | the token itself, once (cookie / response body) |
 | Navidrome password or API key | user | encrypted (`connections.secret_enc`) | never |
-| Spotify refresh token | user | encrypted | never |
-| Spotify access token | user | server memory cache (≤ 1 h [C]) | **yes**, on request, for the SDK and Web API (`Cache-Control: no-store`, JS memory only) |
-| PKCE verifier + state | user, transient | memory, 10 min TTL | never |
-| Spotify Client ID | server | plain (public in PKCE) | yes |
 | Spicy Lyrics secret key (`sl_sk_…`) | server | encrypted | never |
-| Spotify app client secret (optional; Spotify matching only) | server | encrypted | never |
 | Stream-URL signing key, cookie-signing key | server | derived from the master key (HKDF-SHA256, distinct `info` labels) | never |
 | **Master key** | server | Docker secret file, **not** in the DB or the image | never |
 
@@ -160,8 +152,9 @@ requires the password plus a current code. The admin cannot disable their own TO
 | Visible in | Account → Sessions & devices (name, created, last seen, approximate location from IP prefix) | same |
 | Revocation | per item, "sign out everywhere else", password change | same |
 
-`SameSite=Lax`, not Strict, because the Spotify OAuth callback is a top-level cross-site navigation
-that must arrive with the session cookie. Lax sends cookies on top-level GET navigations only. All
+`SameSite=Lax`, not Strict: a link into ECHO from elsewhere (a bookmark, a link in a chat) is a
+top-level cross-site navigation and should arrive signed in. Lax sends cookies on top-level GET
+navigations only. All
 state-changing routes are non-GET and additionally Origin-checked (§5.3).
 
 ---
@@ -201,17 +194,17 @@ blocks DNS-rebinding and misrouted traffic.
 Strict-Transport-Security: max-age=31536000; includeSubDomains
 Content-Security-Policy:
   default-src 'self';
-  script-src 'self' https://sdk.scdn.co;
-  frame-src https://sdk.scdn.co;
-  connect-src 'self' https://api.spotify.com;
-  img-src 'self' https://i.scdn.co data: blob:;
+  script-src 'self';
+  frame-src 'none';
+  connect-src 'self';
+  img-src 'self' data: blob:;
   media-src 'self' blob:;
   font-src 'self';
   style-src 'self';
   worker-src 'self' blob:;
   frame-ancestors 'none';
   base-uri 'none';
-  form-action 'self' https://accounts.spotify.com;
+  form-action 'self';
   report-uri /api/v1/csp-report          (M8: violations are logged)
 Referrer-Policy: no-referrer
 X-Content-Type-Options: nosniff
@@ -221,9 +214,9 @@ Permissions-Policy: camera=(), microphone=(), geolocation=(), display-capture=()
 
 - Styles are set via the CSSOM (`element.style`), which `style-src` doesn't block. There are no inline
   scripts or styles.
-- The Spotify SDK loads its script and one iframe from `sdk.scdn.co` (verified in M7 from the
-  script itself); the iframe's own requests fall under its origin's policy, not ECHO's. CSP
-  violation reports (`report-uri /api/v1/csp-report`, M8) showed none across the full E2E run.
+- Nothing third-party loads: no script, frame, connection or image from another origin (the Spotify
+  SDK's `sdk.scdn.co` and Spotify's API and covers went with Spotify, 2026-11-03). CSP violation
+  reports (`report-uri /api/v1/csp-report`, M8) showed none across the full E2E run.
 - `Permissions-Policy` denies `display-capture` and `microphone`, a structural guarantee that ECHO
   never captures audio (`VISUALIZER_SPEC.md` §2.3).
 
@@ -233,7 +226,7 @@ Static assets · `GET /health` · `GET /session` (signed in or not, and whether 
 `GET /setup` + `POST /setup` (only while no admin exists) · `GET /invite` + `POST /invite` +
 `POST /invite/totp` (a valid unused invite token; M8) · `POST /csp-report` (browser CSP reports, logged
 only, 10 a minute per address and 300 in all; M8) ·
-`GET /spotify/callback` (bound to an existing PKCE `state` and the session cookie) · signed stream
+signed stream
 URLs (`TECHNICAL_ARCHITECTURE.md` §6.5). Everything else → `401`.
 
 ### 5.6 Limits
@@ -265,32 +258,9 @@ server: validate URL (rules below) → test (PLAYBACK_ARCHITECTURE.md §5.3)
   stars and scrobbles stay correct.
 - Secret fields are write-only in the UI ("•••••••• Saved").
 
-### 6.2 Spotify
+### 6.2 Spotify (removed)
 
-> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
-
-**Admin, once:**
-1. Create a Spotify app in the Developer Dashboard (owner: the admin, who must have Premium [C]).
-   Select Web Playback SDK and Web API.
-2. Redirect URI: `https://echo.example.com/api/v1/spotify/callback` (HTTPS is required off-loopback
-   [C]).
-3. Enter the Client ID in Admin → Server → Spotify.
-4. In Development Mode, the app allows **at most 5 Spotify users** [C]. Admin → Users shows "Spotify
-   seats: n / 5". The admin adds each user's Spotify account email under the app's User Management.
-
-**Each user:**
-1. Account → Connections → Spotify → Connect. `GET /api/v1/spotify/login` creates `code_verifier`
-   (64 random bytes), the S256 challenge and `state` (32 bytes), bound to the user's session, with a
-   10 min TTL. It redirects to `accounts.spotify.com/authorize` with the scopes in
-   `PLAYBACK_ARCHITECTURE.md` §4.2.
-2. `GET /api/v1/spotify/callback?code&state`: validate `state` (single use, constant-time, must
-   belong to the current session's user), exchange the code with `code_verifier` and no client
-   secret [C], encrypt and store the refresh token, and keep the access token in memory.
-3. `POST /api/v1/spotify/token` returns `{ accessToken, expiresAt }`, refreshing when < 5 min
-   remain. A refresh response without a new refresh token keeps the old one [C]. Refresh tokens last
-   ~6 months [C]; `invalid_grant` → "Sign-in expired" + Reconnect.
-4. A 403 from Spotify for a user missing from the app's user list → "Ask the ECHO admin to add your
-   Spotify account to the app."
+Removed on 2026-11-03: the admin's Spotify app, each user's PKCE connection, and the 5-seat limit.
 
 ### 6.3 Spicy Lyrics (admin)
 
@@ -307,8 +277,7 @@ redistribution) is shown next to the field.
 
 | Section | Key | Values | Default |
 |---|---|---|---|
-| Playback | `playback.defaultProvider` | `navidrome` \| `spotify` | first connected |
-| | `playback.crossfadeSec` | 0–8 | 0 |
+| Playback | `playback.crossfadeSec` | 0–8 | 0 |
 | | `playback.replayGain` | `off` \| `track` \| `album` \| `auto` | `auto` |
 | | `playback.quality` | `auto` \| `raw` \| `320` \| `192` \| `128` | `auto` (`TECHNICAL_ARCHITECTURE.md` §6.5) |
 | | `playback.scrobble` | bool | true |
@@ -333,9 +302,7 @@ brightness. Everything else follows the user across devices.
 
 | Key | Default |
 |---|---|
-| `spotify.clientId` | null |
-| `spotify.gates.artPalette` (G1) | **true** (owner decision 2026-10-22) |
-| `spotify.gates.syncedLyrics` (G2) | **true** (owner decision 2026-10-22) |
+| `spotify.matchLibrary` (match the library with Spotify track ids for Spicy Lyrics) | true |
 | `lyrics.spicyKey` (secret), `lyrics.spicyEnabled`, `lyrics.lrclibEnabled` | —, true, true |
 | `auth.requireTotpForAll` | false (admin always required) |
 | `navidrome.extraAllowedUrls` | [] |
@@ -343,7 +310,7 @@ brightness. Everything else follows the user across devices.
 ### 7.3 Settings screens
 
 Settings → **Playback · Lyrics · Visuals · Keyboard · About** (per-user preferences);
-**Account** → Profile, Password, Two-factor, Sessions & devices, Connections (Navidrome, Spotify);
+**Account** → Profile, Password, Two-factor, Sessions & devices, Connections (Navidrome);
 **Admin** (admins only) → Server, Users & invites, Audit log. Each view has one save model:
 self-saving controls with a "Saved" stamp (taste-skill app rules §8.2).
 
@@ -358,20 +325,15 @@ page; `src/client/shell/SettingsViews.tsx`, `AccountViews.tsx`, `AdminViews.tsx`
 ┌───────────────────────────────────────────────────────────────────────────────────────────┐
 │ Navidrome      ● Connected                                                [Test] [Disconnect] │
 │                navidrome:4533 · Navidrome 0.64.2 · 41,203 tracks · synced lyrics              │
-├───────────────────────────────────────────────────────────────────────────────────────────┤
-│ Spotify        ● Sign-in expired                                              [Reconnect]   │
-│                Premium · device "ECHO" · seat 2 of 5                                          │
 └───────────────────────────────────────────────────────────────────────────────────────────┘
 Admin → Server:
 │ Spicy Lyrics   ● Connected · key ending …7f2a · rate limit OK                [Test] [Remove] │
 │ LRCLIB         ● Reachable                                                                  │
-│ Spotify app    Client ID 3f9a…c21 · 2 of 5 seats used                        [Edit]          │
 ```
 
 | Item | Test does | Statuses |
 |---|---|---|
 | Navidrome (user) | ping + extensions + scan status | Connected · Unreachable · Credentials rejected · TLS error · Not a Subsonic server · URL not allowed |
-| Spotify (user) | refresh + `GET /v1/me` + Widevine probe (in this browser) + SDK `ready` | Connected · Sign-in expired · Premium required · Not on the app's user list · This browser can't play protected audio |
 | Spicy Lyrics (admin) | lookup of a fixed track ID | Connected · Key rejected · Rate limited (until hh:mm) · Unreachable |
 | LRCLIB (admin) | fixed lookup | Reachable · Unreachable |
 
@@ -402,8 +364,6 @@ Tests time out at 8 s and name the step that failed.
 | Action | Effect |
 |---|---|
 | Disconnect Navidrome (user) | Confirm (names the server). Stops Navidrome playback for this user, clears their Navidrome queue, deletes the connection row (secret included), and drops client caches. Shared caches (palette, lyrics) stay, because they contain no user data. |
-| Disconnect Spotify (user) | Confirm. `player.disconnect()` in open clients (via the next token request failing), deletes the refresh token, and evicts the in-memory access token. The dialog notes: "To remove ECHO's access completely, also remove it in your Spotify account's Apps page" (Spotify's Web API offers no token revocation endpoint [C]). Frees a Spotify seat. As built (M8),
-  Disconnect deletes the row at once; the dialog note is a follow-up. |
 | Revoke a session or device | Immediate. The next request with it gets 401. |
 | Delete my account | A confirm dialog + password + TOTP (or a recovery code). Deletes the user, sessions, connections (with their ciphertext), settings, queue, overrides, recovery codes, invites they created, and their audit rows; one anonymous `account.deleted` line remains (M8). The last admin cannot delete themselves. |
 | Admin disables a user | Revokes all their sessions. Login is refused. Data is kept. |
@@ -426,7 +386,7 @@ connection remains (SEC-06).
 - **Restore:** put the backup in place as `/data/echo.db` on a fresh container with the same
   master key; `admin-cli.ts verify` reports how many sealed values open. Without the key (verified
   in the M8 drill, `src/server/admin-cli.test.ts`): passwords, sessions, settings and queues work;
-  Navidrome and Spotify connections show "needs re-entry"; TOTP secrets are unreadable, so users
+  Navidrome connections show "needs re-entry"; TOTP secrets are unreadable, so users
   sign in with a recovery code and enrol again; the admin re-enters the Spicy key.
 - **Forgotten password:** `admin-cli.ts reset-password <username>`, for whoever holds the master
   key: it refuses unless the key opens this server's sealed values, sets a generated password

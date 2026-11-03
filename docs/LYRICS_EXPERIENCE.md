@@ -480,8 +480,8 @@ the AMLL rule):
   (f 1.45, ζ 1) with no stagger. Lines that should not exist in the new state (decaying lines from
   the old position) fade out in 160 ms. Background lines re-home deterministically for the new `t`.
 - Seeking into the middle of a word: `p_w` starts mid-word. No emphasis lift is replayed.
-- Seek confirmation lag (Spotify): optimistic `t` from the clock is used. If the provider reports a
-  position > 300 ms away, the field re-seeks once.
+- Seek confirmation lag: optimistic `t` from the clock is used. If the provider reports a position
+  > 300 ms away, the field re-seeks once.
 
 ### 9.7 Skipped tracks and song changes
 
@@ -606,7 +606,7 @@ normalised to 0–1 per song, already smoothed and latency-aligned:
 | `onset` | percussive onset impulse (high-band spectral flux), 0 or a 0–1 peak, refractory 120 ms |
 | `mid` | 250 Hz–4 kHz envelope (vocal band proxy) |
 | `intensity` | slow measure of how much is happening (loudness vs the song's own p95, plus onset density), 2 s smoothing |
-| `available` | `false` when no analysis exists (Spotify, Ambient mode, analysis failure) |
+| `available` | `false` when no analysis exists (Ambient mode, analysis failure) |
 
 ### 12.2 Motion gain
 
@@ -682,10 +682,8 @@ down only after the environment has already stepped down):
   arriving pass through the same intermediate colours, with no abrupt change.
 - The contrast solver (`DESIGN_SYSTEM.md` §3.4) runs on the *interpolated* palette, so contrast holds
   mid-transition.
-- Spotify tracks use art-derived colour while gate G1 is on (the default by owner decision,
-  `PLAYBACK_ARCHITECTURE.md` §4.6). If the admin switches G1 off, the fallback palette (Sodium) is
-  used and the lyric field works identically. Likewise, G2 off turns Spotify lyrics into the untimed
-  sheet (§9.3).
+- Without a palette (a cover that cannot be read), the fallback palette (Sodium) is used and the
+  lyric field works identically.
 
 ---
 

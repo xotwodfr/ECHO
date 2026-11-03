@@ -1,11 +1,9 @@
 # ECHO — Product Specification
 
-> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
-> this document that describe Spotify playback, its connection, the policy gates or the library
-> source switch are kept as a record of what was built and why it went; the code is in git before
-> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
-> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
-> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Music that
+> is not in Navidrome is found on YouTube Music through a link on an empty search. The MVP history
+> in §10 still names Spotify, as it was built then.
 
 Status: **Draft 2 — source of truth for scope** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design system](DESIGN_SYSTEM.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Acceptance criteria](ACCEPTANCE_CRITERIA.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
@@ -42,8 +40,7 @@ distance from the listener. That mapping is the product.
 3. **Light comes from the cover.** Colour in the room comes from the current artwork. The shell is
    neutral, so the cover is the only source of colour.
 4. **Honest reactivity.** Visuals react to audio only where ECHO can legitimately analyse that audio
-   (Navidrome / local streams). Where it cannot (Spotify), ECHO says so and uses a non-reactive
-   ambient mode. It never fakes beat sync. (`VISUALIZER_SPEC.md` §2)
+   (Navidrome streams). Where it cannot, ECHO says so and uses a non-reactive ambient mode. It never fakes beat sync. (`VISUALIZER_SPEC.md` §2)
 5. **Readable first.** No effect may reduce lyric legibility below the contrast targets in
    `DESIGN_SYSTEM.md` §3.4. Motion is capped by the music's intensity and by the user's motion
    preference.
@@ -58,8 +55,7 @@ distance from the listener. That mapping is the product.
 | Persona | Context | What they need from ECHO |
 |---|---|---|
 | **The self-hoster** (primary; the owner and admin) | Runs Navidrome and ECHO on a home server (OptiPlex, Docker, Caddy) with a curated library. Listens on a laptop, a gaming PC, and later native desktop/mobile apps, at home and away. Technically capable. | A player worthy of their library on every device: real synced lyrics, visuals that truly respond to the audio, fast browsing, a queue that follows them between devices, and no third-party cloud for core play. |
-| **The Spotify Premium listener** (secondary) | Uses Spotify daily and wants a more beautiful "now playing" for focused listening or as a living-room display. | Their Spotify playback on a cinematic stage with lyrics, controlled from ECHO or from their phone (Spotify Connect). Accepts that visuals are ambient, not beat-reactive. |
-| **The invited listener** (secondary) | A friend or family member the admin invited. Has their own Navidrome account on the same server, and maybe their own Spotify. | Sign in, connect their own accounts, and get the same experience, without seeing anyone else's data. |
+| **The invited listener** (secondary) | A friend or family member the admin invited. Has their own Navidrome account on the same server. | Sign in, connect their own Navidrome account, and get the same experience, without seeing anyone else's data. |
 | **The display user** (tertiary) | Puts ECHO full-screen on a TV or second monitor during a party or while working. | Long unattended sessions, nothing that burns in, readable from 3 m away, keyboard or remote-friendly controls. |
 
 **Multi-user, small scale:** one admin plus a few invited users ("mainly me, maybe some others").
@@ -93,10 +89,10 @@ IDs are referenced by the implementation plan and acceptance criteria.
 | **F4** | Artwork colour identity | Per-track palette (dominant, accent, highlight + derived roles) with contrast guarantees and smooth cross-track interpolation. | `VISUALIZER_SPEC.md` §6, `DESIGN_SYSTEM.md` §3.3 |
 | **F5** | Transport | Play/pause, previous/next, seek with scrubbing, volume, shuffle, repeat, provider/device indicator. | `PLAYBACK_ARCHITECTURE.md` §3 |
 | **F6** | Queue | View, reorder, remove, clear, "play next", "add to queue". Provider-aware (see constraints). | `PLAYBACK_ARCHITECTURE.md` §6 |
-| **F7** | Library | Navidrome: artists, albums, album detail, playlists, recently added, starred. Spotify: saved albums & playlists (read-only browse, play). | §6.3 |
-| **F8** | Search | One search field over the active library source (the switch, below), results as tracks, albums, artists, keyboard-first. | §6.4 |
-| **F8b** | Library source switch | With Navidrome and Spotify both connected: one library at a time, switched in the top bar (the account menu on phones; Settings → Default service is the same setting). Every library page, Home and Search follow it; playback, the queue and the lyrics do not. A link to the other source's item switches to it (2026-11-02, `superpowers/specs/2026-11-02-source-switch-design.md`). | §6.3 |
-| **F9** | Connections & settings | Each user connects, tests and disconnects their own Navidrome and Spotify accounts and sets appearance, motion, audio and lyrics preferences. The admin configures server-wide Spotify app, Spicy Lyrics key and policy gates. | `SETTINGS_AND_SECURITY.md` §6–§8 |
+| **F7** | Library | Navidrome: artists, albums, album detail, playlists, recently added, starred. | §6.3 |
+| **F8** | Search | One search field over the library, results as tracks, albums, artists, keyboard-first; with nothing found, a link to the same search on YouTube Music. | §6.4 |
+| **F8b** | Library source switch | Removed 2026-11-03 with Spotify (it chose between the Navidrome and Spotify libraries). | — |
+| **F9** | Connections & settings | Each user connects, tests and disconnects their own Navidrome account and sets appearance, motion, audio and lyrics preferences. The admin configures the Spicy Lyrics key, library matching and the two-factor policy. | `SETTINGS_AND_SECURITY.md` §6–§8 |
 | **F10** | Keyboard control | Full operation without a pointer; global shortcuts inside the app; a shortcut sheet. | §7 |
 | **F11** | States & resilience | Designed loading, empty, offline, reconnecting, and error states for every block; no blank screens. | §8 |
 | **F12** | Lyrics sourcing | Spicy Lyrics (when configured and allowed), OpenSubsonic/Navidrome lyrics, LRCLIB, embedded tags, with a precedence order and caching. | `LYRICS_INTEGRATION.md` |
@@ -121,7 +117,7 @@ IDs are referenced by the implementation plan and acceptance criteria.
 
 | ID | Screen | One question it answers (taste-skill §2.2) | Biggest thing on it |
 |---|---|---|---|
-| S0 | First run | "How do I start listening?" | Two connection choices (Navidrome, Spotify) with what each one gives you |
+| S0 | First run | "How do I start listening?" | Connect Navidrome, with what it gives you |
 | S1 | Listen | "What is being sung right now?" | The active lyric line |
 | S2 | Library | "What do I want to hear?" | The album grid (cover art at size) |
 | S3 | Search | "Where is that song?" | The first result group |
@@ -157,9 +153,6 @@ IDs are referenced by the implementation plan and acceptance criteria.
   upward *and* toward the viewer as their time nears, rise into focus, then continue upward and
   decay. This reading of "float upward toward the player" satisfies both interpretations, upward on
   screen and nearer to the listener. Full geometry is in `LYRICS_EXPERIENCE.md` §3.
-- **Spotify tracks:** the dock's artwork, title, artist and Spotify logo never auto-hide (Spotify
-  requires artwork and metadata to be shown during playback; `PLAYBACK_ARCHITECTURE.md` §4.6). Only
-  the controls fade.
 - Artwork appears in the dock at 64px. A **Cover mode** (`C`) replaces the lyric field with the
   artwork at up to 60vh for songs without lyrics or by preference.
 - Chrome (top bar and dock controls except progress) fades to 0 after **3 s** without pointer or
@@ -170,20 +163,12 @@ IDs are referenced by the implementation plan and acceptance criteria.
 ### 6.2 S4 Queue
 
 A 400px right side sheet over the current screen (full-width below 720px). Sections: *Now playing*,
-*Next up* (user-added), *Then* (context: album/playlist remainder). Drag or `Alt+↑/↓` to reorder. For
-Spotify, the queue is shown read-only where the API cannot reorder or remove
-(`PLAYBACK_ARCHITECTURE.md` §6.3), with a one-line explanation.
-
-**A queue belongs to one provider.** Spotify's Developer Policy forbids integrating Spotify streams
-with content from another service (III.5). So ECHO never mixes Spotify and Navidrome tracks in one
-queue. Playing a track from the other provider asks: "Replace the queue with this Spotify track?"
-(Replace / Cancel).
+*Next up* (user-added), *Then* (context: album/playlist remainder). Drag or `Alt+↑/↓` to reorder.
 
 ### 6.3 S2 Library and S6 Detail
 
 - Tabs: **Albums** (default; grid of covers, 168px min tile, sort: recently added / A–Z / year /
   most played), **Artists** (list with avatar/cover), **Playlists**, **Starred**.
-- Provider switch in the title row when both providers are connected (`Navidrome · Spotify`).
 - Album detail (S6): object header (cover 240px, title, artist, year, track count, total duration,
   Play / Shuffle / Add to queue), then a track table (number, title, duration, lyrics-availability
   glyph once known, ⋯ menu).
@@ -201,20 +186,18 @@ queue. Playing a track from the other provider asks: "Replace the queue with thi
 ### 6.5 S5 Settings
 
 Sections (each its own view, taste-skill app rules §8.2):
-- **Preferences:** Playback (default provider, crossfade (Navidrome only), ReplayGain, stream
-  quality per device), Lyrics (size, global offset, unsynced display, announcements, Spotify-assisted
-  lookup), Visuals (mode, intensity (default Expressive), quality per device, motion, grain),
+- **Preferences:** Playback (crossfade, ReplayGain, stream
+  quality per device), Lyrics (size, global offset, unsynced display, announcements), Visuals (mode, intensity (default Expressive), quality per device, motion, grain),
   Keyboard, About (version, licences, attributions, **link to source code** (AGPL-3.0)).
 - **Account:** profile, password, two-factor, sessions & devices, connections (the user's own
-  Navidrome and Spotify).
-- **Admin** (admins only): server (Spotify app Client ID and seats, Spicy Lyrics key, policy-gate
-  switches), users & invites, audit log.
+  Navidrome).
+- **Admin** (admins only): server (Spicy Lyrics key, library matching, require TOTP for all), users
+  & invites, audit log.
 
 Details are in `SETTINGS_AND_SECURITY.md` §7.
 
 **As built (M8):** Preferences is one view with five groups; crossfade, film grain and pointer
-parallax are shown disabled ("Arrives in a later version"); the Spotify-assisted lookup sits with
-the Spotify connection in Account; About has no source-code link yet (no public repository URL). The
+parallax are shown disabled ("Arrives in a later version"); About has no source-code link yet (no public repository URL). The
 admin also sets "require TOTP for all" in Server.
 
 ---
@@ -268,7 +251,7 @@ requirements:
 
 **J0 — Server setup (admin, once).** `docker compose up -d` → the container log prints a one-time
 setup URL → open it → create the admin account → scan the TOTP QR code, confirm a code, save the
-recovery codes → Admin → Server: paste the Spotify app Client ID and the Spicy Lyrics key → done.
+recovery codes → Admin → Server: paste the Spicy Lyrics key → done.
 
 **J1 — First run with Navidrome (primary).** Sign in (password + TOTP) → S0 → "Connect Navidrome"
 → the URL is prefilled with the internal Navidrome address → enter your Navidrome username and
@@ -276,13 +259,7 @@ password → "Test connection" shows server version and track count → Save →
 → pick an album → Play → the stage opens, the room takes the cover's colours within 600 ms, and
 lyrics appear (or Cover mode with "No lyrics found").
 
-**J2 — First run with Spotify.** Account → Connections → "Connect Spotify" → Spotify consent (PKCE)
-→ back to ECHO → ECHO registers as a Spotify Connect device "ECHO" → the user picks a playlist in
-Library or plays from their phone and transfers to "ECHO" → the stage opens with the cover's colours
-and floating lyrics, and the environment in **Ambient** mode with a one-time note: "Visuals for
-Spotify tracks follow the cover, not the beat. Spotify audio isn't available to ECHO." The cover is
-shown unaltered in the dock with the Spotify logo. If the user's Spotify account isn't on the app's
-user list, the error says to ask the admin.
+**J2 — First run with Spotify.** Removed 2026-11-03 with Spotify.
 
 **J3 — Focused listening.** Playing → pointer idles 3 s → chrome fades → lines float in, word
 illumination tracks the voice → the user presses `[` twice because the lyrics feel early → offset
@@ -320,21 +297,18 @@ keyed by Spotify track ID, so it serves Navidrome tracks only once the opt-in Sp
 exists (M7; `LYRICS_INTEGRATION.md` §4.3).
 
 **MVP-β "Two sources" (M7–M9):** Spotify playback within confirmed capabilities, the settings and
-security hardening, accessibility and performance passes, and final polish.
+security hardening, accessibility and performance passes, and final polish. (Spotify playback was
+removed on 2026-11-03; the rest stands.)
 
 ### 10.1 Non-goals (MVP)
 
 - **Native desktop and mobile clients** (post-MVP. The MVP ships the API they will use, F14).
 - Social or sharing features. Public sign-up (users only join by invite).
-- Downloading or caching **Spotify** audio or any Spotify content beyond what the developer terms
-  allow (`PLAYBACK_ARCHITECTURE.md` §4.6).
-- Capturing system or tab audio to analyse Spotify. Excluded from MVP for policy and UX reasons
-  (`VISUALIZER_SPEC.md` §2.3).
+- Capturing system or tab audio to analyse it (`VISUALIZER_SPEC.md` §2.3).
 - Editing tags, managing the Navidrome library, uploading music.
 - Lyric editing or community lyric contributions.
 - Equaliser or DSP effects beyond volume, ReplayGain and an optional Navidrome crossfade.
-- Chromecast/AirPlay casting. (Spotify Connect *to* ECHO is in scope because the Web Playback SDK
-  provides it.)
+- Chromecast/AirPlay casting.
 - Last.fm/ListenBrainz scrobbling (Navidrome scrobble calls are in scope; external scrobblers are a
   post-MVP candidate).
 

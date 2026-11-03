@@ -1,11 +1,9 @@
 # ECHO — Acceptance Criteria
 
-> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
-> this document that describe Spotify playback, its connection, the policy gates or the library
-> source switch are kept as a record of what was built and why it went; the code is in git before
-> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
-> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
-> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Criteria
+> that only applied to Spotify keep their IDs, marked **Removed 2026-11-03**, so references to them
+> still resolve.
 
 Status: **Draft 2** (criteria unchanged; status below) · Last reviewed 2026-10-28
 Every criterion is testable. **Method:** U = Vitest unit, E = Playwright E2E, V = Playwright visual
@@ -31,7 +29,6 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | Waiting for | Criteria |
 |---|---|
 | **The owner's Cloudflare setting and a DevTools look** | SEC-19 (TLS grade B → A with minimum TLS 1.2; the cookie flags, check 4 of `reviews/M8-security.md`). DEP-03's on-box drill passed on 2026-10-24 (check 8) |
-| **A Spotify app and Premium account** (manual checklist, `reviews/M7.md`) | PLAY-08, PLAY-09, the M parts of SP-01, SRCH-02, REL-04, BRW-02 |
 | **The owner's laptop and gaming PC** | PERF-01, the reference runs of PERF-03 and LYR-26 (measured here: 0.7 ms frame, 0.2 ms lyrics), REL-06 (8 h soak), DEP-04 under real Navidrome transcoding, VIS-03 client timing on real covers |
 | **People** | A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes). DS-05 passed by three model reviews on 2026-10-28 (`reviews/M9.md`); a human five-second test is still worth doing |
 | **A 10-bit capture setup** | VIS-09 M (the dither test passes; the criterion asks for a 10-bit capture, which Playwright cannot make) |
@@ -53,7 +50,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 - **Fixtures:** `fixtures/lyrics/*` (`LYRICS_EXPERIENCE.md` §16), the mock Subsonic server, 30 fixture
   covers (incl. greyscale, near-white, neon, bordered, text-heavy), `compose.test.yaml` (Caddy with an
   internal CA + ECHO + mock Subsonic).
-- **Manual-only areas:** real Spotify (Premium + Widevine in each browser), the real deployment over
+- **Manual-only areas:** the real deployment over
   the internet (phone hotspot), screen readers (Orca).
 
 ## 1. Playback & transport (F5)
@@ -67,8 +64,8 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | PLAY-05 | ReplayGain `auto` applies album gain in album context and track gain otherwise. The peak prevents clipping | U + M | M5 |
 | PLAY-06 | Scrobble: `submission=false` at start, `submission=true` at min(50%, 4 min), once per play | E (mock records calls) | M5 |
 | PLAY-07 | Media Session metadata and actions work (OS media keys play/pause/next/previous) | M | M5 |
-| PLAY-08 | Spotify: ECHO appears as device "ECHO". Transfer, play context, pause, seek, next/previous, volume, shuffle and repeat work | M | M7 |
-| PLAY-09 | Spotify remote state (playback moved to another device) shows "Playing on …" and "Play here" works | M | M7 |
+| PLAY-08 | **Removed 2026-11-03** with Spotify. | — | — |
+| PLAY-09 | **Removed 2026-11-03** with Spotify. | — | — |
 | PLAY-10 | The scrubber shows the lyric line at the hovered or dragged time | E | M6 |
 
 ## 2. Queue (F6)
@@ -78,7 +75,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | QUE-01 | Play next / Add to queue / reorder (drag and `Alt+↑/↓`) / remove / clear work for Navidrome. The UI matches `queueStore` after each operation | E | M5 |
 | QUE-02 | Shuffle shuffles `context` only, preserves `nextUp` order, and toggling off restores the original context order | U | M5 |
 | QUE-03 | A queue never contains tracks from two providers. Starting the other provider prompts "Replace the queue?" | E | M7 |
-| QUE-04 | Spotify queue is read-only except Add. Reorder/remove/clear controls are absent and the explanation is shown | E (fake provider) + M | M7 |
+| QUE-04 | **Removed 2026-11-03** with Spotify. | — | — |
 | QUE-05 | Queue and position persist across reload (server-side, per user) and restore paused | E | M5 |
 
 ## 3. Library & search (F7, F8)
@@ -89,8 +86,8 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | LIB-02 | A library of 5,000 albums scrolls at ≥ 55 fps (virtualised, ≤ 150 album tiles in the DOM) | P | M9 |
 | LIB-03 | Covers show the cached dominant colour (or `--surface-2`) until loaded, with no layout shift (CLS 0) | E | M5 |
 | SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | E | M5 |
-| SRCH-02 | Search finds the active library source only (the switch, SRC-01); after a switch the same query answers from the new source and never shows the other's results meanwhile. Spotify results respect limit ≤ 10 per type. *Changed 2026-11-02: results were merged and grouped by provider* | E (fake) + M | M7 |
-| SRC-01 | With Navidrome and Spotify both connected, a switch (top bar; the account menu on phones; Settings → Default service is the same setting) shows one source's library at a time on every library page. A link to the other source's item switches to it; switching never stops playback; with one source connected there is no switch | U + E (fake) | 2026-11-02 |
+| SRCH-02 | Search finds the library's tracks, albums and artists; with nothing found it offers the same search on YouTube Music, in a new tab. *Changed 2026-11-03: was the active source only (Spotify ≤ 10 per type)* | E (`pages.spec.ts`: a search with no result offers…) | 2026-11-03 |
+| SRC-01 | **Removed 2026-11-03** with Spotify. | — | — |
 
 ## 4. Floating lyrics (F2), the signature
 
@@ -141,7 +138,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 
 | ID | Criterion | Method | MS |
 |---|---|---|---|
-| VIS-01 | Reverb, Ambient and Still modes render per `VISUALIZER_SPEC.md` §4. `Auto` picks Reverb for Navidrome and Ambient for Spotify | V + E | M5 |
+| VIS-01 | Reverb, Ambient and Still modes render per `VISUALIZER_SPEC.md` §4. `Auto` picks Reverb when the audio can be analysed, else Ambient | V + E | M5 |
 | VIS-02 | Palette roles satisfy their OKLCH boxes for all 30 fixture covers. Achromatic covers produce the Sodium fallback with no invented hue. Near-white covers produce a dark room | U | M4 |
 | VIS-03 | Palette is ready ≤ 150 ms after track change when cached, ≤ 600 ms uncached (local server) | E | M4 |
 | VIS-04 | Track change interpolates all roles in OKLab over 1200 ms with no frame-to-frame ΔE_ok jump > 0.02. A mid-transition retarget is continuous | U | M4 |
@@ -163,7 +160,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | DS-05 | Five-second test: 3 of 3 people (or 3 independent model reviews of the screenshot) can say "a music player showing the song's lyrics" | M | M9 |
 | DS-06 | Every component in `DESIGN_SYSTEM.md` §9 has default/hover/pressed/focus-visible/disabled states (plus loading where relevant), shown on an internal `/__ui` page and snapshotted | V | M2 |
 | DS-07 | Every block has designed loading/empty/error/offline states (`DESIGN_SYSTEM.md` §10) with no layout shift between loading and ready | V | M8 |
-| DS-08 | Artwork is never cropped, overlaid, scaled or animated. Radii are 4 or 8 px only. *(2026-11-02, spring motion: this stays the rule for Spotify artwork; ECHO's own covers spring in and fly, `DESIGN_SYSTEM.md` §11.2, by the owner's choice)* | I + V | M2, M7 |
+| DS-08 | Artwork is never cropped or overlaid. Radii are 4 or 8 px only. *(2026-11-02, spring motion: covers spring in and fly, `DESIGN_SYSTEM.md` §11.2, by the owner's choice; the no-scaling rule was Spotify's, removed 2026-11-03)* | I + V | M2, M7 |
 | DS-10 | Typeface decision recorded in `DESIGN_SYSTEM.md` §4.1 (Draft 6: Segoe UI where installed, Selawik shipped). `--font` names that one face and its fallbacks; no unused face is shipped. *Wording aligned with Draft 6: it previously required exactly one family* | I | M1 |
 | DS-09 | Critique record: a written design critique (design-critique format + taste-skill app-screen questions) for Listen, Library and Settings, with its top 3 fixes applied | M | M9 |
 
@@ -176,13 +173,13 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | MOT-01 | Menus spring in from their trigger and play their exit before they unmount; reopening mid-exit keeps the same menu | E (`motion.spec.ts`: a menu animates out…, reopening a closing menu…) | 2026-11-02 |
 | MOT-02 | Dialogs and sheets spring in and play their exit on Cancel, Esc, close and backdrop; focus returns to the trigger; an exit never waits on an endless animation inside | E (`motion.spec.ts`: a dialog closes…, a sheet closes…) | 2026-11-02 |
 | MOT-03 | The right panel slides in and out and the page beside it resizes smoothly; Queue ↔ Now playing crossfades | E (`motion.spec.ts`: the right panel …) | 2026-11-02 |
-| MOT-04 | Page changes rise in on the spring; a card's cover flies into its page's header and back into its card on Back (not Spotify artwork) | E (`motion.spec.ts`: Back flies the header cover…) | 2026-11-02 |
+| MOT-04 | Page changes rise in on the spring; a card's cover flies into its page's header and back into its card on Back | E (`motion.spec.ts`: Back flies the header cover…) | 2026-11-02 |
 | MOT-05 | Queue rows glide when moved, arrive with a wash, and fade out where they were when removed | E (`motion.spec.ts`: queue changes …) | 2026-11-02 |
 | MOT-06 | Presses spring; play/pause morphs; a heart pops when liked, never when a page shows it saved | E (`motion.spec.ts`: presses spring, the heart pops…, play and pause morph…) | 2026-11-02 |
 | MOT-07 | Content that replaced a placeholder waves in; a page brought back as it was does not | E (`motion.spec.ts`: tiles arrive in a wave…) | 2026-11-02 |
 | MOT-08 | The lyrics view grows out of the player's cover and shrinks back into it; the page under it is live at once | E (`motion.spec.ts`: the lyrics view …) | 2026-11-02 |
-| MOT-09 | Toasts spring up; a switch's selection slides; a new song's cover springs in (Spotify's only fades) | E (`motion.spec.ts`: a toast springs up, a switch's selection slides…, the player's cover…) | 2026-11-02 |
-| MOT-10 | Switching Navidrome ↔ Spotify is a page change; block states and notices spring in | E (`source.spec.ts`: switching is a page change; `motion.spec.ts`: block states…) | 2026-11-02 |
+| MOT-09 | Toasts spring up; a switch's selection slides; a new song's cover springs in | E (`motion.spec.ts`: a toast springs up, a switch's selection slides…, the player's cover…) | 2026-11-02 |
+| MOT-10 | Block states and notices spring in *(the Navidrome ↔ Spotify switch was removed 2026-11-03)* | E (`motion.spec.ts`: block states…) | 2026-11-02 |
 | MOT-11 | Settings → Motion → Full wins over a reduce-motion device; less motion keeps fades only, Off stops UI motion | E (`motion.spec.ts`; `design-rules.test.ts`: no stylesheet reads prefers-reduced-motion) | 2026-11-02 |
 | MOT-PERF | Opening and closing the right panel over 5,000 albums keeps ≥ 50 fps | E (`perf.spec.ts`) | 2026-11-02 |
 
@@ -222,7 +219,7 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | SEC-04 | Redaction: every secret type through every log path (incl. Caddy log filter for signed URLs), with no substring present | U + I | M8 |
 | SEC-05 | Subsonic proxy rejects non-allow-listed methods with 403 | U | M5 |
 | SEC-06 | After each disconnect or account deletion, no row or ciphertext for that connection or user remains. Shared caches contain no user data | U + M | M8 |
-| SEC-07 | Spotify PKCE: `state` is single-use, bound to the session user, and validated in constant time. The verifier never reaches a client. Refresh tokens never leave the server | U + I | M7 |
+| SEC-07 | **Removed 2026-11-03** with Spotify. | — | — |
 | SEC-08 | Security headers and CSP as specified (`SETTINGS_AND_SECURITY.md` §5.4), with no CSP violations during the full E2E run | E + M | M8 |
 | SEC-09 | Container runs non-root, read-only rootfs, `cap_drop: ALL`, `no-new-privileges`, no published ports | I (compose + `docker inspect`) | M8 |
 | SEC-10 | `pnpm audit --prod` and Trivy show no high or critical findings. Install scripts restricted per `SETTINGS_AND_SECURITY.md` §12. *M1 closed on an owner-accepted, time-boxed exception for 43 unfixed HIGH base-image findings (`reviews/M1-SEC-10-exception.md`, expires at the M9 re-check). An exception lets a milestone close but is recorded as an exception, never as a pass; this criterion is unchanged* | I (CI) | M1, M9 |
@@ -261,7 +258,7 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | ID | Criterion | Method | MS |
 |---|---|---|---|
 | BRW-01 | The full E2E suite passes on **Chromium and Firefox** | E | M5 (and every later milestone) |
-| BRW-02 | Spotify connect in Chromium without Widevine and in Firefox with DRM disabled each show their specific fix-it guidance. With them fixed, playback works (manual) | E (stubbed EME) + M | M7 |
+| BRW-02 | **Removed 2026-11-03** with Spotify. | — | — |
 
 ## 11. Reliability
 
@@ -270,19 +267,19 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | REL-01 | Navidrome server stopped mid-song: buffered audio continues, the dock shows "unreachable" with backoff, and recovery is automatic within one backoff interval after the server returns | E (mock kill/restart) | M5 |
 | REL-02 | Stream error → up to 3 reloads at position, then skip with a toast | E (mock faults) | M5 |
 | REL-03 | Lyric sources failing (timeouts, 500s, 429s) never block playback or palette | E (mock) | M6 |
-| REL-04 | Spotify `not_ready` / auth expiry / Premium missing each produce their documented UI state | M + E (fake) | M7 |
+| REL-04 | **Removed 2026-11-03** with Spotify. | — | — |
 | REL-05 | ECHO server unreachable while a client is open → the dock status with retry. Buffered audio continues. A 401 (expired session) → the login sheet returns to the same screen | E | M8 |
 | REL-06 | 8 h soak test (continuous album playback at T0): no crash, no memory growth > 50 MB, no audio dropouts attributable to ECHO | M + P | M9 |
 
 ## 12. Spotify compliance
 
-> **Removed 2026-11-03.** ECHO no longer talks to Spotify; this section records what was built.
+> **Removed 2026-11-03** with Spotify. SP-05 still holds: no audio capture APIs anywhere in the code.
 
 | ID | Criterion | Method | MS |
 |---|---|---|---|
-| SP-01 | Artwork, title, artist and the Spotify logo (≥ 70 px wide) are visible whenever Spotify audio plays, in every view mode and with chrome hidden | V (fake) + M | M7 |
-| SP-02 | Spotify metadata links to `open.spotify.com` | E | M7 |
-| SP-03 | No disk caching of Spotify artwork, metadata or audio. Only derived palettes are cached (30-day TTL), and source images are never written to disk | I + U | M7 |
-| SP-04 | Gates G1 and G2 default **on** (owner decision 2026-10-22): Spotify tracks get art-derived colour and synced lyrics. Switching either off in Admin takes effect on the next track (fallback palette / untimed sheet) without a restart | E (fake) | M7 |
+| SP-01 | **Removed 2026-11-03** with Spotify. | — | — |
+| SP-02 | **Removed 2026-11-03** with Spotify. | — | — |
+| SP-03 | **Removed 2026-11-03** with Spotify. | — | — |
+| SP-04 | **Removed 2026-11-03** with Spotify. | — | — |
 | SP-05 | No Audio Features/Analysis/Recommendations calls, no audio capture APIs (`getDisplayMedia`, `getUserMedia`) anywhere in the code | I (grep) | M7 |
-| SP-06 | No crossfade, mixing or mixed-provider queue with Spotify | U + E | M7 |
+| SP-06 | **Removed 2026-11-03** with Spotify. | — | — |

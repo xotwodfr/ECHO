@@ -1,18 +1,16 @@
 # ECHO — Design System
 
-> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
-> this document that describe Spotify playback, its connection, the policy gates or the library
-> source switch are kept as a record of what was built and why it went; the code is in git before
-> those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
-> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
-> ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
+> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). The look stays
+> Spotify's (the redesign borrowed its layout, not its service); the library switch and the rules for
+> Spotify's own artwork and logo went with it.
 
 Status: **Draft 6** · 2026-10-30: the web client in Fluent 2 with Mica (owner decision;
 `docs/superpowers/specs/2026-10-29-fluent-web-design.md`). Draft 5 (2026-10-29): ECHO redesigned
 after Spotify, web and Android, liquid glass dropped for performance (§7.11). The Android app keeps
 Draft 5's Material 3 surfaces (`ANDROID_CLIENT.md`); this document describes the web client.
-2026-11-02: the library switch in the top bar (§2, §9.5) and every page header in the playing
-song's colour (§3.2).
+2026-11-02: every page header in the playing song's colour (§3.2). (The library switch of the same
+day went with Spotify on 2026-11-03.)
 Related: [Fluent spec](superpowers/specs/2026-10-29-fluent-web-design.md) · [Redesign spec](superpowers/specs/2026-10-29-spotify-redesign-design.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Visualizer](VISUALIZER_SPEC.md)
 
 This is the visual language of the web application: tokens, component rules and the reason each
@@ -65,9 +63,8 @@ wide (≥ 1280px)                         medium (720–1279)          compact (
                                                                       └─────────────┘
 ```
 
-- **Top bar** (`--topbar`): the ECHO wordmark, a round Home button, the library switch
-  (`Navidrome | Spotify`, only with both connected; §9.5), the search pill, the account menu (the
-  library choice when both are connected, Account, Settings, Admin, Log out). On phones the account
+- **Top bar** (`--topbar`): the ECHO wordmark, a round Home button, the search pill, the
+  account menu (Account, Settings, Admin, Log out). On phones the account
   menu opens from an avatar before Home's greeting.
 - **Your Library** (`--library-w`; covers only, `--library-w-min`, below 1024px): Liked Songs,
   playlists, albums, artists; filter chips, a search, the library's order; "+" makes a playlist.
@@ -201,8 +198,6 @@ lyrics view. The one blur in the app is Mica's, baked once per album into an ima
 browser then only composites it. Translucency without a filter (Fluent's layers, a scrim) costs
 nothing and stays allowed.
 
-**Spotify artwork.** Spotify forbids overlaying or distorting its artwork (§8): the card's play
-button does not sit on a Spotify cover.
 
 ## 8. Artwork
 
@@ -210,12 +205,9 @@ button does not sit on a Spotify cover.
   pages, 6px on cards, round for artists, round in the player pill.
 - Sizes: `--art-row` 40, `--art-list` 48, `--art-dock` 56, `--art-shortcut` 64, cards fill their
   column, `--art-detail` 232, the lyrics view `--np-art`.
-- Spotify content keeps Spotify's logo and links in the player (PLAYBACK_ARCHITECTURE.md §4.6).
-- The accent play button rises onto a card's cover corner on hover and focus (Spotify's), except on
-  Spotify's own covers.
-- Motion (§11): ECHO's own covers spring in when the song changes and fly between a card and its
-  page's header and into and out of the lyrics view. Spotify's artwork only ever fades (its Design
-  Guidelines, `PLAYBACK_ARCHITECTURE.md` §4.6).
+- The accent play button rises onto a card's cover corner on hover and focus (Spotify's).
+- Motion (§11): covers spring in when the song changes and fly between a card and its page's header
+  and into and out of the lyrics view.
 
 ## 9. Components
 
@@ -257,9 +249,9 @@ the focus ring. Switches are Fluent's: a 40×20 track in a 24px target, off an o
 matching knob, on the accent with an on-accent knob. Chips and view switches are toggle buttons
 (4px, edged; selected is the accent). Tabs are text with a 3px rounded accent bar under the
 current one. The current Your Library row and phone tab carry a short accent bar (leading edge,
-or under the icon) over a subtle fill. The library switch is a segmented control: a `--fl-control`
-track with a hairline edge, two 30px segments, the chosen one the accent (a fieldset of pressed
-buttons, like Settings' choices). In a menu, a choice among siblings is a `menuitemradio` with a
+or under the icon) over a subtle fill. Segmented choices (Settings' choices, the album sort) are a
+`--fl-control` track with a hairline edge, 30px segments, the chosen one the accent (a fieldset of
+pressed buttons). In a menu, a choice among siblings is a `menuitemradio` with a
 check before the chosen one.
 
 ### 9.6 Sheets, menus, dialogs, toasts
@@ -311,9 +303,8 @@ The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 ### 11.2 Rules
 
 - Movement springs; opacity fades; **exits never bounce**. The 4.9% overshoot is the ceiling.
-- **Spotify's artwork** stays in its original form (Spotify Design Guidelines, §8): it never
-  scales or flies, it only fades with what holds it. ECHO's own covers (Navidrome) spring in, and
-  fly between a card and its page's header and into and out of the lyrics view.
+- Covers spring in, and fly between a card and its page's header and into and out of the lyrics
+  view (§8).
 - An entrance is a transition from `@starting-style`; an exit sets `data-leaving` and the element
   stays until its animation ends (`settle`, `useExit`, `closeModal`). Nothing waits on an animation
   to accept input, and every animation can be interrupted.

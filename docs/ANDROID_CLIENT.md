@@ -6,7 +6,7 @@ A native Android app (Kotlin, Jetpack Compose, Media3) for the owner's ECHO at
 `https://echo.folk3s.com`. Owner decisions (2026-10-29): **full parity** with the web player (the
 library, playback, the Stage with its room, Reverb and word-synced lyrics; liquid glass was later dropped for Material 3's surfaces), **Kotlin +
 Compose**, the server **fixed** to echo.folk3s.com, **Navidrome only** (Spotify's Web Playback SDK
-cannot run in a third-party Android app; `PLAYBACK_ARCHITECTURE.md` §4.7).
+could not run in a third-party Android app; the web dropped Spotify too on 2026-11-03).
 
 ## Architecture
 
