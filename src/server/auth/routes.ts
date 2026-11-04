@@ -498,7 +498,10 @@ export function authRoutes(deps: AuthDeps) {
     c.header('Cache-Control', 'no-store');
     const token = getCookie(c, SESSION_COOKIE);
     const user = token ? resolveSession(db, token, now()) : null;
-    if (user) {
+    if (user && token) {
+      // The session slides on the server; the cookie must slide with it, or the browser drops it
+      // 30 days after signing in however much the app is used (the client asks here at each start).
+      setSessionCookie(c, token);
       const nd = db
         .prepare("SELECT 1 FROM connections WHERE user_id = ? AND provider = 'navidrome'")
         .get(user.id);

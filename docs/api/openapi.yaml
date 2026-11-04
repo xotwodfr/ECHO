@@ -40,7 +40,9 @@ paths:
       security: []
       responses:
         '200':
-          description: Signed in, anonymous, or setup open
+          description: >
+            Signed in, anonymous, or setup open. Signed in, the session cookie is set again for
+            another 30 days (the client asks at each start), so the browser keeps a sliding session.
           content:
             application/json:
               schema:

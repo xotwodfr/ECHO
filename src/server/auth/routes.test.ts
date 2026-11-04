@@ -295,6 +295,31 @@ describe('sessions (§4.6)', () => {
     expect((await call(t.app, 'GET', '/api/v1/me', undefined, t.cookie)).status).toBe(401);
   });
 
+  // The browser drops the cookie at its Max-Age, however long the server would keep the session:
+  // each start of the app (GET /session) gives it the same session for another 30 days.
+  it('a browser keeps the cookie while the app is used, past 30 days from signing in', async () => {
+    const t = await withAdmin();
+    let expires = t.clock.t + 30 * 86_400_000; // what the sign-in told the browser
+    for (let d = 0; d < 60; d += 10) {
+      t.clock.t += 10 * 86_400_000;
+      expect(t.clock.t).toBeLessThan(expires); // the browser still holds it
+      const res = await call(t.app, 'GET', '/api/v1/session', undefined, t.cookie);
+      expect(((await res.json()) as { status: string }).status).toBe('signedIn');
+      const set = res.headers.get('set-cookie') ?? '';
+      expect(set.split(';')[0]).toBe(t.cookie);
+      expect(set).toMatch(/Max-Age=2592000/);
+      expect(set).toMatch(/Secure/);
+      expect(set).toMatch(/HttpOnly/);
+      expires = t.clock.t + 30 * 86_400_000;
+    }
+  });
+
+  it('a signed-out browser gets no cookie from GET /session', async () => {
+    const t = await withAdmin();
+    const res = await call(t.app, 'GET', '/api/v1/session');
+    expect(res.headers.get('set-cookie')).toBeNull();
+  });
+
   it('only the token’s hash is stored', async () => {
     const t = await withAdmin();
     const token = t.cookie.split('=')[1] as string;
