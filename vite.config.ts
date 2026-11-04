@@ -23,6 +23,7 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
+    globalSetup: './tests/unit-setup.ts', // every temp folder of the run goes at its end
     // Auth tests hash with Argon2id at production cost (SETTINGS_AND_SECURITY.md §4.3); several
     // take 3–4 s alone and crossed the 5 s default under the full parallel run.
     testTimeout: 15_000,
