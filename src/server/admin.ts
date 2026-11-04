@@ -6,6 +6,7 @@ import { type AuthDeps, type AuthEnv, body, jsonObject } from './auth/routes.ts'
 import { revokeOthers } from './auth/sessions.ts';
 import type { Sealer } from './crypto.ts';
 import type { Db } from './db/db.ts';
+import type { LyricsCache } from './lyrics/cache.ts';
 
 // Admin → Server settings (SETTINGS_AND_SECURITY.md §6.2, §6.3, §7.2): the Spicy Lyrics secret key,
 // sealed in `server_settings`, write-only (the API says whether one is saved, never what it is),
@@ -62,7 +63,11 @@ export const requireAdmin: MiddlewareHandler<AuthEnv> = async (c, next) => {
   await next();
 };
 
-export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthEnv>) {
+export function adminRoutes(
+  deps: AuthDeps,
+  requireUser: MiddlewareHandler<AuthEnv>,
+  lyrics: LyricsCache,
+) {
   const app = new Hono<AuthEnv>();
   const view = () => ({
     lyrics: { spicyKeySaved: spicyKey(deps.db, deps.sealer) !== null },
@@ -111,6 +116,8 @@ export function adminRoutes(deps: AuthDeps, requireUser: MiddlewareHandler<AuthE
            ON CONFLICT (key) DO UPDATE SET secret_enc = excluded.secret_enc`,
         )
         .run(key === null ? null : deps.sealer.seal(key.trim(), SPICY));
+      // §10: the lyrics fetched with the key go with it, not after Spicy's 30 days.
+      if (key === null) await lyrics.sweep((e) => 'doc' in e && e.doc.source === 'spicy');
       audit(
         deps.db,
         deps.now(),

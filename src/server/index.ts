@@ -149,7 +149,7 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', authRoutes(deps.auth));
   app.route('/api/v1', navidromeRoutes(deps.navidrome, requireUser(deps.auth)));
   app.route('/api/v1', queueRoutes(deps.auth, requireUser(deps.auth)));
-  app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth)));
+  app.route('/api/v1', adminRoutes(deps.auth, requireUser(deps.auth), deps.lyrics.cache));
   app.route('/api/v1', lyricsRoutes(deps.lyrics, requireUser(deps.auth)));
   app.route('/api/v1', settingsRoutes(deps.auth.db, requireUser(deps.auth)));
   app.route('/api/v1', accountRoutes(deps.auth, requireUser(deps.auth)));

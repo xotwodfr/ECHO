@@ -514,7 +514,9 @@ it('a body that is not a JSON object is a 400 on every route that reads one, nev
 });
 
 // ON-SEC-7 (SETTINGS_AND_SECURITY.md §5.6): a per-user API budget, bursts of 50 then 600 a minute,
-// with streams and covers outside it.
+// with streams and covers outside it, and YouTube Music's thumbnails (a YouTube page shows up to
+// ~90, each a request through ECHO: past the burst they broke). YouTube audio stays inside it: a
+// song is a chunk or two, and each new song is a yt-dlp run, which the budget keeps bounded.
 it('a user gets bursts of 50 API requests, then 10 a second; covers are not counted', async () => {
   const w = await withAdmin();
   w.clock.t += 60_000; // a full budget
@@ -523,8 +525,10 @@ it('a user gets bursts of 50 API requests, then 10 a second; covers are not coun
   for (let i = 0; i < 55; i++) burst.push(await me());
   expect(burst.filter((s) => s === 200)).toHaveLength(50);
   expect(burst.slice(50)).toEqual([429, 429, 429, 429, 429]);
-  const cover = await call(w.app, 'GET', '/api/v1/navidrome/cover/x', undefined, w.admin);
-  expect(cover.status).not.toBe(429);
+  const get = async (path: string) => (await call(w.app, 'GET', path, undefined, w.admin)).status;
+  expect(await get('/api/v1/navidrome/cover/x')).not.toBe(429);
+  expect(await get('/api/v1/youtube/image?u=')).not.toBe(429);
+  expect(await get('/api/v1/youtube/stream/x')).toBe(429);
   w.clock.t += 1000; // ten more
   const next: number[] = [];
   for (let i = 0; i < 11; i++) next.push(await me());

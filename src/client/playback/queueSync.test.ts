@@ -4,7 +4,7 @@ import { sessionExpired } from '../session.ts';
 import { ManualClock } from './clock.ts';
 import { createPlaybackController } from './controller.ts';
 import { FakeProvider } from './fake.ts';
-import { queueSlot, savedQueue, startQueueSync, trimQueue } from './queueSync.ts';
+import { queueSlot, queueSyncStopped, savedQueue, startQueueSync, trimQueue } from './queueSync.ts';
 
 const track = (i: number): Track => ({
   key: `navidrome:t${i}`,
@@ -199,6 +199,29 @@ describe('queue sync start', () => {
       expect(puts).toEqual([]);
     } finally {
       sessionExpired.setState({ expired: false });
+    }
+  });
+
+  // §10: Settings → Navidrome → Disconnect clears the saved queue, then reloads the page. A save
+  // still due (the one `pagehide` sends) would put the old queue back.
+  it('saves nothing once stopped for a disconnect', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    const puts: unknown[] = [];
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      if (init?.method === 'PUT') puts.push(init.body);
+      return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    await startQueueSync(c, () => {});
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    queueSyncStopped.setState({ stopped: true }); // with a save already due
+    try {
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(puts).toEqual([]);
+    } finally {
+      queueSyncStopped.setState({ stopped: false });
     }
   });
 });

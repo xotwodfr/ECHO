@@ -239,8 +239,8 @@ URLs (`TECHNICAL_ARCHITECTURE.md` §6.5). Everything else → `401`.
 
 ### 5.6 Limits
 
-Request bodies ≤ 64 KB (no uploads in MVP). Per-user API rate limit: 50 req/s burst, 600/min (streams
-and covers excluded). Lyric and palette routes are server-cached, so they can't amplify outbound
+Request bodies ≤ 64 KB (no uploads in MVP). Per-user API rate limit: 50 req/s burst, 600/min (streams,
+covers and YouTube thumbnails excluded). Lyric and palette routes are server-cached, so they can't amplify outbound
 traffic beyond one upstream call per key and TTL.
 
 ---

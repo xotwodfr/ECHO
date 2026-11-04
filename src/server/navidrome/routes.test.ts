@@ -135,6 +135,27 @@ describe('connecting (§6.1, §5.3)', () => {
     ).toBe(200);
     expect((await s.get('/api/v1/navidrome/rest/ping')).status).toBe(409);
   });
+
+  // §10: disconnecting "clears their Navidrome queue". Kept, it came back on the reload that
+  // follows, every song failing with navidrome.not_connected. The YouTube slot is not Navidrome's.
+  it('disconnecting clears the saved Navidrome queue, and only that one', async () => {
+    const s = setup();
+    await s.connect(PASS);
+    for (const slot of ['/api/v1/me/queue', '/api/v1/me/queue/youtube'])
+      expect(
+        (await call(s.app, 'PUT', slot, { queue: { now: null }, baseUpdatedAt: 0 }, s.ada.cookie))
+          .status,
+      ).toBe(200);
+    await call(s.app, 'DELETE', '/api/v1/me/connections/navidrome', undefined, s.ada.cookie);
+    const saved = async (slot: string) =>
+      (
+        (await (await call(s.app, 'GET', slot, undefined, s.ada.cookie)).json()) as {
+          queue: unknown;
+        }
+      ).queue;
+    expect(await saved('/api/v1/me/queue')).toBeNull();
+    expect(await saved('/api/v1/me/queue/youtube')).toEqual({ now: null });
+  });
 });
 
 describe('the proxy (§5.2)', () => {

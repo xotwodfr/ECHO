@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { LyricsDoc } from '../shared/types.ts';
 import { createSession } from './auth/sessions.ts';
 import { call, testDeps } from './testing.ts';
 
@@ -53,5 +54,31 @@ describe('server settings', () => {
     expect(
       db.prepare("SELECT event FROM audit_log WHERE event LIKE 'admin.spotify%'").pluck().all(),
     ).toEqual(['admin.spotify_match_library']);
+  });
+
+  // §10: "Remove the Spicy key: deletes the key and purges all Spicy cache entries." They were
+  // served on for up to 30 days, which matters when the key went because its licence did.
+  it('removing the Spicy key purges the cached Spicy lyrics, and only those', async () => {
+    const { t, admin } = setup();
+    const cache = t.deps.lyrics.cache;
+    const doc = (source: LyricsDoc['source']): LyricsDoc => ({
+      version: 1,
+      trackKey: 't',
+      sync: 'line',
+      source,
+      attribution: { text: 'x' },
+      offsetMs: 0,
+      lines: [{ text: 'hi', start: 1000 }],
+      fetchedAt: new Date(0).toISOString(),
+    });
+    await cache.put('a', doc('spicy'));
+    await cache.put('b', doc('lrclib'));
+    const key = (spicyKey: string | null) =>
+      call(t.app, 'PUT', '/api/v1/admin/settings', { lyrics: { spicyKey } }, admin.cookie);
+    expect((await key('sl_sk_0123456789')).status).toBe(200);
+    expect(await cache.get('a')).not.toBeNull(); // a new key keeps them
+    expect((await key(null)).status).toBe(200);
+    expect(await cache.get('a')).toBeNull();
+    expect(await cache.get('b')).toMatchObject({ doc: { source: 'lrclib' } });
   });
 });

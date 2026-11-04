@@ -70,8 +70,11 @@ export function createLyricsCache(opts: { dir: string; now: () => number; capByt
     putNegative(key: string, tried: Tried[]) {
       return write(key, { negative: tried, expiresAt: opts.now() + (TTL.negative as number) });
     },
-    /** Deletes expired entries, then the least recently read until the cache fits its cap. */
-    async sweep() {
+    /**
+     * Deletes expired entries (and those `drop` picks: the Spicy key removed), then the least
+     * recently read until the cache fits its cap.
+     */
+    async sweep(drop?: (e: Entry) => boolean) {
       let names: string[];
       try {
         names = (await readdir(opts.dir)).filter((n) => n.endsWith('.json'));
@@ -85,7 +88,7 @@ export function createLyricsCache(opts: { dir: string; now: () => number; capByt
         try {
           const e = JSON.parse(await readFile(path, 'utf8')) as Entry;
           const s = await stat(path);
-          if (e.expiresAt <= opts.now()) {
+          if (e.expiresAt <= opts.now() || drop?.(e)) {
             await unlink(path);
             deleted++;
           } else kept.push({ path, size: s.size, at: s.mtimeMs });

@@ -360,6 +360,8 @@ export function navidromeRoutes(deps: NavidromeDeps, requireUser: MiddlewareHand
   app.delete('/me/connections/navidrome', requireUser, (c) => {
     const u = user(c);
     db.prepare("DELETE FROM connections WHERE user_id = ? AND provider = 'navidrome'").run(u.id);
+    // §10: its saved queue goes too; its songs cannot play without the connection.
+    db.prepare('DELETE FROM queue_state WHERE user_id = ?').run(u.id);
     audit(db, now(), u.id, 'navidrome.disconnected');
     return c.json({ ok: true });
   });

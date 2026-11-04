@@ -1,3 +1,4 @@
+import { createStore } from 'zustand/vanilla';
 import type { QueueState, Track } from '../../shared/types.ts';
 import { ApiError, api } from '../api.ts';
 import { sessionExpired } from '../session.ts';
@@ -7,6 +8,9 @@ import { positionNow } from './controller.ts';
 // The queue follows the user (IMPLEMENTATION_PLAN.md M5 task 9): restored at start, saved to the
 // server a moment after it changes and every 15 s while playing. Another device's newer queue
 // shows a notice; it replaces this one unless this one is playing.
+
+/** Navidrome was disconnected and the page is about to reload: no save may bring its queue back. */
+export const queueSyncStopped = createStore<{ stopped: boolean }>()(() => ({ stopped: false }));
 
 const SAVE_DEBOUNCE_MS = 2000;
 const SAVE_EVERY_MS = 15_000;
@@ -95,7 +99,7 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
   async function save(keepalive = false) {
     timer = null;
     // The session ended: whoever signs in next must not receive this queue (REL-05).
-    if (sessionExpired.getState().expired) return;
+    if (sessionExpired.getState().expired || queueSyncStopped.getState().stopped) return;
     const p = c.player.getState();
     const all = trimQueue(c.queue.getState());
     const slot = queueSlot(all);

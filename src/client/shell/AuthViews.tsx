@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { useStore } from 'zustand';
 import { ApiError, api } from '../api.ts';
+import { queueSyncStopped } from '../playback/queueSync.ts';
 import {
   loadSession,
   login,
@@ -306,7 +307,14 @@ function NavidromeConnection() {
   }
 
   async function disconnect() {
-    await api('/me/connections/navidrome', { method: 'DELETE' });
+    // The server clears the saved queue; a save still due on this page must not bring it back.
+    queueSyncStopped.setState({ stopped: true });
+    try {
+      await api('/me/connections/navidrome', { method: 'DELETE' });
+    } catch (err) {
+      queueSyncStopped.setState({ stopped: false }); // still connected: this page goes on
+      throw err;
+    }
     home();
   }
 
