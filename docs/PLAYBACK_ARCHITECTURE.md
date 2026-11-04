@@ -278,25 +278,33 @@ room).
 
 - **Resolving** (`src/server/youtube/ytdlp.ts`): the standalone yt-dlp (`yt-dlp_linux`, updated
   daily into the data volume) turns a video id into a googlevideo URL for format 140 (AAC,
-  ~130 kbps), anonymously, never with the user's cookie. At most two run at once; a song being
-  played goes ahead of waiting look-ups; a failure is remembered for 2 minutes; a bot check stops
-  the queue with a message.
+  ~130 kbps), anonymously, never with the user's cookie. It asks as YouTube's visionOS app first
+  (since 2026-11-04: ~2 s, and the URL plays at once) and falls back to yt-dlp's default clients
+  when that gives nothing; a bot check or a song that is truly gone is not asked twice. At most
+  two run at once; a song being played goes ahead of waiting look-ups (up to eight wait); a
+  failure is remembered for 2 minutes; a bot check stops the queue with a message.
 - **Streaming** (`proxy.ts`): the URL is bound to the server's IP, so the bytes come through ECHO.
   googlevideo refuses a `Range` header but serves a `range` query, so the browser's Range becomes
-  that, 10 MiB at a time, with yt-dlp's own headers, and ECHO answers 206. A fresh URL is refused
-  until its `available_at` (4–5 s after resolving); the proxy waits for it.
-- **Looking up ahead** (`/youtube/prepare`): a tap, a hover or focus, a page's first song and the
-  next three in the queue.
+  that, 10 MiB at a time, with yt-dlp's own headers, and ECHO answers 206. A URL from the default
+  clients is refused until its `available_at` (4–5 s after resolving); the proxy waits for it.
+- **Looking up ahead** (`/youtube/prepare`, `radio.ts`): a page's first six songs as it opens (an
+  album's or playlist's tracks too), a tap, a hover or focus, and the playing and next two songs
+  in the queue; each song once an hour.
 - **Seeking**: any position, as Range requests.
 
-### 11.1 Start time, and what could make it faster (2026-11-04)
+### 11.1 Start time (2026-11-04)
 
-A song looked up ahead starts at once; one that was not takes 8–14 s: 3.7–4 s of yt-dlp, then
-YouTube's 4–5 s `available_at` wait, then the first chunk. Measured on the OptiPlex:
+A song looked up ahead starts at once. Before 2026-11-04 one that was not took 8–14 s (production
+log: 8 of 20 starts): 3.4–4 s of yt-dlp's default clients, then YouTube's 4–5 s `available_at`
+wait, then the first chunk. Asked as visionOS, measured through `ytdlp.ts` on the OptiPlex: first
+audio after **2.3–2.6 s**, no wait; and a page's first six songs are looked up as it opens.
+
+Options considered:
 
 | Option | Gain | Cost or blocker |
 |---|---|---|
-| Look up the visible tracklist when a page opens (bounded, low priority), and on `pointerdown` on touch screens | most taps on Today and album pages start at once | more yt-dlp runs (~4 s of CPU each) and more requests to YouTube, so a capped number |
+| **Built:** the visionOS client first, the defaults as a fallback | a cold start ~2.5 s instead of 8–14 s | YouTube may change which clients it serves freely; the fallback and the `available_at` wait stay |
+| **Built:** a page's first six songs looked up as it opens | those start at once | more yt-dlp runs and requests to YouTube: six a page, each song once an hour, a backlog of eight |
 | Keep played songs on disk (`/data/cache/audio`, a size cap), and fetch the next song in the queue whole | replays and seeks at once; no expired URLs or throttled chunks mid-song | disk (~4 MB a song) and a whole download for a song skipped early |
 | yt-dlp's directory build (`yt-dlp_linux.zip`) instead of the one-file build that unpacks ~40 MB on every run | a part of each resolve (not measured) | a different update path |
 | Format 251 (Opus, ~134 kbps) where the browser plays WebM | better sound at the same size | none for speed: the same wait |

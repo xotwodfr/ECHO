@@ -35,6 +35,42 @@ const idOf = (args: string[]) => (args.at(-1) ?? '').split('v=')[1] ?? '';
 const ok = (args: string[]) => ({ code: 0, stdout: json(idOf(args)), stderr: '' });
 
 describe('the yt-dlp resolver', () => {
+  // Measured 2026-11-04: the visionOS client alone gives format 140 in ~1.7 s and its URL plays at
+  // once; the default clients take ~3.4 s and their 140 is refused for ~4.7 s more.
+  it('asks as visionOS first, for format 140 only', async () => {
+    const f = fakeRun(ok);
+    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+    await r.resolve(ID);
+    expect(f.calls).toHaveLength(1);
+    expect(f.calls[0]).toContain('youtube:player_client=visionos');
+    expect(f.calls[0]?.[f.calls[0].indexOf('-f') + 1]).toBe('140');
+  });
+
+  it('falls back to the default clients when visionOS gives nothing', async () => {
+    const f = fakeRun((args) =>
+      args.includes('youtube:player_client=visionos')
+        ? { code: 1, stdout: '', stderr: 'ERROR: [youtube] x: Requested format is not available' }
+        : ok(args),
+    );
+    const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+    expect((await r.resolve(ID)).size).toBe(5_818_745);
+    expect(f.calls).toHaveLength(2);
+    expect(f.calls[1]).not.toContain('youtube:player_client=visionos');
+    expect(f.calls[1]).toContain('140/bestaudio[ext=m4a]');
+  });
+
+  it('a bot check or a song that is truly gone is not asked again', async () => {
+    for (const [stderr, code] of [
+      ['ERROR: [youtube] x: Sign in to confirm you’re not a bot', 'youtube.bot_check'],
+      ['ERROR: [youtube] x: Video unavailable', 'youtube.unavailable'],
+    ] as const) {
+      const f = fakeRun(() => ({ code: 1, stdout: '', stderr }));
+      const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
+      await expect(r.resolve(ID)).rejects.toMatchObject({ code });
+      expect(f.calls).toHaveLength(1);
+    }
+  });
+
   it('resolves url, size and expiry', async () => {
     const f = fakeRun(ok);
     const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
@@ -107,10 +143,11 @@ describe('the yt-dlp resolver', () => {
   it('prefetch drops work past a short backlog', async () => {
     const f = fakeRun(ok);
     const r = createYtdlpResolver({ bin: 'yt-dlp', now: () => 0, log: () => {}, run: f.run });
-    const ids = 'abcdefgh'.split('').map((c) => c.repeat(11));
+    const ids = 'abcdefghijkl'.split('').map((c) => c.repeat(11));
     for (const id of ids) r.prefetch(id);
     await new Promise((done) => setTimeout(done, 100));
-    expect(f.calls).toHaveLength(6); // two running, four waiting; the rest dropped
+    // Two running, eight waiting (a page's six and the queue's next two); the rest dropped.
+    expect(f.calls).toHaveLength(10);
     expect(f.max()).toBeLessThanOrEqual(2);
   });
 
@@ -203,8 +240,10 @@ describe('the yt-dlp resolver', () => {
       '--no-playlist',
       '--js-runtimes',
       `node:${process.execPath}`,
+      '--extractor-args',
+      'youtube:player_client=visionos',
       '-f',
-      '140/bestaudio[ext=m4a]',
+      '140',
       '-j',
       `https://music.youtube.com/watch?v=${ID}`,
     ]);

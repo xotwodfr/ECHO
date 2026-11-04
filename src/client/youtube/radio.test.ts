@@ -67,6 +67,24 @@ describe('YouTube radio and prepare-ahead', () => {
 describe('looking songs up ahead', () => {
   afterEach(() => vi.useRealTimers());
 
+  it("a page's first six songs go as one request, in page order, each once an hour", () => {
+    const sent: string[][] = [];
+    let now = 0;
+    const hint = createHinter(
+      async (ids) => void sent.push(ids),
+      150,
+      () => now,
+    );
+    const ids = 'abcdefgh'.split('').map((c) => c.repeat(11));
+    hint.page(ids);
+    expect(sent).toEqual([ids.slice(0, 6)]);
+    hint.page(ids); // asked already
+    expect(sent).toHaveLength(1);
+    now = 3_600_001;
+    hint.page(ids.slice(2));
+    expect(sent.at(-1)).toEqual(ids.slice(2, 8));
+  });
+
   it('batches hints, keeps the latest three, and never asks twice within the hour', async () => {
     vi.useFakeTimers();
     const sent: string[][] = [];

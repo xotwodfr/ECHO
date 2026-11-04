@@ -362,3 +362,23 @@ test("the paper player's play button shows its icon", async ({ page }) => {
   ]);
   expect(ink).not.toBe(ground);
 });
+
+// ---- playing at once (2026-11-04): a page's first songs are looked up as it opens ----
+
+test("opening a page looks up its first six songs, an album's tracks too", async ({ page }) => {
+  const asked = new Set<string>();
+  page.on('request', (r) => {
+    if (r.method() === 'POST' && r.url().endsWith('/api/v1/youtube/prepare'))
+      for (const id of (r.postDataJSON() as { ids: string[] }).ids) asked.add(id);
+  });
+  await signedIn(page, 'yt-ahead');
+  await page.goto('/yt');
+  const six = [1, 2, 3, 4, 5, 6].map((n) => `fakesong00${n}`);
+  await expect.poll(() => six.filter((id) => asked.has(id)).length).toBe(6);
+  await page.goto('/yt/album/MPREb_fake1');
+  await expect
+    .poll(() =>
+      ['fakesong001', 'fakesong004', 'fakesong007', 'fakesong010'].every((id) => asked.has(id)),
+    )
+    .toBe(true);
+});

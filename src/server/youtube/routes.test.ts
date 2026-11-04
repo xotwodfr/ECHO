@@ -208,9 +208,10 @@ describe('browsing YouTube Music', () => {
     expect(seen).toEqual(['fakesong001', 'fakesong002']);
     expect(matched).toEqual(['fakesong001', 'fakesong002']); // Spicy matching starts early too
     expect((await post(['a', 'b', 'c', 'd'])).status).toBe(400);
-    expect((await post(['fakesong001', 'fakesong002', 'fakesong003', 'fakesong004'])).status).toBe(
-      400,
-    );
+    // A page's first six songs come as one request (2026-11-04); seven is too many.
+    const six = [1, 2, 3, 4, 5, 6].map((n) => `fakesong00${n}`);
+    expect((await post(six)).status).toBe(202);
+    expect((await post([...six, 'fakesong007'])).status).toBe(400);
   });
 });
 

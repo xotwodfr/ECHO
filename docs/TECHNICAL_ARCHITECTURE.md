@@ -419,14 +419,14 @@ Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`, and for its
   (`navidrome.ts` picks `/api/v1/youtube/stream/:id` for them), so the queue, Media Session and
   lyrics carry on when the switch flips. A queue holding YouTube songs is saved to
   `/me/queue/youtube`, which the Android app never reads.
-- **Looking up ahead** (`/youtube/prepare`): a tap, a hover or focus, a page's first song and the
-  next three in the queue are resolved before they are asked for; a resolved URL is reused for
-  about 5.5 h.
-- **Measured** (OptiPlex): a resolve takes 3.7–4 s, then YouTube refuses the URL for 4–5 s more
-  (`available_at`), so a song nobody looked up ahead starts in 8–14 s (production log 2026-11-03:
-  8 of 20 song starts; the other 11 began within 250 ms). The wait comes with every full-quality
-  format (140 AAC, 251 Opus, ~130 kbps) of yt-dlp's default clients (`tv samsung`, `visionos`);
-  the other clients need a GVS PO token (2026-11-04). Faster starts: `PLAYBACK_ARCHITECTURE.md` §11.
+- **Looking up ahead** (`/youtube/prepare`): a page's first six songs as it opens, a tap, a hover
+  or focus, and the next songs in the queue are resolved before they are asked for; a resolved
+  URL is reused for about 5.5 h.
+- **Measured** (OptiPlex, 2026-11-04): yt-dlp's default clients (`tv_samsung`, `visionos`) take
+  3.4–4 s and their format 140 is refused for 4–5 s more (`available_at`: a cold start of 8–14 s
+  in production); asked as `visionos` alone, format 140 comes in ~2 s and plays at once, so ECHO
+  asks that way first and falls back to the defaults. Other clients need a GVS PO token.
+  `PLAYBACK_ARCHITECTURE.md` §11.
 
 ---
 

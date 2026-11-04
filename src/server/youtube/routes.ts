@@ -32,7 +32,7 @@ export interface YoutubeDeps {
 
 const BROWSE_ID = /^[\w-]{2,64}$/;
 const MAX_COOKIE = 8192;
-const MAX_PREPARE = 3;
+const MAX_PREPARE = 6; // a page's first six songs (client radio.ts)
 const where = (userId: number) => ({
   table: 'youtube_accounts',
   rowId: userId,

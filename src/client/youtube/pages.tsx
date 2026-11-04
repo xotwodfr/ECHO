@@ -155,9 +155,10 @@ function Detail({
 }) {
   const c = usePlayback();
   const tracks = page.tracks ?? [];
-  // Play plays the first song: look it up while the page is read.
-  const first = tracks[0]?.id;
-  useEffect(() => void (first && hintSong(first)), [first]);
+  // Play plays the first song, and the first rows are the likeliest presses: looked up while the
+  // page is read.
+  const songs = tracks.map((t) => t.id).join(' ');
+  useEffect(() => hintSong.page(songs ? songs.split(' ') : []), [songs]);
   const context = { kind, id, title: page.title } as const;
   return (
     <>

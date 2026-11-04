@@ -10,12 +10,14 @@ import { ytPrepare, ytUpNext } from './api.ts';
 // ahead (goal 9): yt-dlp takes seconds per song, so the next one is fetched while this one plays.
 
 const PREPARE = 3;
+const PAGE_AHEAD = 6; // a page's first songs, looked up as it opens
 const HINT_FOR_MS = 3_600_000; // a looked-up URL is good for hours; ask again after one
 
 /**
- * Songs about to be pressed (pointed at, focused, first on a page), looked up ahead: a cold
- * YouTube song takes ~9 s (yt-dlp, then YouTube's own wait), a prepared one starts at once. Hints
- * within `waitMs` go as one request of the latest three; the server drops them past a backlog.
+ * Songs about to be pressed, looked up ahead: a cold YouTube song takes ~2 s (yt-dlp), a prepared
+ * one starts at once. Pointed at or focused: hints within `waitMs` go as one request of the latest
+ * three. `page`: a page's first six songs as it opens, one request in page order. Each song once
+ * an hour; the server drops look-ups past a backlog.
  */
 export function createHinter(
   send: (ids: string[]) => Promise<unknown> = ytPrepare,
@@ -23,11 +25,14 @@ export function createHinter(
   now: () => number = Date.now,
 ) {
   const asked = new Map<string, number>();
+  const fresh = (id: string) => {
+    const at = asked.get(id);
+    return at === undefined || now() - at >= HINT_FOR_MS;
+  };
   let batch: string[] = [];
   let waiting = false;
-  return (id: string) => {
-    const at = asked.get(id);
-    if ((at !== undefined && now() - at < HINT_FOR_MS) || batch.includes(id)) return;
+  const hint = (id: string) => {
+    if (!fresh(id) || batch.includes(id)) return;
     batch.push(id);
     if (waiting) return;
     waiting = true;
@@ -39,6 +44,13 @@ export function createHinter(
       void send(ids).catch(() => undefined);
     }, waitMs);
   };
+  const page = (ids: string[]) => {
+    const todo = ids.slice(0, PAGE_AHEAD).filter(fresh);
+    if (!todo.length) return;
+    for (const x of todo) asked.set(x, now());
+    void send(todo).catch(() => undefined);
+  };
+  return Object.assign(hint, { page });
 }
 
 export const hintSong = createHinter();

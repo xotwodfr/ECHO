@@ -14,7 +14,7 @@ const REUSE_MARGIN_MS = 30 * 60_000;
 /** A failure is remembered this long: the player's retries and the next prefetch cost no new run. */
 const FAIL_TTL_MS = 2 * 60_000;
 const MAX_RUNNING = 2;
-const MAX_WAITING = 4; // prefetches past this are dropped
+const MAX_WAITING = 8; // a page's six and the queue's next two; prefetches past this are dropped
 const MAX_CACHED = 500;
 const TIMEOUT_MS = 30_000;
 
@@ -139,14 +139,31 @@ export function createYtdlpResolver(opts: {
     }
   }
 
+  /**
+   * Asked as YouTube's visionOS app first: measured 2026-11-04, it gives format 140 in ~1.7 s and its
+   * URL plays at once, where yt-dlp's default clients take ~3.4 s and their 140 is refused for
+   * ~4.7 s more (`available_at`). When it gives nothing, the defaults as before; a bot check or a
+   * song that is truly gone is not asked twice.
+   */
   async function once(id: string): Promise<Resolved> {
+    try {
+      return await extract(id, 'visionos');
+    } catch (e) {
+      if (e instanceof YtAudioError && e.code !== 'youtube.failed') throw e;
+      return extract(id);
+    }
+  }
+
+  /** yt-dlp's answer for a song as one YouTube client sees it (none: yt-dlp's default clients). */
+  async function extract(id: string, client?: string): Promise<Resolved> {
     const args = [
       '--no-config',
       '--no-playlist',
       '--js-runtimes',
       `node:${process.execPath}`,
-      '-f',
-      '140/bestaudio[ext=m4a]',
+      ...(client
+        ? ['--extractor-args', `youtube:player_client=${client}`, '-f', '140']
+        : ['-f', '140/bestaudio[ext=m4a]']),
       '-j',
       `https://music.youtube.com/watch?v=${id}`,
     ];

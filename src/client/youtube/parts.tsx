@@ -206,9 +206,13 @@ export function Shelf({ shelf }: { shelf: YtShelf }) {
 }
 
 export function Shelves({ shelves }: { shelves: YtShelf[] }) {
-  // The first song of the page (Quick picks', the top search result) is the likeliest press.
-  const first = shelves.find((s) => s.layout === 'rows')?.items[0]?.id;
-  useEffect(() => void (first && hintSong(first)), [first]);
+  // The page's first songs (Quick picks, the top search results) are the likeliest presses: looked
+  // up as the page opens, so they start at once.
+  const songs = (shelves.find((s) => s.layout === 'rows')?.items ?? [])
+    .filter((i) => i.track)
+    .map((i) => i.id)
+    .join(' ');
+  useEffect(() => hintSong.page(songs ? songs.split(' ') : []), [songs]);
   return shelves.map((s) => <Shelf key={s.title} shelf={s} />);
 }
 
