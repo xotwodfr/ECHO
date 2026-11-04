@@ -11,7 +11,7 @@ import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
-import { loadPrefs, prefsStore, setPref } from './prefs.ts';
+import { effectiveVisuals, loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { startCollections } from './shell/collections.ts';
 import { startHistory } from './shell/mixes.ts';
@@ -48,7 +48,8 @@ const fixtures = __ECHO_FIXTURES__ ? await import('./fixtures/playback.ts') : nu
 
 /** Settings → Motion, or the system's choice under "system": less motion is reduced or off. */
 const reducedQuery = matchMedia('(prefers-reduced-motion: reduce)');
-const level = () => motionLevel(prefsStore.getState().visuals.motion, reducedQuery.matches);
+const level = () =>
+  motionLevel(effectiveVisuals(prefsStore.getState().visuals).motion, reducedQuery.matches);
 // The shell's CSS motion reads it as <html data-motion> (tokens.css zeroes the motion tokens).
 const markMotion = () => (document.documentElement.dataset.motion = level());
 markMotion();

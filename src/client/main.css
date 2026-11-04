@@ -2140,6 +2140,12 @@ a {
   font: var(--fl-type-body) var(--font-ui);
 }
 
+/* Decided by Performance mode: the saved choice still shows, dimmed as Fluent's disabled content;
+   its label and the hint saying why stay readable, as a disabled toggle's. */
+.shell:not([data-view="listen"]) .canvas .pref-choice:disabled .view-switch {
+  opacity: var(--fl-disabled-content);
+}
+
 .pref-slider {
   display: grid;
   gap: var(--sp-1);

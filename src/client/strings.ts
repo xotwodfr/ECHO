@@ -377,6 +377,10 @@ export const strings = {
       'navidrome-plain': 'Your library (plain text)',
     } as Record<string, string>,
     visuals: 'Visuals',
+    performance: 'Performance mode',
+    performanceHint:
+      'For a slower computer: smaller animations everywhere, and the Listen room holds still. Lyrics still move word by word. On this device only.',
+    setByPerformance: 'Set by Performance mode.',
     mode: 'Stage visuals',
     modeNames: { auto: 'Auto', reverb: 'Reverb', ambient: 'Ambient', still: 'Still' },
     modeHint: 'Reverb follows the music where ECHO can hear it; Ambient and Still do not.',

@@ -2,7 +2,7 @@ import { createStore } from 'zustand/vanilla';
 import { api } from './api.ts';
 
 // The user's preferences (SETTINGS_AND_SECURITY.md §7.1). Most follow the user across devices and
-// live on the server (`/me/settings`); `visuals.quality` and `backdrop`, `playback.quality` and the volume differ per device
+// live on the server (`/me/settings`); `visuals.quality`, `backdrop` and `performance`, `playback.quality` and the volume differ per device
 // (a gaming PC and a laptop) and live in this browser's localStorage. Defaults apply until the
 // server answers, and without a server at all (the fixture shell).
 
@@ -31,6 +31,8 @@ export interface Prefs {
     grain: boolean;
     pointerParallax: boolean;
     backdrop: number; // 0..1, per device: the Stage's blurred-cover brightness (its own screen)
+    /** Performance mode, per device (a slow laptop): see effectiveVisuals. */
+    performance: boolean;
   };
 }
 
@@ -58,14 +60,28 @@ export const DEFAULT_PREFS: Prefs = {
     grain: false,
     pointerParallax: true,
     backdrop: 0.5,
+    performance: false,
   },
 };
+
+/**
+ * The visuals as they apply, Settings → Visuals → Performance mode over what was saved (owner,
+ * 2026-11-04): the smaller animations everywhere, which also hold the Listen room still, at the
+ * lightest quality. Measured on a 4×-throttled Chromium, the live room took Listen to 6 fps and the
+ * page animations to 41; with these both stayed at 57–60 fps. The lyrics keep moving word by word
+ * (owner): only motion "off", chosen as such, gives the still sheet. The saved choices stay
+ * underneath, for when it is switched off.
+ */
+export function effectiveVisuals(v: Prefs['visuals']): Prefs['visuals'] {
+  if (!v.performance) return v;
+  return { ...v, motion: v.motion === 'off' ? 'off' : 'reduced', quality: 'minimal' };
+}
 
 type Section = keyof Prefs;
 /** Keys kept per device, in localStorage, never sent to the server. */
 const DEVICE: { [S in Section]?: (keyof Prefs[S])[] } = {
   playback: ['quality', 'volume', 'autoplay'],
-  visuals: ['quality', 'backdrop'],
+  visuals: ['quality', 'backdrop', 'performance'],
 };
 const isDevice = (s: Section, k: string) => (DEVICE[s] as string[] | undefined)?.includes(k);
 const storageKey = (s: Section, k: string) => `echo.${s}.${k}`;

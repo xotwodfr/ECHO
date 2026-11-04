@@ -1,7 +1,7 @@
 import { DUR_PALETTE_MS } from '../palette/animator.ts';
 import { paletteStore } from '../palette/live.ts';
 import type { PlaybackController } from '../playback/controller.ts';
-import { prefsStore } from '../prefs.ts';
+import { effectiveVisuals, prefsStore } from '../prefs.ts';
 import type { FrameParams } from '../view.ts';
 import { contrastAt, type Inks, peaksOf, type Solve, solveStep } from './contrast.ts';
 import { createGovernor, firstTier, rememberedTier, rememberTier } from './governor.ts';
@@ -104,14 +104,15 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
   const { frame } = opts;
   // A fixed tier (deterministic mode, a caller, Settings → Visuals → Quality), else the governor's,
   // starting from this device's last stable tier (§8.2).
-  const manualTier = frame?.tier ?? opts.tier ?? TIERS[prefsStore.getState().visuals.quality];
+  const manualTier =
+    frame?.tier ?? opts.tier ?? TIERS[effectiveVisuals(prefsStore.getState().visuals).quality];
   let tier: Tier = manualTier ?? rememberedTier() ?? 'T1';
   const env = opts.env ?? browserEnv;
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   // Settings → Visuals: motion (system, full, reduced, off) and the mode (SETTINGS_AND_SECURITY.md
   // §7.1). Still under reduced motion, at T3 and in deterministic mode (one frame, no loop);
   // otherwise Ambient, which becomes Reverb while audio features flow, unless Ambient is chosen.
-  const visuals = () => prefsStore.getState().visuals;
+  const visuals = () => effectiveVisuals(prefsStore.getState().visuals); // Performance mode over them
   const stillWanted = () => {
     const v = visuals();
     return (
@@ -365,7 +366,7 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
     showCover(artOf(s));
   });
   const offVisuals = prefsStore.subscribe((s, prev) => {
-    const [v, p] = [s.visuals, prev.visuals];
+    const [v, p] = [effectiveVisuals(s.visuals), effectiveVisuals(prev.visuals)];
     if (v.backdrop !== p.backdrop) {
       renderer?.setBrightness(v.backdrop);
       if (loop.mode === 'still') loop.renderOnce();

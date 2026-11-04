@@ -21,13 +21,19 @@ function Choice<T extends string | number>(p: {
   options: readonly T[];
   names: (v: T) => string;
   hint?: string;
+  /** Decided elsewhere (Performance mode): the saved choice shows, and cannot be changed. */
+  disabled?: boolean;
   onChange: (v: T) => void;
 }) {
   const hintId = useId();
   const choices = useRef<HTMLDivElement>(null);
   useSlide(choices, '[aria-pressed="true"]', p.value);
   return (
-    <fieldset className="pref-choice" aria-describedby={p.hint ? hintId : undefined}>
+    <fieldset
+      className="pref-choice"
+      disabled={p.disabled}
+      aria-describedby={p.hint ? hintId : undefined}
+    >
       <legend className="pref-label">{p.label}</legend>
       <div className="view-switch" ref={choices}>
         {p.options.map((o) => (
@@ -57,6 +63,7 @@ function save<S extends keyof Prefs, K extends keyof Prefs[S]>(s: S, k: K, v: Pr
 
 export function PreferencesSection() {
   const p = useStore(prefsStore);
+  const perf = p.visuals.performance; // it decides the room and the motion while it is on
   return (
     <div className="prefs">
       <section className="pref-group" aria-labelledby="pref-playback">
@@ -162,12 +169,19 @@ export function PreferencesSection() {
             {strings.settings.visualsLimited}
           </p>
         )}
+        <Toggle
+          label={t.performance}
+          checked={p.visuals.performance}
+          onChange={(v) => save('visuals', 'performance', v)}
+        />
+        <p className="field-hint">{t.performanceHint}</p>
         <Choice
           label={t.mode}
           value={p.visuals.mode}
           options={['auto', 'reverb', 'ambient', 'still'] as const}
           names={(v) => t.modeNames[v]}
-          hint={t.modeHint}
+          hint={perf ? t.setByPerformance : t.modeHint}
+          disabled={perf}
           onChange={(v) => save('visuals', 'mode', v)}
         />
         <Choice
@@ -175,6 +189,8 @@ export function PreferencesSection() {
           value={p.visuals.intensity}
           options={['subtle', 'balanced', 'expressive'] as const}
           names={(v) => t.intensityNames[v]}
+          {...(perf && { hint: t.setByPerformance })}
+          disabled={perf}
           onChange={(v) => save('visuals', 'intensity', v)}
         />
         <Choice
@@ -182,6 +198,8 @@ export function PreferencesSection() {
           value={p.visuals.motion}
           options={['system', 'full', 'reduced', 'off'] as const}
           names={(v) => t.motionNames[v]}
+          {...(perf && { hint: t.setByPerformance })}
+          disabled={perf}
           onChange={(v) => save('visuals', 'motion', v)}
         />
         <Choice
@@ -189,7 +207,8 @@ export function PreferencesSection() {
           value={p.visuals.quality}
           options={['auto', 'high', 'balanced', 'low', 'minimal'] as const}
           names={(v) => t.visualQualityNames[v]}
-          hint={t.perDeviceNextVisit}
+          hint={perf ? t.setByPerformance : t.perDeviceNextVisit}
+          disabled={perf}
           onChange={(v) => save('visuals', 'quality', v)}
         />
         <Toggle

@@ -1,6 +1,6 @@
 import { expect, type Page, test } from '@playwright/test';
 import { fromBase32, hotp, stepAt } from '../../src/server/auth/totp.ts';
-import { E2E_PASSWORD, signedIn } from './helpers.ts';
+import { E2E_PASSWORD, signedIn, signedInWithNavidrome } from './helpers.ts';
 
 // M8: Preferences (persisted per user, per device), Account (password, two-factor, sessions,
 // deletion), Admin (invites, users) and the invite page. SEC-14, ACC-02, ACC-03 end to end.
@@ -172,4 +172,50 @@ test('the audit log says when it could not load, and Retry recovers', async ({ p
   await err.getByRole('button', { name: 'Retry' }).click();
   await expect(page.getByRole('heading', { name: 'Audit log' })).toBeVisible();
   await expect(err).toHaveCount(0);
+});
+
+// Settings → Visuals → Performance mode (owner, 2026-11-04): a slow computer gets the still room and
+// the smaller animations, in Navidrome and YouTube Music mode alike, while the lyrics keep moving
+// word by word. This device's alone: the saved choices underneath come back when it is off.
+test('Performance mode: smaller motion and a still room on this device; lyrics keep moving', async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page, 'perf');
+  await page.goto('/settings');
+  const html = page.locator('html');
+  const motion = page.getByRole('group', { name: 'Motion' });
+  await expect(html).toHaveAttribute('data-motion', 'full');
+  await page.getByRole('switch', { name: 'Performance mode' }).click();
+  await expect(html).toHaveAttribute('data-motion', 'less');
+  // What it decides cannot be changed under it; the saved choice is still the one shown.
+  await expect(motion.getByRole('button', { name: 'Off' })).toBeDisabled();
+  await expect(motion.getByRole('button', { name: 'System' })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  const settings = await (await page.request.get('/api/v1/me/settings')).json();
+  expect(settings.visuals).not.toHaveProperty('performance'); // never on the server
+  await page.reload();
+  await expect(page.getByRole('switch', { name: 'Performance mode' })).toBeChecked();
+  await expect(html).toHaveAttribute('data-motion', 'less');
+
+  // Listen: the room holds still; the lyric field still moves word by word (not the still sheet).
+  await page.goto('/library/album/al-1');
+  await page
+    .getByRole('button', { name: /^Play Harbour Lights 1\b/ })
+    .first()
+    .click();
+  await page
+    .getByRole('region', { name: 'Player' })
+    .getByRole('button', { name: 'Lyrics', exact: true })
+    .click();
+  await expect(page.locator('.stage')).toHaveAttribute('data-mode', 'still');
+  await expect(page.locator('.ly-field')).toBeAttached();
+  await expect(page.locator('.ly-sheet')).toHaveCount(0);
+
+  // Off: everything as it was saved.
+  await page.goto('/settings');
+  await page.getByRole('switch', { name: 'Performance mode' }).click();
+  await expect(html).toHaveAttribute('data-motion', 'full');
+  await expect(motion.getByRole('button', { name: 'Off' })).toBeEnabled();
 });

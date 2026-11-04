@@ -4,7 +4,7 @@ import type { LyricsDoc } from '../../shared/types.ts';
 import { isInstrumental, pinLyricsSource } from '../lyrics/loader.ts';
 import { usePlayback, usePlayer, useQueue, useTicker } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
-import { prefsStore } from '../prefs.ts';
+import { effectiveVisuals, prefsStore } from '../prefs.ts';
 import { sessionStore } from '../session.ts';
 import { lyricHost, lyricOffset, lyricsStore, stageView } from '../stage/status.ts';
 import { strings } from '../strings.ts';
@@ -135,7 +135,7 @@ function NowPlayingSide() {
  */
 export function LyricsView() {
   const { doc, state, since } = useStore(lyricsStore);
-  const motionOff = useStore(prefsStore, (p) => p.visuals.motion === 'off');
+  const motionOff = useStore(prefsStore, (p) => effectiveVisuals(p.visuals).motion === 'off');
   useTicker(state === 'waiting', 100);
   if (state === 'waiting') {
     const waited = performance.now() - since;

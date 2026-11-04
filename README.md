@@ -33,6 +33,9 @@ lyric field in an audio-reactive room lit by the album cover.
 - **Motion:** in the web client everything that appears, leaves, moves or changes springs into
   place (menus and dialogs play their exits, the side panel slides, covers fly to their page and
   into the lyrics view, queue rows glide); Settings → Motion tones it down or turns it off.
+- **Performance mode:** one switch in Settings → Visuals for a slower computer, on that device
+  only: smaller animations everywhere and a Listen room that holds still, in Navidrome and YouTube
+  Music mode alike; the lyrics still move word by word.
 
 Typefaces (web): **Segoe UI** where installed, otherwise **Selawik**, its open fallback, shipped
 for everything, lyrics included, and **Fraunces** with **Instrument Sans** in YouTube Music mode

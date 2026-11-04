@@ -325,10 +325,19 @@ redistribution) is shown next to the field.
 | | `visuals.grain` | bool | false |
 | | `visuals.pointerParallax` | bool | true |
 | | `visuals.backdrop` | 0–1, the blurred cover's brightness (the Stage's brightness control, 2026-10-28) | 0.5 (**per device**) |
+| | `visuals.performance` | bool: Performance mode, for a slow computer (2026-11-04) | false (**per device**) |
 
-`visuals.quality`, `visuals.backdrop`, `playback.quality` and the volume are stored in
-`localStorage` per device. A gaming PC and a laptop need different values, and screens differ in
-brightness. Everything else follows the user across devices.
+`visuals.quality`, `visuals.backdrop`, `visuals.performance`, `playback.quality` and the volume are
+stored in `localStorage` per device. A gaming PC and a laptop need different values, and screens
+differ in brightness. Everything else follows the user across devices.
+
+Performance mode (`effectiveVisuals`, `src/client/prefs.ts`) applies over the saved choices without
+changing them: motion becomes `reduced` (smaller animations in Navidrome and YouTube Music mode
+alike, which also holds the Listen room still) unless `off` was chosen, and the quality `minimal`.
+The lyrics keep moving word by word (owner, 2026-11-04). Measured on a 4×-throttled Chromium at
+1366×768: Listen with lyrics playing went from 7 to 60 fps (main thread 102% → 26% busy), page
+changes from 40 to 57 fps; pages that were already smooth stayed so. While it is on, Settings shows
+the Stage visuals, intensity, motion and quality it decides as set by it.
 
 ### 7.2 Server settings (admin)
 
