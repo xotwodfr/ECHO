@@ -119,8 +119,11 @@ docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts reset-password
 ```
 
 The server also backs the database up daily to `/data/backups/echo-auto-<date>.db` and keeps
-seven. Those sit on the same volume, so copy `/data/backups` off the box for disk-loss protection.
-Back the master key up **apart from** the data volume. The owner's live setup (Caddy on the host,
+seven. Those sit on the same volume, so copy them off the box for disk-loss protection:
+`scripts/offsite-backup.sh` sends the newest to an rclone remote (use a `crypt` one) and keeps 30
+days there, e.g. daily from a systemd timer with `ECHO_OFFSITE_REMOTE=echo-crypt:backups`.
+Back the master key up **apart from** the backups (a password manager, with the crypt password).
+The owner's live setup (Caddy on the host,
 Cloudflare tunnel) is described in [`docs/reviews/M5.md`](docs/reviews/M5.md) ("Task 12").
 
 ## Checks
