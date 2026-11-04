@@ -37,6 +37,16 @@ deferred). Since 2026-10-29:
 - **Wanted list** (2026-11-03): Your Library → Wanted, one list for everyone on the server of music
   that isn't in Navidrome yet; added there or from a search that finds nothing, marked and playable
   once the server's own library has it (`ACCEPTANCE_CRITERIA.md` WNT-01).
+- **YouTube Music mode** (2026-11-03; [spec](superpowers/specs/2026-11-03-youtube-music-design.md)):
+  a switch in the top bar opens a separate UI for whole listening sessions: YouTube Music's own
+  catalogue, search and (with a pasted cookie) your library and likes; the server fetches each
+  song's audio with yt-dlp, anonymously, and streams it through ECHO's player
+  (`TECHNICAL_ARCHITECTURE.md` §6.6, `PLAYBACK_ARCHITECTURE.md` §11, `ACCEPTANCE_CRITERIA.md` §10d).
+- **Liner notes** (2026-11-03; [spec](superpowers/specs/2026-11-03-youtube-liner-notes-design.md)):
+  YouTube Music mode in its own magazine look, paper and ink; ECHO's lyrics printed on paper in its
+  full-screen player; YouTube songs get Spicy Lyrics' word timing (`LYRICS_INTEGRATION.md` §4.3).
+- **Night edition and springs** (2026-11-04): the moon in the masthead (or the device's dark setting)
+  turns the paper dark; YouTube Music mode moves on ECHO's springs (`DESIGN_SYSTEM.md` §14).
 
 **Live** at echo.folk3s.com since 2026-11-03 11:13 UTC: all of the above, built from `edc3d9e`,
 all of it on `main`.
@@ -85,9 +95,10 @@ hand.
 | Accounts | Admin + invited users. Argon2id + TOTP (mandatory for admin). Per-user Navidrome connections. Secrets encrypted at rest with a master key | SETTINGS_AND_SECURITY §2–§4 |
 | Stack | TypeScript, React 19 (shell only), three.js (imperative Stage), DOM lyrics, Zustand. Hono on Node 24, SQLite, sharp | TECHNICAL_ARCHITECTURE §3 |
 | Audio-reactive visuals | Navidrome only (Web Audio in the client on same-origin streams). Ambient when no analysis exists. Default intensity **Expressive** | VISUALIZER_SPEC §2, §7.4 |
-| Spotify | Removed 2026-11-03 (Development Mode's quota). Music not in Navidrome: a YouTube Music link on an empty search | `reviews/2026-11-03-spotify-outage.md` |
+| Spotify | Removed 2026-11-03 (Development Mode's quota). Music not in Navidrome: YouTube Music mode, and a YouTube Music link on an empty search | `reviews/2026-11-03-spotify-outage.md` |
+| YouTube Music | A separate mode (per device), web only. Browsing through InnerTube (youtubei.js), the user's cookie only for their library and likes; audio resolved by yt-dlp on the server, never with a cookie, streamed through ECHO. Breaks YouTube's terms: an admin switch turns it off for everyone | TECHNICAL_ARCHITECTURE §6.6 |
 | Lyrics | Best sync level wins: user's own files (Navidrome) > Spicy Lyrics (owner's key, server-side, Spotify ID; Navidrome tracks matched in the background) > NetEase > LRCLIB. Shared server cache | LYRICS_INTEGRATION §4 |
-| Typeface | Web (Draft 6, `fluent-web`): **Segoe UI** where installed, **Selawik** (Microsoft's open Segoe fallback) shipped, lyrics included. Before it: Figtree (Spotify redesign, 2026-10-29), Roboto Flex under Material 3 (2026-10-25), Mona Sans from the M1 specimen | DESIGN_SYSTEM §4, reviews/M1-type.md |
+| Typeface | Web (Draft 6, `fluent-web`): **Segoe UI** where installed, **Selawik** (Microsoft's open Segoe fallback) shipped, lyrics included. Before it: Figtree (Spotify redesign, 2026-10-29), Roboto Flex under Material 3 (2026-10-25), Mona Sans from the M1 specimen. YouTube Music mode: **Fraunces** and **Instrument Sans** (Liner notes) | DESIGN_SYSTEM §4, §14, reviews/M1-type.md |
 | Palette | Extracted on the server (sharp + material quantiser), roles constrained in OKLCH, interpolated in OKLab, contrast solved against the brightest room pixels | VISUALIZER_SPEC §6, DESIGN_SYSTEM §3 |
 | Licence | AGPL-3.0 | TECHNICAL_ARCHITECTURE §9 |
 

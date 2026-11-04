@@ -261,6 +261,22 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | BRW-01 | The full E2E suite passes on **Chromium and Firefox** | E | M5 (and every later milestone) |
 | BRW-02 | **Removed 2026-11-03** with Spotify. | — | — |
 
+## 10d. YouTube Music mode (F15, 2026-11-03)
+
+Tests run against the fixed catalogue (`ECHO_DEV_FIXTURES=1`, `src/server/youtube/fake.ts`) and
+InnerTube answers recorded once (`catalogue.test.ts`); no test talks to YouTube.
+
+| ID | Criterion | Method | Added |
+|---|---|---|---|
+| YT-01 | The switch opens YouTube Music mode and this device remembers it; flipping back to Navidrome keeps the song playing; an admin switch hides the mode for everyone | U (`routes.test.ts`: hides everything) + E (`youtube.spec.ts`) | 2026-11-03 |
+| YT-02 | Today, Explore, search with suggestions and its tabs, album, artist and playlist pages; Your shelf asks to sign in when signed out, and a cookie Google rotated asks again | U (`catalogue.test.ts`, `routes.test.ts`) + E | 2026-11-03 |
+| YT-03 | A tapped song plays through ECHO's player (yt-dlp on the server, never with the cookie) and starts its radio; a song that won't play is skipped; a bot check stops the queue with a message | U (`ytdlp.test.ts`, `proxy.test.ts`, `playback/navidrome.test.ts`) + E | 2026-11-03 |
+| YT-04 | Like toggles and Liked music lists the song; the state shown is YouTube's own after a reload | E | 2026-11-03 |
+| YT-05 | Liner notes: the masthead names the edition; Today has Now spinning and a numbered tracklist; spreads for albums; the ink strip with its words and the volume on every wide width; on phones one column, the tabs at the bottom, no sideways scroll, the player scrolls to the whole lyrics stage | E | 2026-11-03 |
+| YT-06 | The full-screen player's Lyrics tab is ECHO's lyric field on paper (no room, no blur, the sheets in ink); Navidrome mode's lyrics view keeps its room. A YouTube song with an album gets Spotify ids from YouTube's own details (never the request's), a video never does, and a video's answer is remembered for a day | U (`spotifyMatch.test.ts`, `catalogue.test.ts`, lyrics `routes.test.ts`) + E | 2026-11-03 |
+| YT-07 | Night edition: the moon turns the paper dark and the device keeps the choice; a dark device opens it until the switch says otherwise | U (`edition.test.ts`) + E (`youtube-motion.spec.ts`) | 2026-11-04 |
+| YT-08 | Motion: pages rise, the player rises and sinks, underlines slide, lists wave in, presses spring, Like pops, a new cover springs in; with Motion Off the player closes at once | E (`youtube-motion.spec.ts`) | 2026-11-04 |
+
 ## 11. Reliability
 
 | ID | Criterion | Method | MS |

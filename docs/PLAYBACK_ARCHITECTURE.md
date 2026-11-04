@@ -21,7 +21,8 @@ UI (Dock, Library, Queue, keyboard, Media Session)
         ▼                                  │
 PlaybackController ── owns queueStore, playerStore, SongClock
         │
-        └── NavidromeProvider  (HTMLAudioElement ×2 + Web Audio graph; via /api/v1/navidrome)
+        └── NavidromeProvider  (HTMLAudioElement ×2 + Web Audio graph; via /api/v1/navidrome,
+                                YouTube songs via /api/v1/youtube/stream, §11)
 ```
 
 The controller is the only thing the UI talks to. Providers never touch stores directly. They emit
@@ -264,3 +265,43 @@ crossfade and gapless, the full library, works on the LAN without internet, and 
 `navigator.mediaSession.metadata` (title, artist, album, artwork 96/256/512) and action handlers
 (`play`, `pause`, `previoustrack`, `nexttrack`, `seekto`, `seekbackward`, `seekforward`). The
 position state is updated on each anchor. This gives OS media keys and system "now playing" for free.
+
+---
+
+## 11. YouTube songs (YouTube Music mode, 2026-11-03)
+
+A YouTube song is an ordinary `Track` (`provider: 'youtube'`, key `youtube:<videoId>`) played by
+the same provider: `navidrome.ts` points the `<audio>` element at `/api/v1/youtube/stream/:id`
+instead of Navidrome. The queue, the song clock, Media Session and the lyrics carry on when the
+mode switch flips; Reverb's audio-reactive visuals do not apply (YouTube Music mode has no Stage
+room).
+
+- **Resolving** (`src/server/youtube/ytdlp.ts`): the standalone yt-dlp (`yt-dlp_linux`, updated
+  daily into the data volume) turns a video id into a googlevideo URL for format 140 (AAC,
+  ~130 kbps), anonymously, never with the user's cookie. At most two run at once; a song being
+  played goes ahead of waiting look-ups; a failure is remembered for 2 minutes; a bot check stops
+  the queue with a message.
+- **Streaming** (`proxy.ts`): the URL is bound to the server's IP, so the bytes come through ECHO.
+  googlevideo refuses a `Range` header but serves a `range` query, so the browser's Range becomes
+  that, 10 MiB at a time, with yt-dlp's own headers, and ECHO answers 206. A fresh URL is refused
+  until its `available_at` (4–5 s after resolving); the proxy waits for it.
+- **Looking up ahead** (`/youtube/prepare`): a tap, a hover or focus, a page's first song and the
+  next three in the queue.
+- **Seeking**: any position, as Range requests.
+
+### 11.1 Start time, and what could make it faster (2026-11-04)
+
+A song looked up ahead starts at once; one that was not takes 8–14 s: 3.7–4 s of yt-dlp, then
+YouTube's 4–5 s `available_at` wait, then the first chunk. Measured on the OptiPlex:
+
+| Option | Gain | Cost or blocker |
+|---|---|---|
+| Look up the visible tracklist when a page opens (bounded, low priority), and on `pointerdown` on touch screens | most taps on Today and album pages start at once | more yt-dlp runs (~4 s of CPU each) and more requests to YouTube, so a capped number |
+| Keep played songs on disk (`/data/cache/audio`, a size cap), and fetch the next song in the queue whole | replays and seeks at once; no expired URLs or throttled chunks mid-song | disk (~4 MB a song) and a whole download for a song skipped early |
+| yt-dlp's directory build (`yt-dlp_linux.zip`) instead of the one-file build that unpacks ~40 MB on every run | a part of each resolve (not measured) | a different update path |
+| Format 251 (Opus, ~134 kbps) where the browser plays WebM | better sound at the same size | none for speed: the same wait |
+| Other YouTube clients | — | all need a GVS PO token (BotGuard); a token provider is a service of its own and breaks when YouTube changes |
+| Resolving inside the server with youtubei.js | no process start | the same PO-token wall, and none of yt-dlp's daily fixes |
+| Streaming straight from the browser | — | the URL is bound to the server's IP |
+| Starting on format 139 (49 kbps, no wait) and switching up | — | an audible switch mid-song |
+

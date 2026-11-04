@@ -4,7 +4,8 @@
 > this document that describe Spotify playback, its connection, the policy gates or the library
 > source switch are kept as a record of what was built and why it went; the code is in git before
 > those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search
-> page. What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
+> page, and played in YouTube Music mode (2026-11-03, built from its own specs and plans in
+> `superpowers/`, not from this plan). What stays: matching Navidrome tracks to Spotify **ids** so Spicy Lyrics can serve them
 > ([LYRICS_INTEGRATION.md](LYRICS_INTEGRATION.md) §4.3), which needs no Spotify account or app.
 
 Status: **Draft 2**, with progress through M9 and the deployment · Last reviewed 2026-10-24

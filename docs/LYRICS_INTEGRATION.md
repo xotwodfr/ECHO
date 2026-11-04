@@ -126,6 +126,13 @@ no connection) and is gone. Now (`src/server/lyrics/spotifyMatch.ts`):
   is closed (`PUBLIC_API_ACCESS_DEPRECATED`).
 - **Privacy.** The sweep sends the library's titles, artists, albums and ISRCs to ListenBrainz and
   MusicBrainz. The admin switch says so.
+- **YouTube songs** (2026-11-03, Liner notes): matched the same way (`lb-meta`), kept under the scope
+  `youtube` keyed by the video id. The details come from YouTube's catalogue (`catalogue.meta`: Up
+  next's first entry, the song itself), never from the request. Only songs with an album are
+  matched: music videos and uploads would match wrongly, and a match is shared by everyone; a
+  video's "not a song" is remembered for a day. Matching starts when a song is looked up ahead
+  (`/youtube/prepare`) and otherwise on its lyrics request, inside the same 1.5 s. No sweep:
+  Admin → Spotify matching lists Navidrome tracks only.
 
 ### 4.4 Spotify tracks (removed)
 

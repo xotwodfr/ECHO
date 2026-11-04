@@ -395,8 +395,9 @@ built (Vite).
 
 ### 6.6 YouTube Music mode (2026-11-03)
 
-Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`; plan:
-`docs/superpowers/plans/2026-11-03-youtube-music.md`.
+Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`, and for its look
+`docs/superpowers/specs/2026-11-03-youtube-liner-notes-design.md`; plans beside them in
+`docs/superpowers/plans/`.
 
 - **Server** (`src/server/youtube/`): `catalogue.ts` maps youtubei.js (InnerTube, the API the
   YouTube Music website uses: no key, no quota) into `src/shared/youtube.ts`'s `YtPage`s;
@@ -410,14 +411,22 @@ Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`; plan:
   per device (`localStorage` `echo.mode`). The full-screen player's Lyrics tab mounts ECHO's Stage
   with `room={false}` (no WebGL room, contrast solver or depth blur) inside the `.ln-lyrics` scope,
   which recolours the lyric field for paper. YouTube songs get Spotify ids for Spicy Lyrics from
-  ListenBrainz (`spotify_matches` scope `youtube`), the details always from the catalogue.
+  ListenBrainz (`spotify_matches` scope `youtube`), the details always from the catalogue
+  (`LYRICS_INTEGRATION.md` §4.3). The night edition (`edition.ts`) is per device too
+  (`echo.ytEdition`, else the device's dark setting): `.yt[data-edition="night"]` swaps the `--ln-*`
+  colours in `tokens.css`. Motion is ECHO's own (`ui/motion.ts`, `DESIGN_SYSTEM.md` §11, §14).
   YouTube songs are ordinary `Track`s (`provider: 'youtube'`) played by the same `<audio>` provider
   (`navidrome.ts` picks `/api/v1/youtube/stream/:id` for them), so the queue, Media Session and
   lyrics carry on when the switch flips. A queue holding YouTube songs is saved to
   `/me/queue/youtube`, which the Android app never reads.
-- **Measured** (OptiPlex, 2026-11-03): about 4 s per yt-dlp resolve plus YouTube's few-second
-  `available_at` wait, so a song nobody prepared starts in about 7 s; the next three in the queue
-  are resolved ahead (`/youtube/prepare`).
+- **Looking up ahead** (`/youtube/prepare`): a tap, a hover or focus, a page's first song and the
+  next three in the queue are resolved before they are asked for; a resolved URL is reused for
+  about 5.5 h.
+- **Measured** (OptiPlex): a resolve takes 3.7–4 s, then YouTube refuses the URL for 4–5 s more
+  (`available_at`), so a song nobody looked up ahead starts in 8–14 s (production log 2026-11-03:
+  8 of 20 song starts; the other 11 began within 250 ms). The wait comes with every full-quality
+  format (140 AAC, 251 Opus, ~130 kbps) of yt-dlp's default clients (`tv samsung`, `visionos`);
+  the other clients need a GVS PO token (2026-11-04). Faster starts: `PLAYBACK_ARCHITECTURE.md` §11.
 
 ---
 

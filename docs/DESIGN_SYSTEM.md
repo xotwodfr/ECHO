@@ -333,3 +333,32 @@ The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
 
 `src/client/tokens.css` is normative. Every colour, size, duration, easing and shadow value
 lives there; component code reads only custom properties (DS-01).
+
+## 14. YouTube Music mode: Liner notes (2026-11-03)
+
+A second visual language, scoped to `.yt` (YouTube Music mode only; specs
+`superpowers/specs/2026-11-03-youtube-liner-notes-design.md`). Navidrome mode keeps everything
+above. A music magazine: paper and ink, not YouTube's look and not Fluent's.
+
+- **Colour** (`--ln-*`): paper `#f3eee6`, ink `#1b1a17`, two greys for credits and labels, hairline
+  rules, faded inks for lyrics still to come, and one accent, vermilion `#b8391a` (`#e0896f` on the
+  ink strip). Thin rules separate things: no cards with shadows, no blur, no gradients.
+- **Night edition** (2026-11-04): `.yt[data-edition="night"]` swaps the same tokens: paper
+  `#171512`, type `#ece5d8`, vermilion `#e0896f`, the strip a shade above the page (`--ln-strip`).
+  Chosen by the moon in the masthead, else the device's dark setting.
+- **Type**: **Fraunces** (titles, artists and credits in italic, lyrics) and **Instrument Sans**
+  (everything you operate), self-hosted with their OFL texts; `--ln-type-*` and
+  `--tracking-ln-*` tokens.
+- **Parts**: a masthead (ECHO, "<weekday> edition" in vermilion small capitals, the search as an
+  underlined field, the mode switch as two words, the moon, the account) with the tabs Today ·
+  Explore · Your shelf under it (at the bottom on phones); numbered tracklists with dotted leaders;
+  album pages as spreads; the ink strip along the bottom with its controls as words; a paper
+  full-screen player with Up next · Lyrics · Related.
+- **Lyrics on paper**: ECHO's lyric field, timing and motion, with no room behind it (`<Stage
+  room={false}>`) and the `.ln-lyrics` scope recolouring it: sung words ink, words to come faded,
+  the sweep's edge vermilion, no glow and no depth blur; the untimed and Motion Off sheets in ink.
+- **Motion**: §11 unchanged. Pages rise, the full-screen player rises and sinks, underlines slide,
+  a tab's page springs in, lists wave in after loading, presses spring, Like pops, a new song's
+  cover springs in, the strip rises when music starts; the night spreads from the moon.
+- DS-01 and DS-02 hold here too: every value is a token in `tokens.css`.
+

@@ -290,6 +290,10 @@ redirects, raster types only, so the CSP keeps `img-src 'self'`. The yt-dlp bina
 the image into `/data/bin` and updated daily with `yt-dlp -U` (which checks the release's
 checksums); its temporary files and cache live in `/data`.
 
+Per device, in `localStorage` (not settings): which world the device is in (`echo.mode`) and
+YouTube Music mode's edition (`echo.ytEdition`: day or night; absent, the device's dark setting
+decides).
+
 ### 6.3 Spicy Lyrics (admin)
 
 Admin → Server → Lyrics → Spicy Lyrics key. The server validates the `sl_sk_` prefix and runs a test

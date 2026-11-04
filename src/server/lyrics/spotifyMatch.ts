@@ -1,10 +1,11 @@
 import type { Db } from '../db/db.ts';
 import type { SubsonicClient } from '../navidrome/client.ts';
 
-// Spotify IDs for Navidrome tracks, so Spicy Lyrics can serve them (LYRICS_INTEGRATION.md §4.3).
-// Matches live in `spotify_matches`, one row per track per Navidrome server, kept until corrected.
-// The track's metadata always comes from Navidrome itself, never from a request, so nobody can pin
-// a wrong ID on a track for everyone. Matchers, most precise first:
+// Spotify IDs for Navidrome tracks, and YouTube songs, so Spicy Lyrics can serve them
+// (LYRICS_INTEGRATION.md §4.3). Matches live in `spotify_matches`, one row per track per Navidrome
+// server (or under the scope `youtube`, keyed by the video id), kept until corrected. The track's
+// metadata always comes from Navidrome itself (or YouTube's catalogue), never from a request, so
+// nobody can pin a wrong ID on a track for everyone. Matchers, most precise first:
 //   manual   an admin's correction; never overwritten
 //   spotify  Spotify's own search (ISRC, else metadata): matches kept from before it was removed;
 //            nothing asks Spotify any more

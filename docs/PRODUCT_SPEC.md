@@ -2,8 +2,9 @@
 
 > **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
 > [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Music that
-> is not in Navidrome is found on YouTube Music through a link on an empty search. The MVP history
-> in §10 still names Spotify, as it was built then.
+> is not in Navidrome is found on YouTube Music through a link on an empty search, and since the
+> evening of 2026-11-03 played in **YouTube Music mode** (F15), a separate UI beside the Navidrome
+> one. The MVP history in §10 still names Spotify, as it was built then.
 
 Status: **Draft 2 — source of truth for scope** · Last reviewed 2026-10-24 against the build (M1–M9); "As built" notes mark where it differs
 Related: [Design system](DESIGN_SYSTEM.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Acceptance criteria](ACCEPTANCE_CRITERIA.md) · [Implementation plan](IMPLEMENTATION_PLAN.md)
@@ -99,6 +100,7 @@ IDs are referenced by the implementation plan and acceptance criteria.
 | **F12** | Lyrics sourcing | Spicy Lyrics (when configured and allowed), OpenSubsonic/Navidrome lyrics, LRCLIB, embedded tags, with a precedence order and caching. | `LYRICS_INTEGRATION.md` |
 | **F13** | Accounts & devices | Admin setup, invites, sign-in with password + TOTP (mandatory for the admin), sessions and devices list, account deletion. The queue and preferences follow the user across devices. | `SETTINGS_AND_SECURITY.md` §2, §4 |
 | **F14** | Client API | Versioned, documented `/api/v1` (OpenAPI) with device tokens and signed stream URLs, ready for future desktop and mobile clients | `TECHNICAL_ARCHITECTURE.md` §6.2, §6.5 |
+| **F15** | YouTube Music mode (web, 2026-11-03) | A switch turns ECHO into a YouTube Music player for whole listening sessions: Today, Explore, search, Your shelf (your library, with a pasted cookie), albums, artists, playlists, radio on a tap, likes. Its own look ("Liner notes": paper and ink, a night edition), ECHO's lyrics on paper, ECHO's player and queue underneath. An admin switch turns it off for everyone. | `ACCEPTANCE_CRITERIA.md` §10d, `TECHNICAL_ARCHITECTURE.md` §6.6 |
 
 ---
 
