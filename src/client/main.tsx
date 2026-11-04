@@ -27,6 +27,19 @@ import { createViewStore } from './view.ts';
 import { savedMode } from './youtube/mode.ts';
 import { startYtPrepare } from './youtube/radio.ts';
 
+// A tab opened before a deploy asks for chunks of the old build, which are gone (the Stage's
+// engine on the first Listen): reload once into the new build. Failing again within a minute is
+// not a deploy, so the error stands; without storage there is no guard, so no reload either.
+addEventListener('vite:preloadError', () => {
+  try {
+    if (Date.now() - Number(sessionStorage.getItem('echo.chunkReload')) < 60_000) return;
+    sessionStorage.setItem('echo.chunkReload', String(Date.now()));
+  } catch {
+    return;
+  }
+  location.reload();
+});
+
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
 // development builds play the fixture library (M2 task 3); the image (ECHO_DEV_PAGES=0) has no
 // fixtures and sends visitors to sign in.

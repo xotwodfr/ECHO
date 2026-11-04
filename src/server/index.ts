@@ -179,15 +179,22 @@ export function createApp(deps: AppDeps) {
   app.route('/api/v1', youtubeRoutes(deps.youtube, requireUser(deps.auth)));
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
-  // The built web client (vite build → dist/client), relative to the working directory.
-  app.use('*', serveStatic({ root: './dist/client' }));
+  // The built web client (vite build → dist/client), relative to the working directory. Hashed
+  // assets never change under their name, so they are kept for good; everything else (the page,
+  // which names the current hashes) is asked for again, so a deploy reaches every browser.
+  const cached = (path: string, c: Context) =>
+    c.header(
+      'Cache-Control',
+      path.includes('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache',
+    );
+  app.use('*', serveStatic({ root: './dist/client', onFound: cached }));
   // Deep links (`/library/album/…`) load the client, which reads the view from the URL. Only
   // extension-less paths fall back, so a missing file stays 404.
   app.get('*', async (c, next) => {
     if (c.req.path.split('/').pop()?.includes('.')) return next();
     // The setup page exists only while there is no admin (SETTINGS_AND_SECURITY.md §4.1).
     if (c.req.path === '/setup' && hasAdmin(deps.auth.db)) return next();
-    return serveStatic({ path: './dist/client/index.html' })(c, next);
+    return serveStatic({ path: './dist/client/index.html', onFound: cached })(c, next);
   });
   return app;
 }
