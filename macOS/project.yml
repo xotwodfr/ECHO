@@ -1,0 +1,29 @@
+# ECHO for macOS. XcodeGen makes the Xcode project from this file:
+#   brew install xcodegen && xcodegen && open ECHO.xcodeproj
+# The app's code is shared with iOS/ (Apple/Shared); this folder holds what is the Mac's own.
+name: ECHO
+options:
+  bundleIdPrefix: com.folk3s
+  deploymentTarget:
+    macOS: "14.0"
+targets:
+  ECHO:
+    type: application
+    platform: macOS
+    sources:
+      - path: Sources
+      - path: ../Apple/Shared
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: ECHO
+        LSApplicationCategoryType: public.app-category.music
+        # Test servers on this network (ECHO_URL=http://…); everything else stays https only.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo.mac
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"

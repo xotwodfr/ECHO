@@ -51,10 +51,22 @@ each milestone's record, including what is still open, is in [`docs/reviews/`](d
 - pnpm **12.11.2** via corepack: `corepack enable`
 - Docker with Compose v2, for the container
 
-## Android
+## Native apps
 
-A native Android client lives in `Android/` (Kotlin, Compose, Media3): `cd Android && ./gradlew
-assembleRelease`. See [docs/ANDROID_CLIENT.md](docs/ANDROID_CLIENT.md).
+A native client per platform, each on its own toolkit, all against the same API (device tokens,
+the Subsonic proxy, signed stream URLs):
+
+| Folder | Platform | Built with | Build |
+|---|---|---|---|
+| `Android/` | Android | Kotlin, Compose, Media3 | `./gradlew assembleRelease` ([docs/ANDROID_CLIENT.md](docs/ANDROID_CLIENT.md)) |
+| `Linux/` | Linux | Rust, GTK 4, GStreamer, libsecret | `cargo run --release` |
+| `Windows/` | Windows 10/11 | C#, WPF on .NET 10 (Fluent theme) | `dotnet run` |
+| `macOS/` | macOS 14+ | Swift, SwiftUI, AVPlayer | `xcodegen && open ECHO.xcodeproj` |
+| `iOS/` | iPhone, iPad (iOS 17+) | Swift, SwiftUI, AVPlayer | `xcodegen && open ECHO.xcodeproj` |
+
+macOS and iOS share their code in `Apple/Shared`. Android is the full app (Stage, lyrics, mixes);
+the other four are baselines (sign in, albums, an album's songs, a player that goes on through
+the album), each folder's README says what each has and has been checked with.
 
 ## Develop
 

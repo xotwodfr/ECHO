@@ -22,3 +22,14 @@ Android/app/build/
 Android/local.properties
 Android/*.apk
 .superpowers/
+
+# The other native clients' build output (their READMEs)
+Linux/target/
+Windows/**/bin/
+Windows/**/obj/
+iOS/*.xcodeproj/
+iOS/Info.plist
+macOS/*.xcodeproj/
+macOS/Info.plist
+xcuserdata/
+.DS_Store

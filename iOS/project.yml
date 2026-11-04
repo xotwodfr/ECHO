@@ -1,0 +1,36 @@
+# ECHO for iOS (iPhone and iPad). XcodeGen makes the Xcode project from this file:
+#   brew install xcodegen && xcodegen && open ECHO.xcodeproj
+# The app's code is shared with macOS/ (Apple/Shared); this folder holds what is iOS's own.
+name: ECHO
+options:
+  bundleIdPrefix: com.folk3s
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  ECHO:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: ../Apple/Shared
+    info:
+      path: Info.plist
+      properties:
+        CFBundleDisplayName: ECHO
+        UILaunchScreen: {}
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        # Music plays on with the screen off or another app in front.
+        UIBackgroundModes: [audio]
+        # Test servers on this network (ECHO_URL=http://…); everything else stays https only.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        # Your Apple developer team, to run it on a device (Xcode → Signing & Capabilities):
+        # DEVELOPMENT_TEAM: XXXXXXXXXX

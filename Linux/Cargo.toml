@@ -1,0 +1,18 @@
+[package]
+name = "echo-gtk" # not "echo": installed, that would shadow the shell's echo
+version = "0.1.0"
+edition = "2024"
+description = "ECHO for Linux: a native GTK 4 client for an ECHO server"
+license = "AGPL-3.0-only"
+publish = false
+
+# Versions at least two weeks old when added (docs/TECHNICAL_ARCHITECTURE.md §3); Cargo.lock pins
+# the rest. ureq is held at 3.4.2: 3.5.1 was two days old.
+[dependencies]
+async-channel = "2.5.0"
+gtk = { package = "gtk4", version = "0.11.5", features = ["v4_12"] }
+gst = { package = "gstreamer", version = "0.25.4" }
+gst-play = { package = "gstreamer-play", version = "0.25.0" }
+libsecret = "0.9.0"
+serde_json = "1.0.154"
+ureq = { version = "=3.4.2", features = ["json"] }
