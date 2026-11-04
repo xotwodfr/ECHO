@@ -47,6 +47,9 @@ deferred). Since 2026-10-29:
   full-screen player; YouTube songs get Spicy Lyrics' word timing (`LYRICS_INTEGRATION.md` §4.3).
 - **Night edition and springs** (2026-11-04): the moon in the masthead (or the device's dark setting)
   turns the paper dark; YouTube Music mode moves on ECHO's springs (`DESIGN_SYSTEM.md` §14).
+- **YouTube songs start at once** (2026-11-04): a page's first songs are looked up as it opens, and
+  yt-dlp asks as YouTube's visionOS app, whose links play without YouTube's 4–5 s wait: a song
+  nobody looked up starts in ~2.5 s instead of 8–14 s (`PLAYBACK_ARCHITECTURE.md` §11.1, YT-09).
 
 **Live** at echo.folk3s.com since 2026-11-03 11:13 UTC: all of the above, built from `edc3d9e`,
 all of it on `main`.

@@ -963,13 +963,13 @@ paths:
         '400': { description: Not an id }
   /youtube/prepare:
     post:
-      summary: Resolve up to three songs' audio ahead, so they start without waiting for yt-dlp
+      summary: Resolve up to six songs' audio ahead (a page's first songs, a hover, the queue's next), so they start at once
       requestBody:
         required: true
-        content: { application/json: { schema: { type: object, required: [ids], properties: { ids: { type: array, maxItems: 3, items: { type: string, pattern: '^[\w-]{11}$' } } } } } }
+        content: { application/json: { schema: { type: object, required: [ids], properties: { ids: { type: array, maxItems: 6, items: { type: string, pattern: '^[\w-]{11}$' } } } } } }
       responses:
         '202': { description: Resolving in the background }
-        '400': { description: Not up to three video ids }
+        '400': { description: Not up to six video ids }
   /youtube/stream/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, pattern: '^[\w-]{11}$', description: A video id } }

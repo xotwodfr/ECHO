@@ -276,6 +276,7 @@ InnerTube answers recorded once (`catalogue.test.ts`); no test talks to YouTube.
 | YT-06 | The full-screen player's Lyrics tab is ECHO's lyric field on paper (no room, no blur, the sheets in ink); Navidrome mode's lyrics view keeps its room. A YouTube song with an album gets Spotify ids from YouTube's own details (never the request's), a video never does, and a video's answer is remembered for a day | U (`spotifyMatch.test.ts`, `catalogue.test.ts`, lyrics `routes.test.ts`) + E | 2026-11-03 |
 | YT-07 | Night edition: the moon turns the paper dark and the device keeps the choice; a dark device opens it until the switch says otherwise | U (`edition.test.ts`) + E (`youtube-motion.spec.ts`) | 2026-11-04 |
 | YT-08 | Motion: pages rise, the player rises and sinks, underlines slide, lists wave in, presses spring, Like pops, a new cover springs in; with Motion Off the player closes at once | E (`youtube-motion.spec.ts`) | 2026-11-04 |
+| YT-09 | A song starts at once when it was looked up ahead (a page's first six songs as it opens, an album's or playlist's tracks, a hover or focus, the queue's next), else in about 2.5 s: yt-dlp asks as visionOS first and falls back to its default clients, never twice on a bot check or a song that is gone. *Measured 2026-11-04 on the server: 2.27 s, no `available_at` wait* | U (`ytdlp.test.ts`, `radio.test.ts`, `routes.test.ts`) + E (`youtube.spec.ts`: opening a page looks up its first six songs) + M | 2026-11-04 |
 
 ## 11. Reliability
 

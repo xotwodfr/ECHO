@@ -22,7 +22,8 @@ lyric field in an audio-reactive room lit by the album cover.
   Lyrics tab is ECHO's own lyrics view printed on paper, word by word from Spicy Lyrics and the
   other word-synced sources (YouTube songs get Spotify ids through ListenBrainz). Songs play
   through ECHO's own player: the server fetches each song's audio with yt-dlp (anonymously, never
-  with your cookie) and streams it like a Navidrome song. That breaks YouTube's terms; an admin
+  with your cookie) and streams it like a Navidrome song; the songs on the page you open are
+  looked up ahead and start at once, any other in about 2.5 s. That breaks YouTube's terms; an admin
   can turn the mode off for everyone. yt-dlp updates itself daily in the data volume.
 - **Colour:** the palette is extracted on the server from each cover and drives the Stage, the
   web client's Fluent 2 accent and its Mica glow (the Android app keeps Material 3); a contrast

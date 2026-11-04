@@ -63,7 +63,7 @@ describe('YouTube radio and prepare-ahead', () => {
   });
 });
 
-// Songs pointed at (or first on a page) are looked up ahead: a lookup plus YouTube's wait is ~9 s.
+// Songs pointed at, or first on a page, are looked up ahead: a cold song takes ~2.5 s, a looked-up one starts at once.
 describe('looking songs up ahead', () => {
   afterEach(() => vi.useRealTimers());
 
