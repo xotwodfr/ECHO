@@ -28,16 +28,17 @@ import { savedMode } from './youtube/mode.ts';
 import { startYtPrepare } from './youtube/radio.ts';
 
 // A tab opened before a deploy asks for chunks of the old build, which are gone (the Stage's
-// engine on the first Listen): reload once into the new build. Failing again within a minute is
-// not a deploy, so the error stands; without storage there is no guard, so no reload either.
+// engine on the first Listen). When the server's page names another build, reload into it. Any
+// other failure stands: offline, or a navigation cutting the request off (Firefox aborts the old
+// page's imports), where a reload would fight the navigation. The new build is the page's own
+// after one reload, so this cannot loop.
+const build = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src;
 addEventListener('vite:preloadError', () => {
-  try {
-    if (Date.now() - Number(sessionStorage.getItem('echo.chunkReload')) < 60_000) return;
-    sessionStorage.setItem('echo.chunkReload', String(Date.now()));
-  } catch {
-    return;
-  }
-  location.reload();
+  if (!build) return;
+  void fetch('/', { cache: 'no-store' })
+    .then((r) => r.text())
+    .then((page) => page.includes(new URL(build).pathname) || location.reload())
+    .catch(() => {});
 });
 
 // A signed-in user with a Navidrome connection plays their own library (M5). Without one,
