@@ -317,7 +317,9 @@ The lyric field's springs are `LYRICS_EXPERIENCE.md` §6's.
   reduce-motion setting (`motionLevel`): **full** springs (Full wins over the device); **less**
   (Reduced, or System on a device asking for less) keeps opacity and colour, nothing travels,
   scales or loops; **off** stops UI motion. tokens.css zeroes the tokens; no stylesheet reads
-  `prefers-reduced-motion` itself.
+  `prefers-reduced-motion` itself. **Performance mode** (Settings → Visuals, per device, 2026-11-04)
+  sets **less** over the saved choice (Off stays Off) through `effectiveVisuals` (`prefs.ts`), in
+  Navidrome and YouTube Music mode alike.
 
 ## 12. Accessibility baseline
 

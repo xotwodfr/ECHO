@@ -69,9 +69,10 @@ Each user has their own login, connections, settings and queue. No social featur
 ECHO is a **self-hosted web service**. The ECHO server runs in Docker Compose on the owner's home
 server, next to Navidrome, behind Caddy (HTTPS), and is **reachable from the public internet** at a
 domain such as `https://echo.example.com`. The MVP client is the **browser web app** on desktop
-browsers: **Google Chrome, Chromium and Firefox are all first-class**. Native **desktop and mobile
-clients** come after the MVP and use the same versioned API (`/api/v1`). The reasons are in
-`TECHNICAL_ARCHITECTURE.md` §2.
+browsers: **Google Chrome, Chromium and Firefox are all first-class**. Native clients use the same
+versioned API (`/api/v1`): the **Android** app (2026-10-29) is the full app, and **Linux, Windows,
+macOS and iOS** have baselines since 2026-11-04 (sign in, albums, an album, playback), each on its
+platform's own toolkit. The reasons are in `TECHNICAL_ARCHITECTURE.md` §2.
 
 Minimum supported viewport: **1024×640** for the full experience. A **compact layout** (≥ 360px wide)
 must stay usable for controlling playback and reading lyrics, but the phone is not a primary target.
@@ -99,8 +100,9 @@ IDs are referenced by the implementation plan and acceptance criteria.
 | **F11** | States & resilience | Designed loading, empty, offline, reconnecting, and error states for every block; no blank screens. | §8 |
 | **F12** | Lyrics sourcing | Spicy Lyrics (when configured and allowed), OpenSubsonic/Navidrome lyrics, LRCLIB, embedded tags, with a precedence order and caching. | `LYRICS_INTEGRATION.md` |
 | **F13** | Accounts & devices | Admin setup, invites, sign-in with password + TOTP (mandatory for the admin), sessions and devices list, account deletion. The queue and preferences follow the user across devices. | `SETTINGS_AND_SECURITY.md` §2, §4 |
-| **F14** | Client API | Versioned, documented `/api/v1` (OpenAPI) with device tokens and signed stream URLs, ready for future desktop and mobile clients | `TECHNICAL_ARCHITECTURE.md` §6.2, §6.5 |
+| **F14** | Client API and native apps | Versioned, documented `/api/v1` (OpenAPI) with device tokens and signed stream URLs; the native apps on it: Android (the full app), and Linux, Windows, macOS and iOS baselines (2026-11-04) | `TECHNICAL_ARCHITECTURE.md` §2.2, §6.2, §6.5; `ACCEPTANCE_CRITERIA.md` §10e |
 | **F15** | YouTube Music mode (web, 2026-11-03) | A switch turns ECHO into a YouTube Music player for whole listening sessions: Today, Explore, search, Your shelf (your library, with a pasted cookie), albums, artists, playlists, radio on a tap, likes. Its own look ("Liner notes": paper and ink, a night edition), ECHO's lyrics on paper, ECHO's player and queue underneath. An admin switch turns it off for everyone. | `ACCEPTANCE_CRITERIA.md` §10d, `TECHNICAL_ARCHITECTURE.md` §6.6 |
+| **F16** | Performance mode (web, 2026-11-04) | One switch in Settings → Visuals for a slower computer, on that device only: the smaller animations everywhere and a Listen room that holds still, in Navidrome and YouTube Music mode alike; the lyrics keep moving word by word. The saved choices come back when it is off. | `SETTINGS_AND_SECURITY.md` §7.1, `ACCEPTANCE_CRITERIA.md` PERF-07 |
 
 ---
 

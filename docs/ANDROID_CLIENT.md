@@ -2,6 +2,10 @@
 
 Status: **v0.1 built** (2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
 
+The other native apps (2026-11-04: `Linux/`, `Windows/`, `macOS/`, `iOS/`) are baselines on the
+same API; this one is the full app. Each folder's README says what it has
+(`ACCEPTANCE_CRITERIA.md` §10e).
+
 A native Android app (Kotlin, Jetpack Compose, Media3) for the owner's ECHO at
 `https://echo.folk3s.com`. Owner decisions (2026-10-29): **full parity** with the web player (the
 library, playback, the Stage with its room, Reverb and word-synced lyrics; liquid glass was later dropped for Material 3's surfaces), **Kotlin +

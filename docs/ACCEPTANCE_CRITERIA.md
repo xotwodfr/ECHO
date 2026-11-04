@@ -194,6 +194,7 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | PERF-04 | Hidden tab: 0 rAF callbacks and analyser polling stops. Audio continues | E | M2 |
 | PERF-05 | Cold start to interactive shell ≤ 1.5 s on LAN, ≤ 3 s over the internet (cached assets: ≤ 1 s). JS bundle for the shell ≤ 350 KB gzip, three.js chunk loaded with the Stage | P + I | M9 |
 | PERF-06 | No memory growth > 20 MB across 20 consecutive track changes (heap snapshot) | P | M9 |
+| PERF-07 | Performance mode (Settings → Visuals, per device): motion reduced everywhere (Off stays Off), the Stage still at the minimal tier, the lyric field still moving word by word; Settings shows the choices it decides as set by it, and they come back when it is off. On a 4×-throttled Chromium at 1366×768, Listen with lyrics ≥ 55 fps and page changes ≥ 55 fps. *Measured 2026-11-04: Listen 7 → 60 fps (main thread 102% → 26% busy), page changes 40 → 57* | U (`prefs.test.ts`) + E (`settings.spec.ts`) + P | 2026-11-04 |
 
 ## 9. Accessibility
 
@@ -241,6 +242,8 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | ACC-01 | First start prints a setup URL (30 min TTL, regenerated per restart). Setup creates the admin with mandatory TOTP and shows recovery codes. `/setup` is 404 afterwards | E | M5 |
 | ACC-02 | Invites are single-use, expire after 72 h, and create a user who sees none of the admin's data | E | M8 |
 | ACC-03 | Account deletion requires password + TOTP and removes the user's data. The last admin cannot delete themselves | E + U | M8 |
+| ACC-04 | A web session used daily never signs out: `GET /session` (each start of the app) sets the cookie again for 30 days, as the server slides the session | U (`routes.test.ts`: the browser's expiry kept) | 2026-11-04 |
+| ACC-05 | Disconnecting Navidrome clears the saved Navidrome queue (the YouTube one stays), and no save still due on the page brings it back; removing the Spicy key deletes the Spicy lyrics cached with it, and only those (`SETTINGS_AND_SECURITY.md` §10) | U (`navidrome/routes.test.ts`, `queueSync.test.ts`, `admin.test.ts`) | 2026-11-04 |
 | MU-01 | The queue and position follow the user between two browsers or devices. Simultaneous play shows the "changed on another device" notice | E (two contexts) | M5 |
 | API-01 | `docs/api/openapi.yaml` describes every `/api/v1` route. Contract tests validate responses against it | U | M8 |
 | API-02 | A non-browser client can log in via `POST /api/v1/auth/device` (with TOTP), use the bearer token, stream via a signed URL, and be revoked | E (scripted HTTP client) | M8 |
@@ -253,6 +256,7 @@ The owner's spring on everything that appears, leaves, moves or changes ([spec](
 | DEP-02 | Audio streams through Caddy without buffering (first audio byte ≤ 300 ms after Navidrome's), Range seeking works through the proxy, and transcoded seeking works via `timeOffset` | E (compose smoke) + M | M5 |
 | DEP-03 | Backup and restore drill: restore DB + master key on a fresh container, and all users and connections work. Restore without the key → connections need re-entry, nothing else breaks | M | M8 |
 | DEP-04 | On the OptiPlex (i7-3770): native modules load. Argon2id 150–250 ms. Palette extraction ≤ 150 ms per cover. Server RSS ≤ 300 MB with 3 concurrent listeners. 3 concurrent remote streams with Navidrome transcoding don't stutter | P + M | M1, M9 |
+| DEP-05 | The nightly database backup leaves the box: `scripts/offsite-backup.sh` copies the newest to an encrypted rclone remote nightly and keeps 30 days; the master key is kept apart (a password manager) | M | open (the owner's Google Drive remote, 2026-11-04) |
 
 ## 10c. Browsers
 
@@ -277,6 +281,22 @@ InnerTube answers recorded once (`catalogue.test.ts`); no test talks to YouTube.
 | YT-07 | Night edition: the moon turns the paper dark and the device keeps the choice; a dark device opens it until the switch says otherwise | U (`edition.test.ts`) + E (`youtube-motion.spec.ts`) | 2026-11-04 |
 | YT-08 | Motion: pages rise, the player rises and sinks, underlines slide, lists wave in, presses spring, Like pops, a new cover springs in; with Motion Off the player closes at once | E (`youtube-motion.spec.ts`) | 2026-11-04 |
 | YT-09 | A song starts at once when it was looked up ahead (a page's first six songs as it opens, an album's or playlist's tracks, a hover or focus, the queue's next), else in about 2.5 s: yt-dlp asks as visionOS first and falls back to its default clients, never twice on a bot check or a song that is gone. *Measured 2026-11-04 on the server: 2.27 s, no `available_at` wait* | U (`ytdlp.test.ts`, `radio.test.ts`, `routes.test.ts`) + E (`youtube.spec.ts`: opening a page looks up its first six songs) + M | 2026-11-04 |
+| YT-10 | Thumbnails are outside the per-user API budget (a page shows up to ~90, each a request through ECHO); YouTube audio stays inside it (each new song is a yt-dlp run) | U (`account.test.ts`) | 2026-11-04 |
+
+## 10e. Native apps (F14, 2026-11-04)
+
+Each baseline does the same: sign in with a device token (the code in the same request when
+two-factor is on), kept in the platform's secret store; the albums; an album's songs; playback from
+signed stream URLs (the file as stored when the platform's player plays it, else MP3 320), going on
+through the album; sign out ending the device's session on the server.
+
+| ID | Criterion | Method | MS |
+|---|---|---|---|
+| NAT-01 | Android (`Android/`): the full app (`docs/ANDROID_CLIENT.md`) | U + M | 2026-10-29 |
+| NAT-02 | Linux (`Linux/`, GTK 4): the baseline, the token in the Secret Service | M (GTK's Broadway backend against a test server: sign in, albums, a song in real time, pause, the album going on, sign out revoking the device) | 2026-11-04 |
+| NAT-03 | Windows (`Windows/`, WPF): the baseline, the token in DPAPI | I (builds without warnings) + M (`Api.cs` against a test server) | open: the window on Windows |
+| NAT-04 | macOS (`macOS/`, SwiftUI): the baseline, the token in the Keychain | I (parses, Swift 6.2) + M (`Api.swift` on Linux against a test server) | open: needs a Mac |
+| NAT-05 | iOS (`iOS/`, SwiftUI): the baseline, the token in the Keychain (this device only), playing on with the screen off | as NAT-04 | open: needs a Mac |
 
 ## 11. Reliability
 
@@ -288,6 +308,7 @@ InnerTube answers recorded once (`catalogue.test.ts`); no test talks to YouTube.
 | REL-04 | **Removed 2026-11-03** with Spotify. | — | — |
 | REL-05 | ECHO server unreachable while a client is open → the dock status with retry. Buffered audio continues. A 401 (expired session) → the login sheet returns to the same screen | E | M8 |
 | REL-06 | 8 h soak test (continuous album playback at T0): no crash, no memory growth > 50 MB, no audio dropouts attributable to ECHO | M + P | M9 |
+| REL-07 | After a deploy, a tab opened before it gets the new build: hashed assets are cached for good and the page is revalidated; a chunk the new image lacks reloads the tab once into the new build, and a chunk that fails while the build is unchanged (offline, a navigation cutting it off) never reloads | E (`deploy.spec.ts`) | 2026-11-04 |
 
 ## 12. Spotify compliance
 

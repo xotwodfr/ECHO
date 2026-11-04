@@ -76,8 +76,10 @@ The deciding constraints are:
 | Firefox | ✅ | **First-class.** E2E suite runs on Firefox too |
 | Edge, Brave | likely (Chromium) | Not tested in CI |
 | Safari | ⚠️ untested | |
-| Future native desktop | ✅ via API | post-MVP |
 | Android app (`Android/`, 2026-10-29) | ✅ native client of `/api/v1`, device token (`docs/ANDROID_CLIENT.md`) | Kotlin, Compose, Media3; the Stage on OpenGL ES with the web's shaders |
+| Linux app (`Linux/`, 2026-11-04) | ✅ baseline: sign in, albums, an album, playback | Rust, GTK 4, GStreamer, libsecret; built and run against a test server |
+| Windows app (`Windows/`, 2026-11-04) | ⚠️ baseline, builds; the window has not run | C#, WPF on .NET 10 with the Fluent theme, DPAPI for the token |
+| macOS and iOS apps (`macOS/`, `iOS/`, 2026-11-04) | ⚠️ baselines, not yet run (need a Mac) | Swift, SwiftUI, AVPlayer, the Keychain; code shared in `Apple/Shared` |
 
 ### 2.3 Server hardware notes
 
@@ -328,7 +330,7 @@ moved.
 | Database | volume `/data/echo.db` (WAL mode) |
 | Caches | volume `/data/cache/{lyrics,palette}` |
 | Logs | stdout (Docker), redacted (`SETTINGS_AND_SECURITY.md` §9) |
-| Backups | back up `/data` **and** the master key, stored separately (`SETTINGS_AND_SECURITY.md` §11) |
+| Backups | back up `/data` **and** the master key, stored separately (`SETTINGS_AND_SECURITY.md` §11). Daily `echo-auto-<date>.db` in `/data/backups` (seven kept); `scripts/offsite-backup.sh` copies the newest off the box (rclone) |
 
 ### 6.4 Compose and Caddy (reference config; finalised in M5)
 
@@ -375,6 +377,12 @@ echo.example.com {
 ECHO trusts `X-Forwarded-For`/`X-Forwarded-Proto` **only** from the Caddy container's address
 (`ECHO_TRUSTED_PROXY`: a comma-separated list of addresses or IPv4 CIDRs; **empty by default**, so
 nothing is trusted until the operator names Caddy's address, as built in M5).
+
+**The owner's live setup (2026-11-04):** a host Caddy behind a Cloudflare tunnel fills
+`X-Forwarded-For` from `Cf-Connecting-Ip`, so its ECHO site block answers only the tunnel (loopback,
+`SETTINGS_AND_SECURITY.md` §5.1). The live compose carries the example's limits too
+(`mem_limit: 768m`, `pids_limit: 256`, `cpus: 2`; peak measured with yt-dlp in the container:
+565 MB, 23 processes).
 
 **Running TypeScript on the server (M1):** the server's `.ts` files run directly on Node 24's
 built-in type stripping (`node src/server/index.ts`), so the server has no build step. tsconfig sets
@@ -432,29 +440,38 @@ Design: `docs/superpowers/specs/2026-11-03-youtube-music-design.md`, and for its
 
 ## 7. Repository layout (single package, AGPL-3.0)
 
+As built (2026-11-04):
+
 ```
 echo/
 ├── LICENSE                     ← AGPL-3.0
-├── docs/                       ← source of truth (incl. docs/api/openapi.yaml from M5)
+├── docs/                       ← source of truth (incl. docs/api/openapi.yaml)
 ├── Dockerfile · compose.example.yaml · Caddyfile.example
-├── package.json · vite.config.ts
+├── package.json · vite.config.ts · playwright.config.ts · biome.json
 ├── src/
-│   ├── shared/                 ← types, LyricsDoc schema + validators
+│   ├── shared/                 ← types (LyricsDoc…), oklab.ts, youtube.ts
 │   ├── server/
-│   │   ├── index.ts            ← Hono app, proxy trust, host check, security headers
-│   │   ├── auth/  users/  admin/  crypto/  db/ (migrations/*.sql)
-│   │   ├── navidrome.ts
-│   │   ├── lyrics/             ← resolver.ts, sources/*, parsers/*
-│   │   └── palette/            ← extract.ts (sharp + material), roles.ts, oklab.ts
+│   │   ├── index.ts            ← the app: hardening, routes, static files, the daily jobs
+│   │   ├── http.ts  log.ts  config.ts  crypto.ts  audit.ts  account.ts  admin.ts  admin-cli.ts
+│   │   ├── auth/  db/ (migrations in db.ts)  navidrome/ (proxy, URL rules, the mock server)
+│   │   ├── lyrics/             ← sources, resolve, parse, cache, routes, spotifyMatch
+│   │   ├── palette/            ← decode (sharp), extract, service, covers
+│   │   ├── youtube/            ← catalogue (youtubei.js), ytdlp, proxy, routes
+│   │   └── plays.ts  queue.ts  settings.ts  wanted.ts
 │   └── client/
-│       ├── main.tsx  tokens.css  fonts/
-│       ├── playback/  audio/  palette/ (animator.ts; oklab.ts shared with server via src/shared)
-│       ├── stage/ (engine, renderer, shaders, perf) · stage/lyrics/ (field, model, layout, background, springs, timing, lyricsConfig)
-│       ├── shell/ (library, search, queue, settings, account, admin, dock, first-run, login;
-│       │          page-transition: page changes, the lyrics view's open and close, source switch)
+│       ├── main.tsx  prefs.ts  api.ts  tokens.css  main.css  fonts/  fixtures/
+│       ├── playback/  palette/  lyrics/
+│       ├── stage/ (engine, renderer, shaders, governor) · stage/lyrics/ (field, model, layout, springs, timing, lyricsConfig)
+│       ├── shell/ (pages, dock, panels, settings, account, admin; page-transition)
+│       ├── youtube/            ← YouTube Music mode (Liner notes)
 │       └── ui/ (components; motion.ts: the spring, exits, glides, arrivals, still copies)
-├── fixtures/                   ← lyrics, features, covers, Subsonic JSON
-└── tests/e2e/
+├── scripts/                    ← verify-hardware, e2e-container.sh, mock-subsonic, offsite-backup.sh…
+├── tests/                      ← e2e/ (Playwright) · unit-setup.ts (Vitest: each run's temp folders)
+├── Android/                    ← native: Kotlin, Compose, Media3 (the full app)
+├── Linux/                      ← native: Rust, GTK 4, GStreamer, libsecret (baseline)
+├── Windows/                    ← native: C#, WPF on .NET 10 (baseline)
+├── macOS/  iOS/                ← native: Swift, SwiftUI, AVPlayer (baselines; XcodeGen project.yml)
+└── Apple/Shared/               ← the code macOS/ and iOS/ share
 ```
 
 `oklab.ts` lives in `src/shared` (the server uses it for extraction, the client for interpolation).
@@ -499,7 +516,8 @@ echo/
 | Migrations | Run automatically at start inside a transaction. The server refuses to start on a failed migration and keeps the old schema |
 | Updates | Tagged images (`echo:0.x.y`). Release notes list migrations. No auto-update |
 | First start | The server prints a one-time **setup URL** (`https://echo.example.com/setup#<token>`, 30 min TTL) to the container log. Opening it creates the admin account (password + mandatory TOTP) |
-| Future native clients | Separate repos or packages consuming `/api/v1`. |
+| Web client caching | Vite's hashed files under `/assets/` are `Cache-Control: public, max-age=31536000, immutable`; the page and every other file `no-cache`, so a deploy reaches every browser. A tab opened before a deploy asks for chunks the new image lacks (the Stage's engine): when one fails to load, the page asks `/` whether it still names its build and reloads into the new one only when it does not, so an offline tab or a navigation cutting a request off never reloads (2026-11-04, `tests/e2e/deploy.spec.ts`) |
+| Native clients | In this repository: `Android/` (the full app), `Linux/`, `Windows/`, `macOS/` and `iOS/` (baselines, 2026-11-04; each folder's README), all on `/api/v1` with device tokens and signed stream URLs (§6.5) |
 
 ---
 

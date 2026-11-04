@@ -5,7 +5,7 @@ is a floating, word-synchronised lyric field in an audio-reactive environment li
 cover. Design direction: **Reverb Chamber**, a dark acoustic room where sound arrives as light,
 peaks and decays.
 
-**Project status (2026-11-03):** milestones **M1–M9 are built and tested**, and ECHO is
+**Project status (2026-11-04):** milestones **M1–M9 are built and tested**, and ECHO is
 **deployed** at https://echo.folk3s.com (M5 task 12). Since then: the Material 3 shell (2026-10-25),
 NetEase lyrics and Spotify matching, daily backups, and an overnight audit and fix pass
 ([OVERNIGHT_ENGINEERING_PLAN.md](OVERNIGHT_ENGINEERING_PLAN.md): findings, fixes, evidence, what is
@@ -50,16 +50,30 @@ deferred). Since 2026-10-29:
 - **YouTube songs start at once** (2026-11-04): a page's first songs are looked up as it opens, and
   yt-dlp asks as YouTube's visionOS app, whose links play without YouTube's 4–5 s wait: a song
   nobody looked up starts in ~2.5 s instead of 8–14 s (`PLAYBACK_ARCHITECTURE.md` §11.1, YT-09).
+- **Review and fixes** (2026-11-04; [record](reviews/2026-11-04-review.md)): web sessions that slide
+  in the browser too (ACC-04), deploys that never leave an open tab with a blank Stage (REL-07),
+  YouTube thumbnails outside the API budget (YT-10), the §10 clean-ups (ACC-05), unit tests that
+  clean up after themselves, the Caddy block answering only the tunnel, the live compose's resource
+  limits, and an off-box backup script (DEP-05, the remote still to set up). What is still open is
+  in the record.
+- **Performance mode** (2026-11-04, F16, PERF-07): one switch in Settings → Visuals for a slower
+  computer, on that device: smaller animations and a still Listen room, lyrics still moving word by
+  word. Measured on a throttled browser: Listen 7 → 60 fps, page changes 40 → 57.
+- **Native apps** (2026-11-04, F14, `ACCEPTANCE_CRITERIA.md` §10e): baselines beside the Android
+  app in `Linux/` (GTK 4, run here), `Windows/` (WPF, builds), `macOS/` and `iOS/` (SwiftUI, need a
+  Mac): sign in, albums, an album, playback.
 
-**Live** at echo.folk3s.com since 2026-11-03 11:13 UTC: all of the above, built from `edc3d9e`,
-all of it on `main`.
+**Live** at echo.folk3s.com: all of the above, `main` `b3968ee` since 2026-11-04 13:34 UTC (the
+native apps that follow it change nothing on the server).
 **Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
 the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full
 visual runs; the Home screenshots (`shell.visual`, paused player) fail whenever the masked
 greeting's box differs in width from the baseline's ("Good morning", "Good evening"), so they
 depend on the time of day; settings ACC-03 fails when run together with other specs and passes
-alone. SEC-10 passes strictly (distroless runtime). Still open, all needing the owner, people or
-real devices: the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
+alone; Firefox Made For You and "a menu animates out" fail in some full runs and pass alone
+(`reviews/2026-11-04-review.md`). SEC-10 passes strictly (distroless runtime). Still open, all
+needing the owner, people or real devices: the off-box backup's remote (DEP-05), the Windows and
+Apple apps on their platforms (NAT-03 to NAT-05), the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
 (SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
 (REL-06), the Orca pass, the five-second test (DS-05), and the 10-bit capture (VIS-09). Per-milestone records: [reviews/](reviews/) (M1–M9, plus
 [M8-security.md](reviews/M8-security.md) for the pre-share security review).
@@ -73,7 +87,7 @@ in the same change. Never leave them diverged.
 
 | # | Document | Read it for | Audience |
 |---|---|---|---|
-| 1 | [PRODUCT_SPEC.md](PRODUCT_SPEC.md) | Vision, users, features (F1–F12), screens (S0–S7), journeys, MVP scope, non-goals | everyone |
+| 1 | [PRODUCT_SPEC.md](PRODUCT_SPEC.md) | Vision, users, features (F1–F16), screens (S0–S7), journeys, MVP scope, non-goals | everyone |
 | 2 | [DESIGN_RESEARCH.md](DESIGN_RESEARCH.md) | Skills used, principles, references, sources for every technical claim, **open questions** | everyone |
 | 3 | [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md) | Two zones (Stage/Shell), tokens, type, colour roles, components, motion, accessibility | UI work |
 | 4 | [LYRICS_EXPERIENCE.md](LYRICS_EXPERIENCE.md) | **The signature feature**: time-as-depth model, word sweep, springs, background field, every edge case | Stage work |
@@ -94,7 +108,7 @@ hand.
 
 | Topic | Decision | Where |
 |---|---|---|
-| Delivery | **Self-hosted web service:** ECHO server in Docker Compose on the owner's OptiPlex next to Navidrome, behind Caddy and a Cloudflare tunnel (https://echo.folk3s.com). MVP client = browser (Chrome, Chromium, Firefox). Desktop and mobile clients later, on the same `/api/v1` | TECHNICAL_ARCHITECTURE §2 |
+| Delivery | **Self-hosted web service:** ECHO server in Docker Compose on the owner's OptiPlex next to Navidrome, behind Caddy and a Cloudflare tunnel (https://echo.folk3s.com). MVP client = browser (Chrome, Chromium, Firefox). Native apps on the same `/api/v1`: Android (the full app), and Linux, Windows, macOS and iOS baselines (2026-11-04), each on its platform's toolkit | TECHNICAL_ARCHITECTURE §2 |
 | Accounts | Admin + invited users. Argon2id + TOTP (mandatory for admin). Per-user Navidrome connections. Secrets encrypted at rest with a master key | SETTINGS_AND_SECURITY §2–§4 |
 | Stack | TypeScript, React 19 (shell only), three.js (imperative Stage), DOM lyrics, Zustand. Hono on Node 24, SQLite, sharp | TECHNICAL_ARCHITECTURE §3 |
 | Audio-reactive visuals | Navidrome only (Web Audio in the client on same-origin streams). Ambient when no analysis exists. Default intensity **Expressive** | VISUALIZER_SPEC §2, §7.4 |
@@ -116,6 +130,6 @@ decisions are recorded in the milestone reviews. The typeface was decided in M1 
 
 - Claim labels: **[C]** confirmed (primary source), **[R]** reported, **[A]** assumption to verify in
   a named milestone, **[U]** unverified.
-- Cross-references use `FILE.md §n`. Acceptance IDs look like `LYR-07`. Feature IDs `F1`–`F12`.
+- Cross-references use `FILE.md §n`. Acceptance IDs look like `LYR-07`. Feature IDs `F1`–`F16`.
   Screen IDs `S0`–`S7`. Milestones `M1`–`M9`.
 - Review write-ups produced during implementation go in `docs/reviews/M<n>.md`.

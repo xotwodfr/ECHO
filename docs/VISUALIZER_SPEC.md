@@ -437,6 +437,10 @@ through a dependent fetch, so it is the first to go.
 - User override: Settings → Visuals → Quality: `Auto` (governor) / `High` / `Balanced` / `Low` /
   `Minimal`. It is stored per device. A manual choice disables the governor except for an emergency step-down below 20 fps
   sustained for 3 s.
+- **Performance mode** (Settings → Visuals, per device, 2026-11-04) applies `Minimal` and reduced
+  motion over the saved choices: the room holds still (one frame per palette change) while the
+  lyric field keeps moving word by word. On a 4×-throttled Chromium, Listen went from 7 to 60 fps
+  (`ACCEPTANCE_CRITERIA.md` PERF-07).
 
 **As built (M9):** `src/client/stage/governor.ts`, fed by the engine on frames that draw the room;
 GPU time is not wired yet (the frame-interval EMA alone decides). The lyric field keeps the tier it

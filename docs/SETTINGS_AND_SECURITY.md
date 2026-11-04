@@ -151,11 +151,11 @@ requires the password plus a current code. The admin cannot disable their own TO
 
 ### 4.6 Sessions and device tokens
 
-| | Web session | Device token (future native clients) |
+| | Web session | Device token (the native clients) |
 |---|---|---|
 | Transport | Cookie `__Host-echo_session`: `Secure; HttpOnly; SameSite=Lax; Path=/` | `Authorization: Bearer echo_dt_<base64url 32 bytes>` |
 | Created by | login (+ TOTP) | `POST /auth/device` with credentials + TOTP and a device name |
-| Lifetime | 30 days, sliding; expires after 14 days idle | 180 days, sliding; 60 days idle |
+| Lifetime | 30 days, sliding; expires after 14 days idle. The browser's cookie slides too: `GET /session`, asked at each start of the app, sets it again for 30 days (2026-11-04: before, it lapsed 30 days after signing in however much the app was used) | 180 days, sliding; 60 days idle |
 | Storage | SHA-256 of the token | SHA-256 of the token |
 | Visible in | Account → Sessions & devices (name, created, last seen, approximate location from IP prefix) | same |
 | Revocation | per item, "sign out everywhere else", password change | same |
@@ -176,6 +176,11 @@ state-changing routes are non-GET and additionally Origin-checked (§5.3).
 - `X-Forwarded-For` / `X-Forwarded-Proto` are honoured **only** when the connection comes from the
   configured trusted proxy (`ECHO_TRUSTED_PROXY`). Otherwise they are ignored and the socket address
   is used.
+- **Behind a Cloudflare tunnel** (the owner's setup: Caddy on the host, `cloudflared` reaching it at
+  `http://localhost:80`), Caddy fills `X-Forwarded-For` from `Cf-Connecting-Ip`, a header any client
+  can send. So ECHO's site block answers only the tunnel: `@notTunnel not remote_ip 127.0.0.1/8 ::1`
+  and `respond @notTunnel 403` (2026-11-04). Without it, anyone reaching port 80 directly (the LAN,
+  Tailscale) chose the client IP that the login limits and the audit log go by.
 - ECHO refuses requests whose forwarded protocol is not `https` (except `/health` from the Docker
   network, for health checks).
 
@@ -423,6 +428,10 @@ connection remains (SEC-06).
 - Back up the database with `docker compose exec echo /nodejs/bin/node src/server/admin-cli.ts backup` (a consistent online
   copy, `VACUUM INTO`, written to `/data/backups/echo-<time>.db`), and copy that file out with the
   owner's normal backups. The cache can be skipped.
+- The server also writes `/data/backups/echo-auto-<date>.db` daily and keeps seven, on the same
+  volume. `scripts/offsite-backup.sh` copies the newest off the box to an rclone remote (a `crypt`
+  one: accounts, plays and the Wanted list are not sealed) and keeps 30 days there; a systemd user
+  timer runs it nightly (2026-11-04; the owner's Google Drive remote is still to be set up).
 - Back up `secrets/echo_master_key` **separately** (password manager or offline). A DB backup
   without the key exposes no secrets.
 - **Restore:** put the backup in place as `/data/echo.db` on a fresh container with the same
