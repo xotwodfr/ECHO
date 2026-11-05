@@ -69,7 +69,7 @@ with covers, WAV streams and timed lyrics.
 lyric source menu and per-track lyric nudges, streaming quality and ReplayGain, the contrast
 solver that darkens the lyric zone behind bright covers.
 
-**Needs the server's 2026-10-29 palette fix** (commit 07e10fb): before it, the palette route refused
+**Needs the server's 2026-10-29 palette fix** (commit 43c7514): before it, the palette route refused
 device tokens, so album colours fall back to Sodium until echo.folk3s.com is redeployed.
 
 ## Milestones

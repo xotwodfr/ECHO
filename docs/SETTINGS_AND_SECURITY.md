@@ -1,6 +1,6 @@
 # ECHO — Settings & Security
 
-> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> **Navidrome only since 2026-11-03.** Spotify was removed (`1ea5b0b`, `385fa38`; why:
 > [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). A migration
 > deleted its stored connections and app credentials. Removed sections are one-line stubs so
 > section numbers stay put; their full text is in git before those commits.

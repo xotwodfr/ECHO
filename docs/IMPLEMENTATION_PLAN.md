@@ -1,6 +1,6 @@
 # ECHO — Implementation Plan
 
-> **Spotify was removed on 2026-11-03** (commits `824eeb9` web client, `8f2c1b2` server). Parts of
+> **Spotify was removed on 2026-11-03** (commits `1ea5b0b` web client, `385fa38` server). Parts of
 > this document that describe Spotify playback, its connection, the policy gates or the library
 > source switch are kept as a record of what was built and why it went; the code is in git before
 > those commits. Music that is not in Navidrome is found on YouTube Music by a link in the search

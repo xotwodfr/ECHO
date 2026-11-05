@@ -74,7 +74,7 @@ Each item says what the owner should see. "From the demo" means the Motion Lab s
    its big spot and the lyric lines rise in. Closing shrinks it back into the player. The rest of
    the shell recedes and returns. *From the demo (scene 7).* *2026-11-02 evening: a variant where
    the whole player bar grows into the view, with the room started only after the growth, was
-   built (43c2422) and reverted at the owner's request (0377ac4); this item stands as built.*
+   built (516fd14) and reverted at the owner's request (cf7484f); this item stands as built.*
 9. **Toasts**: spring up from the bottom; leave with the plain exit.
 10. **Tabs and switches**: the selected indicator slides to the new tab with the spring (the phone
     tab bar, chips, the Navidrome | Spotify switch, Settings toggles).

@@ -1,6 +1,6 @@
 # ECHO — Product Specification
 
-> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> **Navidrome only since 2026-11-03.** Spotify was removed (`1ea5b0b`, `385fa38`; why:
 > [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Music that
 > is not in Navidrome is found on YouTube Music through a link on an empty search, and since the
 > evening of 2026-11-03 played in **YouTube Music mode** (F15), a separate UI beside the Navidrome

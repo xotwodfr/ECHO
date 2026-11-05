@@ -1,6 +1,6 @@
 # ECHO — Playback Architecture
 
-> **Navidrome only since 2026-11-03.** Spotify playback was removed (`824eeb9`, `8f2c1b2`; why:
+> **Navidrome only since 2026-11-03.** Spotify playback was removed (`1ea5b0b`, `385fa38`; why:
 > [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Its sections are
 > one-line stubs, kept so that section numbers (cited in code comments) stay put; their full text is
 > in git before those commits.

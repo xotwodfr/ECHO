@@ -1,6 +1,6 @@
 # Springy motion Implementation Plan
 
-Status: **built** 2026-11-02 (5d44196, bbe67fe, c9c0db9), executed inline with a self-review at the
+Status: **built** 2026-11-02 (3b61397, 6d1df16, 2cb96da), executed inline with a self-review at the
 end; merged into `main` and deployed the same day. Its rulings are in the commit messages and in
 the spec's notes.
 

@@ -1,7 +1,7 @@
 # YouTube Music mode, Liner notes — design
 
 Status: **approved** by the owner 2026-11-03; **built** on branch `liner-notes` (not deployed: the owner's word).
-Builds on `2026-11-03-youtube-music-design.md` (live since 2026-11-03, `main` e8daea6), which this
+Builds on `2026-11-03-youtube-music-design.md` (live since 2026-11-03, `main` 7c506ae), which this
 replaces where it speaks about the look.
 Mockups: https://claude.ai/artifact/8yTf8MWLVBU9TQqsDvfcWm, board **C** (Home) and board **F**
 (the full-screen player with lyrics). Boards A, B, D and E are rejected directions.

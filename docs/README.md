@@ -63,7 +63,7 @@ deferred). Since 2026-10-29:
   app in `Linux/` (GTK 4, run here), `Windows/` (WPF, builds), `macOS/` and `iOS/` (SwiftUI, need a
   Mac): sign in, albums, an album, playback.
 
-**Live** at echo.folk3s.com: all of the above, `main` `b3968ee` since 2026-11-04 13:34 UTC (the
+**Live** at echo.folk3s.com: all of the above, `main` `dce56b4` since 2026-11-04 13:34 UTC (the
 native apps that follow it change nothing on the server).
 **Known failing:** Firefox LYR-17 (a scrubber click half a second ahead in the lyrics view, from
 the Selawik commit on, cause not found); `listen-frame-390` flips between two renders in full

@@ -2,11 +2,11 @@
 
 ## Status 2026-11-03 13:30: done and live
 
-- **Spotify removed and deployed** at 10:15 UTC (`833469b`), the leftover Spotify copy at 10:19
-  (`378c86d`). Verified on the server: the CSP has no Spotify hosts, the bundle no SDK or quota
+- **Spotify removed and deployed** at 10:15 UTC (`449993d`), the leftover Spotify copy at 10:19
+  (`d5779b2`). Verified on the server: the CSP has no Spotify hosts, the bundle no SDK or quota
   code, and the migration left 0 Spotify connections and 0 credential settings (counts only).
 - **Instead of Spotify**, music that is not in Navidrome goes on the shared **Wanted list** (live
-  at 11:13 UTC, `edc3d9e`; `ACCEPTANCE_CRITERIA.md` WNT-01), and an empty search links to YouTube
+  at 11:13 UTC, `53d9f49`; `ACCEPTANCE_CRITERIA.md` WNT-01), and an empty search links to YouTube
   Music.
 - **Left for the owner:** delete the Spotify app in the Spotify developer dashboard, which also
   stops it counting against the developer account's quota.
@@ -14,7 +14,7 @@
 ## Update 2026-11-03 10:05: Spotify was removed
 
 The owner decided almost nothing they play is missing from Navidrome, so Spotify was taken out
-instead of waiting for the quota (`824eeb9` web client, `8f2c1b2` server, `ed07e04` the YouTube Music
+instead of waiting for the quota (`1ea5b0b` web client, `385fa38` server, `6cb2530` the YouTube Music
 link, plus docs). Gone: the Web Playback SDK provider, the Web API helper, Spotify Home and library,
 the Navidrome|Spotify switch, the Spotify connection and app settings (Client ID, secret, seats, the
 two policy gates), the OAuth and token routes, the Spotify palette path and the CSP's Spotify hosts.
@@ -34,15 +34,15 @@ whenever the greeting reads "Good morning", documented), 13 isolated.
   `429 QUOTA_EXCEEDED`, Retry-After **22168 s** (6 h 9 min, so about **14:56 UTC**), on its first call.
 - **Browser, 09:08** (owner's Network tab): all six calls on a Spotify page load answered **429**,
   `/v1/me` included, so the refusal covers the whole app, not one endpoint.
-- **Who spent it** (inference): the source switch (`6b96aa1`, live 2026-11-02 15:31) made
+- **Who spent it** (inference): the source switch (`d051908`, live 2026-11-02 15:31) made
   `startCollections` fetch **both** sources' playlists and hearts at **every page load**: every liked
   song at 50 a call, saved albums, followed artists, playlists, even in Navidrome mode. Fixed in
-  `d7124a2`: Spotify's collections load when its source is open or a Spotify heart is on screen.
+  `6c307e5`: Spotify's collections load when its source is open or a Spotify heart is on screen.
   Another dev app on the same developer account would share the quota too; I cannot see that.
-- Nothing in ECHO can lift a spent quota: it comes back by itself. `4c14fb8` makes Spotify Home say
-  why; `d7124a2` stops ECHO spending it on pages that do not show Spotify.
+- Nothing in ECHO can lift a spent quota: it comes back by itself. `f5ee21c` makes Spotify Home say
+  why; `6c307e5` stops ECHO spending it on pages that do not show Spotify.
 - The Liked Songs e2e flake was a test race (the switch is saved in the background), fixed in
-  `b576bad`.
+  `2de1236`.
 
 The sections below are the overnight analysis, written before this was confirmed.
 
@@ -52,7 +52,7 @@ The sections below are the overnight analysis, written before this was confirmed
 ECHO's side that I could test is healthy. The evidence points at **Spotify refusing the app**, most
 likely its Development Mode **quota**, and ECHO handled that case badly: it retried, kept asking,
 and told you the wrong thing. I fixed that, so the next failure names its cause. Nothing is
-deployed; the container still runs `7e7d766`.
+deployed; the container still runs `c194a71`.
 
 The cause is one look away. In the browser on echo.folk3s.com, open DevTools → Network, filter
 `api.spotify.com`, and press play on a Spotify track. The status and body of the failing calls say
@@ -75,7 +75,7 @@ which one it is (see "What to check first").
    had never been asked (3,799 of them with an ISRC, which Spotify's ISRC search normally matches).
    The only ways the code gets there are a refused app token, a first 429 with a Retry-After over
    2 min, or ten failures in a row. All three were **silent** in the log.
-2. **History.** Before `ccaec9f`, every daily sweep died at its first search with a 429; only 689 of
+2. **History.** Before `db1758c`, every daily sweep died at its first search with a 429; only 689 of
    22,787 tracks were ever asked. A quota that is already spent looks exactly like that.
 3. **Spotify's own docs** (read through a page-fetch summariser; verify at the source): Development
    Mode has a **quota separate from the rate limit**, shared by the developer's apps, with
@@ -95,12 +95,12 @@ report says it can take hours to clear after renewing), (4) something I could no
 
 | Commit | Change |
 |---|---|
-| `3654416` | Browser: a Retry-After over 30 s, or a second 429, starts a **page-wide cooldown**: no Web API call is sent, the SDK is not asked to connect, and the message says how long Spotify asked ECHO to wait. |
-| `494724d` | Browser: a 403 shows **Spotify's own reason** ("Spotify refused ECHO: …") unless it really is the user-list refusal. |
-| `5321a71` | Server: the log says **why** Spotify refused the app: token refused (status, error, description, Retry-After), and why the sweep left Spotify (failure count, Retry-After, Spotify's message). A refused token is asked for once per run, not once per 500 songs. `createSpotifyAppToken` had no tests; it has two. |
-| `7900315` | `QUOTA_EXCEEDED` is recognised on both sides: never retried, a long pause (the Retry-After, else 15 min), the sweep leaves Spotify at once, and any long Spotify pause now holds for plays too. |
-| `2dc2043` | Minor bug: a refused SDK connect left an unhandled "ready timeout" rejection 15 s later. |
-| `ca9687e` | Minor bug: a `/me` without `product` (Development Mode drops it, per Spotify's February guide) is no longer treated as a Free account. |
+| `c46ce0b` | Browser: a Retry-After over 30 s, or a second 429, starts a **page-wide cooldown**: no Web API call is sent, the SDK is not asked to connect, and the message says how long Spotify asked ECHO to wait. |
+| `4d33fae` | Browser: a 403 shows **Spotify's own reason** ("Spotify refused ECHO: …") unless it really is the user-list refusal. |
+| `c3920a0` | Server: the log says **why** Spotify refused the app: token refused (status, error, description, Retry-After), and why the sweep left Spotify (failure count, Retry-After, Spotify's message). A refused token is asked for once per run, not once per 500 songs. `createSpotifyAppToken` had no tests; it has two. |
+| `3cbef6d` | `QUOTA_EXCEEDED` is recognised on both sides: never retried, a long pause (the Retry-After, else 15 min), the sweep leaves Spotify at once, and any long Spotify pause now holds for plays too. |
+| `efbf641` | Minor bug: a refused SDK connect left an unhandled "ready timeout" rejection 15 s later. |
+| `9c6da05` | Minor bug: a `/me` without `product` (Development Mode drops it, per Spotify's February guide) is no longer treated as a Free account. |
 | (docs) | `PLAYBACK_ARCHITECTURE.md` §4.5 and §8, `LYRICS_INTEGRATION.md` §4.3 describe the above; this report. |
 
 Every fix has a test that failed first. At the end: **1457 unit tests pass**, `tsc` clean, biome at
@@ -137,7 +137,7 @@ e2e pass on Chromium.
 ## Found on the way
 
 - `tests/e2e/settings.spec.ts` **ACC-03** fails when run together with the spotify and account specs
-  (2 of 2 runs, also on the baseline `7e7d766`); it passes alone. Not caused by tonight's work.
+  (2 of 2 runs, also on the baseline `c194a71`); it passes alone. Not caused by tonight's work.
 - **"Spotify mode: Liked Songs"** failed 2 of 8 under load on the baseline, 0 of 8 on HEAD. My
   heavier stress run hit the 5-seat limit in the test setup; that was my doing, not a product bug.
 

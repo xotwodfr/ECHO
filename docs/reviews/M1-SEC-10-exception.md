@@ -13,7 +13,7 @@ Background and the removal of the critical zlib finding: [`M1.md`](M1.md), "SEC-
 
 ## Scanner evidence
 
-- Image: `echo:m1`, rebuilt from commit `a4a9843`, image ID
+- Image: `echo:m1`, rebuilt from commit `44f496e`, image ID
   `sha256:92bdb691b75d97eb25814dbffcd89b38e20c68d6e125b6e3571db01317480607`. Base
   `node:24.22.0-trixie-slim@sha256:a6155384446670e9719bdc4fd0ebe4d4b29fb32a8d6aa523da3547a6cfbcf22c`,
   Debian 13.7.

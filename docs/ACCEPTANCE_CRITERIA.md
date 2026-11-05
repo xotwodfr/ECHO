@@ -1,6 +1,6 @@
 # ECHO — Acceptance Criteria
 
-> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> **Navidrome only since 2026-11-03.** Spotify was removed (`1ea5b0b`, `385fa38`; why:
 > [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). Criteria
 > that only applied to Spotify keep their IDs, marked **Removed 2026-11-03**, so references to them
 > still resolve.

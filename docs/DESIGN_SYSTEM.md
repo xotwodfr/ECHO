@@ -1,6 +1,6 @@
 # ECHO — Design System
 
-> **Navidrome only since 2026-11-03.** Spotify was removed (`824eeb9`, `8f2c1b2`; why:
+> **Navidrome only since 2026-11-03.** Spotify was removed (`1ea5b0b`, `385fa38`; why:
 > [reviews/2026-11-03-spotify-outage.md](reviews/2026-11-03-spotify-outage.md)). The look stays
 > Spotify's (the redesign borrowed its layout, not its service); the library switch and the rules for
 > Spotify's own artwork and logo went with it.

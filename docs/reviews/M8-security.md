@@ -42,17 +42,17 @@ The automated review flagged these, and each was fixed with a regression test th
 old code:
 
 1. Re-authentication (password, TOTP) on Account routes was not rate limited, so a stolen session
-   could guess them (`3d5f886`).
+   could guess them (`0134752`).
 2. The log redactor missed secrets whose JSON-escaped or URL-encoded form differed from the raw
-   text (`21dad9e`).
+   text (`a3ce462`).
 3. An unreadable TOTP (after a restore without the key) could be replaced with the password alone.
-   It now needs a recovery code too (`caefff9`).
+   It now needs a recovery code too (`14695cd`).
 4. CSP report rate limiting: an unbounded map first, then a global budget one source could
    exhaust. It is now per address in a bounded map, with a global backstop and a logged dropped
-   count (`7be741f`, `df47e47`).
+   count (`6a127bd`, `f702a76`).
 
 From M7, also in scope: Spotify-ID mappings and lyric cache keys carry the lookup basis
-(`a81268f`).
+(`1d64c24`).
 
 ## Live half — run 2026-10-24 on https://echo.folk3s.com
 
