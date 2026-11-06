@@ -6,9 +6,10 @@ using Avalonia.Styling;
 
 namespace Echo.Ui;
 
-/// Cider's sidebar in the Mojave layout (views/components/sidebar.ejs; style.less #app-sidebar): 260 px,
-/// --sidebarColorMix, 8 px in; the Library (Recently Added, Songs, Albums, Artists: Videos and Podcasts
-/// are Apple Music's) and the Playlists, each under a header that folds it away.
+/// Cider's sidebar (views/components/sidebar.ejs; style.less #app-sidebar): 260 px, --sidebarColorMix,
+/// 8 px in; the Library (Recently Added, Songs, Albums, Artists: Videos and Podcasts are Apple Music's)
+/// and the Playlists, each under a header that folds it away. In Maverick, which has no tabs, the search
+/// field heads it and "Cider" holds Home (ECHO's name stands there).
 public sealed class Sidebar : Border
 {
     public const double Width1 = 260;
@@ -18,7 +19,10 @@ public sealed class Sidebar : Border
     readonly StackPanel playlists = new();
     readonly List<(Button Item, Func<Route, bool> Active)> items = [];
 
-    public Sidebar(Session session, Nav nav)
+    /// Enter in Maverick's search field.
+    public event Action<string>? Searched;
+
+    public Sidebar(Session session, Nav nav, bool maverick = false)
     {
         this.session = session;
         this.nav = nav;
@@ -38,11 +42,26 @@ public sealed class Sidebar : Border
         var create = Item(Icons.Plus, "Create New", null);
         create.Click += (_, _) => _ = CreatePlaylist();
         var lists = new StackPanel { Children = { create, playlists } };
-        Child = new ScrollViewer
+        var groups = new StackPanel { Children = { Header("Library", library), library, Header("Playlists", lists), lists } };
+        var scroll = new ScrollViewer { Padding = new Thickness(8), Content = groups };
+        if (!maverick)
         {
-            Padding = new Thickness(8),
-            Content = new StackPanel { Children = { Header("Library", library), library, Header("Playlists", lists), lists } },
-        };
+            Child = scroll;
+        }
+        else
+        {
+            var home = new StackPanel { Children = { Item(Icons.Home, "Home", new Route("home")) } };
+            groups.Children.InsertRange(0, [Header("ECHO", home), home]);
+            var search = new TextBox { Classes = { "search" }, PlaceholderText = "Search..." };
+            search.KeyDown += (_, e) =>
+            {
+                if (e.Key == Avalonia.Input.Key.Enter && !string.IsNullOrWhiteSpace(search.Text)) Searched?.Invoke(search.Text.Trim());
+            };
+            // .app-sidebar-header: 11 px round the field.
+            var top = Blocks.Search(search, new Thickness(11));
+            DockPanel.SetDock(top, Dock.Top);
+            Child = new DockPanel { Children = { top, scroll } };
+        }
         nav.Changed += Show;
         _ = LoadPlaylists();
     }

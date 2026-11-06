@@ -6,8 +6,9 @@ using Avalonia.Controls.Primitives;
 
 namespace Echo.Ui;
 
-/// Cider's main window in its default layout, Mojave (views/main.ejs, #app-main): the top chrome over the
-/// sidebar and the page, the drawer floating at the right, the bottom chrome under it all. The layers are
+/// Cider's main window (views/main.ejs, #app-main), in the layout Settings chose: Mojave, Cider's default
+/// (the top chrome over the sidebar and the page, the bottom chrome under it all), or Maverick (the player
+/// in the top chrome, no bottom chrome); the drawer floats at the right in both. The layers are
 /// Cider's translucent ones: #app-main, then --color1 behind the navigation, the sidebar and the page.
 public sealed class Shell : Grid
 {
@@ -19,17 +20,19 @@ public sealed class Shell : Grid
     {
         this.session = session;
         Nav = new Nav();
+        Maverick = session.Prefs.Layout == "maverick";
         Background = Kit.Brush("AppMain");
-        RowDefinitions = new RowDefinitions($"*,{ChromeBottom.Height2}");
+        RowDefinitions = new RowDefinitions(Maverick ? "*" : $"*,{ChromeBottom.Height2}");
 
-        Top = new ChromeTop(Nav);
-        sidebar = new Sidebar(session, Nav);
+        Top = new ChromeTop(Nav, Maverick ? session : null);
+        sidebar = new Sidebar(session, Nav, Maverick);
         Bottom = new ChromeBottom(session, Nav);
+        Tools = Maverick ? Top.Tools! : Bottom.Tools;
 
         var navigation = new Grid
         {
             Background = new SolidColorBrush(Color.Parse("#80272727")),
-            RowDefinitions = new RowDefinitions($"{ChromeTop.Height1},*"),
+            RowDefinitions = new RowDefinitions($"{Top.Height},*"),
             ColumnDefinitions = new ColumnDefinitions("Auto,*"),
         };
         navigation.Children.Add(new Border { [Grid.ColumnSpanProperty] = 2, Child = Top });
@@ -48,16 +51,57 @@ public sealed class Shell : Grid
         Drawer = new Drawer(session, Nav) { [Grid.RowProperty] = 1, [Grid.ColumnProperty] = 1 };
         navigation.Children.Add(Drawer);
         Children.Add(navigation);
-        Children.Add(new Border { [Grid.RowProperty] = 1, Child = Bottom });
+        if (!Maverick) Children.Add(new Border { [Grid.RowProperty] = 1, Child = Bottom });
+        // Cider's modals (Settings) float over everything.
+        modal.SetValue(Grid.RowSpanProperty, 2);
+        Children.Add(modal);
 
         Top.SidebarToggled += () => sidebar.IsVisible = !sidebar.IsVisible;
-        Bottom.DrawerRequested += Drawer.Toggle;
-        Drawer.Changed += () => Bottom.OpenPanel = Drawer.Panel;
-        Top.Searched += term => Nav.Open(new Route("search", term, term));
+        Top.MenuRequested += anchor => MainMenu.Show(anchor, session, () => ShowSettings(), () => ShowSettings("About"));
+        Tools.DrawerRequested += Drawer.Toggle;
+        Drawer.Changed += () => Tools.OpenPanel = Drawer.Panel;
+        Top.Searched += Search;
+        sidebar.Searched += Search;
         Bottom.ArtworkClicked += ShowNowPlaying;
+        Bottom.MenuRequested += anchor => NowPlayingMenu.Show(anchor, session, Nav);
+        if (Top.Lcd is { } lcd)
+        {
+            lcd.ArtworkClicked += ShowNowPlaying;
+            lcd.MenuRequested += anchor => NowPlayingMenu.Show(anchor, session, Nav);
+        }
         Nav.Changed += Show;
         Show();
     }
+
+    readonly Panel modal = new() { IsVisible = false };
+
+    /// Maverick: the player in the top chrome, no bottom chrome.
+    public bool Maverick { get; }
+    /// The volume, queue and lyrics buttons, wherever the layout has them.
+    public BarTools Tools { get; }
+
+    void Search(string term) => Nav.Open(new Route("search", term, term));
+
+    /// Cider's settings window over the app, 90 % of it.
+    public SettingsWindow ShowSettings(string tab = "General")
+    {
+        var window = new SettingsWindow(session, tab);
+        window.Closed += () =>
+        {
+            modal.Children.Clear();
+            modal.IsVisible = false;
+        };
+        modal.Children.Clear();
+        modal.Children.Add(new Border { Background = Brushes.Transparent }); // clicks stay in the modal
+        window.Width = Bounds.Width * 0.9;
+        window.Height = Bounds.Height * 0.9;
+        modal.Children.Add(window);
+        modal.IsVisible = true;
+        return window;
+    }
+
+    /// The settings window on show, or null (tests read it).
+    public SettingsWindow? Settings => modal.Children.OfType<SettingsWindow>().FirstOrDefault();
 
     public Nav Nav { get; }
     public ChromeTop Top { get; }

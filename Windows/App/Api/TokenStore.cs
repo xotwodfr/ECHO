@@ -8,12 +8,15 @@ namespace Echo;
 /// box it is a file only its owner can read, under $XDG_STATE_HOME.
 static class TokenStore
 {
-    static readonly string TokenFile = OperatingSystem.IsWindows()
-        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ECHO", "device-token")
+    /// This user's ECHO folder (the prefs live there too).
+    public static readonly string Folder = OperatingSystem.IsWindows()
+        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "ECHO")
         : Path.Combine(Environment.GetEnvironmentVariable("XDG_STATE_HOME") is { Length: > 0 } state
             ? state
             : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".local", "state"),
-            "echo-windows", "token");
+            "echo-windows");
+
+    static readonly string TokenFile = Path.Combine(Folder, OperatingSystem.IsWindows() ? "device-token" : "token");
 
     public static string? Load()
     {

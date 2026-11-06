@@ -17,13 +17,12 @@ public sealed class PlayerControls : StackPanel
     readonly Player player;
     readonly TextBlock name = Kit.Text(null, 14.4, FontWeight.SemiBold), artist = Kit.Text(null, 14);
     readonly TextBlock elapsed = Kit.Text(null, 10), left = Kit.Text(null, 10);
-    readonly Slider progress = new() { Theme = Kit.Res<ControlTheme>("CiderProgress"), Minimum = 0, Maximum = 1 };
-    readonly Button toggle, shuffle, repeat;
-    bool seeking;
+    readonly SeekBar progress;
 
     public PlayerControls(Player player, bool volume)
     {
         this.player = player;
+        progress = new SeekBar(player);
         name.HorizontalAlignment = artist.HorizontalAlignment = HorizontalAlignment.Center;
         Children.Add(name);
         Children.Add(artist);
@@ -33,36 +32,7 @@ public sealed class PlayerControls : StackPanel
         times.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = left });
         Children.Add(times);
         Children.Add(progress);
-        progress.AddHandler(PointerPressedEvent, (_, _) => seeking = true, Avalonia.Interactivity.RoutingStrategies.Tunnel);
-        progress.AddHandler(PointerReleasedEvent, (_, _) =>
-        {
-            seeking = false;
-            player.Seek(player.Duration * progress.Value);
-        }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
-
-        shuffle = Kit.IconButton(Icons.Shuffle, 40, 32, 15.7, "Shuffle", () => player.SetShuffle(!player.Queue.Shuffle));
-        repeat = Kit.IconButton(Icons.Repeat, 40, 32, 15.7, "Repeat", () =>
-        {
-            player.CycleRepeat();
-            Show();
-        });
-        toggle = Kit.IconButton(Icons.Play, 42, 42, 38, "Play", player.Toggle);
-        toggle.CornerRadius = new CornerRadius(21);
-        toggle.Margin = new Thickness(6);
-        Children.Add(new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(0, 12, 0, 0),
-            Children =
-            {
-                shuffle,
-                Kit.IconButton(Icons.Backward, 40, 36, 24, "Previous", () => _ = player.Previous()),
-                toggle,
-                Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next()),
-                repeat,
-            },
-        });
+        Children.Add(new Transport(player) { Margin = new Thickness(0, 12, 0, 0) });
         if (volume)
         {
             var slider = new Slider { Theme = Kit.Res<ControlTheme>("CiderVolume"), Minimum = 0, Maximum = 1, Value = player.Volume };
@@ -77,7 +47,7 @@ public sealed class PlayerControls : StackPanel
             row.Children.Add(slider);
             Children.Add(row);
         }
-        player.PropertyChanged += OnPlayer;
+        AttachedToVisualTree += (_, _) => player.PropertyChanged += OnPlayer;
         DetachedFromVisualTree += (_, _) => player.PropertyChanged -= OnPlayer;
         Show();
     }
@@ -90,11 +60,7 @@ public sealed class PlayerControls : StackPanel
         artist.Text = player.Track?.Artist;
         elapsed.Text = player.Track is null ? "" : Kit.Time(player.Position);
         left.Text = player.Track is null ? "" : "-" + Kit.Time(player.Duration - player.Position);
-        if (!seeking) progress.Value = player.Duration > TimeSpan.Zero ? Math.Clamp(player.Position / player.Duration, 0, 1) : 0;
-        ((Glyph)toggle.Content!).Icon = player.Playing ? Icons.Pause : Icons.Play;
-        shuffle.Classes.Set("on", player.Queue.Shuffle);
-        repeat.Classes.Set("on", player.Queue.Repeat != Repeat.Off);
-        ((Glyph)repeat.Content!).Icon = player.Queue.Repeat == Repeat.One ? Icons.RepeatOne : Icons.Repeat;
+        progress.Follow();
     }
 }
 

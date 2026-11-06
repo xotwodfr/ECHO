@@ -12,7 +12,9 @@ public sealed class Session
         IsFixtures = fixtures;
         Covers = new Covers(api);
         Library = new Library(api);
-        Player = new Player(api, Library, () => new AudioOut(nullDevice: fixtures));
+        PrefsFile = fixtures ? null : Prefs.File;
+        Prefs = Prefs.Load(PrefsFile);
+        Player = new Player(api, Library, () => new AudioOut(nullDevice: fixtures)) { Scrobble = Prefs.Scrobble };
         Player.SignedOut += () => SignedOut?.Invoke();
         Lyrics = new Lyrics(api);
         Lyrics.Follow(Player);
@@ -38,4 +40,23 @@ public sealed class Session
     public Library Library { get; }
     public Player Player { get; }
     public Lyrics Lyrics { get; }
+
+    /// Settings' choices; the built-in library keeps them in memory only.
+    public Prefs Prefs { get; private set; }
+    readonly string? PrefsFile;
+
+    /// Settings changed something: kept, and the player follows.
+    public void Set(Prefs prefs)
+    {
+        Prefs = prefs;
+        Player.Scrobble = prefs.Scrobble;
+        try
+        {
+            prefs.Save(PrefsFile);
+        }
+        catch (IOException) { } // kept for this run at least
+        PrefsChanged?.Invoke();
+    }
+
+    public event Action? PrefsChanged;
 }

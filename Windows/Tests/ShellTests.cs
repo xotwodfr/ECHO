@@ -264,3 +264,50 @@ public class ModeTests
         Assert.Equal(1336, w.Width);
     }
 }
+
+public class SettingsTests
+{
+    [AvaloniaFact]
+    public async Task SettingsSwitchesToMaverickWithThePlayerInTheTopChrome()
+    {
+        var w = await ShellTests.Open();
+        var settings = w.Shell!.ShowSettings("Visual");
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "settings");
+        Assert.Contains("Window Layout", ShellTests.Texts(settings));
+        var layout = settings.GetVisualDescendants().OfType<ComboBox>().Single();
+        layout.SelectedIndex = 1;
+        await ShellTests.Settle(20);
+        var shell = w.Shell!;
+        Assert.True(shell.Maverick);
+        Assert.Equal("maverick", Session.Current!.Prefs.Layout);
+        Assert.NotNull(shell.Top.Lcd);
+        Assert.Null(shell.GetVisualDescendants().OfType<ChromeBottom>().FirstOrDefault());
+        shell.Settings?.GetVisualDescendants().OfType<Button>().First(b => ToolTip.GetTip(b) as string == "Close")
+            .RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "maverick");
+        var texts = ShellTests.Texts(shell).ToList();
+        Assert.Contains("Afterglow", texts);
+        Assert.Contains("Halcyon Drive — Neon Tide", texts);
+        Assert.Contains("ECHO", texts); // Maverick's sidebar holds Home under the app's name
+    }
+
+    [Fact]
+    public void PrefsReadBackAndFallBackToCidersDefaults()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"echo-prefs-{Guid.NewGuid():N}.json");
+        try
+        {
+            Assert.Equal(new Prefs(), Prefs.Load(file)); // none yet: Mojave, scrobbling
+            new Prefs("maverick", false).Save(file);
+            Assert.Equal(new Prefs("maverick", false), Prefs.Load(file));
+            File.WriteAllText(file, "{not json");
+            Assert.Equal(new Prefs(), Prefs.Load(file));
+        }
+        finally
+        {
+            File.Delete(file);
+        }
+    }
+}

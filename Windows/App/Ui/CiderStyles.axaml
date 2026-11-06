@@ -49,4 +49,13 @@
     <Setter Property="Background" Value="#597D7D7D" />
     <Setter Property="BorderBrush" Value="#59646464" />
   </Style>
+
+  <!-- Cider's popovers and menus bring their own body. -->
+  <Style Selector="FlyoutPresenter.cider">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="MaxWidth" Value="400" />
+  </Style>
 </Styles>

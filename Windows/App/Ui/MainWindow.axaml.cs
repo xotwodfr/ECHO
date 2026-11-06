@@ -59,11 +59,26 @@ public partial class MainWindow : Window
             TokenStore.Forget();
             ShowSignIn(s.Api);
         });
+        Show(s);
+        // Settings → Visual → Window Layout: the shell is built again in the other layout.
+        s.PrefsChanged += () =>
+        {
+            if (Content is Shell old && old.Maverick != (s.Prefs.Layout == "maverick"))
+            {
+                var tab = old.Settings is not null;
+                Show(s);
+                if (tab) Dispatcher.UIThread.Post(() => Shell?.ShowSettings("Visual"));
+            }
+        };
+        if (!s.IsFixtures) _ = s.Player.Restore();
+    }
+
+    void Show(Session s)
+    {
         var shell = new Shell(s);
         shell.FullscreenRequested += () => Fullscreen(shell);
         shell.MiniRequested += () => Mini(shell);
         Content = shell;
-        if (!s.IsFixtures) _ = s.Player.Restore();
     }
 
     // ---- Cider's other app modes: the fullscreen view and the mini player ----

@@ -11,28 +11,31 @@ using Path = Avalonia.Controls.Shapes.Path;
 
 namespace Echo.Ui;
 
-/// Cider's top chrome in its default layout ("Mojave", views/app/chrome-top.ejs with windowLayout
-/// twopanel; less/directives.less): 46 px, Base; on the left the main menu, Back, Forward and the
-/// library toggle; in the middle the tab group (Home: Listen Now, Browse and Radio are Apple Music's);
-/// on the right the search field and the window's own controls. The empty parts move the window.
+/// Cider's top chrome (views/app/chrome-top.ejs; style.less .app-chrome; less/directives.less). In the
+/// default layout, Mojave: 46 px, Base; on the left the main menu, Back, Forward and the library toggle;
+/// in the middle the tab group (Home: Listen Now, Browse and Radio are Apple Music's); on the right the
+/// search field and the window's own controls. In Maverick (the player up here, given a session): 55 px;
+/// the Transport after Back and Forward, the Lcd in the middle, the BarTools on the right. The empty
+/// parts move the window.
 public sealed class ChromeTop : Grid
 {
-    public const double Height1 = 46;
+    public const double Height1 = 46, HeightMaverick = 55;
 
     readonly Nav nav;
-    readonly Button back, forward, toggle, home;
+    readonly Button back, forward, toggle;
+    readonly Button? home;
     readonly TextBox search = new() { Width = 180, PlaceholderText = "Search...", Classes = { "search" } };
     bool sidebarShown = true;
 
-    public event Action? MenuRequested;
+    public event Action<Control>? MenuRequested;
     public event Action? SidebarToggled;
     /// Enter in the search field.
     public event Action<string>? Searched;
 
-    public ChromeTop(Nav nav)
+    public ChromeTop(Nav nav, Session? maverick = null)
     {
         this.nav = nav;
-        Height = Height1;
+        Height = maverick is null ? Height1 : HeightMaverick;
         Background = Kit.Brush("Base");
         ColumnDefinitions = new ColumnDefinitions("3*,4*,3*");
 
@@ -44,7 +47,7 @@ public sealed class ChromeTop : Grid
             Content = new Image { Source = new Bitmap(AssetLoader.Open(new Uri("avares://ECHO/Assets/echo.ico"))), Width = 30, Height = 30 },
         };
         ToolTip.SetTip(menu, "Menu");
-        menu.Click += (_, _) => MenuRequested?.Invoke();
+        menu.Click += (_, _) => MenuRequested?.Invoke(menu);
         back = Kit.IconButton(Icons.ChevronLeft, 40, 36, 14, "Back", nav.Back);
         forward = Kit.IconButton(Icons.ChevronRight, 40, 36, 14, "Forward", nav.Forward);
         toggle = Kit.IconButton(Icons.SidebarShown, 40, 36, 16, "Hide Library", () =>
@@ -54,13 +57,27 @@ public sealed class ChromeTop : Grid
             ToolTip.SetTip(toggle, sidebarShown ? "Hide Library" : "Show Library");
             SidebarToggled?.Invoke();
         });
-        var vdiv = new Rectangle { Width = 1, Height = Height1 / 2, Fill = Brushes.White, Opacity = 0.25, Margin = new Thickness(6) };
-        Children.Add(new StackPanel
+        var vdiv = new Rectangle { Width = 1, Height = Height / 2, Fill = Brushes.White, Opacity = 0.25, Margin = new Thickness(6) };
+        var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+        Children.Add(left);
+        if (maverick is not null)
         {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            Children = { menu, vdiv, back, forward, toggle },
-        });
+            Tools = new BarTools(maverick);
+            left.Children.AddRange([menu, back, forward, vdiv, new Transport(maverick.Player)]);
+            Lcd = new Lcd(maverick, nav) { [Grid.ColumnProperty] = 1 };
+            Children.Add(Lcd);
+            Children.Add(new StackPanel
+            {
+                [Grid.ColumnProperty] = 2,
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Children = { Tools, WindowControls() },
+            });
+            nav.Changed += Show;
+            Show();
+            return;
+        }
+        left.Children.AddRange([menu, vdiv, back, forward, toggle]);
 
         // .top-nav-group: #1e1e1e99, 1 px lighten(#1e1e1e, 8 %), radius 12, 32 px; items min 120 px.
         home = TabItem(Icons.Home, "Home", () => nav.Open(new Route("home")));
@@ -102,6 +119,11 @@ public sealed class ChromeTop : Grid
         Show();
     }
 
+    /// Maverick's volume, queue and lyrics, and its player display; null in Mojave (the bottom chrome
+    /// has them).
+    public BarTools? Tools { get; }
+    public Lcd? Lcd { get; }
+
     /// Clears the field (a new search starts empty).
     public string SearchText
     {
@@ -113,7 +135,7 @@ public sealed class ChromeTop : Grid
     {
         back.IsEnabled = nav.CanBack;
         forward.IsEnabled = nav.CanForward;
-        home.Classes.Set("active", nav.Current.Page == "home");
+        home?.Classes.Set("active", nav.Current.Page == "home");
     }
 
     static Button TabItem(Icon icon, string name, Action click)
@@ -141,7 +163,7 @@ public sealed class ChromeTop : Grid
         var row = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Height = Height1,
+            Height = Height,
             Children =
             {
                 Caption("M0,5.5 H10", "Minimize", w => w.WindowState = WindowState.Minimized),
@@ -169,7 +191,7 @@ public sealed class ChromeTop : Grid
         {
             Theme = Kit.Res<ControlTheme>(close ? "CaptionClose" : "Caption"),
             Width = 46,
-            Height = Height1,
+            Height = Height,
             Content = new Path { Data = Geometry.Parse(glyph), Stroke = Brushes.White, StrokeThickness = 1, Width = 10, Height = 10 },
         };
         ToolTip.SetTip(b, tip);
