@@ -1,0 +1,13 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- ECHO's dark neutrals (DESIGN_SYSTEM.md §3); colour comes from the playing album, not from here. -->
+  <Color x:Key="GroundColor">#0B0B10</Color>
+  <Color x:Key="Surface1Color">#15151C</Color>
+  <SolidColorBrush x:Key="Ground" Color="{StaticResource GroundColor}" />
+  <SolidColorBrush x:Key="Surface1" Color="{StaticResource Surface1Color}" />
+  <SolidColorBrush x:Key="Text" Color="#FFFFFF" />
+  <SolidColorBrush x:Key="Muted" Color="#99FFFFFF" />
+  <SolidColorBrush x:Key="Focus" Color="#FFFFFF" />
+  <!-- The web's font token; Inter (bundled with Avalonia) where Windows' faces are missing: the dev box. -->
+  <FontFamily x:Key="EchoFont">Segoe UI Variable Text, Segoe UI, fonts:Inter#Inter</FontFamily>
+</ResourceDictionary>
