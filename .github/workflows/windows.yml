@@ -1,8 +1,8 @@
 name: windows
 
 # ECHO for Windows (Windows/README.md): on a real Windows runner, the tests, the single-file exe, and
-# a smoke run whose screenshot shows the app (Cider's shell on the built-in library) as Windows renders it. A tag windows-v* also
-# publishes the exe as a pre-release.
+# a smoke run whose screenshot shows the app (Cider's shell on the built-in library) as Windows
+# renders it. A tag windows-v* also publishes the exe as a pre-release.
 on:
   push:
     # Both, or GitHub runs it for only the one named. Paths filter branch pushes; tags always run.

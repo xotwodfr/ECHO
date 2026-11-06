@@ -38,17 +38,16 @@ public sealed class Transport : StackPanel
         Children.Add(Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next()));
         Children.Add(repeat);
         // Followed only while on screen: the fullscreen view and the mini player come and go.
-        AttachedToVisualTree += (_, _) =>
+        this.WhileShown(() =>
         {
             player.PropertyChanged += OnPlayer;
             player.QueueChanged += Show;
             Show();
-        };
-        DetachedFromVisualTree += (_, _) =>
+        }, () =>
         {
             player.PropertyChanged -= OnPlayer;
             player.QueueChanged -= Show;
-        };
+        });
         Show();
     }
 

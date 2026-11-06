@@ -41,10 +41,11 @@ public sealed class TrackList : ListBox
         {
             if (SelectedItem is Row row) _ = session.Player.PlayList(tracks, row.Number - 1, context);
         };
-        session.Player.PropertyChanged += (_, e) =>
+        System.ComponentModel.PropertyChangedEventHandler follow = (_, e) =>
         {
             if (e.PropertyName is nameof(Player.Track) or nameof(Player.Playing)) ShowPlaying();
         };
+        this.WhileShown(() => session.Player.PropertyChanged += follow, () => session.Player.PropertyChanged -= follow);
     }
 
     /// Plays the list from `index` (the page's Play, Shuffle).

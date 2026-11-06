@@ -96,12 +96,20 @@ public sealed class QueuePanel : DockPanel
         Children.Add(footer);
         Children.Add(new ScrollViewer { Content = items });
 
-        session.Player.QueueChanged += Refresh;
-        session.Player.PropertyChanged += (_, e) =>
+        System.ComponentModel.PropertyChangedEventHandler track = (_, e) =>
         {
             if (e.PropertyName == nameof(Player.Track)) Refresh();
         };
-        DetachedFromVisualTree += (_, _) => session.Player.QueueChanged -= Refresh;
+        this.WhileShown(() =>
+        {
+            session.Player.QueueChanged += Refresh;
+            session.Player.PropertyChanged += track;
+            Refresh();
+        }, () =>
+        {
+            session.Player.QueueChanged -= Refresh;
+            session.Player.PropertyChanged -= track;
+        });
         Show(false);
     }
 
@@ -199,13 +207,22 @@ public sealed class LyricsPanel : Panel
         scroll.PointerEntered += (_, _) => Blur(false);
         scroll.PointerExited += (_, _) => Blur(true);
         tick.Tick += (_, _) => Follow();
-        session.Lyrics.PropertyChanged += (_, _) => Build();
-        session.Player.PropertyChanged += (_, e) =>
+        System.ComponentModel.PropertyChangedEventHandler lyrics = (_, _) => Build();
+        System.ComponentModel.PropertyChangedEventHandler track = (_, e) =>
         {
             if (e.PropertyName == nameof(Player.Track)) backdrop.Url = session.Player.Track?.Cover;
         };
-        AttachedToVisualTree += (_, _) => tick.Start();
-        DetachedFromVisualTree += (_, _) => tick.Stop();
+        this.WhileShown(() =>
+        {
+            session.Lyrics.PropertyChanged += lyrics;
+            session.Player.PropertyChanged += track;
+            tick.Start();
+        }, () =>
+        {
+            session.Lyrics.PropertyChanged -= lyrics;
+            session.Player.PropertyChanged -= track;
+            tick.Stop();
+        });
         backdrop.Url = session.Player.Track?.Cover;
         Build();
     }

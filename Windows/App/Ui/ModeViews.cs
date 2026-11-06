@@ -47,8 +47,7 @@ public sealed class PlayerControls : StackPanel
             row.Children.Add(slider);
             Children.Add(row);
         }
-        AttachedToVisualTree += (_, _) => player.PropertyChanged += OnPlayer;
-        DetachedFromVisualTree += (_, _) => player.PropertyChanged -= OnPlayer;
+        this.WhileShown(() => player.PropertyChanged += OnPlayer, () => player.PropertyChanged -= OnPlayer);
         Show();
     }
 
@@ -84,17 +83,14 @@ public sealed class FullscreenView : Grid
         Background = Brushes.Black;
         Focusable = true;
         var backdrop = new LyricsBackdrop { Url = session.Player.Track?.Cover, Opacity = 0.9 };
-        session.Player.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(Player.Track)) backdrop.Url = session.Player.Track?.Cover;
-        };
         Children.Add(backdrop);
-
         var art = new CoverImage(session.Player.Track?.Cover, 400, 1200) { Cursor = new Cursor(StandardCursorType.Hand) };
-        session.Player.PropertyChanged += (_, e) =>
+        PropertyChangedEventHandler track = (_, e) =>
         {
-            if (e.PropertyName == nameof(Player.Track)) art.Url = session.Player.Track?.Cover;
+            if (e.PropertyName != nameof(Player.Track)) return;
+            backdrop.Url = art.Url = session.Player.Track?.Cover;
         };
+        this.WhileShown(() => session.Player.PropertyChanged += track, () => session.Player.PropertyChanged -= track);
         art.PointerPressed += (_, _) => Closed?.Invoke();
         var controls = new PlayerControls(session.Player, volume: true) { Margin = new Thickness(0, 12, 0, 0) };
         var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Children = { art, controls } };
@@ -149,10 +145,11 @@ public sealed class MiniPlayer : Panel
     public MiniPlayer(Session session)
     {
         var art = new CoverImage(session.Player.Track?.Cover, double.NaN, 600, 0);
-        session.Player.PropertyChanged += (_, e) =>
+        PropertyChangedEventHandler track = (_, e) =>
         {
             if (e.PropertyName == nameof(Player.Track)) art.Url = session.Player.Track?.Cover;
         };
+        this.WhileShown(() => session.Player.PropertyChanged += track, () => session.Player.PropertyChanged -= track);
         Children.Add(art);
         var controls = new Border
         {

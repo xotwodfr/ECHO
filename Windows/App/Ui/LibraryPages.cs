@@ -281,11 +281,12 @@ public sealed class SongsPage : DockPanel
     {
         try
         {
+            // The first page shows at once; the rest once all are in (each new list would reset the scroll).
             for (var offset = 0; ; offset += 500)
             {
                 var page = await session.Library.Songs(offset);
                 all.AddRange(page);
-                Show();
+                if (offset == 0 || page.Count < 500) Show();
                 if (page.Count < 500) return;
             }
         }

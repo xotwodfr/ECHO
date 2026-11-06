@@ -53,6 +53,14 @@ public static class Kit
         return b;
     }
 
+    /// Listens only while `c` is on screen: the player, the lyrics and the queue outlive every page, which
+    /// would otherwise stay alive (and busy) after it was left.
+    public static void WhileShown(this Control c, Action subscribe, Action unsubscribe)
+    {
+        c.AttachedToVisualTree += (_, _) => subscribe();
+        c.DetachedFromVisualTree += (_, _) => unsubscribe();
+    }
+
     public static string Time(TimeSpan t) => t.TotalHours >= 1 ? $"{(int)t.TotalHours}:{t.Minutes:00}:{t.Seconds:00}" : $"{(int)t.TotalMinutes}:{t.Seconds:00}";
 
     public static string Time(long ms) => Time(TimeSpan.FromMilliseconds(ms));
