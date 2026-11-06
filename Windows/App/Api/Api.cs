@@ -20,18 +20,15 @@ public sealed class ApiException(HttpStatusCode status, string? code) : Exceptio
     public bool SignedOut => Status == HttpStatusCode.Unauthorized;
 }
 
-public record Album(string Id, string Name, string Artist);
-
-/// Suffix: the file's type as Navidrome stores it ("flac", "mp3", "opus"…).
-public record Song(string Id, string Title, string Artist, int Seconds, string Suffix);
-
-public sealed class Api(string baseUrl)
+public sealed class Api(string baseUrl, HttpMessageHandler? handler = null)
 {
     public string Base { get; } = baseUrl.TrimEnd('/');
     public string? Token { get; set; }
-    readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    readonly HttpClient http = new(handler ?? new HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(30) };
 
-    async Task<JsonNode> Send(HttpMethod method, string path, JsonObject? body = null)
+    public Task<JsonNode> Get(string path) => Send(HttpMethod.Get, path);
+
+    public async Task<JsonNode> Send(HttpMethod method, string path, JsonNode? body = null)
     {
         using var req = new HttpRequestMessage(method, $"{Base}/api/v1{path}");
         if (Token is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
@@ -60,44 +57,29 @@ public sealed class Api(string baseUrl)
     /// Ends this device's session on the server (Settings → Account → Sessions loses it).
     public Task SignOut() => Send(HttpMethod.Post, "/auth/logout", new JsonObject());
 
-    async Task<JsonNode> Subsonic(string method, string query)
-    {
-        var r = (await Send(HttpMethod.Get, $"/navidrome/rest/{method}?{query}"))["subsonic-response"];
-        if (Text(r?["status"]) != "ok")
-            throw new ApiException(HttpStatusCode.BadGateway, Text(r?["error"]?["message"]) is { Length: > 0 } m ? m : "Navidrome refused");
-        return r!;
-    }
-
-    public async Task<List<Album>> Albums()
-    {
-        var r = await Subsonic("getAlbumList2", "type=alphabeticalByName&size=500");
-        var list = r["albumList2"]?["album"]?.AsArray() ?? new JsonArray();
-        return list.Select(a => new Album(Text(a?["id"]), Text(a?["name"]), Text(a?["artist"]))).ToList();
-    }
-
-    public async Task<List<Song>> Songs(string albumId)
-    {
-        var r = await Subsonic("getAlbum", $"id={Uri.EscapeDataString(albumId)}");
-        var list = r["album"]?["song"]?.AsArray() ?? new JsonArray();
-        return list
-            .Select(s => new Song(Text(s?["id"]), Text(s?["title"]), Text(s?["artist"]),
-                int.TryParse(Text(s?["duration"]), out var d) ? d : 0, Text(s?["suffix"]).ToLowerInvariant()))
-            .ToList();
-    }
-
-    /// Media Foundation's own formats play as stored (seeking over Range); it plays neither Opus nor
-    /// Ogg without extras, so anything else comes from Navidrome as MP3, 320 kbps.
-    static readonly HashSet<string> Playable = ["mp3", "m4a", "aac", "flac", "wav", "wma"];
-
     /// A signed stream URL (6 h, this song only) the player opens without a header.
-    public async Task<string> StreamUrl(Song song)
+    /// As stored when miniaudio decodes it (StreamFormat), else MP3 320.
+    public async Task<string> StreamUrl(Track track)
     {
-        var path = Text((await Send(HttpMethod.Get, $"/navidrome/stream-url/{Uri.EscapeDataString(song.Id)}"))["url"]);
+        var path = Text((await Send(HttpMethod.Get, $"/navidrome/stream-url/{Uri.EscapeDataString(track.Id)}"))["url"]);
         if (path.Length == 0) throw new ApiException(HttpStatusCode.OK, "no stream URL");
-        var format = Playable.Contains(song.Suffix) ? "&format=raw" : "&format=mp3&maxBitRate=320&estimateContentLength=true";
+        var format = StreamFormat.PlaysRaw(track.ContentType) ? "&format=raw" : "&format=mp3&maxBitRate=320&estimateContentLength=true";
         return $"{Base}{path}{format}";
     }
 
-    static string Text(JsonNode? n) =>
+    /// A server path's bytes with the bearer header (covers: an Image cannot send it).
+    public async Task<Stream> GetStream(string path)
+    {
+        var url = new Uri(path.StartsWith("http") ? path : $"{Base}{path}");
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        // The device token goes to the ECHO server only, never to another host a URL names.
+        if (Token is not null && Uri.Compare(url, new Uri(Base), UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        var res = await http.SendAsync(req);
+        if (!res.IsSuccessStatusCode) throw new ApiException(res.StatusCode, null);
+        return await res.Content.ReadAsStreamAsync();
+    }
+
+    internal static string Text(JsonNode? n) =>
         n is null ? "" : n.GetValueKind() == JsonValueKind.String ? n.GetValue<string>() : n.ToJsonString();
 }

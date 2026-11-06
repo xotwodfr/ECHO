@@ -1,0 +1,10 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Echo.Ui.MainWindow"
+        Title="ECHO"
+        Icon="/Assets/echo.ico"
+        Width="1280" Height="800" MinWidth="1024" MinHeight="640"
+        Background="{DynamicResource Ground}"
+        Foreground="{DynamicResource Text}"
+        FontFamily="{DynamicResource EchoFont}">
+</Window>
