@@ -1,7 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
-using Avalonia.LogicalTree;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
 using Echo.Ui;
 
@@ -32,7 +32,7 @@ public class ShellTests
     }
 
     internal static IEnumerable<string> Texts(Control root) =>
-        root.GetLogicalDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text ?? "");
+        root.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text ?? "");
 
     internal static void Shot(Window w, string name)
     {
@@ -81,5 +81,38 @@ public class ShellTests
         Assert.Contains("Neon Tide", bar);
         Assert.Contains("1:18", bar);
         Assert.Contains("3:00", bar);
+    }
+}
+
+public class CollectionPageTests
+{
+    [AvaloniaFact]
+    public async Task AnAlbumListsItsSongsAndADoubleClickPlaysFromThere()
+    {
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route("album", "f11", "Neon Tide"));
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "album");
+        var page = Assert.IsType<CollectionPage>(w.Shell.Page);
+        var texts = ShellTests.Texts(page).ToList();
+        foreach (var t in new[] { "Neon Tide", "Halcyon Drive", "Play", "Shuffle", "Afterglow", "Coda", "2024", "6 Songs, 22 minutes" })
+            Assert.True(texts.Contains(t), $"missing \"{t}\" in [{string.Join(" | ", texts)}]");
+        Assert.Equal(6, page.List!.ItemCount);
+        page.List.SelectedIndex = 2;
+        await page.List.Play(2);
+        Assert.Equal("Overpass", Session.Current!.Player.Track?.Title);
+        Assert.Equal(3, Session.Current.Player.Queue.Upcoming.Count);
+    }
+
+    [AvaloniaFact]
+    public async Task APlaylistShowsArtworkOnEachRow()
+    {
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route("playlist", "pl1", "Late Night Drive"));
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "playlist");
+        var page = Assert.IsType<CollectionPage>(w.Shell.Page);
+        Assert.Equal(5, page.List!.ItemCount);
+        Assert.Contains("Halcyon Drive — Neon Tide", ShellTests.Texts(page));
     }
 }

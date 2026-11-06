@@ -9,6 +9,7 @@ public static class Pages
 {
     public static Control Create(Session session, Nav nav, Route r) => r.Page switch
     {
+        "album" or "playlist" => new CollectionPage(session, nav, r),
         _ => Stub(r.Title ?? r.Page),
     };
 

@@ -234,4 +234,63 @@
       </ControlTemplate>
     </Setter>
   </ControlTheme>
+
+  <!-- A list with no look of its own: its rows bring Cider's. -->
+  <ControlTheme x:Key="PlainList" TargetType="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ScrollViewer Name="PART_ScrollViewer" Background="{TemplateBinding Background}"
+                      HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                      VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
+          <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="{TemplateBinding Padding}" />
+        </ScrollViewer>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <!-- .cd-mediaitem-list-item: 60 px, radius 8; rgb(200 200 200 / 10%) and the 1 px ring on hover,
+       selected var(selected) with the ring, pressed var(selected-click). -->
+  <ControlTheme x:Key="TrackRow" TargetType="ListBoxItem">
+    <Setter Property="Height" Value="60" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#1AC8C8C8" />
+      <Setter Property="BorderBrush" Value="#29C8C8C8" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#Box">
+      <Setter Property="Background" Value="#4D828282" />
+      <Setter Property="BorderBrush" Value="#29C8C8C8" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#4D505050" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .more-btn-round: a 32 px circle of rgba(100 100 100 / .5) with Cider's shadow; brighter on hover. -->
+  <ControlTheme x:Key="RoundMore" TargetType="Button">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" CornerRadius="16" Background="#80646464" BoxShadow="inset 0 0 0 1 #29C8C8C8, 0 8 40 0 #8C000000">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#A07D7D7D" />
+    </Style>
+  </ControlTheme>
 </ResourceDictionary>
