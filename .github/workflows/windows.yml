@@ -5,12 +5,14 @@ name: windows
 # the runner has no GPU). A tag windows-v* also publishes the exe as a pre-release.
 on:
   push:
+    # Both, or GitHub runs it for only the one named. Paths filter branch pushes; tags always run.
+    branches: ['**']
+    tags: ['windows-v*']
     paths:
       - 'Windows/**'
       - 'Android/app/src/main/assets/stage/**'
       - 'Android/app/src/main/res/drawable-nodpi/blue_noise_64.png'
       - '.github/workflows/windows.yml'
-    tags: ['windows-v*']
 
 jobs:
   windows:
