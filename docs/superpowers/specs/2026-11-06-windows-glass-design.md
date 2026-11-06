@@ -1,6 +1,6 @@
 # ECHO for Windows, liquid glass — design
 
-Status: **draft** 2026-11-06, waiting for the owner's approval.
+Status: **approved** by the owner 2026-11-06 ("yeah, build it and push to github as a release").
 Replaces the WPF baseline in `Windows/` (2026-11-04, `fc21acd`).
 Mockup: board **A · Clear** of the glass board (brainstorm companion, `.superpowers/`, not in git).
 Boards B (frosted) and C (song-coloured glass) are rejected directions.
@@ -103,8 +103,9 @@ is the exception, by the owner's choice.
 - **The window itself is opaque** (my call). The glass bends ECHO's own content, not the desktop
   or the game behind the window. A system backdrop (Mica/Acrylic) would show nothing under a
   full-screen room anyway.
-- **Type**: Segoe UI Variable, as the web's `--font` already says, with Selawik bundled as its
-  fallback (Windows 10 and the dev box), the same three weights the web ships (my call).
+- **Type**: Segoe UI Variable, as the web's `--font` already says, then Segoe UI (Windows 10). On
+  the dev box, Inter, which Avalonia bundles (my call). The web's Selawik ships as `.woff2`, which
+  Avalonia does not load, and only the dev box would ever need it.
 
 ## How it is built
 
@@ -143,8 +144,10 @@ is the exception, by the owner's choice.
   gives `ECHO.exe` (not in git), on the dev box and in CI alike.
 - **Windows CI** (`.github/workflows/windows.yml`, my calls): on every push that touches
   `Windows/**`, a `windows-latest` runner builds the exe, runs the unit tests, and runs
-  `ECHO.exe --smoke`. The smoke run opens the window on the mock library, draws the glass and the
-  room (software rendering through WARP: the runner has no GPU), saves a screenshot, and exits 0.
+  `ECHO.exe --smoke`. The smoke run opens the window on built-in fixtures (generated covers and a
+  palette; the runner cannot host an ECHO server), draws the glass and the room (software
+  rendering through WARP: the runner has no GPU), and exits 0 after a few seconds; the workflow
+  screenshots it before then.
   The screenshot is uploaded as a workflow artifact, so the builder sees Windows' own rendering. A
   tag `windows-v*` also publishes a **pre-release** with `ECHO.exe` attached (`contents: write`
   for the workflow's own token, nothing else).
