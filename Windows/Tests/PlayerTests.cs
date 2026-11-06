@@ -5,6 +5,7 @@ using Echo.Playback;
 
 namespace Echo.Tests;
 
+[Collection("audio")]
 public class PlayerTests
 {
     static readonly PlayContext Ctx = new("album", "a", "Album");

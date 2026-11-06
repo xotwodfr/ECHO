@@ -3,6 +3,8 @@ using Echo.Stage;
 
 namespace Echo.Tests;
 
+// SoundFlow engines in one process interfere when they run at once: the tests that make one run one at a time.
+[Collection("audio")]
 public class AudioTests
 {
     [Fact]
