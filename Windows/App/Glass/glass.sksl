@@ -1,0 +1,58 @@
+// Liquid glass, one panel (GlassMath.cs): drawn in device pixels over a snapshot of what is under it.
+// Per pixel, as the 10-28 web glass computed its displacement and light maps: the depth into a
+// rounded box and the edge's outward normal; inside the rim, the view shifts inward by the bend.
+
+uniform shader backdrop; // what is under the panel, in device pixels
+uniform float2 origin; // the panel's top left, device pixels
+uniform float2 size; // device pixels
+uniform float4 radii; // top-left, top-right, bottom-right, bottom-left
+uniform float bezel;
+uniform float profile[32]; // the bend at 32 steps across the rim, edge first, device pixels
+uniform float2 light; // unit vector, y down
+uniform float specular;
+uniform float saturation;
+uniform float tint;
+uniform float frost;
+
+half3 look(float2 p) {
+    if (frost < 0.01) return backdrop.eval(p).rgb;
+    float d = frost * 0.7071;
+    return (backdrop.eval(p).rgb * 2 + backdrop.eval(p + float2(d, d)).rgb + backdrop.eval(p + float2(-d, d)).rgb
+        + backdrop.eval(p + float2(d, -d)).rgb + backdrop.eval(p + float2(-d, -d)).rgb) / 6;
+}
+
+float bendAt(float t) {
+    float at = t * 31;
+    float b = 0;
+    for (int i = 0; i < 31; i++) {
+        if (at >= float(i) && at <= float(i + 1)) b = mix(profile[i], profile[i + 1], at - float(i));
+    }
+    return b;
+}
+
+half4 main(float2 coord) {
+    float2 q = coord - origin - size * 0.5;
+    float r = q.y < 0 ? (q.x < 0 ? radii.x : radii.y) : (q.x < 0 ? radii.w : radii.z);
+    float qx = abs(q.x) - (size.x * 0.5 - r);
+    float qy = abs(q.y) - (size.y * 0.5 - r);
+    float depth;
+    float2 n;
+    if (qx > 0 && qy > 0) {
+        float len = length(float2(qx, qy));
+        depth = r - len;
+        n = float2(qx / len * sign(q.x), qy / len * sign(q.y));
+    } else {
+        depth = r - max(qx, qy);
+        n = qx > qy ? float2(sign(q.x), 0) : float2(0, sign(q.y));
+    }
+    float coverage = clamp(depth + 0.5, 0, 1);
+    if (coverage <= 0) return half4(0);
+
+    float t = clamp(depth / bezel, 0, 1);
+    float shift = depth < bezel ? bendAt(t) : 0;
+    half3 c = look(coord - n * shift);
+    float l = dot(c, half3(0.2126, 0.7152, 0.0722));
+    c = mix(half3(l), c, saturation) * (1 - tint);
+    if (depth < bezel) c = mix(c, half3(1), specular * abs(dot(n, light)) * pow(1 - t, 6));
+    return half4(c * coverage, coverage);
+}
