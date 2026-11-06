@@ -4,7 +4,7 @@
         Title="ECHO"
         Icon="/Assets/echo.ico"
         Width="1280" Height="800" MinWidth="1024" MinHeight="640"
-        Background="{DynamicResource Ground}"
+        Background="{DynamicResource WindowFallback}"
         Foreground="{DynamicResource Text}"
-        FontFamily="{DynamicResource EchoFont}">
+        FontFamily="{DynamicResource CiderFont}">
 </Window>

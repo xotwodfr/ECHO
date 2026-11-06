@@ -2,7 +2,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
-using Echo.Playback;
 
 namespace Echo.Ui;
 
@@ -10,7 +9,7 @@ namespace Echo.Ui;
 /// after 8 s (the Windows CI screenshots it in between).
 public partial class MainWindow : Window
 {
-    Player? player;
+    Session? session;
 
     public MainWindow()
     {
@@ -30,8 +29,8 @@ public partial class MainWindow : Window
 
     void ShowSignIn(Api api)
     {
-        player?.Dispose();
-        player = null;
+        session?.Player.Dispose();
+        session = Session.Current = null;
         api.Token = null;
         Content = new SignInView(api, token =>
         {
@@ -43,18 +42,19 @@ public partial class MainWindow : Window
 
     void ShowLibrary(Api api)
     {
-        player = new Player(api, () => new AudioOut());
-        player.SignedOut += () => Dispatcher.UIThread.Post(() =>
+        session = Session.Current = new Session(api);
+        session.SignedOut += () => Dispatcher.UIThread.Post(() =>
         {
             TokenStore.Forget();
             ShowSignIn(api);
         });
-        Content = new LibraryView(api, player);
+        Content = new LibraryView(session);
+        _ = session.Player.Restore();
     }
 
     protected override void OnClosed(EventArgs e)
     {
-        player?.Dispose();
+        session?.Player.Dispose();
         base.OnClosed(e);
     }
 }

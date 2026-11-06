@@ -1,0 +1,90 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Cider 1.6.4's look (src/renderer/style.less, less/appvars.less, less/elements.less), dark only. The
+       layers are translucent as in Cider: over Windows 11's Mica they take the wallpaper's tint, as its
+       screenshots do; elsewhere they lie over Mica's own dark grey. -->
+  <Color x:Key="KeyColor">#FC3C44</Color>
+  <SolidColorBrush x:Key="Key" Color="{StaticResource KeyColor}" />
+  <SolidColorBrush x:Key="Text" Color="#EEEEEE" />
+  <SolidColorBrush x:Key="Muted" Color="#99EEEEEE" />
+  <!-- Under the app when Mica is not there (Mica's dark base). -->
+  <SolidColorBrush x:Key="WindowFallback" Color="#202020" />
+  <!-- #app-main: rgba(20 20 20 / .7). -->
+  <SolidColorBrush x:Key="AppMain" Color="#B3141414" />
+  <!-- baseColorMix (@baseColor #1e1e1e at 50 %): the chrome bars, the content. -->
+  <SolidColorBrush x:Key="Base" Color="#801E1E1E" />
+  <SolidColorBrush x:Key="BaseSolid" Color="#1E1E1E" />
+  <!-- sidebarColorMix (@sidebarColor #2e2e2e at 50 %). -->
+  <SolidColorBrush x:Key="Sidebar" Color="#802E2E2E" />
+  <!-- color2 (#202020 at 50 %): the drawer. -->
+  <SolidColorBrush x:Key="Panel" Color="#80202020" />
+  <SolidColorBrush x:Key="Modal" Color="#262626" />
+  <!-- hover, selected, borderColor. -->
+  <SolidColorBrush x:Key="Hover" Color="#1AC8C8C8" />
+  <SolidColorBrush x:Key="Selected" Color="#4D828282" />
+  <SolidColorBrush x:Key="Border" Color="#29C8C8C8" />
+  <SolidColorBrush x:Key="ChromeLine" Color="#1FC8C8C8" />
+  <SolidColorBrush x:Key="ProgressBackground" Color="#333333" />
+  <SolidColorBrush x:Key="MissingArtwork" Color="#6E6E6E" />
+  <SolidColorBrush x:Key="MissingArtworkNote" Color="#29000000" />
+
+  <FontFamily x:Key="CiderFont">avares://ECHO/Assets/Fonts#Pretendard Std</FontFamily>
+
+  <!-- .md-btn -->
+  <ControlTheme x:Key="CiderButton" TargetType="Button">
+    <Setter Property="Background" Value="#40646464" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <!-- filter: brightness(125%) -->
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#597D7D7D" />
+    </Style>
+    <Style Selector="^.primary">
+      <Setter Property="Background" Value="#A6FF2B52" />
+      <Setter Property="BorderBrush" Value="#40DC3545" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="^.primary:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#D0FF3660" />
+    </Style>
+  </ControlTheme>
+
+  <!-- Cider's chrome and list buttons: no box of their own, Cider's hover colour underneath on hover. -->
+  <ControlTheme x:Key="Plain" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#1AC8C8C8" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#4D505050" />
+    </Style>
+    <Style Selector="^.active /template/ Border#Box">
+      <Setter Property="Background" Value="#4D828282" />
+    </Style>
+  </ControlTheme>
+</ResourceDictionary>

@@ -10,7 +10,6 @@ namespace Echo.Ui;
 /// plays the album from there on), and the player along the bottom with sign out.
 public sealed class LibraryView : DockPanel
 {
-    readonly Api api;
     readonly Player player;
     readonly Library library;
     readonly ListBox albums = new();
@@ -23,11 +22,10 @@ public sealed class LibraryView : DockPanel
     readonly Button toggle = new() { Content = "Play", Width = 72 };
     IReadOnlyList<Track> tracks = [];
 
-    public LibraryView(Api api, Player player)
+    public LibraryView(Session session)
     {
-        this.api = api;
-        this.player = player;
-        library = new Library(api);
+        player = session.Player;
+        library = session.Library;
 
         var signOut = new Button { Content = "Sign out", Margin = new Thickness(12, 0, 0, 0) };
         signOut.Click += (_, _) => _ = player.SignOut();
@@ -72,12 +70,12 @@ public sealed class LibraryView : DockPanel
                 new TextBlock { Text = t?.Title, TextTrimming = TextTrimming.CharacterEllipsis },
             },
         });
-        songs.DoubleTapped += (_, _) => { if (songs.SelectedIndex >= 0) _ = player.Play(tracks, songs.SelectedIndex); };
+        songs.DoubleTapped += (_, _) => { if (songs.SelectedIndex >= 0) _ = player.PlayList(tracks, songs.SelectedIndex, new PlayContext("album", null, heading.Text ?? "")); };
         DockPanel.SetDock(heading, Dock.Top);
         DockPanel.SetDock(status, Dock.Top);
         Children.Add(new DockPanel { Children = { heading, status, songs } });
 
-        player.Changed += Show;
+        player.PropertyChanged += (_, _) => Show();
         Show();
         _ = Load();
     }
@@ -86,7 +84,7 @@ public sealed class LibraryView : DockPanel
     {
         try
         {
-            albums.ItemsSource = await library.Albums();
+            albums.ItemsSource = await library.AllAlbums(AlbumSort.AZ);
             heading.Text = "Pick an album";
         }
         catch (Exception e) when (e is HttpRequestException or ApiException or TaskCanceledException)

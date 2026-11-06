@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- ECHO for Windows, the baseline (README.md): Avalonia on .NET 10. The plain net10.0 target runs on
+  <!-- ECHO for Windows (README.md), in Cider 1's look: Avalonia on .NET 10. The plain net10.0 target runs on
        the Linux dev box and in the tests; the Windows target is the released ECHO.exe. -->
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -18,14 +18,17 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.5" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Skia" Version="12.1.5" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.5" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="SoundFlow" Version="1.4.2" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.14" />
   </ItemGroup>
 
   <ItemGroup>
     <AvaloniaResource Include="Assets/echo.ico" />
+    <AvaloniaResource Include="Assets/Fonts/*.otf" />
     <InternalsVisibleTo Include="Echo.Tests" />
   </ItemGroup>
 
