@@ -1,0 +1,87 @@
+using Avalonia.Media.Imaging;
+using Echo.Stage;
+using SkiaSharp;
+
+namespace Echo;
+
+/// A built-in library for the smoke run and the tests: no server, no network. The covers are drawn
+/// (gradients, stripes, rings), loud enough that the glass over them shows its bend.
+public static class Fixtures
+{
+    public static readonly IReadOnlyList<Album> Albums =
+    [
+        new("f1", "Low Orbit", "Mira Vale", "fixture:0"),
+        new("f2", "Heat Index", "The Long Summer", "fixture:1"),
+        new("f3", "Monochrome", "Ostrava", "fixture:2"),
+        new("f4", "Prism Hours", "Kai Lumen", "fixture:3"),
+        new("f5", "Greenhouse", "Fern & Field", "fixture:4"),
+        new("f6", "Red Shift", "Velvet Static", "fixture:5"),
+        new("f7", "Honeycomb", "Ada Sol", "fixture:6"),
+        new("f8", "Half Light", "Northbound", "fixture:7"),
+        new("f9", "Tidepool", "Mira Vale", "fixture:8"),
+        new("f10", "Kaleido", "Junebug", "fixture:9"),
+        new("f11", "Neon Tide", "Halcyon Drive", "fixture:10"),
+        new("f12", "Static Bloom", "Ostrava", "fixture:11"),
+    ];
+
+    public static IReadOnlyList<Song> Songs(Album album) =>
+        new[] { "Afterglow", "Night Swim", "Overpass", "Glass Hours", "Low Tide", "Coda" }
+            .Select((t, i) => new Song($"{album.Id}-{i}", t, album.Artist, 180 + 17 * i, "flac")).ToList();
+
+    /// The Neon Tide palette of board A: the room in violet, the accent in pink.
+    public static readonly StagePalette Palette = StagePalette.Of(new Palette(
+        "oklch(0.28 0.12 300)", "oklch(0.66 0.24 355)", "oklch(0.86 0.12 70)", "oklch(0.70 0.20 355 / 0.40)",
+        "oklch(0.12 0.05 300)", "oklch(0.96 0.02 80)"));
+
+    static readonly SKColor[][] Colours =
+    [
+        [new(0x0B, 0x3D, 0x91), new(0x00, 0xC2, 0xA8)],
+        [new(0xFF, 0x5E, 0x62), new(0xFF, 0x99, 0x66)],
+        [new(0x11, 0x11, 0x11), new(0xEE, 0xEE, 0xEE)],
+        [new(0xF9, 0xD4, 0x23), new(0x8E, 0x2D, 0xE2)],
+        [new(0x1D, 0x97, 0x6C), new(0x93, 0xF9, 0xB9)],
+        [new(0x20, 0x01, 0x22), new(0xFF, 0x00, 0x80)],
+        [new(0xFF, 0xE2, 0x59), new(0xFF, 0xA7, 0x51)],
+        [new(0x23, 0x25, 0x26), new(0xE0, 0xE0, 0xE0)],
+        [new(0x0A, 0x1A, 0x3A), new(0x38, 0xF9, 0xD7)],
+        [new(0xE9, 0x64, 0x43), new(0x90, 0x4E, 0x95)],
+        [new(0x17, 0x0A, 0x3A), new(0xFF, 0x3D, 0x7F)],
+        [new(0x2B, 0x10, 0x55), new(0x75, 0x97, 0xDE)],
+    ];
+
+    /// Cover `i` at `size` px, drawn.
+    public static Bitmap Cover(int i, int size)
+    {
+        var (a, b) = (Colours[i % Colours.Length][0], Colours[i % Colours.Length][1]);
+        using var surface = SKSurface.Create(new SKImageInfo(size, size));
+        var c = surface.Canvas;
+        using var paint = new SKPaint { IsAntialias = true };
+        paint.Shader = SKShader.CreateLinearGradient(new(0, 0), new(size, size), [a, b], SKShaderTileMode.Clamp);
+        c.DrawRect(0, 0, size, size, paint);
+        paint.Shader = null;
+        switch (i % 4)
+        {
+            case 0: // a sun
+                paint.Color = b.WithAlpha(230);
+                c.DrawCircle(size * 0.62f, size * 0.42f, size * 0.24f, paint);
+                break;
+            case 1: // stripes
+                paint.Color = a.WithAlpha(200);
+                for (var x = -size; x < size * 2; x += size / 6) c.DrawLine(x, 0, x + size, size, new SKPaint { Color = a, StrokeWidth = size / 14f, IsAntialias = true });
+                break;
+            case 2: // rings
+                paint.Style = SKPaintStyle.Stroke;
+                paint.StrokeWidth = size / 16f;
+                paint.Color = b;
+                for (var r = size / 10f; r < size * 0.5f; r += size / 7f) c.DrawCircle(size / 2f, size / 2f, r, paint);
+                break;
+            default: // a horizon
+                paint.Color = SKColors.Black.WithAlpha(110);
+                for (var y = size * 0.6f; y < size; y += size / 12f) c.DrawRect(0, y, size, size / 30f, paint);
+                break;
+        }
+        using var image = surface.Snapshot();
+        using var data = image.Encode(SKEncodedImageFormat.Png, 100);
+        return new Bitmap(data.AsStream());
+    }
+}

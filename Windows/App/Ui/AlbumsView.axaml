@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:echo="using:Echo"
+             xmlns:ui="using:Echo.Ui"
+             x:Class="Echo.Ui.AlbumsView">
+  <ScrollViewer>
+    <!-- Clear of the sidebar on the left and of the pill at the bottom; the glass floats over the edges. -->
+    <StackPanel Margin="228,72,24,110">
+      <TextBlock Text="Albums" FontSize="44" FontWeight="Bold" LetterSpacing="-0.9" Margin="8,0,0,20" />
+      <TextBlock x:Name="Status" Foreground="{DynamicResource Muted}" Margin="8,0" IsVisible="False" />
+      <ItemsControl x:Name="Grid">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <WrapPanel ItemWidth="196" />
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="echo:Album">
+            <Button Theme="{StaticResource Bare}" CornerRadius="12" Padding="8" Margin="0,0,0,6" Tag="{Binding}" Click="Open">
+              <StackPanel Width="172">
+                <Border Width="172" Height="172" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface1}">
+                  <ui:CoverImage CoverArt="{Binding CoverArt}" Pixels="344" />
+                </Border>
+                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Margin="0,9,0,1" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Artist}" FontSize="12" Foreground="{DynamicResource Muted}" TextTrimming="CharacterEllipsis" />
+              </StackPanel>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

@@ -1,0 +1,37 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:glass="using:Echo.Glass"
+             xmlns:ui="using:Echo.Ui"
+             x:Class="Echo.Ui.PlayerPill"
+             x:DataType="ui:NowPlaying">
+  <glass:GlassPanel x:Name="Pill" Width="560" Height="66" CornerRadius="33" Padding="11,0,12,0">
+    <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
+      <Button x:Name="Open" Theme="{StaticResource Bare}" CornerRadius="22" Grid.ColumnSpan="2" HorizontalAlignment="Stretch">
+        <Grid ColumnDefinitions="Auto,*">
+          <Border Width="44" Height="44" CornerRadius="22" ClipToBounds="True" Background="{DynamicResource Surface1}">
+            <ui:CoverImage CoverArt="{Binding Album.CoverArt}" Pixels="96" />
+          </Border>
+          <StackPanel Grid.Column="1" Margin="12,0,16,0" VerticalAlignment="Center">
+            <TextBlock Text="{Binding Song.Title}" FontSize="13" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+            <TextBlock Text="{Binding Song.Artist}" FontSize="12" Foreground="{DynamicResource Muted}" TextTrimming="CharacterEllipsis" />
+            <ProgressBar Value="{Binding Progress}" Maximum="1" Height="3" MinHeight="3" Margin="0,7,0,0"
+                         Foreground="{DynamicResource Text}" Background="#40FFFFFF" CornerRadius="2" />
+          </StackPanel>
+        </Grid>
+      </Button>
+      <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <Button x:Name="Previous" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17">
+          <PathIcon Data="{StaticResource IconPrevious}" Width="16" Height="16" />
+        </Button>
+        <glass:GlassPanel Width="44" Height="44" CornerRadius="22">
+          <Button x:Name="Toggle" Theme="{StaticResource Bare}" Width="44" Height="44" CornerRadius="22">
+            <PathIcon x:Name="ToggleIcon" Data="{StaticResource IconPlay}" Width="18" Height="18" />
+          </Button>
+        </glass:GlassPanel>
+        <Button x:Name="Next" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17">
+          <PathIcon Data="{StaticResource IconNext}" Width="16" Height="16" />
+        </Button>
+      </StackPanel>
+    </Grid>
+  </glass:GlassPanel>
+</UserControl>

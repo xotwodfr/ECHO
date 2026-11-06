@@ -20,16 +20,17 @@ public sealed class ApiException(HttpStatusCode status, string? code) : Exceptio
     public bool SignedOut => Status == HttpStatusCode.Unauthorized;
 }
 
-public record Album(string Id, string Name, string Artist);
+/// CoverArt: the cover's id for /navidrome/cover, when the album has one.
+public record Album(string Id, string Name, string Artist, string? CoverArt = null);
 
 /// Suffix: the file's type as Navidrome stores it ("flac", "mp3", "opus"…).
 public record Song(string Id, string Title, string Artist, int Seconds, string Suffix);
 
-public sealed class Api(string baseUrl)
+public sealed class Api(string baseUrl, HttpMessageHandler? handler = null)
 {
     public string Base { get; } = baseUrl.TrimEnd('/');
     public string? Token { get; set; }
-    readonly HttpClient http = new() { Timeout = TimeSpan.FromSeconds(30) };
+    readonly HttpClient http = new(handler ?? new HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(30) };
 
     async Task<JsonNode> Send(HttpMethod method, string path, JsonObject? body = null)
     {
@@ -72,7 +73,8 @@ public sealed class Api(string baseUrl)
     {
         var r = await Subsonic("getAlbumList2", "type=alphabeticalByName&size=500");
         var list = r["albumList2"]?["album"]?.AsArray() ?? new JsonArray();
-        return list.Select(a => new Album(Text(a?["id"]), Text(a?["name"]), Text(a?["artist"]))).ToList();
+        return list.Select(a => new Album(Text(a?["id"]), Text(a?["name"]), Text(a?["artist"]),
+            Text(a?["coverArt"]) is { Length: > 0 } c ? c : null)).ToList();
     }
 
     public async Task<List<Song>> Songs(string albumId)
@@ -85,9 +87,9 @@ public sealed class Api(string baseUrl)
             .ToList();
     }
 
-    /// Media Foundation's own formats play as stored (seeking over Range); it plays neither Opus nor
-    /// Ogg without extras, so anything else comes from Navidrome as MP3, 320 kbps.
-    static readonly HashSet<string> Playable = ["mp3", "m4a", "aac", "flac", "wav", "wma"];
+    /// miniaudio's own decoders play as stored: FLAC, MP3 and WAV. Anything else (AAC, Opus, Ogg, WMA)
+    /// comes from Navidrome as MP3, 320 kbps.
+    static readonly HashSet<string> Playable = ["mp3", "flac", "wav"];
 
     /// A signed stream URL (6 h, this song only) the player opens without a header.
     public async Task<string> StreamUrl(Song song)
@@ -96,6 +98,16 @@ public sealed class Api(string baseUrl)
         if (path.Length == 0) throw new ApiException(HttpStatusCode.OK, "no stream URL");
         var format = Playable.Contains(song.Suffix) ? "&format=raw" : "&format=mp3&maxBitRate=320&estimateContentLength=true";
         return $"{Base}{path}{format}";
+    }
+
+    /// A cover at `size` px (the bearer header is needed, so this is not a URL for an Image).
+    public async Task<Stream> Cover(string coverArt, int size)
+    {
+        using var req = new HttpRequestMessage(HttpMethod.Get, $"{Base}/api/v1/navidrome/cover/{Uri.EscapeDataString(coverArt)}?size={size}");
+        if (Token is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        var res = await http.SendAsync(req);
+        if (!res.IsSuccessStatusCode) throw new ApiException(res.StatusCode, null);
+        return await res.Content.ReadAsStreamAsync();
     }
 
     static string Text(JsonNode? n) =>

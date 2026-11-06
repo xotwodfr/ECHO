@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:glass="using:Echo.Glass"
+             xmlns:ui="using:Echo.Ui"
+             x:Class="Echo.Ui.Shell">
+  <!-- Board A: the page scrolls full width under a floating glass sidebar, the top capsules and the
+       player pill (docs/superpowers/specs/2026-11-06-windows-glass-design.md, "Shell layout"). -->
+  <Panel>
+    <ContentControl x:Name="Page" />
+
+    <glass:GlassPanel x:Name="Sidebar" Width="192" HorizontalAlignment="Left" Margin="12"
+                      CornerRadius="22" Padding="14,18">
+      <StackPanel Spacing="2">
+        <TextBlock Text="ECHO" FontSize="15" FontWeight="ExtraBold" LetterSpacing="4.5" Margin="6,0,0,18" />
+        <Button x:Name="LibraryButton" Theme="{StaticResource Bare}" CornerRadius="12" Padding="10,8"
+                HorizontalAlignment="Stretch" HorizontalContentAlignment="Left">
+          <TextBlock Text="Your Library" FontSize="13" FontWeight="SemiBold" />
+        </Button>
+      </StackPanel>
+    </glass:GlassPanel>
+
+    <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,14,16,0">
+      <glass:GlassPanel x:Name="SearchCapsule" Width="220" Height="34" CornerRadius="17" Padding="14,0">
+        <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+          <PathIcon Data="{StaticResource IconSearch}" Width="14" Height="14" />
+          <TextBlock Text="Search" FontSize="12.5" VerticalAlignment="Center" />
+        </StackPanel>
+      </glass:GlassPanel>
+      <glass:GlassPanel x:Name="Account" Width="34" Height="34" CornerRadius="17">
+        <TextBlock x:Name="Initial" FontSize="12" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+      </glass:GlassPanel>
+    </StackPanel>
+
+    <ui:PlayerPill x:Name="PlayerPill" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="216,0,0,16" />
+  </Panel>
+</UserControl>
