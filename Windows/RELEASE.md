@@ -1,12 +1,14 @@
-ECHO for Windows: the Listen room with lyrics, liquid glass, and media keys.
+ECHO for Windows: your whole library, search, the queue and the Wanted list, under liquid glass.
 
-**Try:** sign in, play an album, and click the cover in the glass player. That's the Listen room:
-word-by-word lyrics over a room that moves with the music and takes the album's colours. Switch
-between Lyrics, Cover and Visual at the top right. **Full screen** (or F11, or double-click the room)
-fills the monitor the window is on: drag ECHO to your second monitor first. While you play a game,
-your keyboard's media keys and Windows' media overlay control ECHO. Your queue follows you between
-ECHO on the web, your phone and here.
+**New:** Home (Made For You, Jump back in, your shelves and playlists); Your Library with albums in
+four orders, artists, playlists, Liked Songs and Wanted; search as you type, with Add to Wanted when
+nothing is found; the queue sheet (the queue button in the player: move, remove, play now, clear);
+shuffle and repeat in the player; right-click a song for Play next, Add to queue, its album, its
+artist and Like.
 
-**Not yet:** search, playlists, artists, the queue sheet, settings. They come in the next builds.
+**Still here:** the Listen room with word-by-word lyrics (click the cover in the player), full
+screen on any monitor (F11), and media keys while you play a game.
+
+**Not yet:** settings, your sessions and devices, the keyboard shortcuts. They come in the next build.
 
 **Windows may say it protected your PC** (the exe is not signed): More info → Run anyway.

@@ -10,12 +10,15 @@
   <SolidColorBrush x:Key="Focus" Color="#FFFFFF" />
   <!-- The web's font token; Inter (bundled with Avalonia) where Windows' faces are missing: the dev box. -->
   <FontFamily x:Key="EchoFont">Segoe UI Variable Text, Segoe UI, fonts:Inter#Inter</FontFamily>
-  <!-- Icons, 24×24 (Fluent System Icons' shapes, filled). -->
+  <!-- Icons, 24×24, filled (shuffle, repeat and queue: Material Icons' shapes, Apache 2.0). -->
   <StreamGeometry x:Key="IconPlay">M7 4.6v14.8c0 .8.9 1.3 1.6.9l11.5-7.4c.6-.4.6-1.3 0-1.7L8.6 3.7C7.9 3.3 7 3.8 7 4.6Z</StreamGeometry>
   <StreamGeometry x:Key="IconPause">M6.5 4h3c.8 0 1.5.7 1.5 1.5v13c0 .8-.7 1.5-1.5 1.5h-3C5.7 20 5 19.3 5 18.5v-13C5 4.7 5.7 4 6.5 4Zm8 0h3c.8 0 1.5.7 1.5 1.5v13c0 .8-.7 1.5-1.5 1.5h-3c-.8 0-1.5-.7-1.5-1.5v-13c0-.8.7-1.5 1.5-1.5Z</StreamGeometry>
   <StreamGeometry x:Key="IconPrevious">M5 5c.6 0 1 .4 1 1v12c0 .6-.4 1-1 1s-1-.4-1-1V6c0-.6.4-1 1-1Zm14.4.2c.6-.4 1.6 0 1.6.8v12c0 .8-1 1.2-1.6.8l-9-6c-.6-.4-.6-1.2 0-1.6l9-6Z</StreamGeometry>
   <StreamGeometry x:Key="IconNext">M19 5c.6 0 1 .4 1 1v12c0 .6-.4 1-1 1s-1-.4-1-1V6c0-.6.4-1 1-1ZM4.6 5.2C4 4.8 3 5.2 3 6v12c0 .8 1 1.2 1.6.8l9-6c.6-.4.6-1.2 0-1.6l-9-6Z</StreamGeometry>
   <StreamGeometry x:Key="IconBack">M15.7 4.3c.4.4.4 1 0 1.4L9.4 12l6.3 6.3c.4.4.4 1 0 1.4s-1 .4-1.4 0l-7-7c-.4-.4-.4-1 0-1.4l7-7c.4-.4 1-.4 1.4 0Z</StreamGeometry>
+  <StreamGeometry x:Key="IconShuffle">M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z</StreamGeometry>
+  <StreamGeometry x:Key="IconRepeat">M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z</StreamGeometry>
+  <StreamGeometry x:Key="IconQueue">M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z</StreamGeometry>
   <StreamGeometry x:Key="IconSearch">M10 3a7 7 0 0 1 5.6 11.2l4.6 4.6c.4.4.4 1 0 1.4s-1 .4-1.4 0l-4.6-4.6A7 7 0 1 1 10 3Zm0 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10Z</StreamGeometry>
 
   <!-- Buttons on glass: no chrome of their own, a faint light on hover. -->

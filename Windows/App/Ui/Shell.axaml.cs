@@ -20,6 +20,11 @@ public partial class Shell : UserControl
         foreach (var (label, page) in new (string, object)[] { ("Home", new HomePage()), ("Search", new SearchPage()), ("Your Library", new AlbumsPage()) })
             NavItems.Children.Add(Item(label, page, bold: true));
         SearchCapsule.PointerPressed += (_, _) => session.Nav.Go(new SearchPage());
+        session.QueueToggled += () =>
+        {
+            if (session.Nav.Current is ListenPage) return; // the room has its own
+            QueueHost.Content = QueueHost.Content is null ? new QueueSheet(session) : null;
+        };
         _ = LoadPlaylists();
         Initial.Text = session.Fixtures ? "F" : "";
         session.Nav.PropertyChanged += (_, e) =>
@@ -58,6 +63,7 @@ public partial class Shell : UserControl
         foreach (var b in NavItems.Children.OfType<Button>().Concat(PlaylistItems.Children.OfType<Button>()))
             b.Background = Equals(b.Tag, page) || (library && b.Tag is AlbumsPage) ? new SolidColorBrush(Color.Parse("#26FFFFFF")) : Brushes.Transparent;
         var listen = page is ListenPage;
+        if (listen) QueueHost.Content = null;
         // The Listen room has no sidebar and no capsules (the web's Stage); the pill stays for now.
         Sidebar.IsVisible = !listen;
         SearchCapsule.IsVisible = !listen;
@@ -73,6 +79,8 @@ public partial class Shell : UserControl
             PlaylistPage p => new PlaylistView(session, p.Id, p.Name),
             StarredPage => new StarredView(session),
             MixPage m => new MixView(session, m.Mix),
+            SearchPage => new SearchView(session),
+            WantedPage => new WantedView(session),
             ListenPage => new ListenView(session),
             _ => new HomeView(session),
         };

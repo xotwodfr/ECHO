@@ -33,6 +33,7 @@ public sealed class ListenView : Panel
     readonly Border cover;
     readonly CoverImage coverImage;
     readonly Panel chrome;
+    readonly ContentControl queue = new();
     readonly ChromeTimer chromeTimer = new(() => Environment.TickCount64);
     readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
     readonly List<Button> modeButtons = [];
@@ -101,6 +102,7 @@ public sealed class ListenView : Panel
         Children.Add(lyrics);
         Children.Add(cover);
         Children.Add(chrome);
+        Children.Add(queue);
         Background = Brushes.Transparent; // pointer moves anywhere bring the chrome back
 
         SetMode(StageViewMode.Lyrics);
@@ -188,6 +190,7 @@ public sealed class ListenView : Panel
         base.OnAttachedToVisualTree(e);
         player.PropertyChanged += OnPlayer;
         session.Lyrics.PropertyChanged += OnLyrics;
+        session.QueueToggled += ToggleQueue;
         tick.Start();
         ShowTrack();
         if (session.Fixtures) lyrics.Show(LyricsStatus.Ready, Fixtures.Lyrics);
@@ -198,10 +201,13 @@ public sealed class ListenView : Panel
     {
         player.PropertyChanged -= OnPlayer;
         session.Lyrics.PropertyChanged -= OnLyrics;
+        session.QueueToggled -= ToggleQueue;
         tick.Stop();
         Cursor = Cursor.Default;
         base.OnDetachedFromVisualTree(e);
     }
+
+    void ToggleQueue() => queue.Content = queue.Content is null ? new QueueSheet(session) : null;
 
     void OnPlayer(object? sender, PropertyChangedEventArgs e)
     {

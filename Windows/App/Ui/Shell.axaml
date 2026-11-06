@@ -35,5 +35,6 @@
     </StackPanel>
 
     <ui:PlayerPill x:Name="PlayerPill" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="216,0,0,16" />
+    <ContentControl x:Name="QueueHost" />
   </Panel>
 </UserControl>

@@ -84,20 +84,28 @@ public class LibraryViewTests
     }
 }
 
-/// Answers by the first route the request's path contains; anything else is 404.
+/// Answers by the first route the request's path contains ("POST /wanted": that method only); anything
+/// else is 404. Keeps every path it was asked.
 sealed class Routes : HttpMessageHandler, System.Collections.IEnumerable
 {
-    readonly List<(string Part, string Json)> routes = [];
+    readonly List<(string? Method, string Part, string Json)> routes = [];
 
-    public string this[string part] { set => routes.Add((part, value)); }
+    public List<string> Asked { get; } = [];
+
+    public string this[string route]
+    {
+        set => routes.Add(route.Split(' ', 2) is [var m, var part] && m.All(char.IsUpper) ? (m, part, value) : (null, route, value));
+    }
 
     public System.Collections.IEnumerator GetEnumerator() => routes.GetEnumerator();
 
     protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
         var path = request.RequestUri!.PathAndQuery;
-        foreach (var (part, json) in routes)
-            if (path.Contains(part)) return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) });
+        lock (Asked) Asked.Add($"{request.Method} {path}");
+        foreach (var (method, part, json) in routes)
+            if ((method is null || method == request.Method.Method) && path.Contains(part))
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(json) });
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("""{"error":"not_found"}""") });
     }
 }

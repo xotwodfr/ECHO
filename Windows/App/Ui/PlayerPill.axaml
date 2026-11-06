@@ -5,7 +5,7 @@
              xmlns:pb="using:Echo.Playback"
              x:Class="Echo.Ui.PlayerPill"
              x:DataType="pb:Player">
-  <glass:GlassPanel x:Name="Pill" Width="560" Height="66" CornerRadius="33" Padding="11,0,12,0">
+  <glass:GlassPanel x:Name="Pill" Width="660" Height="66" CornerRadius="33" Padding="11,0,12,0">
     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
       <Button x:Name="Open" Theme="{StaticResource Bare}" CornerRadius="22" Grid.ColumnSpan="2" HorizontalAlignment="Stretch">
         <Grid ColumnDefinitions="Auto,*">
@@ -21,6 +21,9 @@
         </Grid>
       </Button>
       <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+        <Button x:Name="Shuffle" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17" ToolTip.Tip="Shuffle">
+          <PathIcon Data="{StaticResource IconShuffle}" Width="15" Height="15" />
+        </Button>
         <Button x:Name="Previous" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17">
           <PathIcon Data="{StaticResource IconPrevious}" Width="16" Height="16" />
         </Button>
@@ -31,6 +34,15 @@
         </glass:GlassPanel>
         <Button x:Name="Next" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17">
           <PathIcon Data="{StaticResource IconNext}" Width="16" Height="16" />
+        </Button>
+        <Button x:Name="Repeat" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17" ToolTip.Tip="Repeat">
+          <Panel>
+            <PathIcon Data="{StaticResource IconRepeat}" Width="15" Height="15" />
+            <TextBlock x:Name="RepeatOne" Text="1" FontSize="8" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" />
+          </Panel>
+        </Button>
+        <Button x:Name="QueueButton" Theme="{StaticResource Bare}" Width="34" Height="34" CornerRadius="17" ToolTip.Tip="Queue">
+          <PathIcon Data="{StaticResource IconQueue}" Width="16" Height="16" />
         </Button>
       </StackPanel>
     </Grid>

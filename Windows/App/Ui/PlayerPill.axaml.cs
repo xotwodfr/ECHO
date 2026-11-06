@@ -19,11 +19,25 @@ public partial class PlayerPill : UserControl
         Previous.Click += (_, _) => _ = now.Previous();
         Next.Click += (_, _) => _ = now.Next();
         Toggle.Click += (_, _) => now.Toggle();
+        Shuffle.Click += (_, _) => now.SetShuffle(!now.Queue.Shuffle);
+        Repeat.Click += (_, _) => now.CycleRepeat();
+        QueueButton.Click += (_, _) => session.ToggleQueue();
+        now.QueueChanged += ShowModes;
+        ShowModes();
         now.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(Player.Playing)) ShowPlaying(now.Playing);
         };
         ShowPlaying(now.Playing);
+    }
+
+    /// Shuffle and repeat lit when on; repeat one marked 1.
+    void ShowModes()
+    {
+        if (DataContext is not Player p) return;
+        Shuffle.Opacity = p.Queue.Shuffle ? 1 : 0.5;
+        Repeat.Opacity = p.Queue.Repeat == Playback.Repeat.Off ? 0.5 : 1;
+        RepeatOne.IsVisible = p.Queue.Repeat == Playback.Repeat.One;
     }
 
     void ShowPlaying(bool playing) =>

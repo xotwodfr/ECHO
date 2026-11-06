@@ -27,6 +27,11 @@ public sealed class Session
 
     public void Refused() => SignedOut?.Invoke();
 
+    /// The queue sheet opens or closes (the pill's queue button, Q).
+    public event Action? QueueToggled;
+
+    public void ToggleQueue() => QueueToggled?.Invoke();
+
     public Api Api { get; }
     /// The smoke run and the tests: Echo.Fixtures instead of a server.
     public bool Fixtures { get; }
