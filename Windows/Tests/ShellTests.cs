@@ -166,3 +166,33 @@ public class LibraryPageTests
         Assert.Contains("Honeycomb", ShellTests.Texts(artists));
     }
 }
+
+public class SearchAndArtistTests
+{
+    [AvaloniaFact]
+    public async Task SearchShowsSongsAlbumsAndArtistsOrNoResults()
+    {
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route("search", "ostrava", "ostrava"));
+        await ShellTests.Settle(20);
+        ShellTests.Shot(w, "search");
+        var texts = ShellTests.Texts(w.Shell.Page!).ToList();
+        foreach (var t in new[] { "Songs", "Albums", "Artists", "Monochrome", "Static Bloom", "Ostrava" })
+            Assert.True(texts.Contains(t), $"missing \"{t}\"");
+        w.Shell.Nav.Open(new Route("search", "zzz", "zzz"));
+        await ShellTests.Settle();
+        Assert.Contains("No Results", ShellTests.Texts(w.Shell.Page!));
+    }
+
+    [AvaloniaFact]
+    public async Task AnArtistShowsLatestReleaseTopSongsAndAlbums()
+    {
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route("artist", "ar1", "Mira Vale"));
+        await ShellTests.Settle(20);
+        ShellTests.Shot(w, "artist");
+        var texts = ShellTests.Texts(w.Shell.Page!).ToList();
+        foreach (var t in new[] { "Mira Vale", "Latest Release", "Top Songs", "Albums", "Tidepool", "Low Orbit", "About Mira Vale" })
+            Assert.True(texts.Contains(t), $"missing \"{t}\"");
+    }
+}

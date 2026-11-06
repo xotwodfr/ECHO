@@ -39,7 +39,7 @@ public sealed class TrackList : ListBox
         ItemsSource = tracks.Select((t, i) => new Row(t, i + 1, artwork)).ToList();
         DoubleTapped += (_, e) =>
         {
-            if (SelectedIndex >= 0) _ = session.Player.PlayList(tracks, SelectedIndex, context);
+            if (SelectedItem is Row row) _ = session.Player.PlayList(tracks, row.Number - 1, context);
         };
         session.Player.PropertyChanged += (_, e) =>
         {

@@ -15,6 +15,8 @@ public static class Pages
         "library-albums" => new AlbumsPage(session, nav),
         "library-artists" => new ArtistsPage(session, nav),
         "album" or "playlist" or "mix" => new CollectionPage(session, nav, r),
+        "artist" => new ArtistPage(session, nav, r),
+        "search" => new SearchPage(session, nav, r.Id ?? ""),
         _ => Stub(r.Title ?? r.Page),
     };
 
