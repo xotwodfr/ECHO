@@ -32,7 +32,8 @@ public class ShellTests
     }
 
     internal static IEnumerable<string> Texts(Control root) =>
-        root.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible).Select(t => t.Text ?? "");
+        root.GetVisualDescendants().OfType<TextBlock>().Where(t => t.IsEffectivelyVisible)
+            .Select(t => t.Inlines is { Count: > 0 } runs ? string.Concat(runs.OfType<Avalonia.Controls.Documents.Run>().Select(r => r.Text)) : t.Text ?? "");
 
     internal static void Shot(Window w, string name)
     {
@@ -194,5 +195,38 @@ public class SearchAndArtistTests
         var texts = ShellTests.Texts(w.Shell.Page!).ToList();
         foreach (var t in new[] { "Mira Vale", "Latest Release", "Top Songs", "Albums", "Tidepool", "Low Orbit", "About Mira Vale" })
             Assert.True(texts.Contains(t), $"missing \"{t}\"");
+    }
+}
+
+public class DrawerTests
+{
+    [AvaloniaFact]
+    public async Task TheQueueButtonOpensTheQueueAndAgainClosesIt()
+    {
+        var w = await ShellTests.Open();
+        var drawer = w.Shell!.Drawer;
+        drawer.Toggle("queue");
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "queue");
+        var queue = Assert.IsType<QueuePanel>(drawer.Child);
+        Assert.Equal(["Night Swim", "Overpass", "Glass Hours", "Low Tide", "Coda"], queue.Shown.Select(t => t.Title));
+        Assert.Contains("Clear All", ShellTests.Texts(drawer));
+        drawer.Toggle("queue");
+        Assert.False(drawer.IsVisible);
+    }
+
+    [AvaloniaFact]
+    public async Task TheLyricsLightTheLineThatIsSung()
+    {
+        var w = await ShellTests.Open();
+        await ShellTests.Settle(30); // the lyrics loader waits 250 ms before it asks
+        var drawer = w.Shell!.Drawer;
+        drawer.Toggle("lyrics");
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "lyrics");
+        var lyrics = Assert.IsType<LyricsPanel>(drawer.Child);
+        // 1:18 is inside "Every echo finds its way home" (75.0 s to 78.6 s).
+        Assert.Equal(2, lyrics.Active);
+        Assert.Contains("Streetlights hum a borrowed tune", ShellTests.Texts(lyrics).Select(t => t.Trim()));
     }
 }

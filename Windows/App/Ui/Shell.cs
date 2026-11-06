@@ -44,10 +44,14 @@ public sealed class Shell : Grid
             ClipToBounds = true,
             Child = page,
         });
+        Drawer = new Drawer(session, Nav) { [Grid.RowProperty] = 1, [Grid.ColumnProperty] = 1 };
+        navigation.Children.Add(Drawer);
         Children.Add(navigation);
         Children.Add(new Border { [Grid.RowProperty] = 1, Child = Bottom });
 
         Top.SidebarToggled += () => sidebar.IsVisible = !sidebar.IsVisible;
+        Bottom.DrawerRequested += Drawer.Toggle;
+        Drawer.Changed += () => Bottom.OpenPanel = Drawer.Panel;
         Top.Searched += term => Nav.Open(new Route("search", term, term));
         Nav.Changed += Show;
         Show();
@@ -56,6 +60,7 @@ public sealed class Shell : Grid
     public Nav Nav { get; }
     public ChromeTop Top { get; }
     public ChromeBottom Bottom { get; }
+    public Drawer Drawer { get; }
 
     /// The page on show (tests read it).
     public Control? Page => page.Content as Control;

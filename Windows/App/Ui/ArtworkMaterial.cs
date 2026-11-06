@@ -41,15 +41,27 @@ public sealed class ArtworkMaterial : Control
         InvalidateVisual();
     }
 
-    /// The cover at 64 px, blurred as Cider's 80 px over its 200 %-wide copy (sigma scaled to 64 px).
-    internal static Bitmap Bake(Bitmap cover)
+    /// The cover at 64 px, blurred as Cider's 80 px over its 200 %-wide copy (sigma scaled to 64 px);
+    /// saturated and brightened as a CSS filter would, when asked.
+    internal static Bitmap Bake(Bitmap cover, float sigma = 2.5f, float saturate = 1, float brightness = 1)
     {
         using var png = new MemoryStream();
         cover.Save(png, new PngBitmapEncoderOptions());
         using var source = SKBitmap.Decode(png.ToArray());
         const int size = 64;
         using var surface = SKSurface.Create(new SKImageInfo(size, size));
-        using var paint = new SKPaint { ImageFilter = SKImageFilter.CreateBlur(2.5f, 2.5f, SKShaderTileMode.Clamp) };
+        const float r = 0.2126f, g = 0.7152f, b = 0.0722f, k = 1; // CSS's saturate() matrix, then brightness()
+        var (s, l) = (saturate, brightness);
+        using var paint = new SKPaint
+        {
+            ImageFilter = SKImageFilter.CreateBlur(sigma, sigma, SKShaderTileMode.Clamp),
+            ColorFilter = SKColorFilter.CreateColorMatrix([
+                l * (r + (1 - r) * s), l * (g - g * s), l * (b - b * s), 0, 0,
+                l * (r - r * s), l * (g + (1 - g) * s), l * (b - b * s), 0, 0,
+                l * (r - r * s), l * (g - g * s), l * (b + (1 - b) * s), 0, 0,
+                0, 0, 0, k, 0,
+            ]),
+        };
         surface.Canvas.DrawBitmap(source, new SKRect(0, 0, size, size), paint);
         using var snap = surface.Snapshot();
         using var data = snap.Encode(SKEncodedImageFormat.Png, 100);

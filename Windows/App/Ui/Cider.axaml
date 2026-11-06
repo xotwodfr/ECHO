@@ -311,4 +311,26 @@
       <Setter Property="Background" Value="#B3FA0000" />
     </Style>
   </ControlTheme>
+
+  <!-- .cd-queue-item: 9 px above and below, var(selected) on hover, var(selected-click) pressed. -->
+  <ControlTheme x:Key="QueueItem" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="10,9" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#4D828282" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#4D505050" />
+    </Style>
+  </ControlTheme>
 </ResourceDictionary>
