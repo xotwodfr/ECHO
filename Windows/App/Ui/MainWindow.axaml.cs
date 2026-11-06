@@ -89,6 +89,7 @@ public partial class MainWindow : Window
         Session.Current = session;
         session.SignedOut += () => Dispatcher.UIThread.Post(() =>
         {
+            session.Player.Dispose();
             TokenStore.Forget();
             session.Api.Token = null;
             ShowSignIn(session.Api);

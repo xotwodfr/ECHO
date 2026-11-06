@@ -33,7 +33,7 @@ public class PlayerTests
         try
         {
             var api = new Api("https://echo.test", new Unreachable());
-            var player = new Player(api, new Library(api), () => new AudioOut(new AudioTap(), nullDevice: true), _ => Task.FromResult(wav));
+            using var player = new Player(api, new Library(api), () => new AudioOut(new AudioTap(), nullDevice: true), _ => Task.FromResult(wav));
             await player.PlayList(QueueTests.Album(3), 0, Ctx);
             await player.SaveNow(); // the queue PUT: the server cannot be reached
 

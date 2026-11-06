@@ -9,7 +9,7 @@ namespace Echo.Playback;
 /// played through AudioOut, scrobbles at half the song or 4 minutes, ECHO's own play history, and the
 /// queue that follows the user across devices (queueSync.ts). A token the server refuses stops it all
 /// and clears the queue (REL-05).
-public sealed partial class Player : ObservableObject
+public sealed partial class Player : ObservableObject, IDisposable
 {
     const long ScrobbleMs = 4 * 60_000;
     const int SaveEveryMs = 15_000;
@@ -193,6 +193,15 @@ public sealed partial class Player : ObservableObject
         change();
         QueueChanged?.Invoke();
         Changed();
+    }
+
+    /// Lets go of the audio device and the song's stream (a session ends; Windows locks open files).
+    public void Dispose()
+    {
+        tick.Stop();
+        saveSoon.Stop();
+        output?.Dispose();
+        output = null;
     }
 
     /// Signs this device out on the server too, then stops (Settings → Account).
