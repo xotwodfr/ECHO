@@ -75,9 +75,20 @@ public sealed class AudioOut : IDisposable
     /// The decoder converts to the device's format: a 44.1 kHz song on a 48 kHz device keeps its pitch.
     public async Task Open(string source)
     {
-        var next = await Task.Run<ISoundDataProvider>(() => source.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-            ? new NetworkDataProvider(engine, DeviceFormat, source)
-            : new StreamDataProvider(engine, DeviceFormat, File.OpenRead(source)));
+        var next = await Task.Run<ISoundDataProvider>(() =>
+        {
+            if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return new NetworkDataProvider(engine, DeviceFormat, source);
+            var file = File.OpenRead(source);
+            try
+            {
+                return new StreamDataProvider(engine, DeviceFormat, file);
+            }
+            catch
+            {
+                file.Dispose(); // a file the decoder refused: let go of it (Windows locks open files)
+                throw;
+            }
+        });
         Close();
         provider = next;
         player = new SoundPlayer(engine, DeviceFormat, next) { Volume = volume, Mute = muted };
