@@ -1,43 +1,49 @@
 # ECHO for Windows
 
-A native Windows client for an ECHO server: WPF on .NET 10 with Windows 11's Fluent theme
-(`ThemeMode="System"`: light or dark as Windows is, Mica behind the window). Server:
-`https://echo.folk3s.com` (the Android app's), `ECHO_URL` for another.
+A native Windows client for an ECHO server, at its baseline: the starting point new features are
+built on. Avalonia 12 on .NET 10, dark Fluent. Server: `https://echo.folk3s.com`, `ECHO_URL` for
+another.
 
-WPF, not WinUI 3: WinUI 3 only builds on Windows, while this compiles anywhere the .NET SDK runs
-(`EnableWindowsTargeting`), so every change can be checked before it reaches a Windows machine.
+Avalonia, not WPF or WinUI 3: it builds *and runs* on the Linux dev box, so every screen can be seen
+and tested before it reaches Windows, and the Windows CI runs the real exe.
+
+(A full app with liquid glass was built on the branch `windows-glass` on 2026-11-06: the Listen room,
+lyrics, the whole library. It stays there as a reference to take features from.)
 
 ## What the baseline does
 
-The same core on every native client (Android, Linux, Windows, macOS, iOS):
+The same core as every native baseline (Linux, macOS, iOS):
 
-- **Sign in** with username, password and, with two-factor on, the authenticator code, in one
-  request (`POST /api/v1/auth/device`). The device token is kept in `%LOCALAPPDATA%\ECHO`, encrypted
-  for this Windows user (DPAPI). **Sign out** ends this device's session on the server too
-  (Settings → Account → Sessions & devices). A token the server refuses (revoked, idle 60 days)
-  brings the sign-in back.
-- **Albums**, A–Z (the Subsonic proxy's `getAlbumList2`), and an album's **songs** (`getAlbum`).
-- **Play**: a song from a signed stream URL (`/navidrome/stream-url/:id`, 6 h, this song only),
-  through WPF's `MediaPlayer` (Media Foundation): MP3, AAC/M4A, FLAC, WAV and WMA as stored; Opus,
-  Ogg and the rest, which it does not play without extras, come from Navidrome as MP3, 320 kbps.
-  The album goes on, and stops after its last song. A bar with the song, its time, and play/pause.
+- **Sign in** with username, password and, with two-factor on, the code, in one request
+  (`POST /api/v1/auth/device`). The device token is kept for this Windows user (DPAPI,
+  `%LOCALAPPDATA%\ECHO`). **Sign out** ends this device's session on the server too; a token the
+  server refuses brings the sign-in back.
+- **Albums**, A–Z, and an album's **songs** (the Subsonic proxy's `getAlbumList2`, `getAlbum`).
+- **Play** a song (double-click) from a signed stream URL: FLAC, MP3 and WAV as stored, everything else
+  from Navidrome as MP3 320. The album goes on and stops after its last song. A bar with the song, its
+  time, Previous / Play–Pause / Next.
 
-## Build and run
+## Layout
 
-On Windows 10 or 11 with the .NET 10 SDK:
+| Folder | What |
+|---|---|
+| `App/Api` | The server: device token, signed stream URLs, covers (the token goes to the server only); the models |
+| `App/Library` | The albums and an album through the Subsonic proxy; which formats play as stored |
+| `App/Playback` | Audio out (SoundFlow, miniaudio; songs decoded to the device's format) and the player |
+| `App/Ui` | The window, sign-in, the library screen |
+| `Tests` | xUnit: sign-in, the library, formats, the token, the player |
 
-```powershell
-dotnet run
+## Build, test, run
+
+With the .NET 10 SDK, on Linux or Windows:
+
+```sh
+dotnet test Windows/Tests
+dotnet run --project Windows/App -f net10.0     # the dev box (needs a display)
+dotnet publish Windows/App -c Release -f net10.0-windows10.0.19041.0 -r win-x64 --self-contained \
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o Windows/publish
 ```
 
-`dotnet build` also works on Linux and macOS (it checks the code; the app runs on Windows only).
-`ECHO_URL` points it at another server, e.g. a test server.
-
-Checked 2026-11-04: it builds without warnings on Linux, and `Api.cs` (everything but the window)
-ran against a test server with the mock Navidrome: a wrong password, sign in, albums, an album's
-songs, a stream without a header, sign out. The window itself has not run yet.
-
-## Next
-
-Run it on Windows; covers, search, playlists, the queue that follows you (`/me/queue`), lyrics,
-the system media controls (SMTC), an installer (MSIX) and an icon.
+`ECHO.exe --smoke` shows the sign-in and exits 0 after 8 s. The Windows workflow
+(`.github/workflows/windows.yml`) runs the tests and the smoke run on `windows-latest` and keeps a
+screenshot as the `smoke` artifact; a `windows-v*` tag publishes the exe as a pre-release.
