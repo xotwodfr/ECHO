@@ -5,8 +5,9 @@ using Avalonia.Threading;
 
 namespace Echo.Ui;
 
-/// ECHO's one window: sign-in, or the shell for a session. `--smoke` shows the fixtures, opens the
-/// Listen room after 3 s and exits 0 after 10 s (the Windows CI screenshots it in between).
+/// ECHO's one window: sign-in, or the shell for a session. `--smoke` shows the fixtures maximised, opens
+/// the Listen room after 8 s and exits 0 after 16 s (the Windows CI screenshots both; a self-extracting
+/// exe on a fresh runner takes a few seconds to show its window).
 public partial class MainWindow : Window
 {
     public MainWindow() : this(App.Smoke ? Session.ForFixtures() : null) { }
@@ -50,10 +51,11 @@ public partial class MainWindow : Window
         Content = new Shell(session);
     }
 
-    static void Smoke(Session session)
+    void Smoke(Session session)
     {
-        DispatcherTimer.RunOnce(() => session.Nav.Go(new ListenPage()), TimeSpan.FromSeconds(3));
+        WindowState = WindowState.Maximized;
+        DispatcherTimer.RunOnce(() => session.Nav.Go(new ListenPage()), TimeSpan.FromSeconds(8));
         DispatcherTimer.RunOnce(() => (Application.Current?.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime)?.Shutdown(0),
-            TimeSpan.FromSeconds(10));
+            TimeSpan.FromSeconds(16));
     }
 }
