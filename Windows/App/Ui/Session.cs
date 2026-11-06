@@ -13,6 +13,7 @@ public sealed class Session
         Api = api;
         Fixtures = fixtures;
         Covers = new Covers(api);
+        Library = new Library(api);
         Now = new NowPlaying(this);
     }
 
@@ -28,6 +29,7 @@ public sealed class Session
     /// The smoke run and the tests: Echo.Fixtures instead of a server.
     public bool Fixtures { get; }
     public Covers Covers { get; }
+    public Library Library { get; }
     public Nav Nav { get; } = new();
     public AudioTap Tap { get; } = new();
     public NowPlaying Now { get; }
@@ -38,25 +40,26 @@ public sealed class Session
     {
         var s = new Session(new Api("https://fixtures.invalid"), fixtures: true);
         var album = Echo.Fixtures.Albums[10];
-        s.Now.Show(album, Echo.Fixtures.Songs(album), 0);
+        s.Now.Show(album, album.Tracks, 0);
         return s;
     }
 
-    public async Task<IReadOnlyList<Album>> Albums() => Fixtures ? Echo.Fixtures.Albums : await Api.Albums();
+    public async Task<IReadOnlyList<Album>> Albums() => Fixtures ? Echo.Fixtures.Albums : await Library.AllAlbums(AlbumSort.AZ);
 
-    public async Task<IReadOnlyList<Song>> Songs(Album album) => Fixtures ? Echo.Fixtures.Songs(album) : await Api.Songs(album.Id);
+    /// The album with its tracks (a list's albums come without them).
+    public async Task<Album?> Album(Album album) => Fixtures ? album : await Library.Album(album.Id);
 }
 
 /// What plays, until the Player (the queue, the saved queue, scrobbles) takes over: an album from a song on.
 public sealed partial class NowPlaying(Session session) : ObservableObject
 {
     AudioOut? output;
-    IReadOnlyList<Song> songs = [];
+    IReadOnlyList<Track> songs = [];
     int index;
     readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
 
     [ObservableProperty] public partial Album? Album { get; private set; }
-    [ObservableProperty] public partial Song? Song { get; private set; }
+    [ObservableProperty] public partial Track? Track { get; private set; }
     [ObservableProperty] public partial bool Playing { get; private set; }
     /// 0…1 through the song.
     [ObservableProperty] public partial double Progress { get; private set; }
@@ -76,15 +79,15 @@ public sealed partial class NowPlaying(Session session) : ObservableObject
     }
 
     /// Shows a song without playing it (the smoke run's pill).
-    public void Show(Album album, IReadOnlyList<Song> list, int at)
+    public void Show(Album album, IReadOnlyList<Track> list, int at)
     {
         Album = album;
         songs = list;
         index = at;
-        Song = list[at];
+        Track = list[at];
     }
 
-    public async Task Play(Album album, IReadOnlyList<Song> list, int at)
+    public async Task Play(Album album, IReadOnlyList<Track> list, int at)
     {
         Show(album, list, at);
         if (session.Fixtures) return;
@@ -104,7 +107,7 @@ public sealed partial class NowPlaying(Session session) : ObservableObject
 
     public void Toggle()
     {
-        if (output is null || Song is null) return;
+        if (output is null || Track is null) return;
         if (Playing) output.Pause();
         else output.Play();
         Playing = !Playing;

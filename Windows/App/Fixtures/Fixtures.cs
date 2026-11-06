@@ -8,25 +8,26 @@ namespace Echo;
 /// (gradients, stripes, rings), loud enough that the glass over them shows its bend.
 public static class Fixtures
 {
-    public static readonly IReadOnlyList<Album> Albums =
+    static readonly (string Title, string Artist)[] Names =
     [
-        new("f1", "Low Orbit", "Mira Vale", "fixture:0"),
-        new("f2", "Heat Index", "The Long Summer", "fixture:1"),
-        new("f3", "Monochrome", "Ostrava", "fixture:2"),
-        new("f4", "Prism Hours", "Kai Lumen", "fixture:3"),
-        new("f5", "Greenhouse", "Fern & Field", "fixture:4"),
-        new("f6", "Red Shift", "Velvet Static", "fixture:5"),
-        new("f7", "Honeycomb", "Ada Sol", "fixture:6"),
-        new("f8", "Half Light", "Northbound", "fixture:7"),
-        new("f9", "Tidepool", "Mira Vale", "fixture:8"),
-        new("f10", "Kaleido", "Junebug", "fixture:9"),
-        new("f11", "Neon Tide", "Halcyon Drive", "fixture:10"),
-        new("f12", "Static Bloom", "Ostrava", "fixture:11"),
+        ("Low Orbit", "Mira Vale"), ("Heat Index", "The Long Summer"), ("Monochrome", "Ostrava"),
+        ("Prism Hours", "Kai Lumen"), ("Greenhouse", "Fern & Field"), ("Red Shift", "Velvet Static"),
+        ("Honeycomb", "Ada Sol"), ("Half Light", "Northbound"), ("Tidepool", "Mira Vale"),
+        ("Kaleido", "Junebug"), ("Neon Tide", "Halcyon Drive"), ("Static Bloom", "Ostrava"),
     ];
 
-    public static IReadOnlyList<Song> Songs(Album album) =>
-        new[] { "Afterglow", "Night Swim", "Overpass", "Glass Hours", "Low Tide", "Coda" }
-            .Select((t, i) => new Song($"{album.Id}-{i}", t, album.Artist, 180 + 17 * i, "flac")).ToList();
+    static readonly string[] SongTitles = ["Afterglow", "Night Swim", "Overpass", "Glass Hours", "Low Tide", "Coda"];
+
+    public static readonly IReadOnlyList<Album> Albums = Names.Select((n, i) =>
+    {
+        var id = $"f{i + 1}";
+        var cover = $"fixture:{i}";
+        return new Album(id, n.Title, n.Artist, Cover: cover)
+        {
+            Tracks = SongTitles.Select((t, k) => new Track($"navidrome:{id}-{k}", $"{id}-{k}", t, [new ArtistRef(null, n.Artist)],
+                new AlbumRef(id, n.Title, $"navidrome:{id}"), (180 + 17 * k) * 1000L, [new Artwork(cover)], ContentType: "audio/flac")).ToList(),
+        };
+    }).ToList();
 
     /// The Neon Tide palette of board A: the room in violet, the accent in pink.
     public static readonly StagePalette Palette = StagePalette.Of(new Palette(

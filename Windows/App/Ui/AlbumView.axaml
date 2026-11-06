@@ -25,8 +25,8 @@
               <Grid ColumnDefinitions="36,*,Auto">
                 <TextBlock Text="{Binding Number}" Foreground="{DynamicResource Muted}" FontSize="13" VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1">
-                  <TextBlock Text="{Binding Song.Title}" FontSize="14" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding Song.Artist}" FontSize="12" Foreground="{DynamicResource Muted}" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Track.Title}" FontSize="14" TextTrimming="CharacterEllipsis" />
+                  <TextBlock Text="{Binding Track.Artist}" FontSize="12" Foreground="{DynamicResource Muted}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
                 <TextBlock Grid.Column="2" Text="{Binding Time}" Foreground="{DynamicResource Muted}" FontSize="13" VerticalAlignment="Center" />
               </Grid>

@@ -19,9 +19,9 @@
             <Button Theme="{StaticResource Bare}" CornerRadius="12" Padding="8" Margin="0,0,0,6" Tag="{Binding}" Click="Open">
               <StackPanel Width="172">
                 <Border Width="172" Height="172" CornerRadius="8" ClipToBounds="True" Background="{DynamicResource Surface1}">
-                  <ui:CoverImage CoverArt="{Binding CoverArt}" Pixels="344" />
+                  <ui:CoverImage Url="{Binding Cover}" Pixels="344" />
                 </Border>
-                <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="SemiBold" Margin="0,9,0,1" TextTrimming="CharacterEllipsis" />
+                <TextBlock Text="{Binding Title}" FontSize="13" FontWeight="SemiBold" Margin="0,9,0,1" TextTrimming="CharacterEllipsis" />
                 <TextBlock Text="{Binding Artist}" FontSize="12" Foreground="{DynamicResource Muted}" TextTrimming="CharacterEllipsis" />
               </StackPanel>
             </Button>

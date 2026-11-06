@@ -4,11 +4,11 @@ using Avalonia.Media;
 
 namespace Echo.Ui;
 
-/// A cover by its id, loaded through the session's cache (Covers).
+/// A cover by its server path, loaded through the session's cache (Covers).
 public sealed class CoverImage : Image
 {
-    public static readonly StyledProperty<string?> CoverArtProperty =
-        AvaloniaProperty.Register<CoverImage, string?>(nameof(CoverArt));
+    public static readonly StyledProperty<string?> UrlProperty =
+        AvaloniaProperty.Register<CoverImage, string?>(nameof(Url));
 
     /// The size asked of the server, px.
     public static readonly StyledProperty<int> PixelsProperty =
@@ -16,10 +16,10 @@ public sealed class CoverImage : Image
 
     public CoverImage() => Stretch = Stretch.UniformToFill;
 
-    public string? CoverArt
+    public string? Url
     {
-        get => GetValue(CoverArtProperty);
-        set => SetValue(CoverArtProperty, value);
+        get => GetValue(UrlProperty);
+        set => SetValue(UrlProperty, value);
     }
 
     public int Pixels
@@ -31,15 +31,15 @@ public sealed class CoverImage : Image
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
-        if (change.Property == CoverArtProperty || change.Property == PixelsProperty) _ = Load();
+        if (change.Property == UrlProperty || change.Property == PixelsProperty) _ = Load();
     }
 
     async Task Load()
     {
-        var art = CoverArt;
+        var art = Url;
         Source = null;
         if (art is null || Session.Current is not { } session) return;
         var bitmap = await session.Covers.Get(art, Pixels);
-        if (art == CoverArt) Source = bitmap;
+        if (art == Url) Source = bitmap;
     }
 }
