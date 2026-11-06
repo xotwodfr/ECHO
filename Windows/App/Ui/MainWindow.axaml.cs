@@ -94,6 +94,9 @@ public partial class MainWindow : Window
             ShowSignIn(session.Api);
         });
         Content = new Shell(session);
+#if WINDOWS
+        Playback.Smtc.Attach(session.Player, session.Covers); // the smoke run too: CI sees it start
+#endif
     }
 
     void Smoke(Session session)
