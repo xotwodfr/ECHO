@@ -9,6 +9,7 @@
         <ColorPaletteResources x:Key="Dark" Accent="#FFFC3C44" />
       </FluentTheme.Palettes>
     </FluentTheme>
+    <StyleInclude Source="avares://ECHO/Ui/CiderStyles.axaml" />
   </Application.Styles>
   <Application.Resources>
     <ResourceDictionary>

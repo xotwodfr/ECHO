@@ -86,5 +86,152 @@
     <Style Selector="^.active /template/ Border#Box">
       <Setter Property="Background" Value="#4D828282" />
     </Style>
+    <!-- Cider's small playback button, active (Shuffle, Repeat on): rgb(200 200 200 / 25%). -->
+    <Style Selector="^.on /template/ Border#Box">
+      <Setter Property="Background" Value="#40C8C8C8" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .top-nav-group .app-sidebar-item (less/directives.less): a white layer 1 px in, 10 % on hover, 20 % active. -->
+  <ControlTheme x:Key="TopNavItem" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <Border Name="Layer" Margin="1" CornerRadius="10" Background="White" Opacity="0" />
+          <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Layer">
+      <Setter Property="Opacity" Value="0.1" />
+    </Style>
+    <Style Selector="^.active /template/ Border#Layer">
+      <Setter Property="Opacity" Value="0.2" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .app-sidebar-item: 8 px 12 px, radius 6, 14 px; rgb(180 180 180 / 15%) on hover, rgb(200 200 200 / 15%) active. -->
+  <ControlTheme x:Key="SidebarItem" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Margin" Value="0,3" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#26B4B4B4" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#26969696" />
+    </Style>
+    <Style Selector="^.active /template/ Border#Box">
+      <Setter Property="Background" Value="#26C8C8C8" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .window-controls > div: rgb(200 200 200 / 10%) on hover; the close one rgb(196, 43, 28). -->
+  <ControlTheme x:Key="Caption" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#1AC8C8C8" />
+    </Style>
+  </ControlTheme>
+  <ControlTheme x:Key="CaptionClose" TargetType="Button" BasedOn="{StaticResource Caption}">
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#C42B1C" />
+    </Style>
+  </ControlTheme>
+
+  <!-- A slider's two sides: plain bars. -->
+  <ControlTheme x:Key="SliderBar" TargetType="RepeatButton">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="Transparent">
+          <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Height="{TemplateBinding Height}" VerticalAlignment="Center" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <!-- The song's progress (directives.less .app-chrome-playback-duration-bottom): 5 px, radius 6, the key
+       colour played over #333, a 16 px key-coloured thumb that shows on hover. -->
+  <ControlTheme x:Key="CiderProgress" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="16" Background="Transparent">
+          <Border Height="5" CornerRadius="6" Background="#333333" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="{DynamicResource Key}" Height="5" CornerRadius="6,0,0,6" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="5" />
+            </Track.IncreaseButton>
+            <Thumb Name="Knob" Width="16" Height="16" Opacity="0">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="{DynamicResource Key}" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Thumb#Knob">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </ControlTheme>
+
+  <!-- The volume (style.less .app-chrome-item.volume): 4 px, rgba(255 255 255 / .4), a 14 px #a5a8ba thumb. -->
+  <ControlTheme x:Key="CiderVolume" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="16" Background="Transparent">
+          <Border Height="4" CornerRadius="5" Background="#66FFFFFF" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#99FFFFFF" Height="4" CornerRadius="5,0,0,5" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
+            </Track.IncreaseButton>
+            <Thumb Width="14" Height="14">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="#A5A8BA" Stroke="#1A000000" StrokeThickness="1" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
   </ControlTheme>
 </ResourceDictionary>

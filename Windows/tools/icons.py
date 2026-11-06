@@ -20,6 +20,7 @@ ICONS = {
     "User": "assets/feather/user.svg",
     "PlusCircle": "assets/feather/plus-circle.svg",
     "Plus": "views/svg/plus.svg",
+    "List": "assets/feather/list.svg",
     "Heart": "assets/feather/heart.svg",
     "HeartFill": "assets/feather/heart-fill.svg",
     "Unheart": "assets/feather/unheart.svg",
@@ -74,9 +75,11 @@ def convert(path):
         w, h = (float(re.search(rf'\s{a}="([\d.]+)', root_tag).group(1)) for a in ("width", "height"))
         text = text.replace(root_tag, root_tag[:-1] + f' viewBox="0 0 {w:g} {h:g}">', 1)
     # Draw in viewBox units: the root's own width/height ("100%", "1em", "20") would rescale it.
-    text = re.sub(r"<svg\b[^>]*>", lambda m: re.sub(r'\s(width|height)="[^"]*"', "", m.group(0)), text, count=1)
+    text = re.sub(r"<svg\b[^>]*>", lambda m: re.sub(r'\s(width|height|style)="[^"]*"', "", m.group(0)), text, count=1)
     svg = SVG.parse(io.StringIO(text), reify=True, width=w, height=h)
-    fills, stroke, stroke_w, rule = [], [], 2.0, "F1 "  # SVG's default fill rule, nonzero
+    # SVG's default fill rule is nonzero; the root's style (dropped above with its size) may say otherwise.
+    fills, stroke, stroke_w = [], [], 2.0
+    rule = "F0 " if "fill-rule:evenodd" in root_tag else "F1 "
     for e in svg.elements():
         if not isinstance(e, Shape):
             continue

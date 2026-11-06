@@ -202,11 +202,31 @@ public sealed partial class Library(Api api)
     }
 
     /// Heart or un-heart.
-    public async Task Star(StarKind kind, string id, bool on)
+    public Task Star(StarKind kind, string id, bool on)
     {
         var param = kind switch { StarKind.Track => "id", StarKind.Album => "albumId", _ => "artistId" };
-        var r = (await api.Send(HttpMethod.Post, $"/navidrome/rest/{(on ? "star" : "unstar")}?{param}={Enc(id)}"))["subsonic-response"];
-        if (Echo.Api.Text(r?["status"]) == "failed") throw new ApiException(HttpStatusCode.OK, $"subsonic.{Echo.Api.Text(r?["error"]?["code"])}");
+        return Write(on ? "star" : "unstar", $"{param}={Enc(id)}");
+    }
+
+    /// A new playlist; its id.
+    public async Task<string?> CreatePlaylist(string name) =>
+        (await Write("createPlaylist", $"name={Enc(name)}"))["playlist"]?["id"]?.GetValue<string>();
+
+    /// Songs added to the end of a playlist.
+    public Task AddToPlaylist(string playlist, IEnumerable<string> songs) =>
+        Write("updatePlaylist", $"playlistId={Enc(playlist)}" + string.Concat(songs.Select(s => $"&songIdToAdd={Enc(s)}")));
+
+    /// A page of every song, A–Z by title (search3 with an empty query, as Navidrome allows).
+    public async Task<IReadOnlyList<Track>> Songs(int offset, int size = Page) =>
+        Songs((await Rest("search3", $"query=&artistCount=0&albumCount=0&songCount={size}&songOffset={offset}"))["searchResult3"]?["song"]);
+
+    /// Subsonic writes go as POST (ECHO's proxy takes them so only).
+    async Task<JsonNode> Write(string method, string query)
+    {
+        var r = (await api.Send(HttpMethod.Post, $"/navidrome/rest/{method}?{query}"))["subsonic-response"]
+            ?? throw new ApiException(HttpStatusCode.BadGateway, "no subsonic-response");
+        if (Echo.Api.Text(r["status"]) == "failed") throw new ApiException(HttpStatusCode.OK, $"subsonic.{Echo.Api.Text(r["error"]?["code"])}");
+        return r;
     }
 
     /// The album's palette (`/palette/{albumKey}`), kept; null when the server has none.
