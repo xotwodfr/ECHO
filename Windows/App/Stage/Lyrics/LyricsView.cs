@@ -12,6 +12,9 @@ public sealed class LyricsView : Panel
     /// Makes the field for a synced document.
     public Func<LyricsDoc, Control>? FieldFor { get; set; }
 
+    /// Settings → Lyrics: unsynced lyrics shown as text, or not at all.
+    public bool ShowUnsynced { get; set; } = true;
+
     public void Show(LyricsStatus status, LyricsDoc? doc)
     {
         Children.Clear();
@@ -22,6 +25,8 @@ public sealed class LyricsView : Panel
                 break;
             case LyricsStatus.Missing:
                 Children.Add(Note("No lyrics found"));
+                break;
+            case LyricsStatus.Ready when doc is { Sync: "none" } && !ShowUnsynced:
                 break;
             case LyricsStatus.Ready when doc is { Sync: "none" }:
                 var column = new StackPanel { Spacing = 14, Margin = new Thickness(0, 120, 0, 160), MaxWidth = 900 };

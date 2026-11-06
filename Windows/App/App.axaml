@@ -3,7 +3,12 @@
              x:Class="Echo.App"
              RequestedThemeVariant="Dark">
   <Application.Styles>
-    <FluentTheme />
+    <!-- Quiet tools (PRODUCT_SPEC.md §1.1): Fluent's controls in a light neutral, not Windows' blue. -->
+    <FluentTheme>
+      <FluentTheme.Palettes>
+        <ColorPaletteResources x:Key="Dark" Accent="#FFE6E3DD" />
+      </FluentTheme.Palettes>
+    </FluentTheme>
   </Application.Styles>
   <Application.Resources>
     <ResourceDictionary>

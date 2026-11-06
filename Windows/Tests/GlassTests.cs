@@ -9,6 +9,7 @@ using Echo.Glass;
 
 namespace Echo.Tests;
 
+[Collection("glass")]
 public class GlassTests
 {
     [Fact]
@@ -64,12 +65,13 @@ public class GlassTests
         using var frame = window.CaptureRenderedFrame()!;
 
         double Backdrop(int x) => Math.Clamp((x + 0.5 - 90) / 60, 0, 1) * 255;
-        var tint = 1 - new GlassParams().Tint;
-        // 4 px inside the left rim: refracted, so brighter than the tinted ramp under it.
-        Assert.True(Luma(frame, 104, 100) > Backdrop(104) * tint + 20,
+        // What shows through is darkened by the base tint and the adaptive one (this backdrop is bright).
+        var tint = 1 - new GlassParams().Tint - glass.Darken;
+        // 4 px inside the left rim: refracted, so brighter than the same tint over the ramp under it.
+        Assert.True(Luma(frame, 104, 100) > Backdrop(104) * tint + 12,
             $"rim {Luma(frame, 104, 100):0} vs backdrop {Backdrop(104) * tint:0}");
         // The centre: on white, only tinted.
-        Assert.InRange(Luma(frame, 200, 100), 255 * tint * 0.85, 255 * tint * 1.15);
+        Assert.InRange(Luma(frame, 200, 100), 255 * tint * 0.95, 255 * tint * 1.05);
     }
 
     static double Luma(WriteableBitmap bitmap, int x, int y)

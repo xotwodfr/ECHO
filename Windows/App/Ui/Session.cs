@@ -11,9 +11,11 @@ public sealed class Session
     {
         Api = api;
         Fixtures = fixtures;
+        Prefs = new PrefsStore(fixtures ? null : PrefsStore.DefaultFile);
         Covers = new Covers(api);
         Library = new Library(api);
-        Player = new Player(api, Library, () => new AudioOut(Tap, nullDevice: fixtures)) { Sync = !fixtures };
+        Player = new Player(api, Library, () => new AudioOut(Tap, nullDevice: fixtures)) { Sync = !fixtures, Scrobble = Prefs.State.Scrobble };
+        Prefs.Changed += p => Player.Scrobble = p.Scrobble;
         Player.SignedOut += Refused;
         Lyrics = new Lyrics(api);
         if (!fixtures) Lyrics.Follow(Player);
@@ -40,6 +42,7 @@ public sealed class Session
     public Nav Nav { get; } = new();
     public AudioTap Tap { get; } = new();
     public Player Player { get; }
+    public PrefsStore Prefs { get; }
     public Lyrics Lyrics { get; }
 
     public static Session ForServer(Api api) => new(api, fixtures: false);

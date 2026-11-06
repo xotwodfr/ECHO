@@ -47,4 +47,6 @@ public sealed record MixPage(Mix Mix);
 
 public sealed record WantedPage;
 
+public sealed record SettingsPage;
+
 public sealed record ListenPage;

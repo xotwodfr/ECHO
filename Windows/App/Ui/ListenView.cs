@@ -49,7 +49,16 @@ public sealed class ListenView : Panel
         palette = session.Fixtures ? Fixtures.Palette : StagePalette.Fallback;
 
         fallback = new FallbackRoom { Palette = palette };
-        stage = new StageView(session.Tap) { Mode = session.Fixtures ? RoomMode.Ambient : RoomMode.Reverb, Palette = palette, Playing = player.Playing };
+        // Settings → Quality: Auto lets the governor choose; the others hold a tier.
+        var (tier, manual) = session.Prefs.State.Quality switch
+        {
+            Quality.High => (Tier.T0, true),
+            Quality.Balanced => (Tier.T1, true),
+            Quality.Low => (Tier.T2, true),
+            Quality.Minimal => (Tier.T3, true),
+            _ => (Tier.T1, false),
+        };
+        stage = new StageView(session.Tap, tier, manual) { Palette = palette, Playing = player.Playing };
         stage.TrackStarted();
 
         lyrics = new LyricsView { FieldFor = MakeField };
@@ -145,15 +154,18 @@ public sealed class ListenView : Panel
 
     Control MakeField(LyricsDoc doc)
     {
-        field = new LyricsField(doc, () => player.PositionNow.TotalMilliseconds - session.Lyrics.OffsetMs, () => player.Playing,
-            () => stage.Features, palette)
+        // Positive offsets show words later (Settings → Lyrics, and the web's per-track nudge).
+        field = new LyricsField(doc, () => player.PositionNow.TotalMilliseconds - session.Lyrics.OffsetMs - session.Prefs.State.LyricOffsetMs,
+            () => player.Playing, () => stage.Features, palette)
         {
             Dock = PillClear,
+            Scale = session.Prefs.State.LyricScale,
+            Reduced = session.Prefs.ReducedMotion,
             KeyLight = (x, y) => (stage.KeyX, stage.KeyY) = ((float)x, (float)y),
         };
         field.Seek += ms =>
         {
-            player.Seek(TimeSpan.FromMilliseconds(ms + session.Lyrics.OffsetMs));
+            player.Seek(TimeSpan.FromMilliseconds(ms + session.Lyrics.OffsetMs + session.Prefs.State.LyricOffsetMs));
             if (!player.Playing) player.Toggle();
         };
         return field;
@@ -191,6 +203,8 @@ public sealed class ListenView : Panel
         player.PropertyChanged += OnPlayer;
         session.Lyrics.PropertyChanged += OnLyrics;
         session.QueueToggled += ToggleQueue;
+        session.Prefs.Changed += Apply;
+        Apply(session.Prefs.State);
         tick.Start();
         ShowTrack();
         if (session.Fixtures) lyrics.Show(LyricsStatus.Ready, Fixtures.Lyrics);
@@ -202,9 +216,24 @@ public sealed class ListenView : Panel
         player.PropertyChanged -= OnPlayer;
         session.Lyrics.PropertyChanged -= OnLyrics;
         session.QueueToggled -= ToggleQueue;
+        session.Prefs.Changed -= Apply;
         tick.Stop();
         Cursor = Cursor.Default;
         base.OnDetachedFromVisualTree(e);
+    }
+
+    /// The settings as the room shows them; they apply at once while it is open.
+    void Apply(Prefs p)
+    {
+        stage.Mode = p.Motion == Motion.Off || p.Mode == VisualMode.Still ? RoomMode.Still
+            : p.Mode == VisualMode.Ambient || session.Fixtures ? RoomMode.Ambient
+            : RoomMode.Reverb;
+        stage.Intensity = p.Intensity;
+        stage.Brightness = p.Backdrop;
+        lyrics.ShowUnsynced = p.ShowUnsynced;
+        if (field is null) return;
+        field.Scale = p.LyricScale;
+        field.Reduced = session.Prefs.ReducedMotion;
     }
 
     void ToggleQueue() => queue.Content = queue.Content is null ? new QueueSheet(session) : null;

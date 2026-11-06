@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace Echo.Ui;
 
@@ -17,11 +18,19 @@ public partial class MainWindow : Window
     public static PixelPoint? Remembered { get; set; }
 
     readonly DispatcherTimer seen = new() { Interval = TimeSpan.FromSeconds(1) };
+    Session? current;
 
     public MainWindow(Session? session)
     {
         InitializeComponent();
-        seen.Tick += (_, _) => Seen.Update(this);
+        seen.Tick += (_, _) =>
+        {
+            Seen.Update(this);
+            // Windows' Transparency effects, switched in Settings: every glass surface follows.
+            if (Transparency.Sync())
+                foreach (var g in this.GetVisualDescendants().OfType<Glass.GlassPanel>()) g.InvalidateVisual();
+        };
+        Transparency.Sync();
         seen.Start();
         PropertyChanged += (_, e) =>
         {
@@ -47,10 +56,38 @@ public partial class MainWindow : Window
         if (WindowState == WindowState.FullScreen)
         {
             WindowState = WindowState.Normal;
+            Keep(fullScreen: false);
             return;
         }
-        Remembered = Position + new PixelPoint((int)(Bounds.Width * RenderScaling / 2), (int)(Bounds.Height * RenderScaling / 2));
+        Remembered = Centre;
         WindowState = WindowState.FullScreen;
+        Keep(fullScreen: true);
+    }
+
+    PixelPoint Centre => Position + new PixelPoint((int)(Bounds.Width * RenderScaling / 2), (int)(Bounds.Height * RenderScaling / 2));
+
+    /// Where the window is and whether it is full screen, for the next start (Settings are per computer).
+    void Keep(bool fullScreen)
+    {
+        if (current is not { Fixtures: false } s) return;
+        var at = fullScreen ? Remembered ?? Centre : Centre;
+        s.Prefs.Update(p => p with { WindowX = at.X, WindowY = at.Y, FullScreen = fullScreen });
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        if (current is { Fixtures: false } s && s.Prefs.State is { WindowX: { } x, WindowY: { } y } p)
+        {
+            Remembered = new PixelPoint(x, y);
+            PlaceOn(Remembered, p.FullScreen);
+        }
+    }
+
+    protected override void OnClosing(WindowClosingEventArgs e)
+    {
+        Keep(WindowState == WindowState.FullScreen);
+        base.OnClosing(e);
     }
 
     /// Opens on the remembered monitor (or the primary when it is gone), full screen when it was.
@@ -87,6 +124,7 @@ public partial class MainWindow : Window
     void ShowShell(Session session)
     {
         Session.Current = session;
+        current = session;
         session.SignedOut += () => Dispatcher.UIThread.Post(() =>
         {
             session.Player.Dispose();

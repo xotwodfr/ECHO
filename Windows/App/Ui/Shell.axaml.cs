@@ -20,6 +20,8 @@ public partial class Shell : UserControl
         foreach (var (label, page) in new (string, object)[] { ("Home", new HomePage()), ("Search", new SearchPage()), ("Your Library", new AlbumsPage()) })
             NavItems.Children.Add(Item(label, page, bold: true));
         SearchCapsule.PointerPressed += (_, _) => session.Nav.Go(new SearchPage());
+        Account.PointerPressed += (_, _) => session.Nav.Go(new SettingsPage());
+        if (!session.Fixtures) _ = LoadInitial();
         session.QueueToggled += () =>
         {
             if (session.Nav.Current is ListenPage) return; // the room has its own
@@ -45,6 +47,15 @@ public partial class Shell : UserControl
         };
         b.Click += (_, _) => session.Nav.Go(page);
         return b;
+    }
+
+    async Task LoadInitial()
+    {
+        try
+        {
+            Initial.Text = Api.Text((await session.Api.Get("/me"))["username"]) is { Length: > 0 } name ? name[..1].ToUpperInvariant() : "";
+        }
+        catch (Exception e) when (e is HttpRequestException or ApiException or TaskCanceledException) { }
     }
 
     async Task LoadPlaylists()
@@ -81,6 +92,7 @@ public partial class Shell : UserControl
             MixPage m => new MixView(session, m.Mix),
             SearchPage => new SearchView(session),
             WantedPage => new WantedView(session),
+            SettingsPage => new SettingsView(session),
             ListenPage => new ListenView(session),
             _ => new HomeView(session),
         };
