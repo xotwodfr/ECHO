@@ -6,7 +6,7 @@ using Avalonia.Styling;
 
 namespace Echo.Ui;
 
-/// Cider's collection page for an album or a playlist (views/pages/cider-playlist.ejs; pages.less
+/// Cider's collection page for an album, a playlist or one of ECHO's mixes (views/pages/cider-playlist.ejs; pages.less
 /// .playlist-page): a 300 px header over the cover's artwork material — the 260 px artwork, the name
 /// (1.6 rem, 700), the artist (20 px), the description, Play and Shuffle, a search field and "…" — then
 /// the songs on --color3, 40 px in, and the date and total time under them. Scrolling the songs shrinks
@@ -38,6 +38,15 @@ public sealed class CollectionPage : DockPanel
                 else Show(a.Title, a.Artist, a.ArtistId is null ? null : new Route("artist", a.ArtistId, a.Artist), null,
                     a.Tracks.FirstOrDefault()?.Cover ?? a.Cover, a.Tracks, new PlayContext("album", a.Id, a.Title), artwork: false,
                     a.Year is { } y ? y.ToString() : null);
+            }
+            else if (route.Page == "mix")
+            {
+                if ((await session.Library.Mixes()).FirstOrDefault(m => m.Id == route.Id) is not { } m) Say("This mix has changed since.");
+                else
+                {
+                    var songs = m.Tracks.Select(t => t.ToTrack()).ToList();
+                    Show(m.Title, m.Subtitle, null, null, songs.FirstOrDefault()?.Cover, songs, new PlayContext("mix", m.Id, m.Title), artwork: true, null);
+                }
             }
             else if (await session.Library.Playlist(route.Id!) is not { } p) Say("This playlist is gone.");
             else Show(p.Playlist.Name, p.Playlist.Owner ?? "", null, p.Comment, p.Entries.FirstOrDefault()?.Cover ?? p.Playlist.Cover,

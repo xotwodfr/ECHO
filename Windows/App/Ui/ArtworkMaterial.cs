@@ -45,7 +45,7 @@ public sealed class ArtworkMaterial : Control
     internal static Bitmap Bake(Bitmap cover)
     {
         using var png = new MemoryStream();
-        cover.Save(png);
+        cover.Save(png, new PngBitmapEncoderOptions());
         using var source = SKBitmap.Decode(png.ToArray());
         const int size = 64;
         using var surface = SKSurface.Create(new SKImageInfo(size, size));

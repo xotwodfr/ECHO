@@ -109,6 +109,32 @@ public sealed class Fixtures : HttpMessageHandler
         [new ArtistRef(ArtistId(Names[album].Artist), Names[album].Artist)], new AlbumRef($"f{album + 1}", Names[album].Title, $"navidrome:f{album + 1}"),
         (180 + 17 * k) * 1000L, [new Artwork($"/api/v1/navidrome/cover/f{album + 1}?size=600")], ContentType: "audio/flac");
 
+    /// Recently played: four albums and a playlist, newest first.
+    static JsonArray Played() => Arr(new (string Kind, string Id, string Title, string Cover)[]
+    {
+        ("album", "f11", "Neon Tide", "f11"), ("playlist", "pl1", "Late Night Drive", "f11"), ("album", "f4", "Prism Hours", "f4"),
+        ("album", "f6", "Red Shift", "f6"), ("album", "f1", "Low Orbit", "f1"), ("album", "f8", "Half Light", "f8"),
+    }.Select((c, i) => (JsonNode)new JsonObject
+    {
+        ["kind"] = c.Kind, ["id"] = c.Id, ["title"] = c.Title, ["cover"] = $"/api/v1/navidrome/cover/{c.Cover}?size=300", ["at"] = 1_800_000_000_000L - i * 3_600_000L,
+    }));
+
+    /// Made For You: two of ECHO's mixes.
+    static JsonArray Mixes() => Arr(new (string Id, string Kind, string Title, string Subtitle, int First)[]
+    {
+        ("daily-1", "daily", "Daily Mix 1", "Halcyon Drive, Ostrava and more", 10), ("discover", "discover", "Discover Weekly", "New to you", 3),
+        ("daylist", "daylist", "Late night daylist", "Synth, night drive", 5),
+    }.Select(m => (JsonNode)new JsonObject
+    {
+        ["id"] = m.Id, ["kind"] = m.Kind, ["title"] = m.Title, ["subtitle"] = m.Subtitle,
+        ["tracks"] = Arr(Enumerable.Range(0, 4).Select(k => (JsonNode)new JsonObject
+        {
+            ["id"] = $"f{(m.First + k) % Names.Length + 1}-{k}", ["title"] = SongTitles[k], ["artist"] = Names[(m.First + k) % Names.Length].Artist,
+            ["album"] = Names[(m.First + k) % Names.Length].Title, ["albumId"] = $"f{(m.First + k) % Names.Length + 1}", ["durationMs"] = (180 + 17 * k) * 1000,
+            ["cover"] = $"/api/v1/navidrome/cover/f{(m.First + k) % Names.Length + 1}?size=300",
+        })),
+    }));
+
     static JsonObject Ok(string key, JsonNode value) =>
         new() { ["subsonic-response"] = new JsonObject { ["status"] = "ok", [key] = value } };
 
@@ -194,8 +220,8 @@ public sealed class Fixtures : HttpMessageHandler
             "/lyrics" => query["trackKey"] == Lyrics.TrackKey ? new JsonObject { ["doc"] = Json.ToNode(Lyrics) } : new JsonObject { ["doc"] = null },
             "/me/queue" when request.Method == HttpMethod.Get => SavedQueue(),
             "/me/queue" => new JsonObject { ["updatedAt"] = 2 },
-            "/me/plays/contexts" => new JsonObject { ["contexts"] = new JsonArray() },
-            "/me/mixes" => new JsonObject { ["mixes"] = new JsonArray() },
+            "/me/plays/contexts" => new JsonObject { ["contexts"] = Played() },
+            "/me/mixes" => new JsonObject { ["mixes"] = Mixes() },
             _ when path.StartsWith("/navidrome/stream-url/") => new JsonObject { ["url"] = "/fixtures/no-audio" },
             _ => new JsonObject(),
         };

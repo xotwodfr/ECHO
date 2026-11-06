@@ -293,4 +293,22 @@
       <Setter Property="Background" Value="#A07D7D7D" />
     </Style>
   </ControlTheme>
+
+  <!-- The album square's play and menu buttons: 30 px circles of rgba(50 50 50 / .7), rgba(250 0 0 / .7) on hover. -->
+  <ControlTheme x:Key="TileCircle" TargetType="Button">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" CornerRadius="15" Background="#B3323232">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#B3FA0000" />
+    </Style>
+  </ControlTheme>
 </ResourceDictionary>

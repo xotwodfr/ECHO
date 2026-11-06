@@ -33,4 +33,20 @@
   <Style Selector="TextBox.search:focus">
     <Setter Property="Foreground" Value="#C8C8C8" />
   </Style>
+
+  <!-- .md-select: an md-btn that drops down. -->
+  <Style Selector="ComboBox.md">
+    <Setter Property="Background" Value="#40646464" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="12,6,8,6" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="ComboBox.md:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="#597D7D7D" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+  </Style>
 </Styles>

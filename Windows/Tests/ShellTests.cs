@@ -38,7 +38,7 @@ public class ShellTests
     {
         if (Environment.GetEnvironmentVariable("ECHO_SHOTS") is not { Length: > 0 } dir) return;
         Directory.CreateDirectory(dir);
-        w.CaptureRenderedFrame()?.Save(Path.Combine(dir, $"{name}.png"));
+        w.CaptureRenderedFrame()?.Save(Path.Combine(dir, $"{name}.png"), new Avalonia.Media.Imaging.PngBitmapEncoderOptions());
     }
 
     [AvaloniaFact]
@@ -114,5 +114,55 @@ public class CollectionPageTests
         var page = Assert.IsType<CollectionPage>(w.Shell.Page);
         Assert.Equal(5, page.List!.ItemCount);
         Assert.Contains("Halcyon Drive — Neon Tide", ShellTests.Texts(page));
+    }
+}
+
+public class LibraryPageTests
+{
+    static async Task<(MainWindow W, Control Page)> Open(string page)
+    {
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route(page));
+        await ShellTests.Settle(20);
+        ShellTests.Shot(w, page);
+        return (w, w.Shell.Page!);
+    }
+
+    [AvaloniaFact]
+    public async Task HomeShowsRecentlyPlayedFavoritesAndMadeForYou()
+    {
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route("library-songs"));
+        w.Shell.Nav.Back(); // a fresh Home, with the fixtures' history loaded
+        await ShellTests.Settle(20);
+        ShellTests.Shot(w, "home");
+        var texts = ShellTests.Texts(w.Shell.Page!).ToList();
+        foreach (var t in new[] { "Recently Played", "Your Favorites", "Made For You", "Late Night Drive", "Prism Hours", "Daily Mix 1", "Discover Weekly" })
+            Assert.True(texts.Contains(t), $"missing \"{t}\"");
+    }
+
+    [AvaloniaFact]
+    public async Task RecentlyAddedAndAlbumsShowSquaresThatOpenTheAlbum()
+    {
+        var (w, page) = await Open("library-recentlyadded");
+        Assert.Contains("Static Bloom", ShellTests.Texts(page)); // the newest
+        (w, page) = await Open("library-albums");
+        var texts = ShellTests.Texts(page).ToList();
+        Assert.Contains("Albums", texts);
+        Assert.Contains("Kaleido", texts);
+        Assert.Equal(12, page.GetVisualDescendants().OfType<CoverImage>().Count(c => c.Width == 190));
+    }
+
+    [AvaloniaFact]
+    public async Task SongsListsEverySongAndArtistsShowsTheirAlbums()
+    {
+        var (_, page) = await Open("library-songs");
+        Assert.Equal(72, Assert.IsType<SongsPage>(page).List!.ItemCount);
+        var (w, artists) = await Open("library-artists");
+        var list = artists.GetVisualDescendants().OfType<ListBox>().First();
+        list.SelectedIndex = 0; // Ada Sol
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "library-artists");
+        Assert.Contains("Honeycomb", ShellTests.Texts(artists));
     }
 }
