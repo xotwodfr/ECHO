@@ -27,6 +27,45 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task AnOfflineServerDoesNotSkipThroughTheQueue()
+    {
+        // Every song fails the same way when the server is gone: say so, and stay on the song.
+        var api = new Api("https://echo.test", new Unreachable());
+        using var player = new Player(api, new Library(api), () => new AudioOut(new AudioTap(), nullDevice: true));
+        await player.PlayList(QueueTests.Album(3), 0, Ctx);
+        Assert.Equal("a0", player.Track?.Id);
+        Assert.Equal(2, player.Queue.Upcoming.Count);
+        Assert.False(player.Playing);
+        Assert.Equal("Can't reach the server.", player.Notice);
+    }
+
+    [AvaloniaFact]
+    public async Task ASongThatCannotBeDecodedIsSkipped()
+    {
+        var junk = Path.Combine(Path.GetTempPath(), $"echo-junk-{Guid.NewGuid():N}.flac");
+        var wav = Path.Combine(Path.GetTempPath(), $"echo-ok-{Guid.NewGuid():N}.wav");
+        File.WriteAllText(junk, "this is not audio");
+        File.WriteAllBytes(wav, Wav.Silence(seconds: 5));
+        try
+        {
+            var api = new Api("https://echo.test", new Unreachable());
+            using (var player = new Player(api, new Library(api), () => new AudioOut(new AudioTap(), nullDevice: true),
+                       t => Task.FromResult(t.Id == "a0" ? junk : wav)) { Sync = false })
+            {
+                await player.PlayList(QueueTests.Album(2), 0, Ctx);
+                Assert.Equal("a1", player.Track?.Id);
+                Assert.True(player.Playing);
+                Assert.Equal("This track could not be played. Skipped to the next.", player.Notice);
+            }
+        }
+        finally
+        {
+            File.Delete(junk);
+            File.Delete(wav);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task AnOfflineServerKeepsTheSongPlaying()
     {
         var wav = Path.Combine(Path.GetTempPath(), $"echo-offline-{Guid.NewGuid():N}.wav");

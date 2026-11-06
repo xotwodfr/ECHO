@@ -70,8 +70,11 @@ public sealed class Api(string baseUrl, HttpMessageHandler? handler = null)
     /// A server path's bytes with the bearer header (covers: an Image cannot send it).
     public async Task<Stream> GetStream(string path)
     {
-        using var req = new HttpRequestMessage(HttpMethod.Get, path.StartsWith("http") ? path : $"{Base}{path}");
-        if (Token is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        var url = new Uri(path.StartsWith("http") ? path : $"{Base}{path}");
+        using var req = new HttpRequestMessage(HttpMethod.Get, url);
+        // The device token goes to the ECHO server only, never to another host a URL names.
+        if (Token is not null && Uri.Compare(url, new Uri(Base), UriComponents.SchemeAndServer, UriFormat.Unescaped, StringComparison.OrdinalIgnoreCase) == 0)
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
         var res = await http.SendAsync(req);
         if (!res.IsSuccessStatusCode) throw new ApiException(res.StatusCode, null);
         return await res.Content.ReadAsStreamAsync();

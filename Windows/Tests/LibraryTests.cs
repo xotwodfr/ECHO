@@ -65,3 +65,17 @@ public class LibraryTests
         Assert.Equal("\"navidrome\"", q["provider"]!.ToJsonString());
     }
 }
+
+public class ApiTests
+{
+    [Fact]
+    public async Task TheTokenGoesOnlyToTheServer()
+    {
+        var answer = new Answer(System.Net.HttpStatusCode.OK, "x");
+        var api = new Api("https://echo.test", answer) { Token = "echo_dt_secret" };
+        await api.GetStream("/api/v1/navidrome/cover/al-1?size=300");
+        await api.GetStream("https://elsewhere.example/cover.jpg");
+        Assert.Equal("echo_dt_secret", answer.Requests[0].Headers.Authorization?.Parameter);
+        Assert.Null(answer.Requests[1].Headers.Authorization); // a cover URL from anywhere else gets no token
+    }
+}

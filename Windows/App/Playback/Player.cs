@@ -237,9 +237,18 @@ public sealed partial class Player : ObservableObject, IDisposable
             Refused();
             return;
         }
-        catch (Exception e) when (e is HttpRequestException or ApiException or IOException or InvalidOperationException or TaskCanceledException)
+        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
         {
-            // A song that cannot be played is skipped, like the web (REL-02's last resort).
+            // No server: every song would fail alike. Say so and stay on this one (Play tries again).
+            output?.Pause();
+            Notice = Unreachable;
+            Playing = false;
+            return;
+        }
+        catch (Exception)
+        {
+            // A song that cannot be played (refused, or a file the decoder cannot read: SoundFlow throws
+            // what it likes) is skipped, like the web (REL-02's last resort).
             if (Queue.Advance(userSkip: true) is { } next)
             {
                 Notice = "This track could not be played. Skipped to the next.";

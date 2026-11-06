@@ -43,13 +43,14 @@ public class GlassTests
     [AvaloniaFact]
     public void GlassBendsTheRimAndLeavesTheCentre()
     {
-        // Black up to x = 90, white from x = 150, a steep ramp between: the panel's left rim (x = 100…120)
-        // sits on the ramp, so a rim that shows what is further in shows a brighter grey.
+        // Black up to x = 90, mid grey from x = 150, a ramp between: the panel's left rim (x = 100…120) sits
+        // on the ramp, so a rim that shows what is further in shows a brighter grey. Mid grey keeps the
+        // backdrop below the adaptive tint's threshold: the tint is the base one only.
         var ramp = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(90, 0, RelativeUnit.Absolute),
             EndPoint = new RelativePoint(150, 0, RelativeUnit.Absolute),
-            GradientStops = { new GradientStop(Colors.Black, 0), new GradientStop(Colors.White, 1) },
+            GradientStops = { new GradientStop(Colors.Black, 0), new GradientStop(Color.FromRgb(128, 128, 128), 1) },
         };
         var glass = new GlassPanel
         {
@@ -64,14 +65,14 @@ public class GlassTests
         window.Show();
         using var frame = window.CaptureRenderedFrame()!;
 
-        double Backdrop(int x) => Math.Clamp((x + 0.5 - 90) / 60, 0, 1) * 255;
-        // What shows through is darkened by the base tint and the adaptive one (this backdrop is bright).
-        var tint = 1 - new GlassParams().Tint - glass.Darken;
+        double Backdrop(int x) => Math.Clamp((x + 0.5 - 90) / 60, 0, 1) * 128;
+        Assert.Equal(0, glass.Darken); // a dark backdrop: no adaptive tint
+        var tint = 1 - new GlassParams().Tint;
         // 4 px inside the left rim: refracted, so brighter than the same tint over the ramp under it.
-        Assert.True(Luma(frame, 104, 100) > Backdrop(104) * tint + 12,
+        Assert.True(Luma(frame, 104, 100) > Backdrop(104) * tint + 10,
             $"rim {Luma(frame, 104, 100):0} vs backdrop {Backdrop(104) * tint:0}");
-        // The centre: on white, only tinted.
-        Assert.InRange(Luma(frame, 200, 100), 255 * tint * 0.95, 255 * tint * 1.05);
+        // The centre: on grey, only tinted.
+        Assert.InRange(Luma(frame, 200, 100), 128 * tint * 0.95, 128 * tint * 1.05);
     }
 
     static double Luma(WriteableBitmap bitmap, int x, int y)
