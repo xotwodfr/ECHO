@@ -1,3 +1,4 @@
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Headless.XUnit;
@@ -309,5 +310,43 @@ public class SettingsTests
         {
             File.Delete(file);
         }
+    }
+}
+
+public class MinimumSizeTests
+{
+    [AvaloniaFact]
+    public async Task AtTheSmallestWindowTheTopChromeStillFits()
+    {
+        var w = await ShellTests.Open();
+        w.Width = 1024;
+        w.Height = 640;
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "minimum");
+        var top = w.Shell!.Top;
+        Rect Box(Control c) => new(c.TranslatePoint(new Point(0, 0), w)!.Value, c.Bounds.Size);
+        var search = Box(top.GetVisualDescendants().OfType<TextBox>().Single());
+        var tab = Box(top.GetVisualDescendants().OfType<Button>().Single(b => b.Theme == Kit.Res<Avalonia.Styling.ControlTheme>("TopNavItem")));
+        var close = Box(top.GetVisualDescendants().OfType<Button>().Single(b => ToolTip.GetTip(b) as string == "Close"));
+        Assert.True(close.Right <= w.Bounds.Width + 0.5, $"close at {close} in {w.Bounds} / {w.ClientSize} / top {top.Bounds}");
+        Assert.True(search.Left >= tab.Right, $"search {search} over the tab {tab}");
+        Assert.True(search.Right <= close.Left, $"search {search} under the window controls {close}");
+    }
+}
+
+public class MaverickMinimumTests
+{
+    [AvaloniaFact]
+    public async Task MaverickAlsoFitsTheSmallestWindow()
+    {
+        var w = await ShellTests.Open();
+        Session.Current!.Set(Session.Current.Prefs with { Layout = "maverick" });
+        w.Width = 1024;
+        w.Height = 640;
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "maverick-minimum");
+        var top = w.Shell!.Top;
+        var close = top.GetVisualDescendants().OfType<Button>().Single(b => ToolTip.GetTip(b) as string == "Close");
+        Assert.True(close.TranslatePoint(new Point(close.Bounds.Width, 0), w)!.Value.X <= 1024.5);
     }
 }
