@@ -25,9 +25,11 @@ public partial class AlbumView : UserControl
         Cover.Url = album.Cover;
         Title.Text = album.Title;
         Artist.Text = album.Artist;
-        PlayAll.Click += (_, _) => { if (songs.Count > 0) _ = session.Now.Play(album, songs, 0); };
+        PlayAll.Click += (_, _) => _ = session.Player.PlayList(songs, 0, Context);
         _ = Load();
     }
+
+    PlayContext Context => new("album", album.Id, album.Title);
 
     async Task Load()
     {
@@ -49,6 +51,6 @@ public partial class AlbumView : UserControl
 
     void Play(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button { Tag: SongRow row }) _ = session.Now.Play(album, songs, row.Index);
+        if (sender is Button { Tag: SongRow row }) _ = session.Player.PlayList(songs, row.Index, Context);
     }
 }

@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Echo.Playback;
 
 namespace Echo.Ui;
 
@@ -12,7 +13,7 @@ public partial class PlayerPill : UserControl
 
     public void Bind(Session session)
     {
-        var now = session.Now;
+        var now = session.Player;
         DataContext = now;
         Open.Click += (_, _) => session.Nav.Go(new ListenPage());
         Previous.Click += (_, _) => _ = now.Previous();
@@ -20,7 +21,7 @@ public partial class PlayerPill : UserControl
         Toggle.Click += (_, _) => now.Toggle();
         now.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(NowPlaying.Playing)) ShowPlaying(now.Playing);
+            if (e.PropertyName == nameof(Player.Playing)) ShowPlaying(now.Playing);
         };
         ShowPlaying(now.Playing);
     }

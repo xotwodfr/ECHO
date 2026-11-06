@@ -21,6 +21,7 @@ public partial class Shell : UserControl
             if (e.PropertyName == nameof(Nav.Current)) Show(session.Nav.Current);
         };
         Show(session.Nav.Current);
+        _ = session.Player.Restore(); // the queue from another device, paused
     }
 
     void Show(object page)

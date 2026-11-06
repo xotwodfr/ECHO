@@ -2,8 +2,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:glass="using:Echo.Glass"
              xmlns:ui="using:Echo.Ui"
+             xmlns:pb="using:Echo.Playback"
              x:Class="Echo.Ui.PlayerPill"
-             x:DataType="ui:NowPlaying">
+             x:DataType="pb:Player">
   <glass:GlassPanel x:Name="Pill" Width="560" Height="66" CornerRadius="33" Padding="11,0,12,0">
     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
       <Button x:Name="Open" Theme="{StaticResource Bare}" CornerRadius="22" Grid.ColumnSpan="2" HorizontalAlignment="Stretch">

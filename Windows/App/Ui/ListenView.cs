@@ -18,12 +18,12 @@ public sealed class ListenView : Panel
         {
             Mode = session.Fixtures ? RoomMode.Ambient : RoomMode.Reverb,
             Palette = palette,
-            Playing = session.Now.Playing,
+            Playing = session.Player.Playing,
         };
         stage.TrackStarted();
-        session.Now.PropertyChanged += (_, e) =>
+        session.Player.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(NowPlaying.Playing)) stage.Playing = session.Now.Playing;
+            if (e.PropertyName == nameof(Playback.Player.Playing)) stage.Playing = session.Player.Playing;
         };
         var app = Application.Current!;
         var back = new Button
