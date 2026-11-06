@@ -13,6 +13,7 @@
     <RootNamespace>Echo</RootNamespace>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
@@ -28,6 +29,9 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Glass/glass.sksl" LogicalName="glass.sksl" />
+    <!-- The room's shaders are Android's assets, which are the web's (ShaderTests). -->
+    <EmbeddedResource Include="../../Android/app/src/main/assets/stage/*.glsl" LogicalName="stage.%(Filename).glsl" />
+    <EmbeddedResource Include="../../Android/app/src/main/res/drawable-nodpi/blue_noise_64.png" LogicalName="stage.blue_noise_64.png" />
     <InternalsVisibleTo Include="Echo.Tests" />
   </ItemGroup>
 
