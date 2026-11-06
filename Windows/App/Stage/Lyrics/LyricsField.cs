@@ -7,6 +7,7 @@ using Avalonia.Rendering.SceneGraph;
 using Avalonia.Skia;
 using SkiaSharp;
 using SkiaSharp.HarfBuzz;
+using Echo.Ui;
 
 namespace Echo.Stage.Lyrics;
 
@@ -53,6 +54,21 @@ public sealed class LyricsField : Control
     /// A line was clicked: play from its start (song ms).
     public event Action<double>? Seek;
 
+    /// Where the sung line is now (this control's DIPs), or null between lines.
+    public Rect? ActiveLine { get; private set; }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Seen.Resumed += InvalidateVisual;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        Seen.Resumed -= InvalidateVisual;
+        base.OnDetachedFromVisualTree(e);
+    }
+
     sealed record InstFrame(int I, double X, double Y, double Scale, double Opacity, double Blur, double Mix, double Fade, double Wash,
         double[] Edge, double[] Wy, double[] Ws, double[] Glow, double GlowR, double[][] Emph, double[][] Backing);
 
@@ -80,13 +96,16 @@ public sealed class LyricsField : Control
         last = now;
         model!.Update(songMs(), dt, playing(), Mode.Run, W, H, features(), Reduced);
         if (model.Key is { } k) KeyLight?.Invoke(k.X, k.Y * H / Hs);
+        ActiveLine = model.Insts.TryGetValue(model.Active, out var a) && layout.Lines[a.I].Box is var box
+            ? new Rect(a.X.X - box.W / 2, a.Y.X - box.H / 2, box.W, box.H)
+            : null;
 
         shown = model.Insts.Values.Concat(model.Leaving).Select(i => new InstFrame(i.I, i.X.X, i.Y.X, i.Scale, i.Opacity, i.Blur, i.Mix,
             i.Fade, i.Wash, (double[])i.Edge.Clone(), (double[])i.Wy.Clone(), (double[])i.Ws.Clone(), (double[])i.Glow.Clone(), i.GlowR,
             i.Emph.Select(e => e.Select(s => s.X).ToArray()).ToArray(), i.Backing.Select(b => (double[])b.Clone()).ToArray())).ToList();
         context.Custom(new Draw(new Rect(Bounds.Size), new Frame(shown, layout, Palette, W, Hs, H, model.Dots.Opacity,
             (double[])model.Dots.Scale.Clone(), (double[])model.Dots.Alpha.Clone(), Dock)));
-        if (IsEffectivelyVisible) TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => InvalidateVisual());
+        if (IsEffectivelyVisible && Seen.Allowed) TopLevel.GetTopLevel(this)?.RequestAnimationFrame(_ => InvalidateVisual());
     }
 
     double measuredW;

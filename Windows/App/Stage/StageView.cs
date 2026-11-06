@@ -5,6 +5,7 @@ using Avalonia.OpenGL;
 using Avalonia.OpenGL.Controls;
 using Avalonia.Threading;
 using Echo.Playback;
+using Echo.Ui;
 using SkiaSharp;
 
 namespace Echo.Stage;
@@ -105,6 +106,18 @@ public sealed class StageView(AudioTap tap, Tier initialTier = Tier.T1, bool man
 
     void Kick() => RequestNextFrameRendering();
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        Seen.Resumed += Kick;
+    }
+
+    protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        Seen.Resumed -= Kick;
+        base.OnDetachedFromVisualTree(e);
+    }
+
     protected override void OnOpenGlInit(GlInterface gl)
     {
         try
@@ -180,8 +193,8 @@ public sealed class StageView(AudioTap tap, Tier initialTier = Tier.T1, bool man
         var coverK = still ? 1f : (float)Math.Min(1, (now - coverAt) / PaletteMs);
         renderer.Render(new FrameInput((float)flow, (float)drift, coverK, KeyX, KeyY, (float)chrome, 0, rv), fb);
 
-        // Continuous while moving and visible; Still only while a palette or chrome change runs.
-        if (IsEffectivelyVisible && (!still || now - palAt < PaletteMs || Math.Abs(chrome - ct) > 0.001)) Kick();
+        // Continuous while moving and seen; Still only while a palette or chrome change runs.
+        if (IsEffectivelyVisible && Seen.Allowed && (!still || now - palAt < PaletteMs || Math.Abs(chrome - ct) > 0.001)) Kick();
     }
 
     /// Two palettes mixed in OKLab (the web's palette animator), `k` from a to b.

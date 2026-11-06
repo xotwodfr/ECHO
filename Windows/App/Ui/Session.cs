@@ -1,4 +1,5 @@
 using Echo.Playback;
+using Echo.Stage.Lyrics;
 
 namespace Echo.Ui;
 
@@ -14,6 +15,8 @@ public sealed class Session
         Library = new Library(api);
         Player = new Player(api, Library, () => new AudioOut(Tap, nullDevice: fixtures)) { Sync = !fixtures };
         Player.SignedOut += Refused;
+        Lyrics = new Lyrics(api);
+        if (!fixtures) Lyrics.Follow(Player);
     }
 
     /// The window's session (ECHO has one window); CoverImage reads its covers.
@@ -32,6 +35,7 @@ public sealed class Session
     public Nav Nav { get; } = new();
     public AudioTap Tap { get; } = new();
     public Player Player { get; }
+    public Lyrics Lyrics { get; }
 
     public static Session ForServer(Api api) => new(api, fixtures: false);
 

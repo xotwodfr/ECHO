@@ -29,6 +29,21 @@ public static class Fixtures
         };
     }).ToList();
 
+    /// Word-timed lyrics for the first fixture song, around where the smoke run shows it (1:18).
+    public static readonly LyricsDoc Lyrics = new("navidrome:f11-0", "word", "fixture", new Attribution("Lyrics: fixture"),
+        new (string Text, long Start)[]
+        {
+            ("Streetlights hum a borrowed tune", 66_000), ("We drive until the city's gone", 70_500),
+            ("Every echo finds its way home", 75_000), ("And the afterglow holds on", 80_000),
+            ("Hold on, hold on", 84_500), ("Till the morning comes", 88_000),
+        }.Select(l =>
+        {
+            var words = l.Text.Split(' ');
+            var step = 3600 / words.Length;
+            return new LyricLine(l.Text, l.Start, l.Start + 3600,
+                Words: words.Select((w, i) => new LyricWord(w, l.Start + i * step, l.Start + (i + 1) * step)).ToList());
+        }).ToList());
+
     /// The Neon Tide palette of board A: the room in violet, the accent in pink.
     public static readonly StagePalette Palette = StagePalette.Of(new Palette(
         "oklch(0.28 0.12 300)", "oklch(0.66 0.24 355)", "oklch(0.86 0.12 70)", "oklch(0.70 0.20 355 / 0.40)",
