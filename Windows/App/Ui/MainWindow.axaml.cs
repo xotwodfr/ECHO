@@ -59,8 +59,54 @@ public partial class MainWindow : Window
             TokenStore.Forget();
             ShowSignIn(s.Api);
         });
-        Content = new Shell(s);
+        var shell = new Shell(s);
+        shell.FullscreenRequested += () => Fullscreen(shell);
+        shell.MiniRequested += () => Mini(shell);
+        Content = shell;
         if (!s.IsFixtures) _ = s.Player.Restore();
+    }
+
+    // ---- Cider's other app modes: the fullscreen view and the mini player ----
+
+    WindowState before;
+    Size beforeSize;
+    PixelPoint beforeAt;
+
+    /// Cider's fullscreen view, the window full screen; back on Escape or the artwork.
+    public void Fullscreen(Shell shell)
+    {
+        before = WindowState;
+        var view = new FullscreenView(session!, shell.Nav);
+        view.Closed += () => Back(shell);
+        Content = view;
+        WindowState = WindowState.FullScreen;
+        view.Focus();
+    }
+
+    /// Cider's mini player: the window 300 px square (250 at least), where it was last time.
+    public void Mini(Shell shell)
+    {
+        (before, beforeSize, beforeAt) = (WindowState, new Size(Width, Height), Position);
+        WindowState = WindowState.Normal;
+        MinWidth = MinHeight = 250;
+        Width = Height = 300;
+        var view = new MiniPlayer(session!);
+        view.Closed += () => Back(shell);
+        Content = view;
+    }
+
+    void Back(Shell shell)
+    {
+        var wasMini = Content is MiniPlayer;
+        Topmost = false;
+        Content = shell;
+        (MinWidth, MinHeight) = (1024, 640);
+        if (wasMini)
+        {
+            (Width, Height) = (beforeSize.Width, beforeSize.Height);
+            Position = beforeAt;
+        }
+        WindowState = before;
     }
 
     protected override void OnClosed(EventArgs e)

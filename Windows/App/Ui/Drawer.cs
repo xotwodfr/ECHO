@@ -15,9 +15,9 @@ namespace Echo.Ui;
 
 /// Cider's drawer (style.less .app-drawer; views/app/app-navigation.ejs): 300 px, radius 12, 16 px from
 /// the right, floating over the page with Cider's shadow; the queue or the lyrics. Cider's drawer is
-/// --color2 under a 40 px backdrop blur; ECHO blurs no live pixels, so it is the near-opaque colour that
-/// blur gives over Cider's dark pages (opaque, so no crisp text shows through), and the lyrics lie over
-/// the playing cover blurred once.
+/// --color2 under a 40 px backdrop blur; ECHO blurs no live pixels, so it is the colour that blur gives
+/// over Cider's dark pages, opaque so no crisp text shows through, and the lyrics lie over the playing
+/// cover blurred once.
 public sealed class Drawer : Border
 {
     readonly Session session;
@@ -166,16 +166,26 @@ public sealed class LyricsPanel : Panel
 {
     static readonly IBrush Lit = Brushes.White, Unlit = new SolidColorBrush(Color.FromArgb(153, 255, 255, 255));
     readonly Session session;
-    readonly ScrollViewer scroll = new() { HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled };
+    readonly ScrollViewer scroll = new()
+    {
+        HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
+        VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden,
+    };
     readonly StackPanel lines = new() { Margin = new Thickness(0, 120) };
     readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromMilliseconds(50) };
     readonly LyricsBackdrop backdrop = new();
     LyricsDoc? doc;
     int active = -2;
 
-    public LyricsPanel(Session session)
+    readonly double size;
+
+    /// `size`: the lines' font size (26 px in the drawer, 35 px in the fullscreen view, which has its own
+    /// backdrop).
+    public LyricsPanel(Session session, double size = 26, bool withBackdrop = true)
     {
         this.session = session;
+        this.size = size;
+        backdrop.IsVisible = withBackdrop;
         scroll.Content = lines;
         // .lyric-body's mask: whole down to 95 %, gone at the bottom.
         scroll.OpacityMask = new LinearGradientBrush
@@ -210,14 +220,14 @@ public sealed class LyricsPanel : Panel
         active = -2;
         if (doc is null)
         {
-            lines.Children.Add(new TextBlock { Text = "No Lyrics", FontSize = 26, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center });
+            lines.Children.Add(new TextBlock { Text = "No Lyrics", FontSize = size, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center });
             return;
         }
         foreach (var line in doc.Lines)
         {
             var text = new TextBlock
             {
-                FontSize = 26,
+                FontSize = size,
                 FontWeight = FontWeight.Bold,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(15, 10, 10, 10),

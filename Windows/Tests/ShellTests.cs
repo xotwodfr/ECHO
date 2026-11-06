@@ -230,3 +230,37 @@ public class DrawerTests
         Assert.Contains("Streetlights hum a borrowed tune", ShellTests.Texts(lyrics).Select(t => t.Trim()));
     }
 }
+
+public class ModeTests
+{
+    [AvaloniaFact]
+    public async Task FullscreenShowsTheSongWithItsLyricsAndEscapeGoesBack()
+    {
+        var w = await ShellTests.Open();
+        await ShellTests.Settle(30);
+        var shell = w.Shell!;
+        w.Fullscreen(shell);
+        await ShellTests.Settle();
+        ShellTests.Shot(w, "fullscreen");
+        var view = Assert.IsType<FullscreenView>(w.Content);
+        var texts = ShellTests.Texts(view).ToList();
+        Assert.Contains("Afterglow", texts);
+        Assert.Contains("Every echo finds its way home", texts.Select(t => t.Trim()));
+        view.RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Escape });
+        Assert.Same(shell, w.Content);
+    }
+
+    [AvaloniaFact]
+    public async Task TheMiniPlayerIsASmallSquareThatClosesBackToTheShell()
+    {
+        var w = await ShellTests.Open();
+        var shell = w.Shell!;
+        w.Mini(shell);
+        await ShellTests.Settle();
+        Assert.IsType<MiniPlayer>(w.Content);
+        Assert.Equal(300, w.Width);
+        ((Control)w.Content!).GetVisualDescendants().OfType<Button>().Last().RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+        Assert.Same(shell, w.Content);
+        Assert.Equal(1336, w.Width);
+    }
+}

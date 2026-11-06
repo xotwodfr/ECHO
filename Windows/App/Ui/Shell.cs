@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Layout;
 using Avalonia.Media;
+using Avalonia.Controls.Primitives;
 
 namespace Echo.Ui;
 
@@ -53,6 +54,7 @@ public sealed class Shell : Grid
         Bottom.DrawerRequested += Drawer.Toggle;
         Drawer.Changed += () => Bottom.OpenPanel = Drawer.Panel;
         Top.Searched += term => Nav.Open(new Route("search", term, term));
+        Bottom.ArtworkClicked += ShowNowPlaying;
         Nav.Changed += Show;
         Show();
     }
@@ -61,6 +63,53 @@ public sealed class Shell : Grid
     public ChromeTop Top { get; }
     public ChromeBottom Bottom { get; }
     public Drawer Drawer { get; }
+
+    /// The artwork popover's two buttons (Cider's mediainfo-popover); the window changes mode.
+    public event Action? FullscreenRequested;
+    public event Action? MiniRequested;
+
+    /// Cider's popover on the bar's artwork: the cover large, the song, artist and album, then Mini
+    /// Player and Fullscreen View.
+    void ShowNowPlaying(Control anchor)
+    {
+        if (session.Player.Track is not { } t) return;
+        var flyout = new Flyout { Placement = PlacementMode.TopEdgeAlignedLeft };
+        var mini = Kit.CiderButton("Mini Player", null, () =>
+        {
+            flyout.Hide();
+            MiniRequested?.Invoke();
+        });
+        var full = Kit.CiderButton("Fullscreen View", null, () =>
+        {
+            flyout.Hide();
+            FullscreenRequested?.Invoke();
+        });
+        var buttons = new Grid { ColumnDefinitions = new ColumnDefinitions("*,6,*") };
+        foreach (var b in new[] { mini, full })
+        {
+            b.Padding = new Thickness(8, 6);
+            b.FontSize = 13;
+            b.HorizontalAlignment = HorizontalAlignment.Stretch;
+        }
+        buttons.Children.Add(mini);
+        buttons.Children.Add(new Border { [Grid.ColumnProperty] = 2, Child = full });
+        var name = Kit.Text(t.Title, 16, FontWeight.SemiBold);
+        var artist = Kit.Text(t.Artist, 14, opacity: 0.8);
+        var album = Kit.Text(t.Album.Title, 14, opacity: 0.8);
+        flyout.Content = new StackPanel
+        {
+            Width = 240,
+            Spacing = 4,
+            Children =
+            {
+                new CoverImage(t.Cover, 240, 600) { Margin = new Thickness(0, 0, 0, 8) },
+                name, artist, album,
+                new Border { Height = 1, Background = new SolidColorBrush(Color.FromArgb(51, 255, 255, 255)), Margin = new Thickness(0, 8) },
+                buttons,
+            },
+        };
+        flyout.ShowAt(anchor);
+    }
 
     /// The page on show (tests read it).
     public Control? Page => page.Content as Control;
