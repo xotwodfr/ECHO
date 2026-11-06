@@ -199,6 +199,12 @@ lyrics view. The one blur in the app is Mica's, baked once per album into an ima
 browser then only composites it. Translucency without a filter (Fluent's layers, a scrim) costs
 nothing and stays allowed.
 
+**The Windows app is the exception** (owner, 2026-11-06): it is made for a gaming PC, so its floating
+surfaces are liquid glass, board A "Clear" of `docs/superpowers/specs/2026-11-06-windows-glass-design.md`:
+the 10-28 bend model above as a Skia shader over a snapshot of what is under each panel, with an
+adaptive tint over bright backdrops, opaque when Windows' Transparency effects are off, and never over
+the lyrics. The ban stands for the web and Android.
+
 
 ## 8. Artwork
 

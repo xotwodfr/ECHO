@@ -27,6 +27,7 @@ public partial class PlayerPill : UserControl
         now.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(Player.Playing)) ShowPlaying(now.Playing);
+            if (e.PropertyName == nameof(Player.Notice)) ShowNotice(now);
         };
         ShowPlaying(now.Playing);
     }
@@ -38,6 +39,17 @@ public partial class PlayerPill : UserControl
         Shuffle.Opacity = p.Queue.Shuffle ? 1 : 0.5;
         Repeat.Opacity = p.Queue.Repeat == Playback.Repeat.Off ? 0.5 : 1;
         RepeatOne.IsVisible = p.Queue.Repeat == Playback.Repeat.One;
+    }
+
+    void ShowNotice(Player p)
+    {
+        Toast.IsVisible = p.Notice is not null;
+        ToastText.Text = p.Notice;
+        if (p.Notice is not { } shown) return;
+        Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+        {
+            if (p.Notice == shown) p.Notice = null;
+        }, TimeSpan.FromSeconds(4));
     }
 
     void ShowPlaying(bool playing) =>

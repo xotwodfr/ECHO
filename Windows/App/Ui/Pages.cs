@@ -115,9 +115,19 @@ static class Page
     /// Runs a page's load: a refused token signs out; no server says so in `status`.
     public static async Task Load(Session s, TextBlock status, Func<Task> load)
     {
+        // Loading (F11's designed states): said only when it takes a moment.
+        var done = false;
+        Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+        {
+            if (done) return;
+            status.Text = "Loading…";
+            status.IsVisible = true;
+        }, TimeSpan.FromMilliseconds(300));
         try
         {
             await load();
+            done = true;
+            if (status.Text == "Loading…") status.IsVisible = false;
         }
         catch (ApiException e) when (e.SignedOut)
         {
@@ -127,6 +137,10 @@ static class Page
         {
             status.Text = "Can't reach the server.";
             status.IsVisible = true;
+        }
+        finally
+        {
+            done = true;
         }
     }
 }

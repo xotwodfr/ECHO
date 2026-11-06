@@ -5,6 +5,11 @@
              xmlns:pb="using:Echo.Playback"
              x:Class="Echo.Ui.PlayerPill"
              x:DataType="pb:Player">
+  <StackPanel Spacing="8">
+  <!-- The player's notices (the web's toast): a glass line above the pill for 4 s. -->
+  <glass:GlassPanel x:Name="Toast" HorizontalAlignment="Center" CornerRadius="16" Padding="16,7" IsVisible="False">
+    <TextBlock x:Name="ToastText" FontSize="13" FontWeight="SemiBold" />
+  </glass:GlassPanel>
   <glass:GlassPanel x:Name="Pill" Width="660" Height="66" CornerRadius="33" Padding="11,0,12,0">
     <Grid ColumnDefinitions="Auto,*,Auto" VerticalAlignment="Center">
       <Button x:Name="Open" Theme="{StaticResource Bare}" CornerRadius="22" Grid.ColumnSpan="2" HorizontalAlignment="Stretch">
@@ -47,4 +52,5 @@
       </StackPanel>
     </Grid>
   </glass:GlassPanel>
+  </StackPanel>
 </UserControl>

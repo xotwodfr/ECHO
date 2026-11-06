@@ -18,6 +18,7 @@ public partial class MainWindow : Window
     public static PixelPoint? Remembered { get; set; }
 
     readonly DispatcherTimer seen = new() { Interval = TimeSpan.FromSeconds(1) };
+    readonly Shortcuts shortcuts = new(() => Environment.TickCount64);
     Session? current;
 
     public MainWindow(Session? session)
@@ -103,11 +104,19 @@ public partial class MainWindow : Window
     protected override void OnKeyDown(KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (e.Key == Key.F11 || (e.Key == Key.Escape && WindowState == WindowState.FullScreen))
+        if (e.Handled) return;
+        if (e.Key == Key.F11)
         {
             ToggleFullScreen();
             e.Handled = true;
+            return;
         }
+        if (Content is not Shell shell) return;
+        var textFocused = FocusManager?.GetFocusedElement() is TextBox;
+        if (shortcuts.Map(e.Key, e.KeyModifiers, textFocused) is not { } action) return;
+        // Esc closes the top overlay first, then leaves full screen.
+        if (!shell.Do(action) && action == ShortcutAction.Escape && WindowState == WindowState.FullScreen) ToggleFullScreen();
+        e.Handled = true;
     }
 
     void ShowSignIn(Api api)

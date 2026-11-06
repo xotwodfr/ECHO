@@ -78,7 +78,7 @@ The deciding constraints are:
 | Safari | ⚠️ untested | |
 | Android app (`Android/`, 2026-10-29) | ✅ native client of `/api/v1`, device token (`docs/ANDROID_CLIENT.md`) | Kotlin, Compose, Media3; the Stage on OpenGL ES with the web's shaders |
 | Linux app (`Linux/`, 2026-11-04) | ✅ baseline: sign in, albums, an album, playback | Rust, GTK 4, GStreamer, libsecret; built and run against a test server |
-| Windows app (`Windows/`, 2026-11-04) | ⚠️ baseline, builds; the window has not run | C#, WPF on .NET 10 with the Fluent theme, DPAPI for the token |
+| Windows app (`Windows/`, 2026-11-06) | ✅ full app (no YouTube Music) with liquid glass; CI runs it on `windows-latest` and releases `ECHO.exe` (`windows-v*` pre-releases) | C#, Avalonia 12 on .NET 10, Skia (the glass shader), the web's GLSL room (ANGLE), SoundFlow audio, SMTC, DPAPI for the token (`Windows/README.md`) |
 | macOS and iOS apps (`macOS/`, `iOS/`, 2026-11-04) | ⚠️ baselines, not yet run (need a Mac) | Swift, SwiftUI, AVPlayer, the Keychain; code shared in `Apple/Shared` |
 
 ### 2.3 Server hardware notes
@@ -469,7 +469,7 @@ echo/
 ├── tests/                      ← e2e/ (Playwright) · unit-setup.ts (Vitest: each run's temp folders)
 ├── Android/                    ← native: Kotlin, Compose, Media3 (the full app)
 ├── Linux/                      ← native: Rust, GTK 4, GStreamer, libsecret (baseline)
-├── Windows/                    ← native: C#, WPF on .NET 10 (baseline)
+├── Windows/                    ← native: C#, Avalonia 12 on .NET 10, liquid glass (full app)
 ├── macOS/  iOS/                ← native: Swift, SwiftUI, AVPlayer (baselines; XcodeGen project.yml)
 └── Apple/Shared/               ← the code macOS/ and iOS/ share
 ```
@@ -517,7 +517,7 @@ echo/
 | Updates | Tagged images (`echo:0.x.y`). Release notes list migrations. No auto-update |
 | First start | The server prints a one-time **setup URL** (`https://echo.example.com/setup#<token>`, 30 min TTL) to the container log. Opening it creates the admin account (password + mandatory TOTP) |
 | Web client caching | Vite's hashed files under `/assets/` are `Cache-Control: public, max-age=31536000, immutable`; the page and every other file `no-cache`, so a deploy reaches every browser. A tab opened before a deploy asks for chunks the new image lacks (the Stage's engine): when one fails to load, the page asks `/` whether it still names its build and reloads into the new one only when it does not, so an offline tab or a navigation cutting a request off never reloads (2026-11-04, `tests/e2e/deploy.spec.ts`) |
-| Native clients | In this repository: `Android/` (the full app), `Linux/`, `Windows/`, `macOS/` and `iOS/` (baselines, 2026-11-04; each folder's README), all on `/api/v1` with device tokens and signed stream URLs (§6.5) |
+| Native clients | In this repository: `Android/` and `Windows/` (full apps), `Linux/`, `macOS/` and `iOS/` (baselines, 2026-11-04; each folder's README), all on `/api/v1` with device tokens and signed stream URLs (§6.5) |
 
 ---
 

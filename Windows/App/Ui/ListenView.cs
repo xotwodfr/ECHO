@@ -171,6 +171,8 @@ public sealed class ListenView : Panel
         return field;
     }
 
+    public StageViewMode Mode => mode;
+
     public void SetMode(StageViewMode m)
     {
         mode = m;
