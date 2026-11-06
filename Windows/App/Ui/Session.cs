@@ -48,7 +48,18 @@ public sealed class Session
         return s;
     }
 
-    public async Task<IReadOnlyList<Album>> Albums() => Fixtures ? Echo.Fixtures.Albums : await Library.AllAlbums(AlbumSort.AZ);
+    // The calls the smoke run's pages make, answered from the fixtures there.
+
+    public async Task<IReadOnlyList<Album>> Albums(AlbumSort sort) => Fixtures ? Echo.Fixtures.Albums : await Library.AllAlbums(sort);
+
+    public async Task<IReadOnlyList<Album>> Shelf(AlbumList kind) =>
+        Fixtures ? Echo.Fixtures.Albums.Skip((int)kind * 3).Concat(Echo.Fixtures.Albums).Take(6).ToList() : await Library.AlbumList(kind, 12);
+
+    public async Task<IReadOnlyList<Playlist>> Playlists() => Fixtures ? [] : await Library.Playlists();
+
+    public async Task<IReadOnlyList<Mix>> Mixes() => Fixtures ? [] : await Library.Mixes();
+
+    public async Task<IReadOnlyList<PlayedContext>> PlayedContexts() => Fixtures ? [] : await Library.PlayedContexts();
 
     /// The album with its tracks (a list's albums come without them).
     public async Task<Album?> Album(Album album) => Fixtures ? album : await Library.Album(album.Id);

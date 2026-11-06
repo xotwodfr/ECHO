@@ -22,7 +22,7 @@ public class ShellTests
         var glass = window.GetVisualDescendants().OfType<GlassPanel>().ToList();
         Assert.Contains(glass, g => g.Name == "Sidebar");
         Assert.Contains(glass, g => g.Name == "Pill");
-        Assert.True(window.GetVisualDescendants().OfType<Image>().Count(i => i.Source is not null) >= 10);
+        Assert.True(window.GetVisualDescendants().OfType<CoverImage>().Count(c => c.Bitmap is not null) >= 10);
         Shots.Save(window, "shell");
     }
 

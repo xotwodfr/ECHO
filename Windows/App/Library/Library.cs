@@ -225,13 +225,16 @@ public sealed partial class Library(Api api)
 
     // ---- ECHO's own history (src/server/plays.ts) ----
 
-    /// A play past the scrobble point, with what it was played from.
-    public Task RecordPlay(Track t, PlayContext? ctx)
+    /// `POST /me/plays`'s body: the track with its provider said (the server keeps Navidrome's only).
+    public static JsonObject PlayBody(Track t, PlayContext? ctx)
     {
         var body = new JsonObject { ["track"] = Json.ToNode(t) };
         if (ctx is not null) body["context"] = Json.ToNode(ctx);
-        return api.Send(HttpMethod.Post, "/me/plays", body);
+        return body;
     }
+
+    /// A play past the scrobble point, with what it was played from.
+    public Task RecordPlay(Track t, PlayContext? ctx) => api.Send(HttpMethod.Post, "/me/plays", PlayBody(t, ctx));
 
     /// Made For You; the daylist follows this computer's time of day (getTimezoneOffset's sign).
     public async Task<IReadOnlyList<Mix>> Mixes()
