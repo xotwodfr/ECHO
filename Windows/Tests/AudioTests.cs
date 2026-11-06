@@ -16,16 +16,23 @@ public class AudioTests
             using var output = new AudioOut(tap, nullDevice: true);
             await output.Open(wav);
             output.Play();
-            await Task.Delay(600);
 
+            // What is audible trails the writes by the output latency, and a loaded machine writes in
+            // bursts: wait for the tone (up to 3 s) rather than for a fixed time.
             var window = new float[2048];
-            Assert.True(tap.Window(window), "the tap has nothing");
-            var re = window.Select(s => (double)s).ToArray();
-            var im = new double[re.Length];
-            AnalyserFeatures.Fft(re, im);
-            var peak = Enumerable.Range(1, re.Length / 2 - 1).MaxBy(i => re[i] * re[i] + im[i] * im[i]);
-            var binHz = tap.SampleRate / (double)re.Length;
-            Assert.InRange(peak * binHz, 1000 - binHz, 1000 + binHz);
+            var binHz = 0.0;
+            var peakHz = 0.0;
+            for (var tries = 0; tries < 30 && Math.Abs(peakHz - 1000) > binHz; tries++)
+            {
+                await Task.Delay(100);
+                if (!tap.Window(window)) continue;
+                var re = window.Select(s => (double)s).ToArray();
+                var im = new double[re.Length];
+                AnalyserFeatures.Fft(re, im);
+                binHz = tap.SampleRate / (double)re.Length;
+                peakHz = Enumerable.Range(1, re.Length / 2 - 1).MaxBy(i => re[i] * re[i] + im[i] * im[i]) * binHz;
+            }
+            Assert.InRange(peakHz, 1000 - binHz, 1000 + binHz);
 
             output.Pause();
             var at = output.Position;
