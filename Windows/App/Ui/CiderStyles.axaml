@@ -1,12 +1,13 @@
 <Styles xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-  <!-- Cider 1's .search-input (style.less): 6 px radius, #1e1e1e99, a grey border that turns key-coloured
-       along the bottom when focused, #c8c8c8 at 500, room on the left for the magnifier. -->
+  <!-- Cider 1's .search-input, filled as today's fields are: 8 px radius, a faint white fill and hairline, the
+       hairline key-coloured along the bottom when focused (as Windows 11's), #c8c8c8 at 500, room on the left
+       for the magnifier. -->
   <Style Selector="TextBox.search">
-    <Setter Property="Background" Value="#991E1E1E" />
-    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="Background" Value="#12FFFFFF" />
+    <Setter Property="BorderBrush" Value="#14FFFFFF" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="FontWeight" Value="Medium" />
     <Setter Property="Foreground" Value="#C8C8C8" />
@@ -15,16 +16,16 @@
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
   <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
-    <Setter Property="Background" Value="#991E1E1E" />
-    <Setter Property="BorderBrush" Value="#80646464" />
+    <Setter Property="Background" Value="#1AFFFFFF" />
+    <Setter Property="BorderBrush" Value="#1FFFFFFF" />
   </Style>
   <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="#991E1E1E" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="BorderBrush">
       <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
-        <GradientStop Offset="0" Color="#59646464" />
-        <GradientStop Offset="0.95" Color="#59646464" />
+        <GradientStop Offset="0" Color="#1FFFFFFF" />
+        <GradientStop Offset="0.95" Color="#1FFFFFFF" />
         <GradientStop Offset="0.96" Color="#FC3C44" />
         <GradientStop Offset="1" Color="#FC3C44" />
       </LinearGradientBrush>
@@ -36,18 +37,33 @@
 
   <!-- .md-select: an md-btn that drops down. -->
   <Style Selector="ComboBox.md">
-    <Setter Property="Background" Value="#40646464" />
-    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="Background" Value="#1FFFFFFF" />
+    <Setter Property="BorderBrush" Value="#14FFFFFF" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="CornerRadius" Value="8" />
     <Setter Property="FontSize" Value="14" />
     <Setter Property="Foreground" Value="#EEEEEE" />
     <Setter Property="Padding" Value="12,6,8,6" />
     <Setter Property="MinHeight" Value="0" />
   </Style>
   <Style Selector="ComboBox.md:pointerover /template/ Border#Background">
-    <Setter Property="Background" Value="#597D7D7D" />
-    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="Background" Value="#2EFFFFFF" />
+    <Setter Property="BorderBrush" Value="#14FFFFFF" />
+  </Style>
+
+  <!-- Every menu as Cider's #cmenu: #1e1e1e-ish, a hairline, radius 10, 5 px in; the items
+       radius 6 with room to breathe. -->
+  <Style Selector="ContextMenu, MenuFlyoutPresenter">
+    <Setter Property="Background" Value="#262626" />
+    <Setter Property="BorderBrush" Value="#1FFFFFFF" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="5" />
+  </Style>
+  <Style Selector="MenuItem, ComboBoxItem">
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="12,7" />
+    <Setter Property="FontSize" Value="13.5" />
   </Style>
 
   <!-- Cider's popovers and menus bring their own body. -->
