@@ -10,7 +10,11 @@ public partial class App : Application
     /// `--smoke`: CI's run on built-in fixtures (no server), which exits by itself (README.md).
     public static bool Smoke { get; set; }
 
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize()
+    {
+        AvaloniaXamlLoader.Load(this);
+        Motion.SmoothScrolling();
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {

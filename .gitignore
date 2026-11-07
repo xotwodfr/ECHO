@@ -27,6 +27,7 @@ Android/*.apk
 Linux/target/
 Windows/**/bin/
 Windows/**/obj/
+Windows/**/TestResults/
 iOS/*.xcodeproj/
 iOS/Info.plist
 macOS/*.xcodeproj/

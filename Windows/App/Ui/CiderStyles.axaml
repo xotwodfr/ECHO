@@ -1,0 +1,74 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Cider 1's .search-input (style.less): 6 px radius, #1e1e1e99, a grey border that turns key-coloured
+       along the bottom when focused, #c8c8c8 at 500, room on the left for the magnifier. -->
+  <Style Selector="TextBox.search">
+    <Setter Property="Background" Value="#991E1E1E" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontWeight" Value="Medium" />
+    <Setter Property="Foreground" Value="#C8C8C8" />
+    <Setter Property="Padding" Value="32,6,6,6" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+  </Style>
+  <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="#991E1E1E" />
+    <Setter Property="BorderBrush" Value="#80646464" />
+  </Style>
+  <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="#991E1E1E" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="BorderBrush">
+      <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+        <GradientStop Offset="0" Color="#59646464" />
+        <GradientStop Offset="0.95" Color="#59646464" />
+        <GradientStop Offset="0.96" Color="#FC3C44" />
+        <GradientStop Offset="1" Color="#FC3C44" />
+      </LinearGradientBrush>
+    </Setter>
+  </Style>
+  <Style Selector="TextBox.search:focus">
+    <Setter Property="Foreground" Value="#C8C8C8" />
+  </Style>
+
+  <!-- .md-select: an md-btn that drops down. -->
+  <Style Selector="ComboBox.md">
+    <Setter Property="Background" Value="#40646464" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="12,6,8,6" />
+    <Setter Property="MinHeight" Value="0" />
+  </Style>
+  <Style Selector="ComboBox.md:pointerover /template/ Border#Background">
+    <Setter Property="Background" Value="#597D7D7D" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+  </Style>
+
+  <!-- Cider's popovers and menus bring their own body. -->
+  <Style Selector="FlyoutPresenter.cider">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="MaxWidth" Value="400" />
+  </Style>
+
+  <!-- A press pushes a button in a little and lets it spring back (Cider 4's motion-press-scale); the
+       window's own controls stay put, as Windows' do. -->
+  <Style Selector="Button:not(.nopress)">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button:not(.nopress):pressed">
+    <Setter Property="RenderTransform" Value="scale(0.95)" />
+  </Style>
+</Styles>

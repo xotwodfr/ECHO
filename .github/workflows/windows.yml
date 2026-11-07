@@ -1,8 +1,8 @@
 name: windows
 
 # ECHO for Windows (Windows/README.md): on a real Windows runner, the tests, the single-file exe, and
-# a smoke run whose screenshot shows the app as Windows itself renders it. A tag windows-v* also
-# publishes the exe as a pre-release.
+# a smoke run whose screenshot shows the app (Cider's shell on the built-in library) as Windows
+# renders it. A tag windows-v* also publishes the exe as a pre-release.
 on:
   push:
     # Both, or GitHub runs it for only the one named. Paths filter branch pushes; tags always run.
@@ -39,7 +39,7 @@ jobs:
           $p = Start-Process publish\ECHO.exe -ArgumentList '--smoke' -PassThru -RedirectStandardError smoke-stderr.txt
           $null = $p.Handle # without a cached handle, ExitCode is empty after exit
           Start-Sleep -Seconds 5
-          Shot 'signin'
+          Shot 'shell'
           if (-not $p.WaitForExit(30000)) { $p.Kill(); throw 'ECHO did not exit by itself' }
           Get-Content smoke-stderr.txt
           if ($p.ExitCode -ne 0) { throw "ECHO exited with $($p.ExitCode)" }

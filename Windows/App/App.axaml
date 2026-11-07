@@ -3,17 +3,18 @@
              x:Class="Echo.App"
              RequestedThemeVariant="Dark">
   <Application.Styles>
-    <!-- Quiet tools (PRODUCT_SPEC.md §1.1): Fluent's controls in a light neutral, not Windows' blue. -->
+    <!-- Fluent's own controls (text boxes, sliders, menus) take Cider's key colour. -->
     <FluentTheme>
       <FluentTheme.Palettes>
-        <ColorPaletteResources x:Key="Dark" Accent="#FFE6E3DD" />
+        <ColorPaletteResources x:Key="Dark" Accent="#FFFC3C44" />
       </FluentTheme.Palettes>
     </FluentTheme>
+    <StyleInclude Source="avares://ECHO/Ui/CiderStyles.axaml" />
   </Application.Styles>
   <Application.Resources>
     <ResourceDictionary>
       <ResourceDictionary.MergedDictionaries>
-        <ResourceInclude Source="avares://ECHO/Ui/Theme.axaml" />
+        <ResourceInclude Source="avares://ECHO/Ui/Cider.axaml" />
       </ResourceDictionary.MergedDictionaries>
     </ResourceDictionary>
   </Application.Resources>

@@ -1,0 +1,81 @@
+using System.ComponentModel;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Layout;
+using Avalonia.Media;
+using Echo.Playback;
+using Echo.Stage;
+
+namespace Echo.Ui;
+
+/// The playing song's lyrics on a LyricsStage, wherever Cider shows them (the drawer, the immersive
+/// view): built when they arrive, "No Lyrics" when there are none, the stage woken by play and seeks.
+public sealed class SongLyrics : Panel
+{
+    readonly Session session;
+    readonly TextBlock none;
+
+    /// The lyrics at Spicy Lyrics' size for the room they have.
+    public SongLyrics(Session session)
+    {
+        this.session = session;
+        var player = session.Player;
+        Stage = new LyricsStage(
+            () => player.PositionNow.TotalMilliseconds + Offset,
+            () => player.Playing,
+            ms => player.Seek(TimeSpan.FromMilliseconds(Math.Max(0, ms - Offset))));
+        none = new TextBlock
+        {
+            Text = "No Lyrics",
+            FontSize = 29.6,
+            FontWeight = FontWeight.Bold,
+            Opacity = 0.6,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            VerticalAlignment = VerticalAlignment.Center,
+            IsVisible = false,
+        };
+        // Lines fade in at the top and out at the bottom instead of being cut.
+        Stage.OpacityMask = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+            GradientStops =
+            {
+                new GradientStop(Colors.Transparent, 0), new GradientStop(Colors.Black, 0.1),
+                new GradientStop(Colors.Black, 0.85), new GradientStop(Colors.Transparent, 1),
+            },
+        };
+        Children.Add(Stage);
+        Children.Add(none);
+        PropertyChangedEventHandler lyrics = (_, _) => Build();
+        PropertyChangedEventHandler wake = (_, e) =>
+        {
+            if (e.PropertyName is nameof(Player.Playing) or nameof(Player.Position)) Stage.Wake();
+        };
+        this.WhileShown(() =>
+        {
+            session.Lyrics.PropertyChanged += lyrics;
+            player.PropertyChanged += wake;
+            Build();
+        }, () =>
+        {
+            session.Lyrics.PropertyChanged -= lyrics;
+            player.PropertyChanged -= wake;
+        });
+    }
+
+    public LyricsStage Stage { get; }
+
+    double Offset => (session.Lyrics.Doc?.OffsetMs ?? 0) + session.Lyrics.OffsetMs;
+
+    LyricsDoc? shown;
+
+    void Build()
+    {
+        var doc = session.Lyrics.Status == LyricsStatus.Ready ? session.Lyrics.Doc : null;
+        none.IsVisible = session.Lyrics.Status == LyricsStatus.Missing;
+        if (ReferenceEquals(doc, shown)) return;
+        shown = doc;
+        Stage.Show(doc);
+    }
+}

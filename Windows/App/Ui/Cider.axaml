@@ -1,0 +1,393 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Cider 1.6.4's look (src/renderer/style.less, less/appvars.less, less/elements.less), dark only. The
+       layers are translucent as in Cider: over Windows 11's Mica they take the wallpaper's tint, as its
+       screenshots do; elsewhere they lie over Mica's own dark grey. -->
+  <Color x:Key="KeyColor">#FC3C44</Color>
+  <SolidColorBrush x:Key="Key" Color="{StaticResource KeyColor}" />
+  <SolidColorBrush x:Key="Text" Color="#EEEEEE" />
+  <SolidColorBrush x:Key="Muted" Color="#99EEEEEE" />
+  <!-- Under the app when Mica is not there (Mica's dark base). -->
+  <SolidColorBrush x:Key="WindowFallback" Color="#202020" />
+  <!-- #app-main: rgba(20 20 20 / .7). -->
+  <SolidColorBrush x:Key="AppMain" Color="#B3141414" />
+  <!-- baseColorMix (@baseColor #1e1e1e at 50 %): the chrome bars, the content. -->
+  <SolidColorBrush x:Key="Base" Color="#801E1E1E" />
+  <SolidColorBrush x:Key="BaseSolid" Color="#1E1E1E" />
+  <!-- sidebarColorMix (@sidebarColor #2e2e2e at 50 %). -->
+  <SolidColorBrush x:Key="Sidebar" Color="#802E2E2E" />
+  <!-- color2 (#202020 at 50 %): the drawer. -->
+  <SolidColorBrush x:Key="Panel" Color="#80202020" />
+  <SolidColorBrush x:Key="Modal" Color="#262626" />
+  <!-- hover, selected, borderColor. -->
+  <SolidColorBrush x:Key="Hover" Color="#1AC8C8C8" />
+  <SolidColorBrush x:Key="Selected" Color="#4D828282" />
+  <SolidColorBrush x:Key="Border" Color="#29C8C8C8" />
+  <SolidColorBrush x:Key="ChromeLine" Color="#1FC8C8C8" />
+  <SolidColorBrush x:Key="ProgressBackground" Color="#333333" />
+  <SolidColorBrush x:Key="MissingArtwork" Color="#6E6E6E" />
+  <SolidColorBrush x:Key="MissingArtworkNote" Color="#29000000" />
+
+  <FontFamily x:Key="CiderFont">avares://ECHO/Assets/Fonts#Pretendard Std</FontFamily>
+
+  <!-- .md-btn -->
+  <ControlTheme x:Key="CiderButton" TargetType="Button">
+    <Setter Property="Background" Value="#40646464" />
+    <Setter Property="BorderBrush" Value="#59646464" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="14,8" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <!-- filter: brightness(125%) -->
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#597D7D7D" />
+    </Style>
+    <Style Selector="^.primary">
+      <Setter Property="Background" Value="#A6FF2B52" />
+      <Setter Property="BorderBrush" Value="#40DC3545" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="^.primary:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#D0FF3660" />
+    </Style>
+  </ControlTheme>
+
+  <!-- Cider's chrome and list buttons: no box of their own, Cider's hover colour underneath on hover. -->
+  <ControlTheme x:Key="Plain" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#1AC8C8C8" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#4D505050" />
+    </Style>
+    <Style Selector="^.active /template/ Border#Box">
+      <Setter Property="Background" Value="#4D828282" />
+    </Style>
+    <!-- Cider's small playback button, active (Shuffle, Repeat on): rgb(200 200 200 / 25%). -->
+    <Style Selector="^.on /template/ Border#Box">
+      <Setter Property="Background" Value="#40C8C8C8" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .top-nav-group .app-sidebar-item (less/directives.less): a white layer 1 px in, 10 % on hover, 20 % active. -->
+  <ControlTheme x:Key="TopNavItem" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="6" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel>
+          <Border Name="Layer" Margin="1" CornerRadius="10" Background="White" Opacity="0">
+            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /></Transitions></Border.Transitions>
+          </Border>
+          <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Layer">
+      <Setter Property="Opacity" Value="0.1" />
+    </Style>
+    <Style Selector="^.active /template/ Border#Layer">
+      <Setter Property="Opacity" Value="0.2" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .app-sidebar-item: 8 px 12 px, radius 6, 14 px; rgb(180 180 180 / 15%) on hover, rgb(200 200 200 / 15%) active. -->
+  <ControlTheme x:Key="SidebarItem" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="12,8" />
+    <Setter Property="Margin" Value="0,3" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="FontSize" Value="14" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#26B4B4B4" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#26969696" />
+    </Style>
+    <Style Selector="^.active /template/ Border#Box">
+      <Setter Property="Background" Value="#26C8C8C8" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .window-controls > div: rgb(200 200 200 / 10%) on hover; the close one rgb(196, 43, 28). -->
+  <ControlTheme x:Key="Caption" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#1AC8C8C8" />
+    </Style>
+  </ControlTheme>
+  <ControlTheme x:Key="CaptionClose" TargetType="Button" BasedOn="{StaticResource Caption}">
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#C42B1C" />
+    </Style>
+  </ControlTheme>
+
+  <!-- A slider's two sides: plain bars. -->
+  <ControlTheme x:Key="SliderBar" TargetType="RepeatButton">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Panel Background="Transparent">
+          <Border Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Height="{TemplateBinding Height}" VerticalAlignment="Center" />
+        </Panel>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <!-- The song's progress (directives.less .app-chrome-playback-duration-bottom): 5 px, radius 6, the key
+       colour played over #333, a 16 px key-coloured thumb that shows on hover. -->
+  <ControlTheme x:Key="CiderProgress" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="16" Background="Transparent">
+          <Border Height="5" CornerRadius="6" Background="#333333" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="{DynamicResource Key}" Height="5" CornerRadius="6,0,0,6" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="5" />
+            </Track.IncreaseButton>
+            <Thumb Name="Knob" Width="16" Height="16" Opacity="0">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="{DynamicResource Key}" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Thumb#Knob">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </ControlTheme>
+
+  <!-- The volume (style.less .app-chrome-item.volume): 4 px, rgba(255 255 255 / .4), a 14 px #a5a8ba thumb. -->
+  <ControlTheme x:Key="CiderVolume" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="16" Background="Transparent">
+          <Border Height="4" CornerRadius="5" Background="#66FFFFFF" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#99FFFFFF" Height="4" CornerRadius="5,0,0,5" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
+            </Track.IncreaseButton>
+            <Thumb Width="14" Height="14">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="#A5A8BA" Stroke="#1A000000" StrokeThickness="1" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <!-- A list with no look of its own: its rows bring Cider's. -->
+  <ControlTheme x:Key="PlainList" TargetType="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <ScrollViewer Name="PART_ScrollViewer" Background="{TemplateBinding Background}"
+                      HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
+                      VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
+          <ItemsPresenter Name="PART_ItemsPresenter" ItemsPanel="{TemplateBinding ItemsPanel}" Margin="{TemplateBinding Padding}" />
+        </ScrollViewer>
+      </ControlTemplate>
+    </Setter>
+  </ControlTheme>
+
+  <!-- Song rows, Apple Music's way: radius 6, every other one faintly lit, lighter on hover, a grey
+       highlight when selected. -->
+  <ControlTheme x:Key="TrackRow" TargetType="ListBoxItem">
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="Transparent" CornerRadius="6">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
+                            HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^.odd /template/ Border#Box">
+      <Setter Property="Background" Value="#09FFFFFF" />
+    </Style>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#17FFFFFF" />
+    </Style>
+    <Style Selector="^:selected /template/ Border#Box">
+      <Setter Property="Background" Value="#2EFFFFFF" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .more-btn-round: a 32 px circle of rgba(100 100 100 / .5) with Cider's shadow; brighter on hover. -->
+  <ControlTheme x:Key="RoundMore" TargetType="Button">
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" CornerRadius="16" Background="#80646464" BoxShadow="inset 0 0 0 1 #29C8C8C8, 0 8 40 0 #8C000000">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#A07D7D7D" />
+    </Style>
+  </ControlTheme>
+
+  <!-- The album square's play and menu buttons: 30 px circles of rgba(50 50 50 / .7), rgba(250 0 0 / .7) on hover. -->
+  <ControlTheme x:Key="TileCircle" TargetType="Button">
+    <Setter Property="Width" Value="30" />
+    <Setter Property="Height" Value="30" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" CornerRadius="15" Background="#B3323232">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#B3FA0000" />
+    </Style>
+  </ControlTheme>
+
+  <!-- .cd-queue-item: 9 px above and below, var(selected) on hover, var(selected-click) pressed. -->
+  <ControlTheme x:Key="QueueItem" TargetType="Button">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+    <Setter Property="Padding" Value="10,9" />
+    <Setter Property="HorizontalAlignment" Value="Stretch" />
+    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="#4D828282" />
+    </Style>
+    <Style Selector="^:pressed /template/ Border#Box">
+      <Setter Property="Background" Value="#4D505050" />
+    </Style>
+  </ControlTheme>
+
+  <!-- Apple Music's round play button in the key colour (the artist banner). -->
+  <ControlTheme x:Key="KeyCircle" TargetType="Button">
+    <Setter Property="Width" Value="48" />
+    <Setter Property="Height" Value="48" />
+    <Setter Property="Foreground" Value="White" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="Box" CornerRadius="24" Background="{DynamicResource Key}" BoxShadow="0 4 14 0 #59000000">
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Opacity" Value="0.85" />
+    </Style>
+  </ControlTheme>
+
+  <!-- Spicy Lyrics' full-screen progress: 4 px, white over rgba(255 255 255 / .2), round ends, a white thumb on hover. -->
+  <ControlTheme x:Key="SpicyProgress" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="14" Background="Transparent">
+          <Border Height="4" CornerRadius="2" Background="#33FFFFFF" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#E6FFFFFF" Height="4" CornerRadius="2,0,0,2" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
+            </Track.IncreaseButton>
+            <Thumb Name="Knob" Width="12" Height="12" Opacity="0">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="White" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Thumb#Knob">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </ControlTheme>
+</ResourceDictionary>
