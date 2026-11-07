@@ -34,6 +34,17 @@ public sealed class SongLyrics : Panel
             VerticalAlignment = VerticalAlignment.Center,
             IsVisible = false,
         };
+        // Lines fade in at the top and out at the bottom instead of being cut.
+        Stage.OpacityMask = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+            GradientStops =
+            {
+                new GradientStop(Colors.Transparent, 0), new GradientStop(Colors.Black, 0.1),
+                new GradientStop(Colors.Black, 0.85), new GradientStop(Colors.Transparent, 1),
+            },
+        };
         Children.Add(Stage);
         Children.Add(none);
         PropertyChangedEventHandler lyrics = (_, _) => Build();

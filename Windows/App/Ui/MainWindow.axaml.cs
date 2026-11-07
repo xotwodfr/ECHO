@@ -87,11 +87,11 @@ public partial class MainWindow : Window
     Size beforeSize;
     PixelPoint beforeAt;
 
-    /// Cider's fullscreen view, the window full screen; back on Escape or the artwork.
+    /// Cider 4's immersive view, the window full screen; back on Escape or the bar's exit button.
     public void Fullscreen(Shell shell)
     {
         before = WindowState;
-        var view = new FullscreenView(session!, shell.Nav);
+        var view = new ImmersiveView(session!, shell.Nav);
         view.Closed += () => Back(shell);
         Content = view;
         WindowState = WindowState.FullScreen;
