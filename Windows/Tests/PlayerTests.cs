@@ -40,6 +40,21 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task PlayAfterTheServerWasUnreachableAsksAgain()
+    {
+        var server = new Unreachable();
+        var api = new Api("https://echo.test", server);
+        using var player = new Player(api, new Library(api), () => new AudioOut(nullDevice: true)) { Sync = false };
+        await player.PlayList(QueueTests.Album(3), 0, Ctx);
+        Assert.Equal(1, server.Asked);
+
+        player.Toggle();
+        for (var i = 0; i < 100 && server.Asked < 2; i++) await Task.Delay(10);
+        Assert.Equal(2, server.Asked);
+        Assert.False(player.Playing);
+    }
+
+    [AvaloniaFact]
     public async Task AServerErrorDoesNotSkipThroughTheQueue()
     {
         // ECHO up, Navidrome down: every song answers 502. That is the server, not the song.
@@ -210,8 +225,13 @@ sealed class NewerElsewhere(QueueState newer) : HttpMessageHandler
 /// No server: every request fails as a network error.
 sealed class Unreachable : HttpMessageHandler
 {
-    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) =>
+    public int Asked;
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        Interlocked.Increment(ref Asked);
         throw new HttpRequestException("unreachable");
+    }
 }
 
 static class Wav

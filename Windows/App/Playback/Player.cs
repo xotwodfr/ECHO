@@ -256,6 +256,7 @@ public sealed partial class Player : ObservableObject, IDisposable
         {
             // Say so and stay on this one (Play tries again).
             output?.Pause();
+            loaded = false;
             Notice = Unreachable;
             Playing = false;
             return;
