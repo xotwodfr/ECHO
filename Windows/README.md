@@ -53,9 +53,12 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   Picks, Recently Played), the library grid, the artist banner, search's Top Results, Cider 4's queue
   drawer, red sidebar icons.
 - Today's finish over Cider's layout: the page floats as a rounded card on the window's ground, the
-  player bar is laid out as current players are (the controls over a thin progress bar, Play a white
-  disc), Settings opens over a dimmed app in Windows 11's setting cards, menus are dark and rounded,
-  empty pages say so centred.
+  top bar has a round Home beside a wide search pill, the player bar is laid out as current players are
+  (the controls over a thin progress bar, Play a white disc), album headers fade into their songs,
+  Settings opens over a dimmed app in Windows 11's setting cards, menus are dark and rounded, empty
+  pages say so centred, the sign-in screen is a card (and can be moved and closed).
+- Keys: **Space** plays or pauses (not while typing), **Ctrl+F** goes to the search field; keyboard
+  focus shows as a rounded ring.
 
 Left out as Apple Music's: Listen Now, Browse, Radio, Videos, Podcasts, Apple Music playlists, Add to
 Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.

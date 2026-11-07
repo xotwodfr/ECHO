@@ -29,3 +29,19 @@ What looked dated or broken, and the fix:
 Skipped: loading skeletons (the server answers in ~150 ms), light theme (the app is dark-only).
 
 Done 2026-11-07 (70f5bb3..d787d0d, 88 tests pass, both TFMs build); not pushed or released yet.
+
+## Second pass (owner: "looks good, but do another deepdive", 21:16 UTC)
+
+Screens the tests never saved, shot by hand: sign-in, mini player, main menu, the cover popover, hover
+states, keyboard focus, 1920×1080.
+
+- **Bug: the sign-in screen could not be moved or closed** (frameless window; only the shell's top bar
+  had the caption buttons). Now it has them, and the form is a card. 135b7e1
+- Top bar: the lone Home pill → a round Home beside a 360 px search pill, centred. e34e034
+- Album pages: header faded into the songs (no shadow, no darker band); Play the one solid button in
+  the album's colour; tile hover circles in the key colour; the cover popover's buttons fit. e34e034
+- Keys: Space play/pause (not in a field), Ctrl+F search; focus ring rounded (Fluent's square adorner
+  drew clipped to a corner over these themes, so the ring is a BoxShadow on each theme's Box). 3943bfc
+
+Left as is: album rows stretch at 1920 px wide (as Apple Music's do).
+
