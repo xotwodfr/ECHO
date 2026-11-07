@@ -1,5 +1,6 @@
-ECHO for Windows: everything moves now.
+ECHO for Windows: everything moves now, and songs start at once.
 
+- **Songs start playing straight away** (in about a tenth of a second) instead of after 2–4 s: a song plays as it downloads instead of waiting for the whole file. Jumping ahead in a song that is still downloading no longer freezes the window.
 - **Smooth scrolling** everywhere: the mouse wheel glides instead of jumping in steps.
 - **Progress bars move smoothly** every frame, in the player bar, the full-screen view and the mini player.
 - **Covers fade in** as they load (and cross-fade when the song changes) instead of popping in over a grey placeholder.
