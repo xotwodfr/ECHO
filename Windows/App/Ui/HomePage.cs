@@ -92,7 +92,7 @@ public sealed class HomePage : ScrollViewer
     }
 }
 
-/// Apple Music's sections: a 22 px title (with arrows that page a shelf sideways), then the content.
+/// Apple Music's sections: a 20 px title (with arrows that page a shelf sideways), then the content.
 public static class Shelf
 {
     public static Control Section(string title, Control content) => new StackPanel
@@ -101,7 +101,7 @@ public static class Shelf
         Children = { Title(title), content },
     };
 
-    static TextBlock Title(string text) => new() { Text = text, FontSize = 22, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 12), VerticalAlignment = VerticalAlignment.Center };
+    static TextBlock Title(string text) => new() { Text = text, FontSize = 20, FontWeight = FontWeight.Bold, LetterSpacing = -0.3, Margin = new Thickness(0, 0, 0, 12), VerticalAlignment = VerticalAlignment.Center };
 
     /// A row of items that scrolls sideways, a viewport at a time with the header's arrows.
     public static Control Of(string title, IEnumerable<Control> items, double gap)

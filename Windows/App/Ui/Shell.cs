@@ -8,8 +8,8 @@ namespace Echo.Ui;
 
 /// Cider's main window (views/main.ejs, #app-main), in the layout Settings chose: Mojave, Cider's default
 /// (the top chrome over the sidebar and the page, the bottom chrome under it all), or Maverick (the player
-/// in the top chrome, no bottom chrome); the drawer floats at the right in both. The layers are
-/// Cider's translucent ones: #app-main, then --color1 behind the navigation, the sidebar and the page.
+/// in the top chrome, no bottom chrome); the drawer floats at the right in both. The sidebar and the bars
+/// lie on #app-main's translucent ground; the page floats over it as a card.
 public sealed class Shell : Grid
 {
     readonly Session session;
@@ -31,23 +31,25 @@ public sealed class Shell : Grid
 
         var navigation = new Grid
         {
-            Background = new SolidColorBrush(Color.Parse("#80272727")),
             RowDefinitions = new RowDefinitions($"{Top.Height},*"),
             ColumnDefinitions = new ColumnDefinitions("Auto,*"),
         };
         navigation.Children.Add(new Border { [Grid.ColumnSpanProperty] = 2, Child = Top });
         navigation.Children.Add(new Border { [Grid.RowProperty] = 1, Child = sidebar });
-        // #app-content: --baseColorMix with a 1 px edge of it on the left.
-        navigation.Children.Add(new Border
+        // #app-content as today's apps float it: a rounded card on the ground, 8 px from the window's edges.
+        var card = new Border
         {
             [Grid.RowProperty] = 1,
             [Grid.ColumnProperty] = 1,
-            Background = Kit.Brush("Base"),
-            BorderBrush = Kit.Brush("Base"),
-            BorderThickness = new Thickness(1, 0, 0, 0),
+            Background = Kit.Brush("Card"),
+            BorderBrush = Kit.Brush("Hairline"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Margin = new Thickness(0, 0, 8, Maverick ? 8 : 0),
             ClipToBounds = true,
             Child = page,
-        });
+        };
+        navigation.Children.Add(card);
         Drawer = new Drawer(session, Nav) { [Grid.RowProperty] = 1, [Grid.ColumnProperty] = 1 };
         navigation.Children.Add(Drawer);
         Children.Add(navigation);
@@ -56,7 +58,11 @@ public sealed class Shell : Grid
         modal.SetValue(Grid.RowSpanProperty, 2);
         Children.Add(modal);
 
-        Top.SidebarToggled += () => sidebar.IsVisible = !sidebar.IsVisible;
+        Top.SidebarToggled += () =>
+        {
+            sidebar.IsVisible = !sidebar.IsVisible;
+            card.Margin = new Thickness(sidebar.IsVisible ? 0 : 8, 0, 8, card.Margin.Bottom);
+        };
         Top.MenuRequested += anchor => MainMenu.Show(anchor, session, () => ShowSettings(), () => ShowSettings("About"));
         Tools.DrawerRequested += Drawer.Toggle;
         Drawer.Changed += () => Tools.OpenPanel = Drawer.Panel;

@@ -35,7 +35,7 @@ public sealed class ChromeBottom : Grid
         player = session.Player;
         progress = new SeekBar(player);
         Height = Height2;
-        Background = Kit.Brush("Panel");
+        Background = Brushes.Transparent; // on the ground
         ColumnDefinitions = new ColumnDefinitions("3*,4*,3*");
 
         // ---- left: .playback-controls ----

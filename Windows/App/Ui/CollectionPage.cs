@@ -83,7 +83,7 @@ public sealed class CollectionPage : DockPanel
         var count = tracks.Count;
         var minutes = (int)Math.Round(tracks.Sum(t => t.DurationMs) / 60_000.0);
         meta ??= $"{count} {(count == 1 ? "song" : "songs")} · {Duration(minutes)}";
-        var title = new TextBlock { Text = name, FontSize = 28, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 6, 2), TextTrimming = TextTrimming.CharacterEllipsis };
+        var title = new TextBlock { Text = name, FontSize = 30, FontWeight = FontWeight.Bold, LetterSpacing = -0.6, Margin = new Thickness(0, 0, 6, 2), TextTrimming = TextTrimming.CharacterEllipsis };
         var by = new TextBlock { Text = artistName, FontSize = 22, FontWeight = FontWeight.Medium, Foreground = Kit.Brush("Key"), Margin = new Thickness(0, 0, 6, 6), TextTrimming = TextTrimming.CharacterEllipsis };
         var caps = new TextBlock { Text = meta.ToUpperInvariant(), FontSize = 12, FontWeight = FontWeight.SemiBold, Opacity = 0.6, Margin = new Thickness(0, 0, 0, 8), IsVisible = meta.Length > 0 };
         if (artist is not null)

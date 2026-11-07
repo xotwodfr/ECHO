@@ -36,7 +36,7 @@ public sealed class ChromeTop : Grid
     {
         this.nav = nav;
         Height = maverick is null ? Height1 : HeightMaverick;
-        Background = Kit.Brush("Base");
+        Background = Brushes.Transparent; // on the ground, and still a drag handle
         // Cider's 30 % | flex | 30 %, which frees the middle under 1100 px: here the sides share what the
         // middle leaves (Mojave's tabs stay centred), so the window's controls always fit.
         ColumnDefinitions = new ColumnDefinitions(maverick is null ? "*,Auto,*" : "Auto,*,Auto");

@@ -165,7 +165,7 @@ public sealed class ArtistPage : ScrollViewer
         love.Click += (_, _) => _ = session.Library.Star(StarKind.Artist, route.Id!, true);
         more.ContextMenu = new ContextMenu { ItemsSource = new[] { love } };
         more.Click += (_, _) => more.ContextMenu.Open(more);
-        var name = new TextBlock { Text = page.Name, FontSize = 48, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        var name = new TextBlock { Text = page.Name, FontSize = 48, FontWeight = FontWeight.Bold, LetterSpacing = -1.2, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         var bottom = new DockPanel
         {
             VerticalAlignment = VerticalAlignment.Bottom,

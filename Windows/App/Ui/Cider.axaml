@@ -19,6 +19,9 @@
   <!-- color2 (#202020 at 50 %): the drawer. -->
   <SolidColorBrush x:Key="Panel" Color="#80202020" />
   <SolidColorBrush x:Key="Modal" Color="#262626" />
+  <!-- The page's card: a step lighter than the ground the sidebar and the bars lie on, a hairline round it. -->
+  <SolidColorBrush x:Key="Card" Color="#CC242424" />
+  <SolidColorBrush x:Key="Hairline" Color="#14FFFFFF" />
   <!-- hover, selected, borderColor. -->
   <SolidColorBrush x:Key="Hover" Color="#1AC8C8C8" />
   <SolidColorBrush x:Key="Selected" Color="#4D828282" />
@@ -118,14 +121,15 @@
     </Style>
   </ControlTheme>
 
-  <!-- .app-sidebar-item: 8 px 12 px, radius 6, 14 px; rgb(180 180 180 / 15%) on hover, rgb(200 200 200 / 15%) active. -->
+  <!-- .app-sidebar-item, denser as today's sidebars are: 7 px 10 px, radius 6, 13.5 px; rgb(180 180 180 / 15%) on
+       hover, rgb(200 200 200 / 15%) active. -->
   <ControlTheme x:Key="SidebarItem" TargetType="Button">
     <Setter Property="Background" Value="Transparent" />
     <Setter Property="Foreground" Value="#EEEEEE" />
-    <Setter Property="Padding" Value="12,8" />
-    <Setter Property="Margin" Value="0,3" />
+    <Setter Property="Padding" Value="10,7" />
+    <Setter Property="Margin" Value="0,1" />
     <Setter Property="CornerRadius" Value="6" />
-    <Setter Property="FontSize" Value="14" />
+    <Setter Property="FontSize" Value="13.5" />
     <Setter Property="HorizontalAlignment" Value="Stretch" />
     <Setter Property="HorizontalContentAlignment" Value="Left" />
     <Setter Property="Template">

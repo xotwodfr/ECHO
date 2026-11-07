@@ -22,7 +22,8 @@ public static class Blocks
         return s;
     }
 
-    public static TextBlock H1(string text) => new() { Text = text, FontSize = 32, FontWeight = FontWeight.Bold };
+    /// Today's large title: 30 px, bold, tracked in tight.
+    public static TextBlock H1(string text) => new() { Text = text, FontSize = 30, FontWeight = FontWeight.Bold, LetterSpacing = -0.6 };
 
     public static TextBlock H3(string text) => new() { Text = text, FontSize = 18.7, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center };
 
