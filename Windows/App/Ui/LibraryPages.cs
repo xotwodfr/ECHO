@@ -56,18 +56,18 @@ public static class Blocks
         Children = { box, new Glyph(Icons.Search, 12) { Margin = new Thickness(10, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Opacity = 0.55, IsHitTestVisible = false } },
     };
 
-    /// `.cd-mediaitem-square` in a library grid: 220×260, the 190 px artwork 6 px in, the title (14 px)
-    /// and the artist (12 px) centred; on hover a play and a menu button, 30 px circles of
-    /// rgba(50 50 50 / .7), 14 px from the artwork's bottom corners.
-    public static Control Square(Session session, Nav nav, Album album, string? subtitle = null)
+    /// An album as Apple Music shows it in a grid or a shelf: the cover rounded (6 px) with a soft shadow,
+    /// the title and the artist under it, left-aligned, one line each; on hover Cider's play and menu
+    /// circles at the cover's bottom corners.
+    public static Tile Square(Session session, Nav nav, Album album, string? subtitle = null, double side = 180)
     {
-        var art = new CoverImage(album.Cover, 190, 300) { Margin = new Thickness(6) };
+        var art = new CoverImage(album.Cover, side, 300, 6);
         var play = Circle(Icons.PlaySmall, 11);
         var menu = Circle(Icons.More, 18);
         play.HorizontalAlignment = HorizontalAlignment.Left;
         menu.HorizontalAlignment = HorizontalAlignment.Right;
-        play.Margin = new Thickness(14, 0, 0, 14);
-        menu.Margin = new Thickness(0, 0, 14, 14);
+        play.Margin = new Thickness(10, 0, 0, 10);
+        menu.Margin = new Thickness(0, 0, 10, 10);
         play.Click += async (_, _) =>
         {
             try
@@ -93,19 +93,17 @@ public static class Blocks
                 }).ToList(),
         };
         menu.Click += (_, _) => menu.ContextMenu.Open(menu);
-        var buttons = new Panel { Opacity = 0, VerticalAlignment = VerticalAlignment.Bottom, Children = { play, menu } };
-        var top = new Panel { Cursor = new Cursor(StandardCursorType.Hand), Children = { art, buttons } };
-        top.PointerEntered += (_, _) => buttons.Opacity = 1;
-        top.PointerExited += (_, _) => buttons.Opacity = 0;
         art.PointerPressed += (_, e) =>
         {
             if (e.GetCurrentPoint(art).Properties.IsLeftButtonPressed) nav.Open(new Route("album", album.Id, album.Title));
         };
-        var title = Kit.Text(album.Title, 14);
-        var sub = Kit.Text(subtitle ?? album.Artist, 12);
-        title.HorizontalAlignment = sub.HorizontalAlignment = HorizontalAlignment.Center;
-        title.MaxWidth = sub.MaxWidth = 198;
-        return new StackPanel { Width = 220, Height = 260, HorizontalAlignment = HorizontalAlignment.Center, Children = { top, title, sub } };
+        var sub = Kit.Text(subtitle ?? album.Artist, 13, opacity: 0.6);
+        if (artist is not null && subtitle is null)
+        {
+            sub.Cursor = new Cursor(StandardCursorType.Hand);
+            sub.PointerPressed += (_, _) => nav.Open(artist);
+        }
+        return new Tile(art, [play, menu], Kit.Text(album.Title, 13, FontWeight.Medium), sub, side);
     }
 
     static Button Circle(Icon icon, double size) => new()
@@ -114,12 +112,13 @@ public static class Blocks
         Content = new Glyph(icon, size),
     };
 
-    /// Cider's `.collection-list-square` grid: 4 columns (3 under 1150 px of window, 5 from 1500), filled
-    /// a page at a time as the scroll nears its end (Cider's infinite scroll).
+    /// Apple Music's library grid: as many columns as fit tiles of 160–220 px with 24 px between, the
+    /// tiles stretched to fill the row; filled a page at a time as the scroll nears its end (Cider's
+    /// infinite scroll).
     public static Control Grid(Session session, Nav nav, IReadOnlyList<Album> albums, ScrollViewer scroll, Func<Album, string?>? subtitle = null)
     {
         const int Step = 60;
-        var grid = new UniformGrid { Columns = 4 };
+        var grid = new TileGrid();
         var shown = 0;
         void More()
         {
@@ -131,16 +130,7 @@ public static class Blocks
         {
             if (shown < albums.Count && scroll.Offset.Y + scroll.Viewport.Height > scroll.Extent.Height - 600) More();
         };
-        grid.AttachedToVisualTree += (_, _) =>
-        {
-            if (TopLevel.GetTopLevel(grid) is not { } top) return;
-            void Fit() => grid.Columns = top.Bounds.Width < 1150 ? 3 : top.Bounds.Width >= 1500 ? 5 : 4;
-            Fit();
-            top.PropertyChanged += (_, e) =>
-            {
-                if (e.Property == Visual.BoundsProperty) Fit();
-            };
-        };
+        grid.Margin = new Thickness(0, 16, 0, 0);
         return grid;
     }
 
@@ -160,7 +150,7 @@ public static class Blocks
     public static bool Expected(Exception e) => e is HttpRequestException or ApiException or TaskCanceledException;
 }
 
-/// views/pages/library-recentlyadded.ejs: "Recently Added" over the newest albums' squares.
+/// views/pages/library-recentlyadded.ejs: "Recently Added" over the newest albums' tiles.
 public sealed class RecentlyAddedPage : ContentControl
 {
     public RecentlyAddedPage(Session session, Nav nav) => _ = Load(session, nav);
@@ -174,7 +164,7 @@ public sealed class RecentlyAddedPage : ContentControl
         try
         {
             var albums = await session.Library.Albums(AlbumSort.Newest, 0, 200);
-            column.Children.Add(Blocks.Well(Blocks.Grid(session, nav, albums, scroll)));
+            column.Children.Add(Blocks.Grid(session, nav, albums, scroll));
         }
         catch (Exception e) when (Blocks.Expected(e))
         {
@@ -248,7 +238,7 @@ public sealed class AlbumsPage : ContentControl
             || a.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase) || a.Artist.Contains(q, StringComparison.CurrentCultureIgnoreCase)));
         if (order.SelectedIndex == 1) list = list.Reverse();
         if (grid is not null) column.Children.Remove(grid);
-        column.Children.Add(grid = Blocks.Well(Blocks.Grid(session, nav, list.ToList(), scroll)));
+        column.Children.Add(grid = Blocks.Grid(session, nav, list.ToList(), scroll));
     }
 }
 
@@ -419,5 +409,96 @@ public sealed class ArtistsPage : Grid
         {
             detail.Content = Blocks.Column(new Thickness(32), Blocks.Message(await Blocks.Failed(session, e)));
         }
+    }
+}
+
+/// A cover with a caption under it, its side set by whoever lays it out (a TileGrid, a shelf).
+public sealed class Tile : StackPanel
+{
+    readonly CoverImage art;
+    readonly TextBlock title, subtitle;
+
+    public Tile(CoverImage art, Button[] hover, TextBlock title, TextBlock subtitle, double side)
+    {
+        this.art = art;
+        this.title = title;
+        this.subtitle = subtitle;
+        var buttons = new Panel { Opacity = 0, VerticalAlignment = VerticalAlignment.Bottom };
+        foreach (var b in hover) buttons.Children.Add(b);
+        var top = new Border
+        {
+            CornerRadius = new CornerRadius(6),
+            BoxShadow = BoxShadows.Parse("0 4 14 0 #40000000"),
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Child = new Panel { Children = { art, buttons } },
+        };
+        top.PointerEntered += (_, _) => buttons.Opacity = 1;
+        top.PointerExited += (_, _) => buttons.Opacity = 0;
+        title.Margin = new Thickness(0, 8, 0, 0);
+        Children.Add(top);
+        Children.Add(title);
+        Children.Add(subtitle);
+        Side = side;
+    }
+
+    public double Side
+    {
+        get => art.Width;
+        set
+        {
+            art.Width = art.Height = value;
+            Width = value;
+            title.MaxWidth = subtitle.MaxWidth = value;
+        }
+    }
+}
+
+/// Lays Tiles in rows: as many columns as fit tiles of at least `Min` px with `Gap` between, each tile
+/// stretched to share the width.
+public sealed class TileGrid : Panel
+{
+    public double Min { get; init; } = 160;
+    public double Gap { get; init; } = 24;
+    public double RowGap { get; init; } = 28;
+
+    int Columns(double width) => Math.Max(2, (int)((width + Gap) / (Min + Gap)));
+
+    protected override Size MeasureOverride(Size available)
+    {
+        var width = double.IsInfinity(available.Width) ? 1000 : available.Width;
+        var cols = Columns(width);
+        var side = Math.Floor((width - Gap * (cols - 1)) / cols);
+        double height = 0, row = 0;
+        for (var i = 0; i < Children.Count; i++)
+        {
+            if (Children[i] is Tile t && Math.Abs(t.Side - side) > 0.5) t.Side = side;
+            Children[i].Measure(new Size(side, double.PositiveInfinity));
+            row = Math.Max(row, Children[i].DesiredSize.Height);
+            if (i % cols == cols - 1 || i == Children.Count - 1)
+            {
+                height += row + (i == Children.Count - 1 ? 0 : RowGap);
+                row = 0;
+            }
+        }
+        return new Size(width, height);
+    }
+
+    protected override Size ArrangeOverride(Size final)
+    {
+        var cols = Columns(final.Width);
+        var side = Math.Floor((final.Width - Gap * (cols - 1)) / cols);
+        double y = 0, row = 0;
+        for (var i = 0; i < Children.Count; i++)
+        {
+            var c = Children[i];
+            c.Arrange(new Rect((i % cols) * (side + Gap), y, side, c.DesiredSize.Height));
+            row = Math.Max(row, c.DesiredSize.Height);
+            if (i % cols == cols - 1)
+            {
+                y += row + RowGap;
+                row = 0;
+            }
+        }
+        return final;
     }
 }

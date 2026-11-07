@@ -1,15 +1,16 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Styling;
 
 namespace Echo.Ui;
 
-/// views/pages/home.ejs: Recently Played beside Your Favorites (two wells of six rows, 392 px), then Made
-/// For You in a row of squares. ECHO's history, favourites and mixes stand where Cider asked Apple Music;
-/// the Artists Feed, Replay and Friends Listening To are Apple Music's and left out.
+/// Home, Cider's page (home.ejs) laid out as Apple Music's: the title, then Top Picks for You (ECHO's
+/// mixes as tall cards coloured by their covers), Recently Played (a shelf of covers that pages
+/// sideways) and Your Favorites (starred songs in columns). Cider's Artists Feed, Replay and Friends
+/// Listening To are Apple Music's and left out.
 public sealed class HomePage : ScrollViewer
 {
     readonly Session session;
@@ -20,7 +21,7 @@ public sealed class HomePage : ScrollViewer
     {
         this.session = session;
         this.nav = nav;
-        column = Blocks.Column(new Thickness(32));
+        column = Blocks.Column(new Thickness(32, 24, 32, 32), Blocks.H1("Home"));
         Content = column;
         _ = Load();
     }
@@ -42,81 +43,84 @@ public sealed class HomePage : ScrollViewer
             column.Children.Add(Blocks.Message(await Blocks.Failed(session, e)));
             return;
         }
-
-        var recent = new StackPanel();
-        foreach (var c in played.Take(6)) recent.Children.Add(ContextRow(c));
-        if (played.Count == 0) recent.Children.Add(Blocks.Message("What you play shows up here."));
-        var favorites = new TrackList(session, nav, starred.Tracks.Take(6).ToList(), new PlayContext("favorites", null, "Your Favorites"), Rows.Compact);
-        var columns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,32,*") };
-        columns.Children.Add(Section("Recently Played", recent, null));
-        columns.Children.Add(new Border
-        {
-            [Grid.ColumnProperty] = 2,
-            Child = Section("Your Favorites", starred.Tracks.Count == 0 ? Blocks.Message("Songs you love show up here.") : favorites, null),
-        });
-        column.Children.Add(columns);
-
-        if (mixes.Count == 0) return;
-        var row = new StackPanel { Orientation = Orientation.Horizontal };
-        foreach (var mix in mixes) row.Children.Add(MixSquare(mix));
-        column.Children.Add(new Border
-        {
-            Margin = new Thickness(0, 32, 0, 0),
-            Child = Blocks.Column(default, Blocks.H3("Made For You"), Blocks.Well(new ScrollViewer
-            {
-                HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-                VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-                Content = row,
-            })),
-        });
+        if (mixes.Count > 0) column.Children.Add(Shelf.Of("Top Picks for You", mixes.Select(Pick), 20));
+        if (played.Count > 0) column.Children.Add(Shelf.Of("Recently Played", played.Select(Played), 24));
+        if (starred.Tracks.Count > 0)
+            column.Children.Add(Shelf.Section("Your Favorites", SongGrid.Of(session, nav, starred.Tracks.Take(12).ToList(), new PlayContext("favorites", null, "Your Favorites"))));
+        if (column.Children.Count == 1) column.Children.Add(Blocks.Message("Play something: what you play and love shows up here."));
     }
 
-    static Control Section(string title, Control rows, Action? seeAll)
+    /// Apple's Top Picks card: the cover over a block of its own colour with the title and subtitle.
+    Control Pick(Mix mix)
     {
-        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Height = 40 };
-        head.Children.Add(Blocks.H3(title));
-        if (seeAll is not null) head.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = Blocks.SeeAll("See All", seeAll) });
-        var well = Blocks.Well(rows);
-        well.Height = 392;
-        well.Margin = default;
-        return new StackPanel { Children = { head, well } };
+        var cover = mix.Tracks.FirstOrDefault()?.Cover;
+        var under = new Border
+        {
+            Height = 84,
+            Padding = new Thickness(14, 12),
+            Background = new SolidColorBrush(Color.FromArgb(255, 40, 40, 44)),
+            Child = new StackPanel { Children = { Kit.Text(mix.Title, 15, FontWeight.SemiBold), Kit.Text(mix.Subtitle, 13, opacity: 0.8) } },
+        };
+        _ = Tint(cover, under);
+        var card = new Border
+        {
+            Width = 220,
+            CornerRadius = new CornerRadius(10),
+            ClipToBounds = true,
+            BoxShadow = BoxShadows.Parse("0 4 14 0 #40000000"),
+            Cursor = new Cursor(StandardCursorType.Hand),
+            Child = new StackPanel { Children = { new CoverImage(cover, 220, 600, 0), under } },
+        };
+        card.PointerPressed += (_, _) => nav.Open(new Route("mix", mix.Id, mix.Title));
+        return card;
     }
 
-    /// A Recently Played row: Cider's list item for an album, playlist, artist or mix.
-    Control ContextRow(PlayedContext c)
+    async Task Tint(string? cover, Border under)
+    {
+        if (await session.Covers.KeyColor(cover) is not { } key) return;
+        // The key colour darkened to carry white text, as Apple's cards do.
+        under.Background = new SolidColorBrush(Color.FromRgb((byte)(key.R * 0.45), (byte)(key.G * 0.45), (byte)(key.B * 0.45)));
+    }
+
+    Control Played(PlayedContext c)
     {
         var kind = c.Kind switch { "album" => "Album", "playlist" => "Playlist", "artist" => "Artist", _ => "Mix" };
         var route = new Route(c.Kind, c.Id, c.Title);
-        var b = new Button
-        {
-            Theme = Kit.Res<ControlTheme>("Plain"),
-            CornerRadius = new CornerRadius(8),
-            Height = 60,
-            HorizontalAlignment = HorizontalAlignment.Stretch,
-            HorizontalContentAlignment = HorizontalAlignment.Left,
-            Content = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Children =
-                {
-                    new CoverImage(c.Cover, 42, 96, c.Kind == "artist" ? 21 : 6) { Margin = new Thickness(12) },
-                    new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text(c.Title ?? kind, 14), Kit.Text(kind, 11.2, opacity: 0.7) } },
-                },
-            },
-        };
-        b.Click += (_, _) => nav.Open(route);
-        return b;
+        var art = new CoverImage(c.Cover, 180, 300, c.Kind == "artist" ? 90 : 6);
+        art.PointerPressed += (_, _) => nav.Open(route);
+        return new Tile(art, [], Kit.Text(c.Title ?? kind, 13, FontWeight.Medium), Kit.Text(kind, 13, opacity: 0.6), 180);
     }
+}
 
-    /// `mediaitem-scroller-horizontal`'s square: 160×200, the 140 px artwork 6 px in.
-    Control MixSquare(Mix mix)
+/// Apple Music's sections: a 22 px title (with arrows that page a shelf sideways), then the content.
+public static class Shelf
+{
+    public static Control Section(string title, Control content) => new StackPanel
     {
-        var art = new CoverImage(mix.Tracks.FirstOrDefault()?.Cover, 140, 300) { Margin = new Thickness(6), Cursor = new Cursor(StandardCursorType.Hand) };
-        art.PointerPressed += (_, _) => nav.Open(new Route("mix", mix.Id, mix.Title));
-        var title = Kit.Text(mix.Title, 14);
-        var sub = Kit.Text(mix.Subtitle, 12);
-        title.HorizontalAlignment = sub.HorizontalAlignment = HorizontalAlignment.Center;
-        title.MaxWidth = sub.MaxWidth = 150;
-        return new StackPanel { Width = 160, Height = 200, Children = { art, title, sub } };
+        Margin = new Thickness(0, 28, 0, 0),
+        Children = { Title(title), content },
+    };
+
+    static TextBlock Title(string text) => new() { Text = text, FontSize = 22, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 0, 12), VerticalAlignment = VerticalAlignment.Center };
+
+    /// A row of items that scrolls sideways, a viewport at a time with the header's arrows.
+    public static Control Of(string title, IEnumerable<Control> items, double gap)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = gap };
+        foreach (var i in items) row.Children.Add(i);
+        var scroll = new ScrollViewer
+        {
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
+            Content = row,
+            Padding = new Thickness(0, 0, 0, 16), // room for the covers' shadows
+        };
+        void Page(int dir) => scroll.Offset = new Vector(Math.Clamp(scroll.Offset.X + dir * scroll.Viewport.Width * 0.9, 0, Math.Max(0, scroll.Extent.Width - scroll.Viewport.Width)), 0);
+        var back = Kit.IconButton(Icons.ChevronLeft, 28, 28, 12, "Back", () => Page(-1));
+        var on = Kit.IconButton(Icons.ChevronRight, 28, 28, 12, "More", () => Page(1));
+        var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+        head.Children.Add(Title(title));
+        head.Children.Add(new StackPanel { [Grid.ColumnProperty] = 1, Orientation = Orientation.Horizontal, Spacing = 4, Children = { back, on } });
+        return new StackPanel { Margin = new Thickness(0, 28, 0, 0), Children = { head, scroll } };
     }
 }

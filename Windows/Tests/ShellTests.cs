@@ -141,7 +141,7 @@ public class LibraryPageTests
         await ShellTests.Settle(20);
         ShellTests.Shot(w, "home");
         var texts = ShellTests.Texts(w.Shell.Page!).ToList();
-        foreach (var t in new[] { "Recently Played", "Your Favorites", "Made For You", "Late Night Drive", "Prism Hours", "Daily Mix 1", "Discover Weekly" })
+        foreach (var t in new[] { "Home", "Top Picks for You", "Recently Played", "Your Favorites", "Late Night Drive", "Prism Hours", "Daily Mix 1", "Discover Weekly" })
             Assert.True(texts.Contains(t), $"missing \"{t}\"");
     }
 
@@ -154,7 +154,7 @@ public class LibraryPageTests
         var texts = ShellTests.Texts(page).ToList();
         Assert.Contains("Albums", texts);
         Assert.Contains("Kaleido", texts);
-        Assert.Equal(12, page.GetVisualDescendants().OfType<CoverImage>().Count(c => c.Width == 190));
+        Assert.Equal(12, page.GetVisualDescendants().OfType<Tile>().Count());
     }
 
     [AvaloniaFact]
