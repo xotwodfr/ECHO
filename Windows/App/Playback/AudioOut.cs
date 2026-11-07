@@ -11,11 +11,11 @@ using SoundFlow.Structs;
 namespace Echo.Playback;
 
 /// One song at a time to the speakers through SoundFlow (miniaudio: WASAPI on Windows, PulseAudio or
-/// ALSA on the dev box). A signed stream URL plays as it arrives (ProgressiveStream: one request, sound
-/// from the first bytes; SoundFlow's own NetworkDataProvider asked three times and downloaded the whole
-/// song first, 2–4 s of silence); a local path (tests) plays from the file. With no audio device (or
-/// `nullDevice`, the tests) a thread pulls the mixer at real time instead: silent, but the song and its
-/// position run.
+/// ALSA on the dev box). A song from the server plays as it arrives (ProgressiveStream: sound from the
+/// first bytes, the cover art skipped; SoundFlow's own NetworkDataProvider asked three times and
+/// downloaded the whole song first, 2–4 s of silence); a local path (tests) plays from the file. With
+/// no audio device (or `nullDevice`, the tests) a thread pulls the mixer at real time instead: silent,
+/// but the song and its position run.
 public sealed class AudioOut : IDisposable
 {
     static readonly AudioFormat DeviceFormat = new() { Format = SampleFormat.F32, Channels = 2, SampleRate = 48_000 };
@@ -24,7 +24,7 @@ public sealed class AudioOut : IDisposable
     readonly AudioPlaybackDevice? device;
     readonly Mixer mixer;
     readonly CancellationTokenSource stop = new();
-    static readonly HttpClient http = new() { Timeout = Timeout.InfiniteTimeSpan };
+    readonly object sync = new(); // the song in play changes on a worker
     SoundPlayer? player;
     ISoundDataProvider? provider;
     ProgressiveStream? download;
@@ -71,53 +71,80 @@ public sealed class AudioOut : IDisposable
     /// The song ended by itself (not a pause, a stop or another Open).
     public event Action? Ended;
 
-    /// Opens `source` paused, replacing the current song. Over HTTP only the headers are waited for,
-    /// then as much of the song as the decoder reads to start. The decoder converts to the device's
-    /// format: a 44.1 kHz song on a 48 kHz device keeps its pitch.
-    public async Task Open(string source)
-    {
-        var (next, arriving) = await Task.Run<(ISoundDataProvider, ProgressiveStream?)>(async () =>
+    /// Opens a song arriving over HTTP (`fetch(from)` answers with its bytes from `from` on), replacing
+    /// the current one: only its headers and as much of it as the decoder reads to start are waited for.
+    /// It starts at `at`, playing if `play`, as soon as it can, on a worker (the window may be busy
+    /// laying out the new song). The decoder converts to the device's format: a 44.1 kHz song on a
+    /// 48 kHz device keeps its pitch.
+    public Task Open(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, TimeSpan at = default, bool play = false) =>
+        Open(async () =>
         {
-            if (source.StartsWith("http", StringComparison.OrdinalIgnoreCase))
-            {
-                var response = await http.GetAsync(source, HttpCompletionOption.ResponseHeadersRead);
-                if (!response.IsSuccessStatusCode)
-                {
-                    response.Dispose();
-                    throw new HttpRequestException($"The song's stream answered {(int)response.StatusCode}.");
-                }
-                var stream = new ProgressiveStream(response);
-                try
-                {
-                    return (new StreamDataProvider(engine, DeviceFormat, stream), stream);
-                }
-                catch
-                {
-                    stream.Dispose();
-                    throw;
-                }
-            }
-            var file = File.OpenRead(source);
+            var stream = await ProgressiveStream.Open(fetch);
             try
             {
-                return (new StreamDataProvider(engine, DeviceFormat, file), null);
+                return (new StreamDataProvider(engine, DeviceFormat, stream), stream);
+            }
+            catch
+            {
+                stream.Dispose();
+                throw;
+            }
+        }, at, play);
+
+    /// Opens a file (tests), as above.
+    public Task Open(string path, TimeSpan at = default, bool play = false) =>
+        Open(() =>
+        {
+            var file = File.OpenRead(path);
+            try
+            {
+                return Task.FromResult<(ISoundDataProvider, ProgressiveStream?)>((new StreamDataProvider(engine, DeviceFormat, file), null));
             }
             catch
             {
                 file.Dispose(); // a file the decoder refused: let go of it (Windows locks open files)
                 throw;
             }
+        }, at, play);
+
+    int opened;
+
+    /// A song asked for after this one wins: this one is dropped when it is ready.
+    async Task Open(Func<Task<(ISoundDataProvider, ProgressiveStream?)>> make, TimeSpan at, bool play)
+    {
+        var mine = Interlocked.Increment(ref opened);
+        await Task.Run(async () =>
+        {
+            var (next, arriving) = await make();
+            SoundPlayer p;
+            lock (sync)
+            {
+                if (mine != opened)
+                {
+                    arriving?.Dispose();
+                    (next as IDisposable)?.Dispose();
+                    return;
+                }
+                Close();
+                (provider, download) = (next, arriving);
+                p = player = new SoundPlayer(engine, DeviceFormat, next) { Volume = volume, Mute = muted };
+                p.PlaybackEnded += (_, _) => Ended?.Invoke();
+                mixer.AddComponent(p);
+            }
+            if (at > TimeSpan.Zero) p.Seek(at, SeekOrigin.Begin); // before Play: no blip of the song's start
+            if (play) p.Play();
         });
-        Close();
-        (provider, download) = (next, arriving);
-        player = new SoundPlayer(engine, DeviceFormat, next) { Volume = volume, Mute = muted };
-        player.PlaybackEnded += (_, _) => Ended?.Invoke();
-        mixer.AddComponent(player);
     }
 
-    public void Play() => player?.Play();
+    public void Play()
+    {
+        lock (sync) player?.Play();
+    }
 
-    public void Pause() => player?.Pause();
+    public void Pause()
+    {
+        lock (sync) player?.Pause();
+    }
 
     public bool Playing => player?.State == PlaybackState.Playing;
 
@@ -180,7 +207,7 @@ public sealed class AudioOut : IDisposable
     public void Dispose()
     {
         stop.Cancel();
-        Close();
+        lock (sync) Close();
         device?.Stop();
         device?.Dispose();
         engine.Dispose();

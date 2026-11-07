@@ -60,7 +60,7 @@ Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.
 
 | Folder | What |
 |---|---|
-| `App/Api` | The server: device token, signed stream URLs, covers (the token goes to the server only); the models |
+| `App/Api` | The server: device token, songs from the stream endpoint (Range requests skip cover art), covers (the token goes to the server only); the models |
 | `App/Library` | The library through the Subsonic proxy; lyrics; which formats play as stored |
 | `App/Playback` | Audio out (SoundFlow, miniaudio), the queue and the player |
 | `App/Ui` | Cider's window: `Shell`, `ChromeTop`, `Sidebar`, `ChromeBottom`, `Drawer`, the pages, `ModeViews`, `Menus`; `Cider.axaml` its colours and controls |

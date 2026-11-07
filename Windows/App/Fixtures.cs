@@ -221,6 +221,7 @@ public sealed class Fixtures : HttpMessageHandler
     {
         var uri = request.RequestUri!;
         var path = uri.AbsolutePath.Replace("/api/v1", "");
+        if (path.StartsWith("/navidrome/stream/")) return Task.FromException<HttpResponseMessage>(new HttpRequestException("The fixtures have no audio."));
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         if (path.StartsWith("/navidrome/cover/"))
         {
@@ -239,7 +240,6 @@ public sealed class Fixtures : HttpMessageHandler
             "/me/queue" => new JsonObject { ["updatedAt"] = 2 },
             "/me/plays/contexts" => new JsonObject { ["contexts"] = Played() },
             "/me/mixes" => new JsonObject { ["mixes"] = Mixes() },
-            _ when path.StartsWith("/navidrome/stream-url/") => new JsonObject { ["url"] = "/fixtures/no-audio" },
             _ => new JsonObject(),
         };
         return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
