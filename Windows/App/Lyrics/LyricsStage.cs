@@ -12,50 +12,27 @@ namespace Echo.Stage;
 
 // The lyrics as Apple Music draws them, by the numbers of AMLL (github.com/amll-dev/applemusic-like-lyrics,
 // AGPL-3.0 like ECHO; read from packages/core/src/lyric-player and styles, Nov 2026): the behaviour, not
-// its code. The words' springs are still Spicy Lyrics' (github.com/Spikerko/spicy-lyrics, AGPL-3.0).
+// its code.
 
-/// A natural cubic spline through (time, value) points, held flat outside them (Spicy's GetSpline).
-public sealed class Spline
+/// A CSS cubic-bézier timing function: the curve's y where its x is `x` (0–1).
+public sealed class CubicBezier(double x1, double y1, double x2, double y2)
 {
-    readonly double[] x, y, m;
+    public static readonly CubicBezier EaseOut = new(0, 0, 0.58, 1);
 
-    public Spline(params (double T, double V)[] points)
-    {
-        x = points.Select(p => p.T).ToArray();
-        y = points.Select(p => p.V).ToArray();
-        var n = x.Length;
-        m = new double[n];
-        if (n < 3) return;
-        // The second derivatives, natural ends (zero there).
-        var b = new double[n];
-        var c = new double[n];
-        var r = new double[n];
-        var a = new double[n];
-        for (var i = 1; i < n - 1; i++)
-        {
-            a[i] = x[i] - x[i - 1];
-            b[i] = 2 * (x[i + 1] - x[i - 1]);
-            c[i] = x[i + 1] - x[i];
-            r[i] = 6 * ((y[i + 1] - y[i]) / (x[i + 1] - x[i]) - (y[i] - y[i - 1]) / (x[i] - x[i - 1]));
-        }
-        for (var i = 2; i < n - 1; i++)
-        {
-            var k = a[i] / b[i - 1];
-            b[i] -= k * c[i - 1];
-            r[i] -= k * r[i - 1];
-        }
-        for (var i = n - 2; i >= 1; i--) m[i] = (r[i] - c[i] * m[i + 1]) / b[i];
-    }
+    static double Coord(double a, double b, double s) => 3 * a * (1 - s) * (1 - s) * s + 3 * b * (1 - s) * s * s + s * s * s;
 
-    public double At(double t)
+    public double At(double x)
     {
-        if (t <= x[0]) return y[0];
-        if (t >= x[^1]) return y[^1];
-        var i = 0;
-        while (t > x[i + 1]) i++;
-        var h = x[i + 1] - x[i];
-        var (u, w) = ((x[i + 1] - t) / h, (t - x[i]) / h);
-        return u * y[i] + w * y[i + 1] + ((u * u * u - u) * m[i] + (w * w * w - w) * m[i + 1]) * h * h / 6;
+        if (x <= 0) return 0;
+        if (x >= 1) return 1;
+        double lo = 0, hi = 1, s = x;
+        for (var i = 0; i < 30; i++)
+        {
+            s = (lo + hi) / 2;
+            if (Coord(x1, x2, s) < x) lo = s;
+            else hi = s;
+        }
+        return Coord(y1, y2, s);
     }
 }
 
@@ -295,21 +272,19 @@ public sealed class LyricsStage : Panel
 }
 
 /// One item of the column: a line (with its background vocals) or the interlude's dots. A line lit is
-/// white where sung and half-bright where still to come; a line not lit is dim; between them it fades
-/// over about 0.4 s (AMLL's transitions). Background vocals are 0.7 em under the line, at 40 % of its
-/// light, sliding up out from under it and growing from 80 % while the line is sung. Each word (or,
-/// held a second or more, each letter) has Spicy's three springs — scale (0.88 Hz, ζ 0.64), lift
-/// (1.45 Hz, ζ 0.4) and glow (1.18 Hz, ζ 0.56) — chasing its curves as it is sung.
+/// white where sung and half-bright where still to come, the light running across each word with a soft
+/// edge 0.6 em wide; a line not lit is dim; between them it fades over about 0.4 s (AMLL's transitions).
+/// Each word rises 0.05 em as it is sung. A word held a second or more (2–7 letters, or any CJK) is sung
+/// letter by letter: each letter swells, spreads from the word's middle, lifts and glows, peaking halfway
+/// through, a little after the one before it (AMLL's emphasis; stronger on a line's last word).
+/// Background vocals are 0.7 em under the line at 40 % of its light, rising twice as far, sliding up
+/// out from under it and growing from 80 % while the line is sung. All of it follows the song's time.
 public sealed class LineView : Control
 {
     static readonly FontFamily Face = new("avares://ECHO/Assets/Fonts#Pretendard Std");
-    static readonly Spline Scale = new((0, 0.95), (0.7, 1.0505), (1, 1));
-    static readonly Spline LetterScale = new((0, 0.95), (0.7, 1.175), (1, 1));
-    static readonly Spline Lift = new((0, 1 / 100.0), (0.9, -1 / 60.0), (1, 0));
-    static readonly Spline LetterLift = new((0, 1 / 100.0), (0.9, -1 / 56.0), (1, 0));
-    static readonly Spline Glow = new((0, 0), (0.15, 1), (0.6, 1), (1, 0));
     static readonly IBrush HoverFill = new SolidColorBrush(Color.FromArgb(17, 255, 255, 255)); // #fff1
     static readonly (double F, double Zeta) BgSpring = Spring.Of(1, 20, 50);
+    static readonly CubicBezier EmpIn = new(0.2, 0.4, 0.58, 1), EmpOut = new(0.3, 0, 0.58, 1);
 
     // AMLL adds light (plus-lighter): 20 % to a line not lit; to a lit one 85 % where sung and 34 % still
     // to come; background vocals 40 % of that. Over ECHO's backdrops (about 35 % grey) these whites
@@ -317,27 +292,26 @@ public sealed class LineView : Control
     const double Dim = 0.3, LitSung = 1, LitWaiting = 0.5, Plain = 0.85;
     const double BgDim = 0.12, BgSung = 0.5, BgWaiting = 0.2;
 
-    /// A word or a letter of a held word, with its springs.
-    sealed class Piece(string text, FormattedText shape, SKPath? outline, double x, double y, double w, double em, double start, double end, bool letter)
+    /// A word, or a letter of a held word: where it sits, when its word is sung, and the word's box (the
+    /// light crosses the whole word).
+    sealed record Piece(FormattedText Shape, SKPath? Outline, double X, double Y, double W, double Em, double Start, double End, double WordLeft, double WordWidth, bool Bg)
     {
-        public readonly string Text = text;
-        public readonly FormattedText Shape = shape;
-        public readonly SKPath? Outline = outline;
-        public readonly double X = x, Y = y, W = w, Em = em, Start = start, End = end;
-        public readonly bool Letter = letter;
-        public Spring S = new(0.95), L = new(1 / 100.0), G = new(0);
-        /// Where a letter sits in its word, and how many there are (for the wave's falloff).
-        public int Index, Of = 1;
-        public double WordStart, WordEnd;
+        public Emphasis? Emp { get; init; }
     }
+
+    /// A held word's letters: this one's place among them, when the word starts, how long it plays, how
+    /// much it swells and glows.
+    sealed record Emphasis(int Index, int Count, double Start, double Du, double Amount, double Blur);
+
+    readonly record struct Syllable(string Text, double Start, double End);
 
     readonly Item item;
     readonly double size, pad;
     readonly bool plain, duetSong;
     readonly List<Piece> pieces = [];
     readonly List<string> words = [];
-    int bgFrom = int.MaxValue;
-    double bgTop, bgHeight, mainBottom, t;
+    readonly List<(string Word, double Swell, double Glow)> held = [];
+    double bgTop, bgHeight, mainBottom, t, movesFrom, movesUntil;
     bool lit, hover, showBackground = true;
     double blur = -1;
 
@@ -368,6 +342,9 @@ public sealed class LineView : Control
     public IReadOnlyList<string> Words => words;
 
     public bool IsLit => lit;
+
+    /// The words sung letter by letter, with how much they swell and glow (tests read them).
+    public IReadOnlyList<(string Word, double Swell, double Glow)> Held => held;
 
     /// Where the line is (its top) and how big, in % (tests read them).
     public double Top => y.X;
@@ -436,10 +413,11 @@ public sealed class LineView : Control
         return !blurring.Settled(sigma);
     }
 
-    /// Moves the springs on to `time`; true while any still moves.
+    /// Moves the line's light and words on to `time`; true while its light still changes.
     public bool Step(double time, bool isLit, double dtMs)
     {
-        var changed = isLit != lit || Math.Abs(time - t) > 0.5;
+        // The words move while the song is inside their time (or just left it).
+        var redraw = isLit != lit || time != t && (Moving(time) || Moving(t));
         t = time;
         lit = isLit;
         var busy = false;
@@ -447,93 +425,58 @@ public sealed class LineView : Control
         {
             // A seek: the line's light and its background vocals are there at once.
             (fade, bgIn, bgFade) = (new Spring(isLit ? 100 : 0), new Spring(showBackground ? 100 : 0), new Spring(showBackground ? 100 : 0));
+            redraw = true;
         }
         else
         {
             fade.Step(isLit ? 100 : 0, dtMs, 2.5, 1);
             bgIn.Step(showBackground ? 100 : 0, dtMs, BgSpring.F, BgSpring.Zeta);
             bgFade.Step(showBackground ? 100 : 0, dtMs, 3.3, 1);
-            busy |= !fade.Settled(isLit ? 100 : 0) || !bgIn.Settled(showBackground ? 100 : 0) || !bgFade.Settled(showBackground ? 100 : 0);
+            busy = !fade.Settled(isLit ? 100 : 0) || !bgIn.Settled(showBackground ? 100 : 0) || !bgFade.Settled(showBackground ? 100 : 0);
         }
-        foreach (var p in pieces)
-        {
-            var (sc, lift, glow) = Targets(p);
-            if (dtMs >= 1000)
-            {
-                (p.S, p.L, p.G) = (new Spring(sc), new Spring(lift), new Spring(glow)); // a seek: there at once
-                continue;
-            }
-            p.S.Step(sc, dtMs, 0.88, 0.64);
-            p.L.Step(lift, dtMs, 1.45, 0.4);
-            p.G.Step(glow, dtMs, 1.18, 0.56);
-            busy |= !p.S.Settled(sc) || !p.L.Settled(lift) || !p.G.Settled(glow);
-        }
-        if (busy || changed || item.Interlude && isLit) InvalidateVisual();
+        if (busy || redraw) InvalidateVisual();
         return busy || item.Interlude && time >= item.Start && time < item.End;
     }
 
-    /// Where a piece's springs head at time t: its curves at its progress (at rest before it, settled
-    /// after); a letter's lean toward the one being sung (Spicy: 1 / (1 + d^2.8), glow 1 / (1 + 0.9 d)).
-    (double Scale, double Lift, double Glow) Targets(Piece p)
-    {
-        if (plain) return (1, 0, 0);
-        if (!p.Letter)
-        {
-            var x = Progress(p.Start, p.End);
-            return (Scale.At(x), Lift.At(x), lit ? Glow.At(x) : 0);
-        }
-        var share = (p.WordEnd - p.WordStart) / p.Of;
-        var at0 = (int)Math.Floor((t - p.WordStart) / Math.Max(1, share));
-        var mine = Progress(p.Start, p.End);
-        if (at0 < 0 || at0 >= p.Of) return (LetterScale.At(mine), LetterLift.At(mine), 0);
-        var d = Math.Abs(p.Index - at0);
-        var fall = 1 / (1 + Math.Pow(d, 2.8));
-        var glowFall = 1 / (1 + 0.9 * d);
-        var at = (t - (p.WordStart + at0 * share)) / Math.Max(1, share);
-        double Lean(Spline s) => s.At(0) + (s.At(at) - s.At(0)) * fall;
-        // Letters already sung keep their settled place; those to come lean toward the lit one.
-        return p.Index < at0
-            ? (LetterScale.At(1) + (LetterScale.At(at) - LetterScale.At(1)) * fall, LetterLift.At(1) + (LetterLift.At(at) - LetterLift.At(1)) * fall, lit ? Glow.At(at) * glowFall : 0)
-            : (Lean(LetterScale), Lean(LetterLift), lit ? Glow.At(at) * glowFall : 0);
-    }
-
-    double Progress(double start, double end) => end <= start ? (t >= start ? 1 : 0) : Math.Clamp((t - start) / (end - start), 0, 1);
+    bool Moving(double time) => item.Interlude ? time >= item.Start && time < item.End : time >= movesFrom && time <= movesUntil;
 
     protected override Size MeasureOverride(Size available)
     {
         pieces.Clear();
         words.Clear();
-        bgFrom = int.MaxValue;
+        held.Clear();
         var width = double.IsInfinity(available.Width) ? 600 : available.Width;
         if (item.Line is not { } line) return new Size(width, size * 2);
         // AMLL: 0.4 em above and below; in a song with a duet, each voice keeps 15 % clear on the far side.
         var inner = Math.Max(1, width - pad * 2);
         var room = duetSong ? inner * 0.85 : inner;
         var left = RightAligned ? pad + inner - room : pad;
-        mainBottom = Flow(Split(line.Words, line.Text, line.Start, line.End ?? line.Start + 4000), size, size * 0.4, left, room, line.Words is not { Count: > 0 });
-        bgFrom = pieces.Count;
+        mainBottom = Flow(Split(line.Words, line.Text, line.Start, line.End ?? line.Start + 4000), size, size * 0.4, left, room, line.Words is not { Count: > 0 }, bg: false);
         bgTop = mainBottom + size * 0.2;
         var bottom = bgTop;
         foreach (var bg in line.Background ?? [])
-            bottom = Flow(Split(bg.Words, bg.Text, bg.Start ?? line.Start, bg.End ?? line.End ?? line.Start + 4000), size * 0.7, bottom, left, room, bg.Words is not { Count: > 0 });
+            bottom = Flow(Split(bg.Words, bg.Text, bg.Start ?? line.Start, bg.End ?? line.End ?? line.Start + 4000), size * 0.7, bottom, left, room, bg.Words is not { Count: > 0 }, bg: true);
         bgHeight = bottom - bgTop;
+        // Words move from their start until the longest of their motions ends (a held letter's 1.4 ×).
+        movesFrom = pieces.Count == 0 ? 0 : pieces.Min(p => p.Start);
+        movesUntil = pieces.Count == 0 ? 0 : pieces.Max(p => p.Emp is { } e ? e.Start + e.Du * 2 : p.Start + 2 * Math.Max(1000, p.End - p.Start) + 500);
         return new Size(width, (showBackground && bgHeight > 0 ? bottom : mainBottom) + size * 0.4);
     }
 
-    /// The words with their times; a line timed only as a whole is spread over its length by
-    /// characters, so the light runs across it as Spicy's line lyrics do.
-    static List<(string Text, double Start, double End)> Split(IReadOnlyList<LyricWord>? timed, string text, double start, double end)
+    /// The syllables with their times, each ending in a space where its word ends; a line timed only as
+    /// a whole is spread over its length by characters, so the light runs across it word by word.
+    static List<Syllable> Split(IReadOnlyList<LyricWord>? timed, string text, double start, double end)
     {
         if (timed is { Count: > 0 })
-            return timed.Select((w, i) => (w.IsPartOfWord || i == timed.Count - 1 ? w.Text : w.Text + " ", (double)w.Start, (double)w.End)).ToList();
+            return timed.Select((w, i) => new Syllable(w.IsPartOfWord || i == timed.Count - 1 ? w.Text : w.Text + " ", w.Start, w.End)).ToList();
         var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         var total = Math.Max(1, parts.Sum(p => p.Length + 1));
-        var list = new List<(string, double, double)>();
+        var list = new List<Syllable>();
         var at = start;
         foreach (var p in parts)
         {
             var span = (end - start) * (p.Length + 1) / total;
-            list.Add((p + " ", at, at + span));
+            list.Add(new Syllable(p + " ", at, at + span));
             at += span;
         }
         return list;
@@ -542,43 +485,73 @@ public sealed class LineView : Control
     static FormattedText Shape(string text, double em) => new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
         new Typeface(Face, FontStyle.Normal, FontWeight.Bold), em, Brushes.White);
 
-    /// Lays the words in rows `width` wide from (`left`, `top`), as text wraps; returns the bottom.
-    double Flow(List<(string Text, double Start, double End)> source, double em, double top, double left, double width, bool lineTimed)
+    static bool Cjk(string s) => s.Any(c => c is >= '぀' and <= 'ヿ' or >= '㐀' and <= '鿿' or >= '가' and <= '힯' or >= '豈' and <= '﫿');
+
+    /// AMLL's emphasis for a word sung over `chunk` (its syllables), or null: held 1 s or more, and 2–7
+    /// letters long unless CJK. The longer it is held the more it swells and glows.
+    static Emphasis? Emphasize(List<Syllable> chunk, bool last)
+    {
+        var word = string.Concat(chunk.Select(s => s.Text)).Trim();
+        var (start, held) = (chunk[0].Start, chunk[^1].End - chunk[0].Start);
+        if (held < 1000 || !Cjk(word) && (word.Length > 7 || word.Length < 2)) return null;
+        var du = Math.Max(1000, held);
+        double amount = du / 2000, glow = du / 3000;
+        amount = (amount > 1 ? Math.Sqrt(amount) : amount * amount * amount) * 0.6;
+        glow = (glow > 1 ? Math.Sqrt(glow) : glow * glow * glow) * 0.5;
+        if (last) (amount, glow, du) = (amount * 1.6, glow * 1.5, du * 1.2);
+        return new Emphasis(0, word.Length, start, du, Math.Min(1.2, amount), Math.Min(0.8, glow));
+    }
+
+    /// Lays the words in rows `width` wide from (`left`, `top`), wrapping between words; returns the
+    /// bottom.
+    double Flow(List<Syllable> source, double em, double top, double left, double width, bool lineTimed, bool bg)
     {
         var row = new List<Piece>();
         double x = 0, y = top, lineHeight = em * 1.2;
         void End()
         {
             var shift = left + (RightAligned && row.Count > 0 ? width - row.Max(p => p.X + p.W) : 0);
-            for (var i = 0; i < row.Count; i++) row[i] = Moved(row[i], shift);
-            pieces.AddRange(row);
+            foreach (var p in row) pieces.Add(Moved(p, shift));
             row.Clear();
         }
-        foreach (var (text, start, end) in source)
+        // A word is its syllables up to one ending in a space.
+        var chunks = new List<List<Syllable>> { new() };
+        foreach (var s in source)
         {
-            words.Add(text.Trim());
-            var whole = Shape(text, em);
-            if (x > 0 && x + whole.Width > width)
+            chunks[^1].Add(s);
+            if (s.Text.EndsWith(' ')) chunks.Add([]);
+        }
+        chunks.RemoveAll(c => c.Count == 0);
+        for (var c = 0; c < chunks.Count; c++)
+        {
+            var chunk = chunks[c];
+            if (x > 0 && x + Shape(string.Concat(chunk.Select(s => s.Text)).TrimEnd(), em).Width > width)
             {
                 End();
                 x = 0;
                 y += lineHeight;
             }
-            // A word held a second or more is sung letter by letter (Spicy's IsLetterCapable).
-            var letters = text.TrimEnd();
-            if (!plain && !lineTimed && end - start >= 1000 && letters.Length > 1)
+            var emp = plain || lineTimed ? null : Emphasize(chunk, c == chunks.Count - 1);
+            if (emp is not null) held.Add((string.Concat(chunk.Select(s => s.Text)).Trim(), emp.Amount, emp.Blur));
+            var index = 0;
+            foreach (var s in chunk)
             {
-                var share = (end - start) / letters.Length;
-                for (var i = 0; i < letters.Length; i++)
+                words.Add(s.Text.Trim());
+                var shape = Shape(s.Text, em);
+                if (emp is not null)
                 {
-                    var before = i == 0 ? 0 : Shape(letters[..i], em).WidthIncludingTrailingWhitespace;
-                    var shape = Shape(letters[i].ToString(), em);
-                    row.Add(new Piece(letters[i].ToString(), shape, Outline(letters[i].ToString(), em, x + before, y + shape.Baseline), x + before, y, shape.WidthIncludingTrailingWhitespace, em,
-                        start + i * share, start + (i + 1) * share, letter: true) { Index = i, Of = letters.Length, WordStart = start, WordEnd = end });
+                    var letters = s.Text.TrimEnd();
+                    for (var i = 0; i < letters.Length; i++)
+                    {
+                        var before = i == 0 ? 0 : Shape(letters[..i], em).WidthIncludingTrailingWhitespace;
+                        var letter = Shape(letters[i].ToString(), em);
+                        row.Add(new Piece(letter, Outline(letters[i].ToString(), em, x + before, y + letter.Baseline), x + before, y, letter.WidthIncludingTrailingWhitespace, em,
+                            s.Start, s.End, x, shape.Width, bg) { Emp = emp with { Index = index++ } });
+                    }
                 }
+                else row.Add(new Piece(shape, null, x, y, shape.Width, em, s.Start, s.End, x, shape.Width, bg));
+                x += shape.WidthIncludingTrailingWhitespace;
             }
-            else row.Add(new Piece(text, whole, plain ? null : Outline(text.TrimEnd(), em, x, y + whole.Baseline), x, y, whole.Width, em, start, end, letter: false));
-            x += whole.WidthIncludingTrailingWhitespace;
         }
         End();
         return y + lineHeight;
@@ -597,10 +570,28 @@ public sealed class LineView : Control
     {
         var outline = p.Outline is null ? null : new SKPath(p.Outline);
         outline?.Transform(SKMatrix.CreateTranslation((float)dx, 0));
-        return new(p.Text, p.Shape, outline, p.X + dx, p.Y, p.W, p.Em, p.Start, p.End, p.Letter)
-        {
-            Index = p.Index, Of = p.Of, WordStart = p.WordStart, WordEnd = p.WordEnd,
-        };
+        return p with { Outline = outline, X = p.X + dx, WordLeft = p.WordLeft + dx };
+    }
+
+    /// Where a piece is at time t, as AMLL's word animations run: a word rises 0.05 em over its time
+    /// (at least 1 s, eased out); a held word's letter, starting 1/2.5 of the word's time later per
+    /// letter, swells by up to 10 % × amount, spreads out from the word's middle and lifts, glowing,
+    /// on a curve up to halfway and back, while it floats up a sine and 0.05 em over 1.4 × the time.
+    /// Background vocals rise twice as far.
+    (double Dx, double Dy, double Scale, double Glow, double GlowSigma) Motion(Piece p)
+    {
+        var up = p.Bg ? 0.1 : 0.05;
+        if (p.Emp is not { } e) return (0, -up * CubicBezier.EaseOut.At((t - p.Start) / Math.Max(1000, p.End - p.Start)) * p.Em, 1, 0, 0);
+        var at = e.Start + e.Du / 2.5 / e.Count * e.Index;
+        var x = Math.Clamp((t - at) / e.Du, 0, 1);
+        var curve = x < 0.5 ? EmpIn.At(x / 0.5) : 1 - EmpOut.At((x - 0.5) / 0.5);
+        var f = Math.Clamp((t - at) / (e.Du * 1.4), 0, 1);
+        var rise = Math.Sin(f * Math.PI) * (p.Bg ? 2 : 1) * 0.05 + f * up;
+        return (-curve * 0.03 * e.Amount * (e.Count / 2.0 - e.Index) * p.Em,
+            (-curve * 0.025 * e.Amount - rise) * p.Em,
+            1 + curve * 0.1 * e.Amount,
+            curve * e.Blur,
+            Math.Min(0.3, e.Blur * 0.3) * p.Em / 2);
     }
 
     public override void Render(DrawingContext context)
@@ -612,26 +603,24 @@ public sealed class LineView : Control
             if (t >= item.Start && t < item.End) Dots(context);
             return;
         }
-        for (var i = 0; i < pieces.Count; i++)
+        foreach (var p in pieces)
         {
-            var p = pieces[i];
-            var bg = i >= bgFrom;
-            if (bg && bgFade.X < 1) continue;
+            if (p.Bg && bgFade.X < 1) continue;
             var box = new Rect(p.X, p.Y, p.W, p.Em * 1.2);
-            // Scale from the piece's foot, lift by its em (Spicy's translate in --DefaultLyricsSize).
-            var m = Matrix.CreateTranslation(-box.Center.X, -box.Bottom) * Matrix.CreateScale(p.S.X, p.S.X) * Matrix.CreateTranslation(box.Center.X, box.Bottom + p.L.X * p.Em);
-            if (bg)
+            var (dx, dy, s, glow, sigma) = plain ? (0, 0, 1, 0, 0) : Motion(p);
+            var m = Matrix.CreateTranslation(-box.Center.X, -box.Center.Y) * Matrix.CreateScale(s, s) * Matrix.CreateTranslation(box.Center.X + dx, box.Center.Y + dy);
+            if (p.Bg)
             {
                 // Out from under the line: from 80 % of its own height up and 80 % of its size.
                 var k = Math.Clamp(bgIn.X / 100, 0, 1);
                 var (ox, oy) = (RightAligned ? Bounds.Width - pad : pad, bgTop);
-                var s = 0.8 + 0.2 * k;
-                m *= Matrix.CreateTranslation(-ox, -oy) * Matrix.CreateScale(s, s) * Matrix.CreateTranslation(ox, oy - 0.8 * (1 - k) * bgHeight);
+                var g = 0.8 + 0.2 * k;
+                m *= Matrix.CreateTranslation(-ox, -oy) * Matrix.CreateScale(g, g) * Matrix.CreateTranslation(ox, oy - 0.8 * (1 - k) * bgHeight);
             }
-            var shown = bg ? Math.Clamp(bgFade.X / 100, 0, 1) : 1;
+            var shown = p.Bg ? Math.Clamp(bgFade.X / 100, 0, 1) : 1;
             using var _ = context.PushTransform(m);
-            if (p.G.X > 0.01 && p.Outline is { } outline) context.Custom(new GlowOp(box.Inflate(16), outline, p.G.X * shown));
-            p.Shape.SetForegroundBrush(Fill(p, bg, shown));
+            if (glow * shown > 0.005 && p.Outline is { } outline) context.Custom(new GlowOp(box.Inflate(p.Em), outline, glow * shown, sigma));
+            p.Shape.SetForegroundBrush(Fill(p, shown));
             context.DrawText(p.Shape, new Point(p.X, p.Y));
         }
     }
@@ -639,25 +628,34 @@ public sealed class LineView : Control
     static Color White(double alpha) => Color.FromArgb((byte)Math.Clamp(255 * alpha, 0, 255), 255, 255, 255);
 
     /// The colour across a piece: dim, or as the line lights, white where sung and half-bright still to
-    /// come, the edge at −20 % + 120 % of the progress with a 20 % fade (Spicy's --gradient-position).
-    IBrush Fill(Piece p, bool bg, double shown)
+    /// come. The edge between runs across the word over its time, a soft band 0.6 em wide (AMLL's mask:
+    /// half the word's height) centred on the word's left edge as it starts and its right as it ends.
+    IBrush Fill(Piece p, double shown)
     {
         if (plain) return new SolidColorBrush(White(Plain));
         var f = Math.Clamp(fade.X / 100, 0, 1);
-        var (dim, on, waiting) = bg ? (BgDim, BgSung, BgWaiting) : (Dim, LitSung, LitWaiting);
+        var (dim, on, waiting) = p.Bg ? (BgDim, BgSung, BgWaiting) : (Dim, LitSung, LitWaiting);
         var sung = White((dim + (on - dim) * f) * shown);
         var toCome = White((dim + (waiting - dim) * f) * shown);
-        var pos = (-20 + 120 * Progress(p.Start, p.End)) / 100;
-        if (pos <= -0.2) return new SolidColorBrush(toCome);
-        if (pos >= 1) return new SolidColorBrush(sung);
+        var edge = p.WordLeft + p.WordWidth * (t - p.Start) / Math.Max(1, p.End - p.Start);
+        var half = 0.3 * p.Em;
+        // How sung a point x is: 1 left of the band, 0 right of it.
+        double Lit(double x) => Math.Clamp((edge + half - x) / (2 * half), 0, 1);
+        var (l, r) = (Lit(p.X), Lit(p.X + p.W));
+        if (l <= 0) return new SolidColorBrush(toCome);
+        if (r >= 1) return new SolidColorBrush(sung);
+        Color Mix(double k) => Color.FromArgb((byte)(toCome.A + (sung.A - toCome.A) * k), 255, 255, 255);
+        var (from, to) = (Math.Clamp((edge - half - p.X) / p.W, 0, 1), Math.Clamp((edge + half - p.X) / p.W, 0, 1));
         return new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative),
             EndPoint = new RelativePoint(1, 0.5, RelativeUnit.Relative),
             GradientStops =
             {
-                new GradientStop(sung, Math.Clamp(pos, 0, 1)),
-                new GradientStop(toCome, Math.Clamp(pos + 0.2, 0, 1)),
+                new GradientStop(Mix(l), 0),
+                new GradientStop(Mix(Lit(p.X + from * p.W)), from),
+                new GradientStop(Mix(Lit(p.X + to * p.W)), to),
+                new GradientStop(Mix(r), 1),
             },
         };
     }
@@ -681,9 +679,9 @@ public sealed class LineView : Control
         }
     }
 
-    /// Spicy's glow: a white text-shadow of (4 + 2g) px at 35 % × g, drawn as the glyphs' outline under
-    /// Skia's blur mask (a Gaussian of half the radius), in the line's current transform.
-    sealed class GlowOp(Rect bounds, SKPath outline, double g) : ICustomDrawOperation
+    /// A held letter's glow, AMLL's white text-shadow: the glyph's outline under Skia's blur mask (a
+    /// Gaussian `sigma` px, half the shadow's radius), at `alpha`, in the letter's current transform.
+    sealed class GlowOp(Rect bounds, SKPath outline, double alpha, double sigma) : ICustomDrawOperation
     {
         public Rect Bounds => bounds;
         public bool HitTest(Point p) => false;
@@ -697,8 +695,8 @@ public sealed class LineView : Control
             using var paint = new SKPaint
             {
                 IsAntialias = true,
-                Color = new SKColor(255, 255, 255, (byte)Math.Clamp(255 * 0.35 * g, 0, 255)),
-                MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)((4 + 2 * g) / 2)),
+                Color = new SKColor(255, 255, 255, (byte)Math.Clamp(255 * alpha, 0, 255)),
+                MaskFilter = SKMaskFilter.CreateBlur(SKBlurStyle.Normal, (float)Math.Max(0.5, sigma)),
             };
             lease.SkCanvas.DrawPath(outline, paint);
         }

@@ -71,13 +71,13 @@ public class TimelineTests
     }
 
     [Fact]
-    public void SpicysCurvesPassThroughTheirPoints()
+    public void ACubicBezierEasesAsCssDoes()
     {
-        var scale = new Spline((0, 0.95), (0.7, 1.0505), (1, 1));
-        Assert.Equal(0.95, scale.At(-1));
-        Assert.Equal(1.0505, scale.At(0.7), 9);
-        Assert.Equal(1, scale.At(2));
-        Assert.True(scale.At(0.5) > 1); // on its way up past full size
+        var ease = CubicBezier.EaseOut;
+        Assert.Equal(0, ease.At(-1));
+        Assert.Equal(1, ease.At(2));
+        Assert.Equal(0.5, new CubicBezier(0.25, 0.25, 0.75, 0.75).At(0.5), 3); // a straight line
+        Assert.True(ease.At(0.5) > 0.6); // ease-out: most of the way by halfway
     }
 
     [Fact]
@@ -205,6 +205,60 @@ public class LyricsStageTests
         set(102_000);
         stage.Tick(16);
         Assert.True(stage.Lines[stage.Active].RightAligned);
+    }
+
+    static LineView Laid(params (string Word, long Ms)[] words)
+    {
+        var at = 10_000L;
+        var timed = words.Select(w => { var word = new LyricWord(w.Word, at, at + w.Ms); at += w.Ms; return word; }).ToList();
+        var line = new LyricLine(string.Join(" ", words.Select(w => w.Word)), 10_000, at, Words: timed);
+        var view = new LineView(new Item(line, 10_000, at), 30, plain: false);
+        view.Measure(new Avalonia.Size(2000, double.PositiveInfinity));
+        return view;
+    }
+
+    [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void WordsHeldASecondOrMoreWithTwoToSevenLettersGlow()
+    {
+        // Too short a letter, too long a word, held long enough, and the last word sung quickly.
+        var view = Laid(("I", 1_000), ("beautiful", 2_000), ("stay", 2_500), ("now", 500));
+        var stay = Assert.Single(view.Held);
+        Assert.Equal("stay", stay.Word);
+        // 2.5 s: swells by √1.25 × 0.6, glows by (2.5/3)³ × 0.5.
+        Assert.Equal(Math.Sqrt(1.25) * 0.6, stay.Swell, 6);
+        Assert.Equal(Math.Pow(2.5 / 3, 3) * 0.5, stay.Glow, 6);
+        // Any held CJK word glows, however short.
+        Assert.Equal("爱", Assert.Single(Laid(("爱", 1_500)).Held).Word);
+    }
+
+    [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void ALongHeldWordSwellsAndGlowsHalfwayThrough()
+    {
+        // "long" held 2.8 s as the line's last word: its first letter peaks 1.68 s in.
+        var at = 10_000L;
+        var timed = new[] { ("I've", 300L), ("been", 300L), ("waiting", 400L), ("so", 300L), ("long", 2_800L) }
+            .Select(w => { var word = new LyricWord(w.Item1, at, at + w.Item2); at += w.Item2; return word; }).ToList();
+        var doc = Fixtures.Lyrics with { Lines = [new LyricLine("I've been waiting so long", 10_000, at, Words: timed), new LyricLine("Comes back to me", 15_000, 18_000)] };
+        var t = 12_900.0;
+        var stage = new LyricsStage(() => t, () => true, _ => { });
+        var w = new Avalonia.Controls.Window { Width = 800, Height = 600, Content = stage };
+        w.Show();
+        stage.Show(doc);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Run(stage, 30);
+        var line = stage.Lines[stage.Active];
+        Assert.True(line.IsLit);
+        Assert.Equal("long", Assert.Single(line.Held).Word);
+        ShellTests.Shot(w, "lyrics-held");
+    }
+
+    [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void ALinesLastHeldWordGlowsMore()
+    {
+        var mid = Assert.Single(Laid(("on", 1_200), ("and", 300)).Held);
+        var last = Assert.Single(Laid(("and", 300), ("on", 1_200)).Held);
+        Assert.Equal(mid.Swell * 1.6, last.Swell, 6);
+        Assert.Equal(mid.Glow * 1.5, last.Glow, 6);
     }
 
     [Avalonia.Headless.XUnit.AvaloniaFact]
