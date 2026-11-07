@@ -130,6 +130,21 @@ public partial class MainWindow : Window
         if (!e.Handled && Content is Shell shell) shell.Keys(e);
     }
 
+    bool saved;
+
+    /// Where the song is, saved before the window goes (it is saved 15 s apart while playing): the window
+    /// hides at once and closes when the server has it, 2 s at most.
+    protected override async void OnClosing(WindowClosingEventArgs e)
+    {
+        base.OnClosing(e);
+        if (e.Cancel || saved || session is null || e.CloseReason == WindowCloseReason.ApplicationShutdown) return;
+        e.Cancel = true;
+        saved = true;
+        Hide();
+        await Task.WhenAny(session.Player.SaveNow(), Task.Delay(2000));
+        Close();
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         session?.Player.Dispose();

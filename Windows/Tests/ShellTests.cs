@@ -10,8 +10,35 @@ namespace Echo.Tests;
 
 /// Cider's shell on the built-in library. With ECHO_SHOTS set to a folder, each test also saves what it
 /// drew there, for the side-by-side with Cider's own screenshots (1336×768).
+/// A server that notes each request as "METHOD /path?query".
+sealed class Counting(HttpMessageHandler inner) : DelegatingHandler(inner)
+{
+    public List<string> Asked { get; } = [];
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        Asked.Add($"{request.Method} {request.RequestUri!.PathAndQuery}");
+        return base.SendAsync(request, token);
+    }
+}
+
 public class ShellTests
 {
+    [AvaloniaFact]
+    public async Task ClosingTheWindowSavesWhereTheSongIs()
+    {
+        // The queue is saved 15 s apart while playing: closing in between lost up to 15 s of the song.
+        var server = new Counting(new Fixtures());
+        var w = new MainWindow { Width = 1336, Height = 768 };
+        w.Open(new Session(new Api(Fixtures.Base, server), fixtures: true));
+        w.Show();
+        await Settle();
+        w.Close();
+        await Settle();
+        Assert.Contains(server.Asked, u => u.StartsWith("PUT /api/v1/me/queue"));
+        Assert.False(w.IsVisible);
+    }
+
     internal static async Task<MainWindow> Open()
     {
         var w = new MainWindow { Width = 1336, Height = 768 };
@@ -176,17 +203,6 @@ public class LibraryPageTests
         Assert.Contains("Albums", texts);
         Assert.Contains("Kaleido", texts);
         Assert.Equal(12, page.GetVisualDescendants().OfType<Tile>().Count());
-    }
-
-    sealed class Counting(HttpMessageHandler inner) : DelegatingHandler(inner)
-    {
-        public List<string> Asked { get; } = [];
-
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
-        {
-            Asked.Add(request.RequestUri!.PathAndQuery);
-            return base.SendAsync(request, token);
-        }
     }
 
     [AvaloniaFact]
