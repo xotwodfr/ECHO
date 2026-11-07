@@ -1,7 +1,11 @@
-ECHO for Windows: Cider, better, and lyrics the Apple Music way.
+ECHO for Windows: Cider's look, with Apple Music's best layouts.
 
-- **Lyrics, rebuilt.** The line being sung sits a third of the way down, the next ones glide up after it one by one; words light up as they're sung and lift a little, long notes swell, backing vocals sit smaller underneath, breaks show three breathing dots. Click a line to jump there.
-- **Immersive view** (from the cover in the player bar → Fullscreen View): the artwork, the lyrics in a big card, a floating player, over the song's colours slowly drifting.
-- **Album pages take the cover's colour**, and pages and the side panel now glide in.
+- **Album and playlist pages**: the artist in the album's colour, a small "genre · year" line, and Apple's song table — striped rows, Song / Artist / Album / Time columns on playlists, a play button where the number is when you hover, "…" on every row.
+- **Home**: Top Picks (your mixes as big cards in their own colours), Recently Played and Your Favorites as Apple-style shelves.
+- **Albums and Recently Added**: Apple's clean cover grid, filling the window's width.
+- **Artists**: the artist's picture across the top with their name and a red play button, Latest Release beside Top Songs, albums in a shelf.
+- **Search**: Top Results first, then songs, albums and artists.
+- **Queue**: Now Playing and Playing Next as Cider 4 shows them, with history a click away.
+- Red icons in the sidebar, as in Apple Music. The lyrics and immersive view from 3.1 are still here.
 
 **Windows may say it protected your PC** (the exe is not signed): More info → Run anyway.

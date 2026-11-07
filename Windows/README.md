@@ -40,6 +40,10 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
 - Cider 4's **immersive view** (the artwork, the lyrics card, a floating player over the cover's slowly
   turning colours) and Cider's **mini player**, from the artwork's popover.
 - Album pages take their cover's colour; pages and the drawer move in as Cider's do.
+- Where Apple Music does it better, its layout inside Cider's look: song tables (striped, columns,
+  play on hover), the album header (artist in the page's colour, GENRE · YEAR), Home's shelves (Top
+  Picks, Recently Played), the library grid, the artist banner, search's Top Results, Cider 4's queue
+  drawer, red sidebar icons.
 
 Left out as Apple Music's: Listen Now, Browse, Radio, Videos, Podcasts, Apple Music playlists, Add to
 Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.
