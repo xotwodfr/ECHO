@@ -35,6 +35,12 @@ public sealed class Drawer : Border
         HorizontalAlignment = HorizontalAlignment.Right;
         Margin = new Thickness(0, 20, 16, 20);
         IsVisible = false;
+        // Cider's drawertransition: in from the right, fading.
+        Transitions =
+        [
+            new Avalonia.Animation.DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(250), Easing = new Avalonia.Animation.Easings.CubicEaseOut() },
+            new Avalonia.Animation.TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(250), Easing = new Avalonia.Animation.Easings.CubicEaseOut() },
+        ];
     }
 
     /// "queue", "lyrics" or null (closed).
@@ -45,8 +51,19 @@ public sealed class Drawer : Border
     /// The bar's buttons: the same panel again closes the drawer.
     public void Toggle(string panel)
     {
+        var opening = !IsVisible;
         Panel = Panel == panel ? null : panel;
         IsVisible = Panel is not null;
+        if (IsVisible && opening)
+        {
+            Opacity = 0;
+            RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateX(24px)");
+            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                Opacity = 1;
+                RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateX(0px)");
+            }, Avalonia.Threading.DispatcherPriority.Render);
+        }
         Child = Panel switch
         {
             "queue" => new QueuePanel(session, nav),

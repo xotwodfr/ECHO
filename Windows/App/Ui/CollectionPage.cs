@@ -140,6 +140,7 @@ public sealed class CollectionPage : DockPanel
         };
         SetDock(header, Dock.Top);
         Children.Add(header);
+        _ = Tint(cover, header, play, shuffle);
 
         // ---- the songs (.playlist-body: var(--color3), 16 px / 40 px in) and the footer ----
         var count = tracks.Count;
@@ -165,6 +166,24 @@ public sealed class CollectionPage : DockPanel
             list = List = new TrackList(session, nav, shown, context, artwork);
             ((StackPanel)scroll.Content!).Children[0] = list;
         };
+    }
+
+    /// Cider 4 colours an album's page with its cover: the header glows with the key colour and Play and
+    /// Shuffle wear it (as md-btn-primary wears Cider's red, at 65 %).
+    async Task Tint(string? cover, Border header, Button play, Button shuffle)
+    {
+        if (await session.Covers.KeyColor(cover) is not { } key) return;
+        header.Background = new LinearGradientBrush
+        {
+            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+            GradientStops = { new GradientStop(Color.FromArgb(90, key.R, key.G, key.B), 0), new GradientStop(Color.FromArgb(0, key.R, key.G, key.B), 1) },
+        };
+        foreach (var b in new[] { play, shuffle })
+        {
+            b.Background = new SolidColorBrush(Color.FromArgb(166, key.R, key.G, key.B));
+            b.BorderBrush = new SolidColorBrush(Color.FromArgb(64, key.R, key.G, key.B));
+        }
     }
 
     static string Duration(int minutes) => minutes >= 60

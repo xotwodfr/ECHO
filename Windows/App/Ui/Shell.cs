@@ -158,5 +158,22 @@ public sealed class Shell : Grid
     /// The page on show (tests read it).
     public Control? Page => page.Content as Control;
 
-    void Show() => page.Content = Pages.Create(session, Nav, Nav.Current);
+    /// A page comes in as Cider's do (wpfade): from 12 px lower and transparent, in 250 ms.
+    void Show()
+    {
+        var next = Pages.Create(session, Nav, Nav.Current);
+        next.Opacity = 0;
+        next.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateY(12px)");
+        next.Transitions =
+        [
+            new Avalonia.Animation.DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(250), Easing = new Avalonia.Animation.Easings.CubicEaseOut() },
+            new Avalonia.Animation.TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(250), Easing = new Avalonia.Animation.Easings.CubicEaseOut() },
+        ];
+        page.Content = next;
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            next.Opacity = 1;
+            next.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateY(0px)");
+        }, Avalonia.Threading.DispatcherPriority.Render);
+    }
 }

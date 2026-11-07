@@ -44,6 +44,7 @@
       <ControlTemplate>
         <Border Name="Box" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
                 CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate>
@@ -72,6 +73,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
                             VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" />
         </Border>
@@ -101,7 +103,9 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Panel>
-          <Border Name="Layer" Margin="1" CornerRadius="10" Background="White" Opacity="0" />
+          <Border Name="Layer" Margin="1" CornerRadius="10" Background="White" Opacity="0">
+            <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /></Transitions></Border.Transitions>
+          </Border>
           <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
         </Panel>
       </ControlTemplate>
@@ -127,6 +131,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate>
@@ -148,6 +153,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" Background="{TemplateBinding Background}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate>
@@ -258,6 +264,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
         </Border>
@@ -285,6 +292,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" CornerRadius="16" Background="#80646464" BoxShadow="inset 0 0 0 1 #29C8C8C8, 0 8 40 0 #8C000000">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate>
@@ -303,6 +311,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" CornerRadius="15" Background="#B3323232">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate>
@@ -322,6 +331,7 @@
     <Setter Property="Template">
       <ControlTemplate>
         <Border Name="Box" Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+          <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Center" />
         </Border>
       </ControlTemplate>
