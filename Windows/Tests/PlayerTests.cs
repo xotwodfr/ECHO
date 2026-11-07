@@ -40,6 +40,41 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task AServerErrorDoesNotSkipThroughTheQueue()
+    {
+        // ECHO up, Navidrome down: every song answers 502. That is the server, not the song.
+        var api = new Api("https://echo.test", new Answer(HttpStatusCode.BadGateway, """{"error":"upstream"}"""));
+        using var player = new Player(api, new Library(api), () => new AudioOut(nullDevice: true));
+        await player.PlayList(QueueTests.Album(3), 0, Ctx);
+        Assert.Equal("a0", player.Track?.Id);
+        Assert.Equal(2, player.Queue.Upcoming.Count);
+        Assert.False(player.Playing);
+        Assert.Equal("Can't reach the server.", player.Notice);
+    }
+
+    [AvaloniaFact]
+    public async Task RepeatAllStopsWhenNoSongInTheQueuePlays()
+    {
+        var junk = Path.Combine(Path.GetTempPath(), $"echo-junk-{Guid.NewGuid():N}.flac");
+        File.WriteAllText(junk, "this is not audio");
+        try
+        {
+            var api = new Api("https://echo.test", new Unreachable());
+            using var player = new Player(api, new Library(api), () => new AudioOut(nullDevice: true), _ => Task.FromResult(junk)) { Sync = false };
+            player.CycleRepeat();
+            Assert.Equal(Repeat.All, player.Queue.Repeat);
+            var play = player.PlayList(QueueTests.Album(3), 0, Ctx);
+            Assert.Same(play, await Task.WhenAny(play, Task.Delay(5000)));
+            Assert.False(player.Playing);
+            Assert.Equal("This track could not be played.", player.Notice);
+        }
+        finally
+        {
+            File.Delete(junk);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task ASongThatCannotBeDecodedIsSkipped()
     {
         var junk = Path.Combine(Path.GetTempPath(), $"echo-junk-{Guid.NewGuid():N}.flac");

@@ -221,7 +221,11 @@ public sealed partial class Player : ObservableObject, IDisposable
 
     async Task OpenFile(Track t, TimeSpan at, bool play) => await Output.Open(await source!(t), at, play);
 
-    async Task Start(Track t, bool play, TimeSpan at = default)
+    /// No server, or one that fails (5xx: ECHO up, Navidrome down): every song would fail alike.
+    static bool Down(Exception e) => e is HttpRequestException or TaskCanceledException or ApiException { Status: >= HttpStatusCode.InternalServerError };
+
+    /// `failed`: songs skipped in a row before this one; once every song in the queue has failed, it stops.
+    async Task Start(Track t, bool play, TimeSpan at = default, int failed = 0)
     {
         // The song is asked for before the window changes for it, and plays as soon as it comes.
         var opening = source is null ? Output.Open((from, token) => api.Stream(t, from, token), at, play) : OpenFile(t, at, play);
@@ -245,9 +249,9 @@ public sealed partial class Player : ObservableObject, IDisposable
             Refused();
             return;
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        catch (Exception e) when (Down(e))
         {
-            // No server: every song would fail alike. Say so and stay on this one (Play tries again).
+            // Say so and stay on this one (Play tries again).
             output?.Pause();
             Notice = Unreachable;
             Playing = false;
@@ -257,10 +261,10 @@ public sealed partial class Player : ObservableObject, IDisposable
         {
             // A song that cannot be played (refused, or a file the decoder cannot read: SoundFlow throws
             // what it likes) is skipped, like the web (REL-02's last resort).
-            if (Queue.Advance(userSkip: true) is { } next)
+            if (failed < Queue.History.Count + Queue.Upcoming.Count && Queue.Advance(userSkip: true) is { } next)
             {
                 Notice = "This track could not be played. Skipped to the next.";
-                await Start(next, play);
+                await Start(next, play, failed: failed + 1);
                 return;
             }
             Notice = "This track could not be played.";
@@ -418,7 +422,7 @@ public sealed partial class Player : ObservableObject, IDisposable
             }
             catch (Exception x) when (x is HttpRequestException or ApiException or TaskCanceledException) { }
         }
-        catch (Exception e) when (e is HttpRequestException or TaskCanceledException)
+        catch (Exception e) when (Down(e))
         {
             Notice = Unreachable;
         }
