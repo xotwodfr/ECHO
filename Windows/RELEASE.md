@@ -1,5 +1,8 @@
-ECHO for Windows: lyrics as Apple Music draws them.
+ECHO for Windows: a modern look, and lyrics as Apple Music draws them.
 
+- **New in 3.3.0: a modern look throughout.** The page floats as a rounded card; the top bar has a round Home beside a wide search field; the player bar puts the controls over a thin progress bar with a white Play button; album pages fade from the cover's colour into the songs, with Play in the album's colour; Settings opens over a dimmed app with a card per setting; menus are dark and rounded; Songs has column headers and Artists shows each artist's albums as a grid.
+- **New in 3.3.0: keys.** Space plays or pauses (not while typing), Ctrl+F goes to search, and keyboard focus shows as a rounded ring.
+- **Fixed in 3.3.0: the sign-in screen can be moved, minimized and closed** (it had no window controls).
 - **New in 3.2.2: songs start faster.** A song streams straight from the server in one request, on a connection already open; it is asked for before the window updates and starts as soon as it decodes; cover art embedded in the file is skipped instead of downloaded before the first note; and jumping ahead into a part that hasn't arrived yet plays at once.
 - **New in 3.2.1: lyrics timed only by line now light up a whole line at once** as it is sung, as Apple Music shows them, instead of sweeping across it at a steady pace that never matched the singing (about half of all lyrics are timed this way).
 - **The sung line sits a third of the way down**, and the lines ripple into place, each a moment after the one above.
