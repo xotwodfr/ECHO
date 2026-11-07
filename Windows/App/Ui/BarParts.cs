@@ -11,13 +11,14 @@ namespace Echo.Ui;
 /// Cider's five playback buttons, wherever its player sits (the bottom chrome, Maverick's top chrome, the
 /// fullscreen view, the mini player): Shuffle and Repeat as small buttons (40×32, a 0.98 em glyph, rgb(200
 /// 200 200 / 25%) behind when on), Previous and Next (40×36, the glyph at 60 %), Play/Pause round (42 px,
-/// a 38 px glyph, 6 px apart).
+/// a 38 px glyph, 6 px apart). `solid`, for the bar: Play/Pause a white disc with a dark glyph, as
+/// today's players have it.
 public sealed class Transport : StackPanel
 {
     readonly Player player;
-    readonly Button shuffle, repeat, toggle;
+    readonly Button shuffle, repeat, toggle, back, on;
 
-    public Transport(Player player)
+    public Transport(Player player, bool solid = false)
     {
         this.player = player;
         Orientation = Orientation.Horizontal;
@@ -32,10 +33,21 @@ public sealed class Transport : StackPanel
         toggle = Kit.IconButton(Icons.Play, 42, 42, 38, "Play", player.Toggle);
         toggle.CornerRadius = new CornerRadius(21);
         toggle.Margin = new Thickness(6);
+        back = Kit.IconButton(Icons.Backward, 40, 36, 24, "Previous", () => _ = player.Previous());
+        on = Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next());
+        if (solid)
+        {
+            toggle.Theme = Kit.Res<ControlTheme>("PlayCircle");
+            toggle.Width = toggle.Height = 36;
+            toggle.Opacity = 1;
+            toggle.Margin = new Thickness(12, 0);
+            ((Glyph)toggle.Content!).Width = ((Glyph)toggle.Content!).Height = 30;
+            back.Opacity = on.Opacity = 0.85;
+        }
         Children.Add(shuffle);
-        Children.Add(Kit.IconButton(Icons.Backward, 40, 36, 24, "Previous", () => _ = player.Previous()));
+        Children.Add(back);
         Children.Add(toggle);
-        Children.Add(Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next()));
+        Children.Add(on);
         Children.Add(repeat);
         // Followed only while on screen: the fullscreen view and the mini player come and go.
         this.WhileShown(() =>
@@ -54,6 +66,26 @@ public sealed class Transport : StackPanel
     void OnPlayer(object? s, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(Player.Playing) or nameof(Player.Track)) Show();
+    }
+
+    /// Apple Music's row under a cover `width` wide: Shuffle and Repeat small and dim at its edges,
+    /// Previous, Play/Pause and Next large and white between them, spread evenly.
+    public void Spread(double width)
+    {
+        void Size(Button b, double box, double glyph, double opacity)
+        {
+            b.Width = b.Height = box;
+            b.Opacity = opacity;
+            ((Glyph)b.Content!).Width = ((Glyph)b.Content!).Height = glyph;
+        }
+        Size(shuffle, width * 0.1, width * 0.048, 0.55);
+        Size(repeat, width * 0.1, width * 0.048, 0.55);
+        Size(back, width * 0.16, width * 0.127, 1);
+        Size(on, width * 0.16, width * 0.127, 1);
+        Size(toggle, width * 0.16, width * 0.158, 1);
+        toggle.Margin = default;
+        toggle.CornerRadius = new CornerRadius(width * 0.08);
+        Spacing = Math.Max(0, (width - width * (0.1 * 2 + 0.16 * 3)) / 4);
     }
 
     /// Shuffle and Repeat alone (Cider 4's queue drawer has them on top).
@@ -156,8 +188,12 @@ public sealed class BarTools : StackPanel
     {
         set
         {
-            queue.Classes.Set("active", value == "queue");
-            lyrics.Classes.Set("active", value == "lyrics");
+            // Today's players light the open panel's icon in the key colour rather than boxing it.
+            queue.Foreground = value == "queue" ? Kit.Brush("Key") : Kit.Brush("Text");
+            lyrics.Foreground = value == "lyrics" ? Kit.Brush("Key") : Kit.Brush("Text");
+            queue.Opacity = value == "queue" ? 1 : 0.7;
+            Show();
+            if (value == "lyrics") lyrics.Opacity = 1;
         }
     }
 

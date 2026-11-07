@@ -33,19 +33,32 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   playlists, Create New. **Album / playlist / mix** pages, **artist** pages, **search**.
 - Playback through the queue: shuffle, repeat, volume, seek; scrobbles; the queue follows you across
   devices (`/me/queue`). The **drawer**: the queue (and history) and the lyrics.
-- **Lyrics** as Spicy Lyrics draws them (`App/Lyrics`; Spicy Lyrics, github.com/Spikerko/spicy-lyrics,
-  AGPL-3.0, its numbers ported, not its code): the sung line centred and the column gliding to it as
-  one; lines sung at 85 % white, lines to come at 50 %, blurred 1.25 px a line away; each word (or, held
-  a second or more, each letter) springs from 95 % past 105 % to full size, lifts and glows as it is
-  sung; background vocals, duets, interlude dots; click to seek.
-- The **full-screen lyrics** as Spicy Lyrics lays them out (the cover with the progress, title and
-  artist under it, the lyrics beside it, over the cover's flowing colours) and Cider's **mini player**,
-  from the artwork's popover.
+- **Lyrics** as Apple Music draws them, the look of Lyricify's Apple Music style with the numbers of
+  AMLL (`App/Lyrics`; Apple Music-like Lyrics, github.com/amll-dev/applemusic-like-lyrics, AGPL-3.0,
+  its numbers ported, not its code): the first line lit a third of the way down, each line on its own
+  spring so the column ripples when the line changes; a line lit until a later one begins after it
+  (duet lines light together), white where sung and half-bright to come, the light crossing each word
+  with a soft edge; lines not lit dim, shrunk to 97 % and blurred 1 px plus a px a line away; each word
+  rising as it is sung, and a held word (1 s or more, 2-7 letters) swelling, spreading and glowing
+  letter by letter; background vocals sliding out under their line while it is sung, duets on
+  opposite sides, interlude dots; click to seek.
+- The **full-screen lyrics** as Apple Music lays them out (the cover with the title, artist and "…"
+  under it, a thin progress bar with the time left, Apple's controls, a pill to go back; the lyrics
+  beside it, over the cover's flowing colours) and Cider's **mini player**, from the artwork's
+  popover. **Performance mode** (Settings → Visual), for slower computers: no blur or glow on the
+  lyrics, and a still background.
 - Album pages take their cover's colour; pages and the drawer move in as Cider's do.
 - Where Apple Music does it better, its layout inside Cider's look: song tables (striped, columns,
   play on hover), the album header (artist in the page's colour, GENRE · YEAR), Home's shelves (Top
   Picks, Recently Played), the library grid, the artist banner, search's Top Results, Cider 4's queue
   drawer, red sidebar icons.
+- Today's finish over Cider's layout: the page floats as a rounded card on the window's ground, the
+  top bar has a round Home beside a wide search pill, the player bar is laid out as current players are
+  (the controls over a thin progress bar, Play a white disc), album headers fade into their songs,
+  Settings opens over a dimmed app in Windows 11's setting cards, menus are dark and rounded, empty
+  pages say so centred, the sign-in screen is a card (and can be moved and closed).
+- Keys: **Space** plays or pauses (not while typing), **Ctrl+F** goes to the search field; keyboard
+  focus shows as a rounded ring.
 
 Left out as Apple Music's: Listen Now, Browse, Radio, Videos, Podcasts, Apple Music playlists, Add to
 Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.
@@ -54,7 +67,7 @@ Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.
 
 | Folder | What |
 |---|---|
-| `App/Api` | The server: device token, signed stream URLs, covers (the token goes to the server only); the models |
+| `App/Api` | The server: device token, songs from the stream endpoint (Range requests skip cover art), covers (the token goes to the server only); the models |
 | `App/Library` | The library through the Subsonic proxy; lyrics; which formats play as stored |
 | `App/Playback` | Audio out (SoundFlow, miniaudio), the queue and the player |
 | `App/Ui` | Cider's window: `Shell`, `ChromeTop`, `Sidebar`, `ChromeBottom`, `Drawer`, the pages, `ModeViews`, `Menus`; `Cider.axaml` its colours and controls |

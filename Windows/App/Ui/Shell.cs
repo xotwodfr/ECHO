@@ -8,8 +8,8 @@ namespace Echo.Ui;
 
 /// Cider's main window (views/main.ejs, #app-main), in the layout Settings chose: Mojave, Cider's default
 /// (the top chrome over the sidebar and the page, the bottom chrome under it all), or Maverick (the player
-/// in the top chrome, no bottom chrome); the drawer floats at the right in both. The layers are
-/// Cider's translucent ones: #app-main, then --color1 behind the navigation, the sidebar and the page.
+/// in the top chrome, no bottom chrome); the drawer floats at the right in both. The sidebar and the bars
+/// lie on #app-main's translucent ground; the page floats over it as a card.
 public sealed class Shell : Grid
 {
     readonly Session session;
@@ -31,23 +31,25 @@ public sealed class Shell : Grid
 
         var navigation = new Grid
         {
-            Background = new SolidColorBrush(Color.Parse("#80272727")),
             RowDefinitions = new RowDefinitions($"{Top.Height},*"),
             ColumnDefinitions = new ColumnDefinitions("Auto,*"),
         };
         navigation.Children.Add(new Border { [Grid.ColumnSpanProperty] = 2, Child = Top });
         navigation.Children.Add(new Border { [Grid.RowProperty] = 1, Child = sidebar });
-        // #app-content: --baseColorMix with a 1 px edge of it on the left.
-        navigation.Children.Add(new Border
+        // #app-content as today's apps float it: a rounded card on the ground, 8 px from the window's edges.
+        var card = new Border
         {
             [Grid.RowProperty] = 1,
             [Grid.ColumnProperty] = 1,
-            Background = Kit.Brush("Base"),
-            BorderBrush = Kit.Brush("Base"),
-            BorderThickness = new Thickness(1, 0, 0, 0),
+            Background = Kit.Brush("Card"),
+            BorderBrush = Kit.Brush("Hairline"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(10),
+            Margin = new Thickness(0, 0, 8, Maverick ? 8 : 0),
             ClipToBounds = true,
             Child = page,
-        });
+        };
+        navigation.Children.Add(card);
         Drawer = new Drawer(session, Nav) { [Grid.RowProperty] = 1, [Grid.ColumnProperty] = 1 };
         navigation.Children.Add(Drawer);
         Children.Add(navigation);
@@ -56,7 +58,11 @@ public sealed class Shell : Grid
         modal.SetValue(Grid.RowSpanProperty, 2);
         Children.Add(modal);
 
-        Top.SidebarToggled += () => sidebar.IsVisible = !sidebar.IsVisible;
+        Top.SidebarToggled += () =>
+        {
+            sidebar.IsVisible = !sidebar.IsVisible;
+            card.Margin = new Thickness(sidebar.IsVisible ? 0 : 8, 0, 8, card.Margin.Bottom);
+        };
         Top.MenuRequested += anchor => MainMenu.Show(anchor, session, () => ShowSettings(), () => ShowSettings("About"));
         Tools.DrawerRequested += Drawer.Toggle;
         Drawer.Changed += () => Tools.OpenPanel = Drawer.Panel;
@@ -82,7 +88,21 @@ public sealed class Shell : Grid
 
     void Search(string term) => Nav.Open(new Route("search", term, term));
 
-    /// Cider's settings window over the app, 90 % of it.
+    /// Today's keys (the window passes on what nothing else took): Ctrl+F goes to the search field, Space
+    /// plays or pauses unless a field has the keyboard.
+    public void Keys(Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.F && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control)
+            e.Handled = Top.FocusSearch() || sidebar.FocusSearch();
+        else if (e.Key == Avalonia.Input.Key.Space && e.KeyModifiers == Avalonia.Input.KeyModifiers.None && e.Source is not TextBox)
+        {
+            session.Player.Toggle();
+            e.Handled = true;
+        }
+    }
+
+    /// Cider's settings window over the app, 90 % of it up to 980×680, the app dimmed behind it; a click
+    /// on the dimmed app closes it.
     public SettingsWindow ShowSettings(string tab = "General")
     {
         var window = new SettingsWindow(session, tab);
@@ -91,12 +111,15 @@ public sealed class Shell : Grid
             modal.Children.Clear();
             modal.IsVisible = false;
         };
+        var scrim = new Border { Background = new SolidColorBrush(Color.FromArgb(140, 0, 0, 0)) };
+        scrim.PointerPressed += (_, _) => window.Close();
         modal.Children.Clear();
-        modal.Children.Add(new Border { Background = Brushes.Transparent }); // clicks stay in the modal
-        window.Width = Bounds.Width * 0.9;
-        window.Height = Bounds.Height * 0.9;
+        modal.Children.Add(scrim);
+        window.Width = Math.Min(Bounds.Width * 0.9, 980);
+        window.Height = Math.Min(Bounds.Height * 0.9, 680);
         modal.Children.Add(window);
         modal.IsVisible = true;
+        Motion.Enter(window);
         return window;
     }
 
@@ -133,6 +156,7 @@ public sealed class Shell : Grid
         {
             b.Padding = new Thickness(8, 6);
             b.FontSize = 13;
+            b.FontWeight = FontWeight.Medium;
             b.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
         buttons.Children.Add(mini);

@@ -1,20 +1,39 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="Echo.Ui.SignInView">
-  <!-- The wordmark and one form in a 360 px column, in Cider's controls. -->
-  <StackPanel Width="360" VerticalAlignment="Center" Spacing="12">
-    <TextBlock Text="ECHO" FontSize="28" FontWeight="ExtraBold" LetterSpacing="8" HorizontalAlignment="Center" Margin="0,0,0,24" />
-    <TextBlock x:Name="Heading" Text="Sign in" FontSize="20" FontWeight="SemiBold" />
-    <StackPanel x:Name="Credentials" Spacing="12">
-      <TextBox x:Name="UserBox" PlaceholderText="Username" />
-      <TextBox x:Name="PasswordBox" PlaceholderText="Password" PasswordChar="•" />
-    </StackPanel>
-    <StackPanel x:Name="CodePanel" Spacing="6" IsVisible="False">
-      <TextBox x:Name="CodeBox" PlaceholderText="Code" MaxLength="10" />
-      <TextBlock Text="The 6-digit code from your authenticator app." FontSize="12" Foreground="{DynamicResource Muted}" TextWrapping="Wrap" />
-    </StackPanel>
-    <TextBlock x:Name="Error" Foreground="#FFB4A9" TextWrapping="Wrap" IsVisible="False" />
-    <Button x:Name="SubmitButton" Content="Sign in" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
-            Theme="{StaticResource CiderButton}" Classes="primary" FontWeight="SemiBold" IsDefault="True" />
-  </StackPanel>
+  <!-- The window's ground with a soft key-coloured glow from the top; the window's own bar (it moves the
+       window and holds its controls, the frameless window has no other); one card in the middle: the logo,
+       which server, the form. -->
+  <Grid RowDefinitions="46,*">
+    <Grid.Background>
+      <RadialGradientBrush Center="50%,0%" GradientOrigin="50%,0%" RadiusX="70%" RadiusY="90%">
+        <GradientStop Offset="0" Color="#38FC3C44" />
+        <GradientStop Offset="1" Color="#00FC3C44" />
+      </RadialGradientBrush>
+    </Grid.Background>
+    <Border x:Name="Bar" Grid.RowSpan="2" Background="Transparent" />
+    <Border Grid.Row="1" Width="380" VerticalAlignment="Center" Margin="0,0,0,46" Padding="32"
+            CornerRadius="16" Background="{DynamicResource Card}" BorderBrush="{DynamicResource Hairline}" BorderThickness="1"
+            BoxShadow="0 12 40 0 #66000000">
+      <StackPanel Spacing="12">
+        <Image Source="/Assets/echo.ico" Width="52" Height="52" HorizontalAlignment="Center" />
+        <StackPanel Spacing="2" Margin="0,4,0,12">
+          <TextBlock x:Name="Heading" Text="Sign in" FontSize="22" FontWeight="Bold" LetterSpacing="-0.3" HorizontalAlignment="Center" />
+          <TextBlock x:Name="Host" FontSize="13" Foreground="{DynamicResource Muted}" HorizontalAlignment="Center" />
+        </StackPanel>
+        <StackPanel x:Name="Credentials" Spacing="10">
+          <TextBox x:Name="UserBox" Classes="field" PlaceholderText="Username" />
+          <TextBox x:Name="PasswordBox" Classes="field" PlaceholderText="Password" PasswordChar="•" />
+        </StackPanel>
+        <StackPanel x:Name="CodePanel" Spacing="6" IsVisible="False">
+          <TextBox x:Name="CodeBox" Classes="field" PlaceholderText="Code" MaxLength="10" />
+          <TextBlock Text="The 6-digit code from your authenticator app." FontSize="12" Foreground="{DynamicResource Muted}" TextWrapping="Wrap" />
+        </StackPanel>
+        <TextBlock x:Name="Error" Foreground="#FFB4A9" TextWrapping="Wrap" IsVisible="False" />
+        <Button x:Name="SubmitButton" Content="Sign in" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                Theme="{StaticResource CiderButton}" Classes="primary" Padding="16,10" Margin="0,6,0,0" IsDefault="True" />
+      </StackPanel>
+    </Border>
+    <ContentControl x:Name="Controls" />
+  </Grid>
 </UserControl>

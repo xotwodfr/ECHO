@@ -8,19 +8,21 @@ using Echo.Playback;
 
 namespace Echo.Ui;
 
-/// Cider's bottom chrome in the Mojave layout (views/app/chrome-bottom.ejs; less/directives.less): 90 px of
-/// --color2. Left, the artwork (70 px) with the song, artist and album, and the "…" menu; in the middle
-/// the time, the progress bar and the duration over the Transport; right, the BarTools.
+/// Cider's bottom chrome in the Mojave layout (views/app/chrome-bottom.ejs), laid out as today's players
+/// are: 80 px on the window's ground. Left, the artwork (56 px) with the song over "artist — album" and
+/// the "…" menu right beside them; in the middle the Transport over a thin progress bar with the time
+/// small at its ends; right, the BarTools.
 public sealed class ChromeBottom : Grid
 {
-    public const double Height2 = 90;
+    public const double Height2 = 80;
 
     readonly Player player;
-    readonly CoverImage art = new(null, 70, 300, 4) { Margin = new Thickness(10, 0) };
-    readonly TextBlock title = Kit.Text(null, 12.8, FontWeight.Medium);
-    readonly TextBlock artist = Kit.Text(null, 12, opacity: 0.8);
-    readonly TextBlock album = Kit.Text(null, 12, opacity: 0.8);
-    readonly TextBlock elapsed = Kit.Text(null, 12.8), total = Kit.Text(null, 12.8);
+    readonly CoverImage art = new(null, 56, 300, 6) { Margin = new Thickness(16, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
+    readonly TextBlock title = Kit.Text(null, 13.5, FontWeight.SemiBold);
+    readonly TextBlock artist = Kit.Text(null, 12.5, opacity: 0.6);
+    readonly TextBlock album = Kit.Text(null, 12.5, opacity: 0.6);
+    readonly TextBlock dash = Kit.Text(" — ", 12.5, opacity: 0.6);
+    readonly TextBlock elapsed = Kit.Text(null, 11, FontWeight.Medium, 0.55), total = Kit.Text(null, 11, FontWeight.Medium, 0.55);
     readonly SeekBar progress;
     readonly StackPanel info;
     string? shownKey;
@@ -35,7 +37,7 @@ public sealed class ChromeBottom : Grid
         player = session.Player;
         progress = new SeekBar(player);
         Height = Height2;
-        Background = Kit.Brush("Panel");
+        Background = Brushes.Transparent; // on the ground
         ColumnDefinitions = new ColumnDefinitions("3*,4*,3*");
 
         // ---- left: .playback-controls ----
@@ -53,14 +55,16 @@ public sealed class ChromeBottom : Grid
         {
             if (player.Track?.Album.Id is { } id) nav.Open(new Route("album", id, player.Track.Album.Title));
         };
-        var more = Kit.IconButton(Icons.More, 32, 32, 22, "More", () => MenuRequested?.Invoke(this));
+        var more = Kit.IconButton(Icons.More, 30, 30, 20, "More", () => MenuRequested?.Invoke(this));
         more.VerticalAlignment = VerticalAlignment.Center;
-        info = new StackPanel { Margin = new Thickness(8), VerticalAlignment = VerticalAlignment.Center, Spacing = 1, Children = { title, artist, album } };
-        var left = new DockPanel
-        {
-            Children = { art, new Border { Child = more, [DockPanel.DockProperty] = Dock.Right, Margin = new Thickness(0, 0, 8, 0) }, info },
-        };
-        DockPanel.SetDock(art, Dock.Left);
+        more.Margin = new Thickness(4, 0, 12, 0);
+        artist.MaxWidth = 140;
+        var by = new DockPanel { Children = { artist, dash, album } };
+        DockPanel.SetDock(artist, Dock.Left);
+        DockPanel.SetDock(dash, Dock.Left);
+        info = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 2, MaxWidth = 240, Children = { title, by } };
+        // "…" right after the song, wherever its name ends.
+        var left = new StackPanel { Orientation = Orientation.Horizontal, Background = Brushes.Transparent, Children = { art, info, more } };
         left.ContextRequested += (_, e) =>
         {
             MenuRequested?.Invoke(this);
@@ -68,9 +72,10 @@ public sealed class ChromeBottom : Grid
         };
         Children.Add(left);
 
-        // ---- middle: the duration row over the controls ----
-        elapsed.Width = total.Width = 64;
-        elapsed.TextAlignment = total.TextAlignment = TextAlignment.Center;
+        // ---- middle: the controls over the progress, the time small at its ends ----
+        elapsed.Width = total.Width = 40;
+        elapsed.TextAlignment = TextAlignment.Right;
+        progress.Margin = new Thickness(10, 0);
         var duration = new DockPanel
         {
             Children =
@@ -84,8 +89,9 @@ public sealed class ChromeBottom : Grid
         {
             [Grid.ColumnProperty] = 1,
             VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(0, 6, 0, 0),
-            Children = { duration, new Transport(player) },
+            MaxWidth = 640,
+            Spacing = 2,
+            Children = { new Transport(player, solid: true), duration },
         });
 
         // ---- right ----
@@ -119,6 +125,7 @@ public sealed class ChromeBottom : Grid
         title.Text = t?.Title ?? player.Notice;
         artist.Text = t?.Artist;
         album.Text = t?.Album.Title;
+        dash.IsVisible = t is not null;
         if (t?.Key != shownKey)
         {
             if (shownKey is not null) Motion.Enter(info, dx: 12, dy: 0, ms: 320); // a new song slides in

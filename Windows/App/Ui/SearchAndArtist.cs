@@ -9,24 +9,17 @@ using Avalonia.Styling;
 namespace Echo.Ui;
 
 /// Songs in columns as Apple Music lays out top songs (Cider's mediaitem-list-item__grid): compact rows
-/// 340 px wide, four to a column, the columns side by side scrolling sideways.
+/// 340 px wide, four to a column, for a Shelf to page sideways.
 public static class SongGrid
 {
-    public static Control Of(Session session, Nav nav, IReadOnlyList<Track> tracks, PlayContext context)
+    public static IEnumerable<Control> Columns(Session session, Nav nav, IReadOnlyList<Track> tracks, PlayContext context)
     {
-        var columns = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 24 };
         for (var i = 0; i < tracks.Count; i += 4)
         {
             var list = new TrackList(session, nav, tracks, context, Rows.Compact) { Width = 340 };
             list.ItemsSource = ((IEnumerable<TrackList.Row>)list.ItemsSource!).Skip(i).Take(4).ToList();
-            columns.Children.Add(list);
+            yield return list;
         }
-        return new ScrollViewer
-        {
-            HorizontalScrollBarVisibility = ScrollBarVisibility.Auto,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled,
-            Content = columns,
-        };
     }
 
     /// An artist as Apple Music shows one: the picture round, the name centred under it.
@@ -68,7 +61,7 @@ public sealed class SearchPage : ScrollViewer
         }
         if (r.Tracks.Count + r.Albums.Count + r.Artists.Count == 0)
         {
-            column.Children.Add(Shelf.Section("No Results", new TextBlock { Text = "Try a new search.", FontSize = 14, Opacity = 0.7 }));
+            column.Children.Add(Blocks.Message("No Results", "Try a new search."));
             return;
         }
         var ctx = new PlayContext("search", null, term);
@@ -84,7 +77,7 @@ public sealed class SearchPage : ScrollViewer
             top.Children.Add(Result(t.Cover, false, t.Title, $"Song · {t.Artist}", () => _ = session.Player.PlayList(r.Tracks, at, ctx)));
         }
         column.Children.Add(Shelf.Section("Top Results", top));
-        if (r.Tracks.Count > 0) column.Children.Add(Shelf.Section("Songs", SongGrid.Of(session, nav, r.Tracks, ctx)));
+        if (r.Tracks.Count > 0) column.Children.Add(Shelf.Of("Songs", SongGrid.Columns(session, nav, r.Tracks, ctx), 24));
         if (r.Albums.Count > 0) column.Children.Add(Shelf.Of("Albums", r.Albums.Select(a => Blocks.Square(session, nav, a)), 24));
         if (r.Artists.Count > 0) column.Children.Add(Shelf.Of("Artists", r.Artists.Select(a => SongGrid.Artist(nav, a)), 24));
     }
@@ -165,7 +158,7 @@ public sealed class ArtistPage : ScrollViewer
         love.Click += (_, _) => _ = session.Library.Star(StarKind.Artist, route.Id!, true);
         more.ContextMenu = new ContextMenu { ItemsSource = new[] { love } };
         more.Click += (_, _) => more.ContextMenu.Open(more);
-        var name = new TextBlock { Text = page.Name, FontSize = 48, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
+        var name = new TextBlock { Text = page.Name, FontSize = 48, FontWeight = FontWeight.Bold, LetterSpacing = -1.2, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };
         var bottom = new DockPanel
         {
             VerticalAlignment = VerticalAlignment.Bottom,
@@ -201,7 +194,7 @@ public sealed class ArtistPage : ScrollViewer
         {
             [Grid.ColumnProperty] = albums.Count > 0 ? 1 : 0,
             Margin = new Thickness(albums.Count > 0 ? 32 : 0, 0, 0, 0),
-            Child = Shelf.Section("Top Songs", SongGrid.Of(session, nav, songs, ctx)),
+            Child = Shelf.Of("Top Songs", SongGrid.Columns(session, nav, songs, ctx), 24),
         });
         body.Children.Add(row);
         if (albums.Count > 0) body.Children.Add(Shelf.Of("Albums", albums.Select(a => Blocks.Square(session, nav, a, a.Year?.ToString())), 24));

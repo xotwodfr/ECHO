@@ -124,6 +124,12 @@ public partial class MainWindow : Window
         WindowState = before;
     }
 
+    protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (!e.Handled && Content is Shell shell) shell.Keys(e);
+    }
+
     protected override void OnClosed(EventArgs e)
     {
         session?.Player.Dispose();

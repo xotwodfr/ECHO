@@ -18,7 +18,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     readonly Api api;
     readonly Library library;
     readonly Func<AudioOut> makeOutput;
-    readonly Func<Track, Task<string>> source;
+    readonly Func<Track, Task<string>>? source; // a local file per song (tests); else the server
     readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromMilliseconds(250) };
     readonly DispatcherTimer saveSoon = new() { Interval = TimeSpan.FromSeconds(2) };
     AudioOut? output;
@@ -32,7 +32,7 @@ public sealed partial class Player : ObservableObject, IDisposable
         this.api = api;
         this.library = library;
         makeOutput = output;
-        this.source = source ?? api.StreamUrl;
+        this.source = source;
         tick.Tick += (_, _) => Tick();
         saveSoon.Tick += (_, _) =>
         {
@@ -217,8 +217,12 @@ public sealed partial class Player : ObservableObject, IDisposable
 
     // ---- playing ----
 
+    async Task OpenFile(Track t, TimeSpan at, bool play) => await Output.Open(await source!(t), at, play);
+
     async Task Start(Track t, bool play, TimeSpan at = default)
     {
+        // The song is asked for before the window changes for it, and plays as soon as it comes.
+        var opening = source is null ? Output.Open((from, token) => api.Stream(t, from, token), at, play) : OpenFile(t, at, play);
         Track = t;
         scrobbled = "none";
         recorded = false;
@@ -226,11 +230,13 @@ public sealed partial class Player : ObservableObject, IDisposable
         Position = at;
         try
         {
-            var url = await source(t);
-            await Output.Open(url);
-            if (at > TimeSpan.Zero) await Output.Seek(at); // before Play: no blip of the song's start
-            if (play) Output.Play();
+            await opening;
+            if (Track != t) return; // another song was asked for meanwhile
             Playing = play;
+        }
+        catch (Exception) when (Track != t)
+        {
+            return;
         }
         catch (ApiException e) when (e.SignedOut)
         {

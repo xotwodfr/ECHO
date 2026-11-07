@@ -141,10 +141,10 @@ public static class NowPlayingMenu
     }
 }
 
-/// Cider's settings window (views/components/settings-window.ejs; style.less .settings-window,
-/// .md-option-*): 90 % of the window, radius 10, Cider's shadow; the tabs down the left; each tab's
-/// options under a header (10 px, 500, rgb(255 255 255 / 10%)) as lines 14 px in. Only what applies to
-/// ECHO: the window layout, scrobbling, the account, about.
+/// Cider's settings window (views/components/settings-window.ejs; style.less .settings-window): radius 12,
+/// Cider's shadow; the tabs down the left; each tab's options as Windows 11 lays out its settings, the
+/// section's name over a card per setting. Only what applies to ECHO: the window layout, scrobbling,
+/// the account, about.
 public sealed class SettingsWindow : Border
 {
     readonly Session session;
@@ -157,11 +157,11 @@ public sealed class SettingsWindow : Border
     {
         this.session = session;
         Margin = new Thickness(0);
-        CornerRadius = new CornerRadius(10);
+        CornerRadius = new CornerRadius(12);
         Background = new SolidColorBrush(Color.Parse("#232323"));
         BoxShadow = BoxShadows.Parse("inset 0 0 0 1 #29C8C8C8, 0 8 40 0 #8C000000");
         ClipToBounds = true;
-        var close = Kit.IconButton(Icons.X, 32, 32, 16, "Close", () => Closed?.Invoke(), 0.8);
+        var close = Kit.IconButton(Icons.X, 32, 32, 16, "Close", Close, 0.8);
         close.HorizontalAlignment = HorizontalAlignment.Right;
         close.VerticalAlignment = VerticalAlignment.Top;
         close.Margin = new Thickness(10);
@@ -173,7 +173,7 @@ public sealed class SettingsWindow : Border
             Children =
             {
                 grid,
-                new TextBlock { Text = "Settings", FontSize = 20, FontWeight = FontWeight.Bold, Margin = new Thickness(18, 14) },
+                new TextBlock { Text = "Settings", FontSize = 20, FontWeight = FontWeight.Bold, LetterSpacing = -0.3, Margin = new Thickness(18, 14) },
                 close,
             },
         };
@@ -186,12 +186,16 @@ public sealed class SettingsWindow : Border
         Open(tab);
     }
 
+    public void Close() => Closed?.Invoke();
+
     public void Open(string tab)
     {
         foreach (var b in tabs.Children.OfType<Button>()) b.Classes.Set("active", (string?)b.Tag == tab);
         page.Content = tab switch
         {
-            "Visual" => Container("Visual", Line("Window Layout", "Mojave: the player at the bottom. Maverick: the player in the top bar.", Layout())),
+            "Visual" => Container("Visual",
+                Line("Window Layout", "Mojave: the player at the bottom. Maverick: the player in the top bar.", Layout()),
+                Line("Performance Mode", "For slower computers: no blur or glow on the lyrics, and a still background. The words still light up as they are sung.", Performance())),
             "Account" => Account(),
             "About" => About(),
             _ => Container("General", Line("Scrobble", "Send what you play to Navidrome (and on to Last.fm, when Navidrome is set up for it).", Scrobble())),
@@ -203,6 +207,13 @@ public sealed class SettingsWindow : Border
         var box = new ComboBox { Classes = { "md" }, ItemsSource = new[] { "Mojave", "Maverick" }, SelectedIndex = session.Prefs.Layout == "maverick" ? 1 : 0 };
         box.SelectionChanged += (_, _) => session.Set(session.Prefs with { Layout = box.SelectedIndex == 1 ? "maverick" : "mojave" });
         return box;
+    }
+
+    Control Performance()
+    {
+        var toggle = new ToggleSwitch { IsChecked = session.Prefs.Performance, OnContent = null, OffContent = null };
+        toggle.IsCheckedChanged += (_, _) => session.Set(session.Prefs with { Performance = toggle.IsChecked == true });
+        return toggle;
     }
 
     Control Scrobble()
@@ -241,42 +252,33 @@ public sealed class SettingsWindow : Border
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "";
         return Container("About",
             Line("ECHO for Windows", null, new TextBlock { Text = version, FontSize = 13.6, Opacity = 0.7 }),
-            Line("Design", "After Cider 1 (github.com/ciderapp/Cider) by the Cider Collective, AGPL-3.0. ECHO is AGPL-3.0 too.", new Control()));
+            Line("Design", "After Cider 1 (github.com/ciderapp/Cider) by the Cider Collective, AGPL-3.0. ECHO is AGPL-3.0 too.", new Control()),
+            Line("Lyrics", "After AMLL, Apple Music-like Lyrics (github.com/amll-dev/applemusic-like-lyrics), AGPL-3.0.", new Control()));
     }
 
-    /// .md-option-container: the header, then the lines with a rgb(0 0 0 / 15%) rule between.
+    /// Windows 11's settings: the section's name, then each setting a card of its own (a faint fill, a
+    /// hairline, radius 8), 4 px apart.
     static Control Container(string header, params Control[] lines)
     {
-        var column = new StackPanel();
-        column.Children.Add(new Border
-        {
-            Padding = new Thickness(10),
-            Background = new SolidColorBrush(Color.FromArgb(26, 255, 255, 255)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(64, 200, 200, 200)),
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Child = new TextBlock { Text = header, FontSize = 14.4, FontWeight = FontWeight.Medium },
-        });
-        for (var i = 0; i < lines.Length; i++)
-        {
-            if (i > 0) lines[i] = new Border { BorderBrush = new SolidColorBrush(Color.FromArgb(38, 0, 0, 0)), BorderThickness = new Thickness(0, 1, 0, 0), Child = lines[i] };
-            column.Children.Add(lines[i]);
-        }
-        return new Border
-        {
-            CornerRadius = new CornerRadius(10),
-            ClipToBounds = true,
-            Background = new SolidColorBrush(Color.FromArgb(13, 255, 255, 255)),
-            Child = column,
-            MaxWidth = 900,
-            VerticalAlignment = VerticalAlignment.Top,
-        };
+        var column = new StackPanel { Spacing = 4, MaxWidth = 900, VerticalAlignment = VerticalAlignment.Top };
+        column.Children.Add(new TextBlock { Text = header, FontSize = 14, FontWeight = FontWeight.SemiBold, Margin = new Thickness(2, 0, 0, 6) });
+        foreach (var line in lines)
+            column.Children.Add(new Border
+            {
+                Background = new SolidColorBrush(Color.FromArgb(13, 255, 255, 255)),
+                BorderBrush = Kit.Brush("Hairline"),
+                BorderThickness = new Thickness(1),
+                CornerRadius = new CornerRadius(8),
+                Child = line,
+            });
+        return column;
     }
 
-    /// .md-option-line: the name (and a note under it) on the left, the control on the right, 14 px in.
+    /// .md-option-line: the name (and a note under it) on the left, the control on the right.
     static Control Line(string name, string? note, Control control)
     {
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(14) };
-        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { new TextBlock { Text = name, FontSize = 13.6 } } };
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(16, 14) };
+        var text = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { new TextBlock { Text = name, FontSize = 14 } } };
         if (note is not null) text.Children.Add(new TextBlock { Text = note, FontSize = 12, Opacity = 0.6, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 16, 0) });
         grid.Children.Add(text);
         control.VerticalAlignment = VerticalAlignment.Center;

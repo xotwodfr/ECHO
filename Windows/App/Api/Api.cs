@@ -9,7 +9,7 @@ namespace Echo;
 
 // ECHO's API as this client uses it (docs/api/openapi.yaml): a device token from POST /auth/device,
 // sent as a bearer header (the server's Origin check exempts it), the allow-listed Subsonic proxy
-// for the library, and signed stream URLs for the player, which sends no header of its own.
+// for the library, and the songs from the stream endpoint with the same header.
 
 /// An answer other than 2xx: the status and ECHO's error code (`{ "error": … }`), when it sent one.
 public sealed class ApiException(HttpStatusCode status, string? code) : Exception(code ?? $"HTTP {(int)status}")
@@ -20,11 +20,21 @@ public sealed class ApiException(HttpStatusCode status, string? code) : Exceptio
     public bool SignedOut => Status == HttpStatusCode.Unauthorized;
 }
 
-public sealed class Api(string baseUrl, HttpMessageHandler? handler = null)
+public sealed class Api
 {
-    public string Base { get; } = baseUrl.TrimEnd('/');
+    public Api(string baseUrl, HttpMessageHandler? handler = null)
+    {
+        Base = baseUrl.TrimEnd('/');
+        // One pool of connections for the API and the songs, kept open between songs (Caddy keeps an
+        // idle one 5 min): the next song starts on a connection already made.
+        handler ??= new SocketsHttpHandler { PooledConnectionIdleTimeout = TimeSpan.FromMinutes(4) };
+        http = new HttpClient(handler, disposeHandler: false) { Timeout = TimeSpan.FromSeconds(30) };
+        streams = new HttpClient(handler, disposeHandler: false) { Timeout = Timeout.InfiniteTimeSpan };
+    }
+
+    public string Base { get; }
     public string? Token { get; set; }
-    readonly HttpClient http = new(handler ?? new HttpClientHandler()) { Timeout = TimeSpan.FromSeconds(30) };
+    readonly HttpClient http, streams;
 
     public Task<JsonNode> Get(string path) => Send(HttpMethod.Get, path);
 
@@ -57,14 +67,19 @@ public sealed class Api(string baseUrl, HttpMessageHandler? handler = null)
     /// Ends this device's session on the server (Settings → Account → Sessions loses it).
     public Task SignOut() => Send(HttpMethod.Post, "/auth/logout", new JsonObject());
 
-    /// A signed stream URL (6 h, this song only) the player opens without a header.
-    /// As stored when miniaudio decodes it (StreamFormat), else MP3 320.
-    public async Task<string> StreamUrl(Track track)
+    /// A song's bytes from `from` on (a Range request past 0), its headers read: straight from the
+    /// stream endpoint with the bearer header, one request (no signed URL fetched first). As stored
+    /// when miniaudio decodes it (StreamFormat), else MP3 320.
+    public async Task<HttpResponseMessage> Stream(Track track, long from = 0, CancellationToken token = default)
     {
-        var path = Text((await Send(HttpMethod.Get, $"/navidrome/stream-url/{Uri.EscapeDataString(track.Id)}"))["url"]);
-        if (path.Length == 0) throw new ApiException(HttpStatusCode.OK, "no stream URL");
-        var format = StreamFormat.PlaysRaw(track.ContentType) ? "&format=raw" : "&format=mp3&maxBitRate=320&estimateContentLength=true";
-        return $"{Base}{path}{format}";
+        var format = StreamFormat.PlaysRaw(track.ContentType) ? "format=raw" : "format=mp3&maxBitRate=320&estimateContentLength=true";
+        var req = new HttpRequestMessage(HttpMethod.Get, $"{Base}/api/v1/navidrome/stream/{Uri.EscapeDataString(track.Id)}?{format}");
+        if (Token is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+        if (from > 0) req.Headers.Range = new RangeHeaderValue(from, null);
+        var res = await streams.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, token);
+        if (res.IsSuccessStatusCode) return res;
+        res.Dispose();
+        throw new ApiException(res.StatusCode, null);
     }
 
     /// A server path's bytes with the bearer header (covers: an Image cannot send it).

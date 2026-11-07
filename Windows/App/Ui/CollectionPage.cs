@@ -8,7 +8,7 @@ namespace Echo.Ui;
 
 /// Cider's collection page for an album, a playlist or one of ECHO's mixes (views/pages/cider-playlist.ejs; pages.less
 /// .playlist-page): a 300 px header over the cover's artwork material — the 260 px artwork, the name
-/// (1.6 rem, 700), the artist (20 px), the description, Play and Shuffle, a search field and "…" — then
+/// (1.6 rem, 700), the artist (20 px), the description, Play, Shuffle and "…", a search field — then
 /// the songs on --color3, 40 px in, and the date and total time under them. Scrolling the songs shrinks
 /// the header to 200 px and the artwork to 128 px, as Cider's `plmin`. (Add to Library is Apple Music's.)
 public sealed class CollectionPage : DockPanel
@@ -63,7 +63,7 @@ public sealed class CollectionPage : DockPanel
         }
     }
 
-    void Say(string text) => Children.Add(new TextBlock { Text = text, Margin = new Thickness(40, 32), Opacity = 0.7, FontSize = 14 });
+    void Say(string text) => Children.Add(Blocks.Message(text));
 
     void Show(string name, string artistName, Route? artist, string? description, string? cover, IReadOnlyList<Track> tracks,
         PlayContext context, bool artwork, string? date, string? meta)
@@ -83,7 +83,7 @@ public sealed class CollectionPage : DockPanel
         var count = tracks.Count;
         var minutes = (int)Math.Round(tracks.Sum(t => t.DurationMs) / 60_000.0);
         meta ??= $"{count} {(count == 1 ? "song" : "songs")} · {Duration(minutes)}";
-        var title = new TextBlock { Text = name, FontSize = 28, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 6, 2), TextTrimming = TextTrimming.CharacterEllipsis };
+        var title = new TextBlock { Text = name, FontSize = 30, FontWeight = FontWeight.Bold, LetterSpacing = -0.6, Margin = new Thickness(0, 0, 6, 2), TextTrimming = TextTrimming.CharacterEllipsis };
         var by = new TextBlock { Text = artistName, FontSize = 22, FontWeight = FontWeight.Medium, Foreground = Kit.Brush("Key"), Margin = new Thickness(0, 0, 6, 6), TextTrimming = TextTrimming.CharacterEllipsis };
         var caps = new TextBlock { Text = meta.ToUpperInvariant(), FontSize = 12, FontWeight = FontWeight.SemiBold, Opacity = 0.6, Margin = new Thickness(0, 0, 0, 8), IsVisible = meta.Length > 0 };
         if (artist is not null)
@@ -101,51 +101,56 @@ public sealed class CollectionPage : DockPanel
         {
             session.Player.SetShuffle(true);
             _ = list.Play(Random.Shared.Next(Math.Max(1, tracks.Count)));
-        }, primary: true);
+        });
         play.MinWidth = shuffle.MinWidth = 100;
-        var info = new StackPanel
-        {
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(24, 0, 0, 0),
-            Children = { title, by, caps, desc, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 0), Children = { play, shuffle } } },
-        };
-
-        var search = new TextBox { Classes = { "search" }, Width = 225, PlaceholderText = "Search..." };
+        // "…" beside Play and Shuffle, as Apple's.
         var more = new Button
         {
             Theme = Kit.Res<ControlTheme>("RoundMore"),
             Content = new Glyph(Icons.More, 20),
-            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
         };
         more.Click += (_, _) => more.ContextMenu?.Open(more);
         more.ContextMenu = Menu(tracks, artist);
-        var tools = new StackPanel
+        var info = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Children =
-            {
-                new Panel
-                {
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Children = { search, new Glyph(Icons.Search, 12) { Margin = new Thickness(10, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Opacity = 0.55, IsHitTestVisible = false } },
-                },
-                more,
-            },
+            Margin = new Thickness(24, 0, 0, 0),
+            Children = { title, by, caps, desc, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 0), Children = { play, shuffle, more } } },
         };
+
+        var search = new TextBox { Classes = { "search" }, Width = 225, PlaceholderText = "Search..." };
+        var tools = Blocks.Search(search, default);
+        tools.VerticalAlignment = VerticalAlignment.Bottom;
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(16) };
         row.Children.Add(artBox);
         row.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = info });
         row.Children.Add(new Border { [Grid.ColumnProperty] = 2, Child = tools });
+        // The header's colour fades into the songs: one surface, as today's album pages are.
         var header = new Border
         {
             MinHeight = 300,
-            BoxShadow = BoxShadows.Parse("0 4 6 3 #1A000000"),
-            Child = new Panel { Children = { new ArtworkMaterial { Url = cover }, row } },
+            Child = new Panel
+            {
+                Children =
+                {
+                    new ArtworkMaterial
+                    {
+                        Url = cover,
+                        OpacityMask = new LinearGradientBrush
+                        {
+                            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+                            GradientStops = { new GradientStop(Colors.Black, 0.4), new GradientStop(Colors.Transparent, 1) },
+                        },
+                    },
+                    row,
+                },
+            },
         };
         SetDock(header, Dock.Top);
         Children.Add(header);
-        _ = Tint(cover, header, play, shuffle, by);
+        _ = Tint(cover, header, play, by);
 
         // ---- the songs (.playlist-body: var(--color3), 16 px / 40 px in) and the footer ----
         // Apple's footer: the year, then the count and length, small and grey.
@@ -164,7 +169,7 @@ public sealed class CollectionPage : DockPanel
             header.MinHeight = compact ? 200 : 300;
             desc.IsVisible = !compact && description is not null;
         };
-        Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#33000000")), Child = scroll });
+        Children.Add(scroll);
 
         search.TextChanged += (_, _) =>
         {
@@ -175,9 +180,9 @@ public sealed class CollectionPage : DockPanel
         };
     }
 
-    /// Cider 4 colours an album's page with its cover: the header glows with the key colour and Play and
-    /// Shuffle wear it (as md-btn-primary wears Cider's red, at 65 %).
-    async Task Tint(string? cover, Border header, Button play, Button shuffle, TextBlock by)
+    /// Cider 4 colours an album's page with its cover: the header glows with the key colour and Play wears
+    /// it solid (darkened when it is too light to carry white text); Shuffle stays the quieter button.
+    async Task Tint(string? cover, Border header, Button play, TextBlock by)
     {
         if (await session.Covers.KeyColor(cover) is not { } key) return;
         by.Foreground = new SolidColorBrush(key);
@@ -187,11 +192,9 @@ public sealed class CollectionPage : DockPanel
             EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
             GradientStops = { new GradientStop(Color.FromArgb(90, key.R, key.G, key.B), 0), new GradientStop(Color.FromArgb(0, key.R, key.G, key.B), 1) },
         };
-        foreach (var b in new[] { play, shuffle })
-        {
-            b.Background = new SolidColorBrush(Color.FromArgb(166, key.R, key.G, key.B));
-            b.BorderBrush = new SolidColorBrush(Color.FromArgb(64, key.R, key.G, key.B));
-        }
+        var light = (0.2126 * key.R + 0.7152 * key.G + 0.0722 * key.B) / 255;
+        var k = light > 0.6 ? 0.6 / light : 1;
+        play.Background = new SolidColorBrush(Color.FromRgb((byte)(key.R * k), (byte)(key.G * k), (byte)(key.B * k)));
     }
 
     static string Duration(int minutes) => minutes >= 60

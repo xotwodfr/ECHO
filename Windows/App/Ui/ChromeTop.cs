@@ -12,9 +12,9 @@ using Path = Avalonia.Controls.Shapes.Path;
 namespace Echo.Ui;
 
 /// Cider's top chrome (views/app/chrome-top.ejs; style.less .app-chrome; less/directives.less). In the
-/// default layout, Mojave: 46 px, Base; on the left the main menu, Back, Forward and the library toggle;
-/// in the middle the tab group (Home: Listen Now, Browse and Radio are Apple Music's); on the right the
-/// search field and the window's own controls. In Maverick (the player up here, given a session): 55 px;
+/// default layout, Mojave: 46 px on the window's ground; on the left the main menu, Back, Forward and the
+/// library toggle; in the middle a round Home (Cider's tab group; Listen Now, Browse and Radio are Apple
+/// Music's) beside a wide search pill; on the right the window's own controls. In Maverick (the player up here, given a session): 55 px;
 /// the Transport after Back and Forward, the Lcd in the middle, the BarTools on the right. The empty
 /// parts move the window.
 public sealed class ChromeTop : Grid
@@ -36,7 +36,7 @@ public sealed class ChromeTop : Grid
     {
         this.nav = nav;
         Height = maverick is null ? Height1 : HeightMaverick;
-        Background = Kit.Brush("Base");
+        Background = Brushes.Transparent; // on the ground, and still a drag handle
         // Cider's 30 % | flex | 30 %, which frees the middle under 1100 px: here the sides share what the
         // middle leaves (Mojave's tabs stay centred), so the window's controls always fit.
         ColumnDefinitions = new ColumnDefinitions(maverick is null ? "*,Auto,*" : "Auto,*,Auto");
@@ -73,7 +73,7 @@ public sealed class ChromeTop : Grid
                 [Grid.ColumnProperty] = 2,
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Children = { Tools, WindowControls() },
+                Children = { Tools, WindowControls(this, Height) },
             });
             nav.Changed += Show;
             Show();
@@ -81,41 +81,37 @@ public sealed class ChromeTop : Grid
         }
         left.Children.AddRange([menu, vdiv, back, forward, toggle]);
 
-        // .top-nav-group: #1e1e1e99, 1 px lighten(#1e1e1e, 8 %), radius 12, 32 px; items min 120 px.
+        // Cider's tab group held only Home here; today's bar puts a round Home and a wide search pill together
+        // in the middle, as Spotify's does, and leaves the right to the window's controls.
         home = TabItem(Icons.Home, "Home", () => nav.Open(new Route("home")));
-        Children.Add(new Border
-        {
-            [Grid.ColumnProperty] = 1,
-            Background = new SolidColorBrush(Color.Parse("#991E1E1E")),
-            BorderBrush = new SolidColorBrush(Color.Parse("#313131")),
-            BorderThickness = new Thickness(1),
-            CornerRadius = new CornerRadius(12),
-            Height = 32,
-            HorizontalAlignment = HorizontalAlignment.Center,
-            Child = home,
-        });
-
+        search.Width = 360;
+        search.Height = 36;
+        search.CornerRadius = new CornerRadius(18);
+        search.Padding = new Thickness(38, 0, 14, 0);
+        search.PlaceholderText = "Search your library";
+        search.Classes.Add("pill");
         search.KeyDown += (_, e) =>
         {
             if (e.Key == Key.Enter && !string.IsNullOrWhiteSpace(search.Text)) Searched?.Invoke(search.Text.Trim());
         };
         var field = new Panel
         {
-            Margin = new Thickness(0, 0, 6, 0),
             VerticalAlignment = VerticalAlignment.Center,
             Children =
             {
                 search,
-                new Glyph(Icons.Search, 12) { Margin = new Thickness(10, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Opacity = 0.55, IsHitTestVisible = false },
+                new Glyph(Icons.Search, 14) { Margin = new Thickness(15, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Opacity = 0.6, IsHitTestVisible = false },
             },
         };
         Children.Add(new StackPanel
         {
-            [Grid.ColumnProperty] = 2,
+            [Grid.ColumnProperty] = 1,
             Orientation = Orientation.Horizontal,
-            HorizontalAlignment = HorizontalAlignment.Right,
-            Children = { field, WindowControls() },
+            VerticalAlignment = VerticalAlignment.Center,
+            Spacing = 8,
+            Children = { home, field },
         });
+        Children.Add(new Border { [Grid.ColumnProperty] = 2, HorizontalAlignment = HorizontalAlignment.Right, Child = WindowControls(this, Height) });
 
         nav.Changed += Show;
         Show();
@@ -125,6 +121,9 @@ public sealed class ChromeTop : Grid
     /// has them).
     public BarTools? Tools { get; }
     public Lcd? Lcd { get; }
+
+    /// Ctrl+F: the field takes the keyboard (Mojave; Maverick's is in the sidebar).
+    public bool FocusSearch() => search.IsEffectivelyVisible && search.Focus();
 
     /// Clears the field (a new search starts empty).
     public string SearchText
@@ -140,42 +139,42 @@ public sealed class ChromeTop : Grid
         home?.Classes.Set("active", nav.Current.Page == "home");
     }
 
+    /// A round 36 px button with the icon alone (the name as its tip), lit while its page shows.
     static Button TabItem(Icon icon, string name, Action click)
     {
         var b = new Button
         {
             Theme = Kit.Res<ControlTheme>("TopNavItem"),
-            MinWidth = 120,
-            Content = new StackPanel
-            {
-                Orientation = Orientation.Horizontal,
-                Spacing = 8,
-                Children = { new Glyph(icon, 16), new TextBlock { Text = name, FontSize = 14, VerticalAlignment = VerticalAlignment.Center } },
-            },
+            Width = 36,
+            Height = 36,
+            Padding = new Thickness(0),
+            Content = new Glyph(icon, 18),
         };
+        ToolTip.SetTip(b, name);
         b.Click += (_, _) => click();
         return b;
     }
 
-    // ---- the window's own controls: 138 px, three of 46, Windows' 10 px glyphs ----
+    // ---- the window's own controls: 138 px, three of 46, Windows' 10 px glyphs (the sign-in screen has them too) ----
 
-    Control WindowControls()
+    public static Control WindowControls(Control host, double height)
     {
-        var max = Caption("M0.5,0.5 H9.5 V9.5 H0.5 Z", "Maximize", w => w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized);
+        var max = Caption(host, height, "M0.5,0.5 H9.5 V9.5 H0.5 Z", "Maximize", w => w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized);
         var row = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Height = Height,
+            Height = height,
+            HorizontalAlignment = HorizontalAlignment.Right,
             Children =
             {
-                Caption("M0,5.5 H10", "Minimize", w => w.WindowState = WindowState.Minimized),
+                Caption(host, height, "M0,5.5 H10", "Minimize", w => w.WindowState = WindowState.Minimized),
                 max,
-                Caption("M0,0 L10,10 M10,0 L0,10", "Close", w => w.Close(), close: true),
+                Caption(host, height, "M0,0 L10,10 M10,0 L0,10", "Close", w => w.Close(), close: true),
             },
         };
-        AttachedToVisualTree += (_, _) =>
+        host.AttachedToVisualTree += (_, _) =>
         {
-            if (TopLevel.GetTopLevel(this) is not Window w) return;
+            if (TopLevel.GetTopLevel(host) is not Window w) return;
             w.PropertyChanged += (_, e) =>
             {
                 if (e.Property != Window.WindowStateProperty) return;
@@ -187,30 +186,36 @@ public sealed class ChromeTop : Grid
         return row;
     }
 
-    Button Caption(string glyph, string tip, Action<Window> act, bool close = false)
+    static Button Caption(Control host, double height, string glyph, string tip, Action<Window> act, bool close = false)
     {
         var b = new Button
         {
             Theme = Kit.Res<ControlTheme>(close ? "CaptionClose" : "Caption"),
             Classes = { "nopress" },
             Width = 46,
-            Height = Height,
+            Height = height,
             Content = new Path { Data = Geometry.Parse(glyph), Stroke = Brushes.White, StrokeThickness = 1, Width = 10, Height = 10 },
         };
         ToolTip.SetTip(b, tip);
         b.Click += (_, _) =>
         {
-            if (TopLevel.GetTopLevel(this) is Window w) act(w);
+            if (TopLevel.GetTopLevel(host) is Window w) act(w);
         };
         return b;
     }
 
-    // The bar itself moves the window, and a double click maximizes it (Electron's drag region).
+    /// Electron's drag region: a press moves the window, a double click maximizes it.
+    public static void DragWindow(Control from, PointerPressedEventArgs e)
+    {
+        if (e.Handled || TopLevel.GetTopLevel(from) is not Window w || !e.GetCurrentPoint(from).Properties.IsLeftButtonPressed) return;
+        if (e.ClickCount == 2) w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        else w.BeginMoveDrag(e);
+    }
+
+    // The bar itself moves the window.
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (e.Handled || TopLevel.GetTopLevel(this) is not Window w || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        if (e.ClickCount == 2) w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        else w.BeginMoveDrag(e);
+        DragWindow(this, e);
     }
 }

@@ -6,7 +6,7 @@ using Avalonia.Styling;
 
 namespace Echo.Ui;
 
-/// Cider's sidebar (views/components/sidebar.ejs; style.less #app-sidebar): 260 px, --sidebarColorMix,
+/// Cider's sidebar (views/components/sidebar.ejs; style.less #app-sidebar): 260 px on the window's ground,
 /// 8 px in; the Library (Recently Added, Songs, Albums, Artists: Videos and Podcasts are Apple Music's)
 /// and the Playlists, each under a header that folds it away. In Maverick, which has no tabs, the search
 /// field heads it and "Cider" holds Home (ECHO's name stands there).
@@ -18,6 +18,7 @@ public sealed class Sidebar : Border
     readonly Nav nav;
     readonly StackPanel playlists = new();
     readonly List<(Button Item, Func<Route, bool> Active)> items = [];
+    readonly TextBox? search;
 
     /// Enter in Maverick's search field.
     public event Action<string>? Searched;
@@ -27,7 +28,6 @@ public sealed class Sidebar : Border
         this.session = session;
         this.nav = nav;
         Width = Width1;
-        Background = Kit.Brush("Sidebar");
 
         var library = new StackPanel
         {
@@ -52,7 +52,7 @@ public sealed class Sidebar : Border
         {
             var home = new StackPanel { Children = { Item(Icons.Home, "Home", new Route("home")) } };
             groups.Children.InsertRange(0, [Header("ECHO", home), home]);
-            var search = new TextBox { Classes = { "search" }, PlaceholderText = "Search..." };
+            search = new TextBox { Classes = { "search" }, PlaceholderText = "Search..." };
             search.KeyDown += (_, e) =>
             {
                 if (e.Key == Avalonia.Input.Key.Enter && !string.IsNullOrWhiteSpace(search.Text)) Searched?.Invoke(search.Text.Trim());
@@ -65,6 +65,9 @@ public sealed class Sidebar : Border
         nav.Changed += Show;
         _ = LoadPlaylists();
     }
+
+    /// Ctrl+F in Maverick: its search field is here.
+    public bool FocusSearch() => search?.Focus() ?? false;
 
     /// The server's playlists under Playlists (again after one is made).
     public async Task LoadPlaylists()
@@ -114,7 +117,7 @@ public sealed class Sidebar : Border
                 Orientation = Orientation.Horizontal,
                 Spacing = 12,
                 // The icon in the key colour, as Apple Music's sidebar has them.
-                Children = { new Glyph(icon, 18) { Foreground = Kit.Brush("Key") }, new TextBlock { Text = name, FontSize = 14, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center } },
+                Children = { new Glyph(icon, 17) { Foreground = Kit.Brush("Key") }, new TextBlock { Text = name, FontSize = 13.5, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center } },
             },
         };
         if (to is not null)
@@ -134,6 +137,7 @@ public sealed class Sidebar : Border
             Theme = Kit.Res<ControlTheme>("Plain"),
             CornerRadius = new CornerRadius(3),
             Padding = new Thickness(6),
+            Margin = new Thickness(0, 8, 0, 2),
             Opacity = 0.5,
             HorizontalAlignment = HorizontalAlignment.Stretch,
             HorizontalContentAlignment = HorizontalAlignment.Stretch,

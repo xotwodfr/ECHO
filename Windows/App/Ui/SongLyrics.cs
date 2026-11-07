@@ -23,7 +23,8 @@ public sealed class SongLyrics : Panel
         Stage = new LyricsStage(
             () => player.PositionNow.TotalMilliseconds + Offset,
             () => player.Playing,
-            ms => player.Seek(TimeSpan.FromMilliseconds(Math.Max(0, ms - Offset))));
+            ms => player.Seek(TimeSpan.FromMilliseconds(Math.Max(0, ms - Offset))),
+            lite: () => session.Prefs.Performance);
         none = new TextBlock
         {
             Text = "No Lyrics",

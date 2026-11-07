@@ -10,6 +10,10 @@ public struct Spring(double x)
 
     public readonly bool Settled(double target) => Math.Abs(X - target) < 0.05 && Math.Abs(V) < 0.05;
 
+    /// A spring given by mass, damping and stiffness (AMLL's, CSS's) as Step's frequency and ratio.
+    public static (double F, double Zeta) Of(double mass, double damping, double stiffness) =>
+        (Math.Sqrt(stiffness / mass) / (2 * Math.PI), damping / (2 * Math.Sqrt(stiffness * mass)));
+
     public void Step(double target, double dtMs, double f = 2.2, double zeta = 1)
     {
         var t = Math.Clamp(dtMs, 0, 100) / 1000;

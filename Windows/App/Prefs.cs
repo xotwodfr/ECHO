@@ -3,9 +3,10 @@ using System.Text.Json;
 namespace Echo;
 
 /// What Settings keeps for this Windows user, beside the device token: Cider's window layout ("mojave",
-/// its default, or "maverick") and whether plays scrobble to Navidrome (and on to Last.fm, if it is set
-/// up there).
-public sealed record Prefs(string Layout = "mojave", bool Scrobble = true)
+/// its default, or "maverick"), whether plays scrobble to Navidrome (and on to Last.fm, if it is set
+/// up there), and Performance mode (for slower computers: no blur or glow on the lyrics, a still
+/// background).
+public sealed record Prefs(string Layout = "mojave", bool Scrobble = true, bool Performance = false)
 {
     public static readonly string File = Path.Combine(TokenStore.Folder, "prefs.json");
 
