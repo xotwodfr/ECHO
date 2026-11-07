@@ -43,7 +43,7 @@ public sealed class TrackList : ListBox
         }
         ItemTemplate = new FuncDataTemplate<Row>((row, _) => row is null ? null : RowView(row, nav));
         ItemsSource = tracks.Select((t, i) => new Row(t, i + 1, kind)).ToList();
-        ContainerPrepared += (_, e) => e.Container.Classes.Set("odd", e.Index % 2 == 1);
+        ContainerPrepared += (_, e) => e.Container.Classes.Set("odd", kind != Rows.Compact && e.Index % 2 == 1);
         DoubleTapped += (_, e) =>
         {
             if (SelectedItem is Row row) _ = session.Player.PlayList(tracks, row.Number - 1, context);
