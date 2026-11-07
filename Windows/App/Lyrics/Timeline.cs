@@ -26,7 +26,27 @@ public sealed class Timeline
             items.Add(new Item(lines[i], start, EndOf(lines[i], i + 1 < lines.Count ? lines[i + 1].Start : start + 5000)));
         }
         Items = items;
+        // A line stays lit past its end until a line begins after it ended.
+        litUntil = new double[items.Count];
+        for (var i = 0; i < items.Count; i++)
+        {
+            litUntil[i] = double.PositiveInfinity;
+            for (var j = i + 1; j < items.Count; j++)
+                if (!items[j].Interlude && items[j].Start >= items[i].End)
+                {
+                    litUntil[i] = items[j].Start;
+                    break;
+                }
+        }
+        lastEnd = items.Count == 0 ? 0 : items.Max(i => i.End);
+        HasDuet = lines.Any(l => l.OppositeAligned);
     }
+
+    readonly double[] litUntil;
+    readonly double lastEnd;
+
+    /// Some lines are the other voice's (they sit on the right).
+    public bool HasDuet { get; }
 
     public IReadOnlyList<Item> Items { get; }
 
@@ -45,6 +65,19 @@ public sealed class Timeline
         var active = -1;
         for (var i = 0; i < Items.Count && Items[i].Start <= t; i++) active = i;
         return active;
+    }
+
+    /// The lines lit at `t`, in order (AMLL's highlighted lines): each from its start until a line begins
+    /// after it has ended, so a finished line stays readable through the gap and overlapping lines (a
+    /// duet) light together; none while an interlude's dots hold the column, nor after the last line.
+    public IReadOnlyList<int> LitAt(double t)
+    {
+        var lit = new List<int>();
+        var active = ActiveAt(t);
+        if (active < 0 || Items[active].Interlude || t >= lastEnd) return lit;
+        for (var i = 0; i < Items.Count && Items[i].Start <= t; i++)
+            if (!Items[i].Interlude && t < litUntil[i]) lit.Add(i);
+        return lit;
     }
 
     /// How much of a word is sung at `t`, 0–1.

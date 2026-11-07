@@ -10,9 +10,9 @@ using SkiaSharp;
 
 namespace Echo.Stage;
 
-// The lyrics as Spicy Lyrics (github.com/Spikerko/spicy-lyrics, AGPL-3.0 like ECHO; its default mode,
-// read from src/utils/Lyrics/Animator, css/Lyrics/Mixed.css, main.css, LyricsVirtualizer.ts) draws
-// them, its numbers ported to Avalonia: the behaviour, not its code.
+// The lyrics as Apple Music draws them, by the numbers of AMLL (github.com/amll-dev/applemusic-like-lyrics,
+// AGPL-3.0 like ECHO; read from packages/core/src/lyric-player and styles, Nov 2026): the behaviour, not
+// its code. The words' springs are still Spicy Lyrics' (github.com/Spikerko/spicy-lyrics, AGPL-3.0).
 
 /// A natural cubic spline through (time, value) points, held flat outside them (Spicy's GetSpline).
 public sealed class Spline
@@ -59,14 +59,28 @@ public sealed class Spline
     }
 }
 
-/// Spicy Lyrics' column: the lines left-aligned at 7 % of the width (between 29.6 and 56 px), bold;
-/// the current line centred, the whole column gliding there as one block; the lines sung at 85 %
-/// white, those to come at 50 %, each blurred 1.25 px (a text-shadow's radius) a line away from the
-/// current one, at most 6.8 px; no line shrinks. A click seeks to a line; the wheel scrolls freely and
-/// the column comes back 3 s later. Nothing moves while paused and settled.
+/// AMLL's column. Bold lines the larger of 5 % of the window's height and 2.5 % of its width (a column
+/// under 500 px, the side panel: 8 % of its width), 1.2 high, 0.4 em above and below each. The first
+/// line lit sits with its middle 35 % down. Each line rides its own spring; when the sung line changes
+/// the first one in view starts at once and each below it 50 ms later, the gap shrinking 5 % a line past
+/// the sung one, so the column ripples. Lines not lit shrink to 97 % (while playing) and blur 1 px plus
+/// 1 px a line away, at most 5 px. A click seeks to a line; the wheel scrolls freely and the column
+/// comes back 3 s later. Nothing moves while paused and settled.
 public sealed class LyricsStage : Panel
 {
     const double BackAfterMs = 3000;
+
+    // AMLL's springs (mass, damping, stiffness): a seek, an interlude or the first line glide softly;
+    // playing, the stiffness rises from 170 to 220 as lines come faster (100–800 ms apart).
+    static readonly (double F, double Zeta) Soft = Spring.Of(0.9, 15, 90);
+    static readonly (double F, double Zeta) ScaleSpring = Spring.Of(2, 25, 100);
+
+    static (double F, double Zeta) Playback(double intervalMs)
+    {
+        var ratio = Math.Pow(1 - (Math.Clamp(intervalMs, 100, 800) - 100) / 700, 0.2);
+        var k = 170 + ratio * 50;
+        return Spring.Of(0.9, Math.Sqrt(k) * 2.2, k);
+    }
 
     readonly Func<double> clock;
     readonly Func<bool> playing;
@@ -75,13 +89,13 @@ public sealed class LyricsStage : Panel
     readonly List<LineView> views = [];
     LyricsDoc? doc;
     Timeline? timeline;
-    Spring scroll;
+    IReadOnlyList<int> lit = [];
     int active = -2;
     double now, lastT = double.NaN, manual, wheelAt = double.NegativeInfinity, builtSize;
     bool scheduled, hovered;
 
     /// `clock`: the song's time in ms with the lyrics' offsets applied; `seek` goes to such a time.
-    /// `fontSize` 0: Spicy's size from the width.
+    /// `fontSize` 0: AMLL's size from the window.
     public LyricsStage(Func<double> clock, Func<bool> playing, Action<double> seek, double fontSize = 0)
     {
         this.clock = clock;
@@ -101,21 +115,38 @@ public sealed class LyricsStage : Panel
         AttachedToVisualTree += (_, _) => Wake();
         SizeChanged += (_, _) =>
         {
-            if (Math.Abs(SizeFor(Bounds.Width) - builtSize) > 0.5) Build();
+            if (Math.Abs(SizeFor(Bounds.Size) - builtSize) > 0.5 || Math.Abs(PadFor(Bounds.Width) - builtPad) > 0.5) Build();
             Wake();
         };
     }
 
-    /// Spicy's `clamp(1.85rem, 7cqw, 3.5rem)`.
-    double SizeFor(double width) => fixedSize > 0 ? fixedSize : Math.Clamp(width * 0.07, 29.6, 56);
+    bool Narrow(double width) => width < 500;
 
-    public double FontSize => builtSize > 0 ? builtSize : SizeFor(Bounds.Width);
+    /// AMLL's `max(5vh, 2.5vw)`; a narrow column `8vw` of itself.
+    double SizeFor(Size size)
+    {
+        if (fixedSize > 0) return fixedSize;
+        if (Narrow(size.Width)) return Math.Max(12, size.Width * 0.08);
+        var window = TopLevel.GetTopLevel(this)?.ClientSize ?? size;
+        return Math.Max(12, Math.Max(window.Height * 0.05, window.Width * 0.025));
+    }
 
-    /// The item holding the column (tests read it); −1 before the first, −2 before any frame.
+    /// The room either side of a line: 1 em, 20 px in a narrow column.
+    double PadFor(double width) => Narrow(width) ? 20 : SizeFor(new Size(width, Bounds.Height));
+
+    double builtPad;
+
+    public double FontSize => builtSize > 0 ? builtSize : SizeFor(Bounds.Size);
+
+    /// The item the column is anchored on (tests read it): the first line lit, else the interlude or
+    /// the last line begun; −1 before the first, −2 before any frame.
     public int Active => active;
 
-    /// A line's top as the column moves (tests read it).
-    public double TopOf(int item) => views[item].Bounds.Y + scroll.X;
+    /// The items lit now (tests read them).
+    public IReadOnlyList<int> Lit => lit;
+
+    /// A line's top as it moves (tests read it).
+    public double TopOf(int item) => views[item].Top;
 
     public IReadOnlyList<LineView> Lines => views;
 
@@ -129,11 +160,12 @@ public sealed class LyricsStage : Panel
     {
         Children.Clear();
         views.Clear();
-        builtSize = SizeFor(Bounds.Width);
+        builtSize = SizeFor(Bounds.Size);
+        builtPad = PadFor(Bounds.Width);
         timeline = doc is null ? null : new Timeline(doc);
         foreach (var item in timeline?.Items ?? [])
         {
-            var view = new LineView(item, builtSize, !timeline!.Synced);
+            var view = new LineView(item, builtSize, !timeline!.Synced, builtPad, timeline.HasDuet);
             view.PointerPressed += (_, e) =>
             {
                 if (!e.GetCurrentPoint(view).Properties.IsLeftButtonPressed || !timeline.Synced) return;
@@ -145,6 +177,7 @@ public sealed class LyricsStage : Panel
             Children.Add(view);
         }
         active = -2;
+        lit = [];
         lastT = double.NaN;
         manual = 0;
         InvalidateMeasure();
@@ -154,25 +187,16 @@ public sealed class LyricsStage : Panel
     protected override Size MeasureOverride(Size available)
     {
         var width = double.IsInfinity(available.Width) ? 600 : available.Width;
-        foreach (var v in views) v.Measure(new Size(Math.Max(1, width - Pad * 2), double.PositiveInfinity));
+        foreach (var v in views) v.Measure(new Size(width, double.PositiveInfinity));
         return new Size(width, double.IsInfinity(available.Height) ? 400 : available.Height);
     }
 
     protected override Size ArrangeOverride(Size final)
     {
-        // The lines one under another, a third of the font size apart; the column moves by transform.
-        // An interlude takes room only while it plays.
-        double y = 0;
-        for (var i = 0; i < views.Count; i++)
-        {
-            var v = views[i];
-            v.Arrange(new Rect(Pad, y, final.Width - Pad * 2, v.DesiredSize.Height));
-            if (!v.Item.Interlude || i == active) y += v.DesiredSize.Height + FontSize * 0.34;
-        }
+        // Every line at the top; its spring places it (a render transform).
+        foreach (var v in views) v.Arrange(new Rect(0, 0, final.Width, v.DesiredSize.Height));
         return final;
     }
-
-    double Pad => Math.Max(16, Bounds.Width * 0.05);
 
     void Hover(bool on)
     {
@@ -204,51 +228,78 @@ public sealed class LyricsStage : Panel
         now += dtMs;
         if (timeline is null || views.Count == 0) return false;
         var t = clock();
-        // A seek (backwards, or a jump of more than a second): the column is there at once.
-        var jumped = double.IsNaN(lastT) || t < lastT - 200 || t > lastT + dtMs + 1000;
+        var first = double.IsNaN(lastT);
+        // A seek (backwards, or a jump of more than a second): the column glides there, all at once.
+        var jumped = first || t < lastT - 200 || t > lastT + dtMs + 1000;
         lastT = t;
-        var now1 = timeline.ActiveAt(t);
-        if (now1 != active)
-        {
-            active = now1;
-            InvalidateArrange(); // an interlude opens or folds
-        }
+        var isPlaying = playing();
+        var synced = timeline.Synced;
+        var nowLit = timeline.LitAt(t);
+        var focus = !synced ? -1 : nowLit.Count > 0 ? nowLit[0] : timeline.ActiveAt(t);
+        var latest = nowLit.Count > 0 ? nowLit[^1] : focus;
+        bool Holds(int i) => nowLit.Contains(i) || i >= focus && i < latest;
+        var changed = focus != active || !nowLit.SequenceEqual(lit);
+
+        // Background vocals take room under their line while it is sung, and always while paused.
+        for (var i = 0; i < views.Count; i++) views[i].ShowBackground = !synced || !isPlaying || Holds(i);
         if (!IsMeasureValid || !IsArrangeValid || views.Any(v => !v.IsMeasureValid)) UpdateLayout();
         if (now - wheelAt > BackAfterMs) manual += (0 - manual) * Math.Min(1, dtMs / 120);
 
-        // The current line's middle at the middle of the stage (Spicy scrolls it to "center").
-        double target;
-        if (!timeline.Synced) target = FontSize + manual;
-        else
+        // Where each line goes: stacked, the anchor's middle 35 % down (an interlude takes room only
+        // while it holds the column).
+        var tops = new double[views.Count];
+        double y = 0;
+        for (var i = 0; i < views.Count; i++)
         {
-            var holder = views[Math.Max(active, 0)];
-            target = Bounds.Height / 2 - (holder.Bounds.Y + holder.Bounds.Height / 2) + manual;
+            tops[i] = y;
+            if (!views[i].Item.Interlude || i == focus) y += views[i].DesiredSize.Height;
         }
-        if (jumped) scroll = new Spring(target);
-        else scroll.Step(target, dtMs, f: 1.3, zeta: 1);
-        var busy = playing() || !scroll.Settled(target) || Math.Abs(manual) > 0.5;
+        var anchor = Math.Max(focus, 0);
+        var offset = (synced ? Bounds.Height * 0.35 - (tops[anchor] + views[anchor].DesiredSize.Height / 2) : 0) + manual;
+
+        var prev = anchor - 1;
+        while (prev >= 0 && views[prev].Item.Interlude) prev--;
+        var spring = jumped || prev < 0 || views[anchor].Item.Interlude ? Soft : Playback(views[anchor].Item.Start - views[prev].Item.Start);
+        var gap = changed && !jumped ? 50.0 : 0;
+        var delay = 0.0;
+        for (var i = 0; i < views.Count; i++)
+        {
+            var v = views[i];
+            var goal = tops[i] + offset;
+            var scale = isPlaying && synced && !Holds(i) ? 97 : 100;
+            if (first) v.Snap(goal, scale);
+            else v.Aim(goal, scale, spring, now + delay);
+            if (goal + v.DesiredSize.Height >= 0)
+            {
+                delay += gap;
+                if (i >= focus) gap /= 1.05;
+            }
+        }
+        active = focus;
+        lit = nowLit;
+
+        var busy = isPlaying || Math.Abs(manual) > 0.5;
         var free = hovered || now - wheelAt < BackAfterMs;
         for (var i = 0; i < views.Count; i++)
         {
             var v = views[i];
-            var d = Math.Abs(i - Math.Max(active, 0));
-            // Spicy's blur is a text-shadow of 1.25 px a line, at most 6.8 px: a Gaussian of half that.
-            v.Blur = !timeline.Synced || free || i == active ? 0 : Math.Min(1.25 * d, 1.25 * 5.465) / 2;
-            v.RenderTransform = new MatrixTransform(Matrix.CreateTranslation(0, scroll.X));
-            var state = !timeline.Synced ? LineState.Sung : i == active ? LineState.Active : v.Item.Start <= t ? LineState.Sung : LineState.NotSung;
-            busy |= v.Step(t, state, jumped ? 1000 : dtMs);
+            busy |= v.Move(now, dtMs, ScaleSpring, Bounds.Width);
+            var d = i < focus ? focus - i + 1 : i - latest;
+            busy |= v.BlurTo(!synced || free || Holds(i) ? 0 : Math.Min(5, (1 + d) * (Narrow(Bounds.Width) ? 0.8 : 1)), first || jumped ? 1000 : dtMs);
+            // Lines well out of view are not drawn.
+            v.Opacity = v.Top + v.DesiredSize.Height < -Bounds.Height * 0.4 || v.Top > Bounds.Height * 1.4 ? 0 : 1;
+            busy |= v.Step(t, nowLit.Contains(i), first || jumped ? 1000 : dtMs);
         }
         return busy;
     }
 }
 
-public enum LineState { NotSung, Active, Sung }
-
-/// One item of the column: a line (with its background vocals) or the interlude's dots. Each word (or,
+/// One item of the column: a line (with its background vocals) or the interlude's dots. A line lit is
+/// white where sung and half-bright where still to come; a line not lit is dim; between them it fades
+/// over about 0.4 s (AMLL's transitions). Background vocals are 0.7 em under the line, at 40 % of its
+/// light, sliding up out from under it and growing from 80 % while the line is sung. Each word (or,
 /// held a second or more, each letter) has Spicy's three springs — scale (0.88 Hz, ζ 0.64), lift
-/// (1.45 Hz, ζ 0.4) and glow (1.18 Hz, ζ 0.56) — chasing its curves as it is sung: from 95 % up past
-/// 105 % to 100 %, from 1/100 em down to 1/60 em up and back, the glow up in its first 15 % and down
-/// after 60 %. The sung part of a word is 85 % white, the rest 40 % (a 20 % fade between).
+/// (1.45 Hz, ζ 0.4) and glow (1.18 Hz, ζ 0.56) — chasing its curves as it is sung.
 public sealed class LineView : Control
 {
     static readonly FontFamily Face = new("avares://ECHO/Assets/Fonts#Pretendard Std");
@@ -257,8 +308,14 @@ public sealed class LineView : Control
     static readonly Spline Lift = new((0, 1 / 100.0), (0.9, -1 / 60.0), (1, 0));
     static readonly Spline LetterLift = new((0, 1 / 100.0), (0.9, -1 / 56.0), (1, 0));
     static readonly Spline Glow = new((0, 0), (0.15, 1), (0.6, 1), (1, 0));
-    static readonly Color Sung = Color.FromArgb(217, 255, 255, 255), Waiting = Color.FromArgb(128, 255, 255, 255), Unsung = Color.FromArgb(102, 255, 255, 255);
-    static readonly IBrush HoverFill = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255));
+    static readonly IBrush HoverFill = new SolidColorBrush(Color.FromArgb(17, 255, 255, 255)); // #fff1
+    static readonly (double F, double Zeta) BgSpring = Spring.Of(1, 20, 50);
+
+    // AMLL adds light (plus-lighter): 20 % to a line not lit; to a lit one 85 % where sung and 34 % still
+    // to come; background vocals 40 % of that. Over ECHO's backdrops (about 35 % grey) these whites
+    // look the same.
+    const double Dim = 0.3, LitSung = 1, LitWaiting = 0.5, Plain = 0.85;
+    const double BgDim = 0.12, BgSung = 0.5, BgWaiting = 0.2;
 
     /// A word or a letter of a held word, with its springs.
     sealed class Piece(string text, FormattedText shape, SKPath? outline, double x, double y, double w, double em, double start, double end, bool letter)
@@ -275,20 +332,27 @@ public sealed class LineView : Control
     }
 
     readonly Item item;
-    readonly double size;
-    readonly bool plain;
+    readonly double size, pad;
+    readonly bool plain, duetSong;
     readonly List<Piece> pieces = [];
     readonly List<string> words = [];
-    double t;
-    LineState state = LineState.NotSung;
-    bool hover;
+    int bgFrom = int.MaxValue;
+    double bgTop, bgHeight, mainBottom, t;
+    bool lit, hover, showBackground = true;
     double blur = -1;
 
-    public LineView(Item item, double size, bool plain)
+    // The stage's springs for this line: where it is, how big (%), and the move it waits to start.
+    Spring y, scale = new(100), fade = new(0), blurring = new(0), bgIn = new(100), bgFade = new(100);
+    (double Y, double Scale, double F, double Zeta) goal, next;
+    double nextAt = double.NaN;
+
+    public LineView(Item item, double size, bool plain, double pad = 0, bool duetSong = false)
     {
         this.item = item;
         this.size = size;
         this.plain = plain;
+        this.pad = pad;
+        this.duetSong = duetSong;
         Cursor = plain ? Cursor.Default : new Cursor(StandardCursorType.Hand);
         RenderTransformOrigin = RelativePoint.TopLeft; // the stage's matrix places the line itself
         PointerEntered += (_, _) => { hover = true; InvalidateVisual(); };
@@ -300,45 +364,112 @@ public sealed class LineView : Control
     /// A duet's other voice sits on the right.
     public bool RightAligned => item.Line?.OppositeAligned == true;
 
-    /// The words as laid out (tests read them).
+    /// The words as laid out, background vocals last (tests read them).
     public IReadOnlyList<string> Words => words;
 
-    public LineState State => state;
+    public bool IsLit => lit;
 
-    /// Blur as a Gaussian's sigma in px; set only when it changes, each change is a new layer.
-    public double Blur
+    /// Where the line is (its top) and how big, in % (tests read them).
+    public double Top => y.X;
+    public double ScaleNow => scale.X;
+    public double BlurNow => Math.Max(0, blurring.X);
+
+    /// The background vocals take room under the line.
+    public bool ShowBackground
     {
+        get => showBackground;
         set
         {
-            if (Math.Abs(value - blur) < 0.05) return;
+            if (value == showBackground) return;
+            showBackground = value;
+            InvalidateMeasure();
+        }
+    }
+
+    /// There at once: the first frame of new lyrics.
+    public void Snap(double top, double percent)
+    {
+        goal = (top, percent, 1, 1);
+        nextAt = double.NaN;
+        y = new Spring(top);
+        scale = new Spring(percent);
+    }
+
+    /// Heads for `top` at `percent` on `spring` from time `at`; a move already waiting keeps its start.
+    public void Aim(double top, double percent, (double F, double Zeta) spring, double at)
+    {
+        var last = double.IsNaN(nextAt) ? goal : next;
+        if (Math.Abs(last.Y - top) < 0.5 && Math.Abs(last.Scale - percent) < 0.05) return;
+        next = (top, percent, spring.F, spring.Zeta);
+        nextAt = double.IsNaN(nextAt) ? at : Math.Max(nextAt, at);
+    }
+
+    /// Moves the line on to `now`; true while it still moves.
+    public bool Move(double now, double dtMs, (double F, double Zeta) scaleSpring, double width)
+    {
+        if (!double.IsNaN(nextAt) && now >= nextAt)
+        {
+            goal = next;
+            nextAt = double.NaN;
+        }
+        y.Step(goal.Y, dtMs, goal.F, goal.Zeta);
+        scale.Step(goal.Scale, dtMs, scaleSpring.F, scaleSpring.Zeta);
+        // Shrinks toward its own edge: the left, the right for the other voice; its middle in height.
+        var (ox, oy) = (RightAligned ? width - pad : pad, DesiredSize.Height / 2);
+        var s = scale.X / 100;
+        RenderTransform = new MatrixTransform(Matrix.CreateTranslation(-ox, -oy) * Matrix.CreateScale(s, s) * Matrix.CreateTranslation(ox, oy + y.X));
+        return !double.IsNaN(nextAt) || !y.Settled(goal.Y) || !scale.Settled(goal.Scale);
+    }
+
+    /// Blurs toward `sigma` px (a Gaussian's, as CSS blur()) over about 0.4 s; true while it changes.
+    public bool BlurTo(double sigma, double dtMs)
+    {
+        if (dtMs >= 1000) blurring = new Spring(sigma);
+        else blurring.Step(sigma, dtMs, 2.5, 1);
+        var value = Math.Max(0, blurring.X);
+        if (Math.Abs(value - blur) >= 0.05)
+        {
             blur = value;
             // Avalonia's radius r blurs with sigma ≈ 0.577 r + 0.5.
             Effect = value <= 0.5 ? null : new BlurEffect { Radius = (value - 0.5) / 0.57735 };
         }
+        return !blurring.Settled(sigma);
     }
 
     /// Moves the springs on to `time`; true while any still moves.
-    public bool Step(double time, LineState s, double dtMs)
+    public bool Step(double time, bool isLit, double dtMs)
     {
-        var changed = s != state || Math.Abs(time - t) > 0.5;
+        var changed = isLit != lit || Math.Abs(time - t) > 0.5;
         t = time;
-        state = s;
+        lit = isLit;
         var busy = false;
+        if (dtMs >= 1000)
+        {
+            // A seek: the line's light and its background vocals are there at once.
+            (fade, bgIn, bgFade) = (new Spring(isLit ? 100 : 0), new Spring(showBackground ? 100 : 0), new Spring(showBackground ? 100 : 0));
+        }
+        else
+        {
+            fade.Step(isLit ? 100 : 0, dtMs, 2.5, 1);
+            bgIn.Step(showBackground ? 100 : 0, dtMs, BgSpring.F, BgSpring.Zeta);
+            bgFade.Step(showBackground ? 100 : 0, dtMs, 3.3, 1);
+            busy |= !fade.Settled(isLit ? 100 : 0) || !bgIn.Settled(showBackground ? 100 : 0) || !bgFade.Settled(showBackground ? 100 : 0);
+        }
         foreach (var p in pieces)
         {
-            var (scale, lift, glow) = Targets(p);
+            var (sc, lift, glow) = Targets(p);
             if (dtMs >= 1000)
             {
-                (p.S, p.L, p.G) = (new Spring(scale), new Spring(lift), new Spring(glow)); // a seek: there at once
+                (p.S, p.L, p.G) = (new Spring(sc), new Spring(lift), new Spring(glow)); // a seek: there at once
                 continue;
             }
-            p.S.Step(scale, dtMs, 0.88, 0.64);
+            p.S.Step(sc, dtMs, 0.88, 0.64);
             p.L.Step(lift, dtMs, 1.45, 0.4);
             p.G.Step(glow, dtMs, 1.18, 0.56);
-            busy |= !p.S.Settled(scale) || !p.L.Settled(lift) || !p.G.Settled(glow);
+            busy |= !p.S.Settled(sc) || !p.L.Settled(lift) || !p.G.Settled(glow);
         }
-        if (busy || changed || item.Interlude && s == LineState.Active) InvalidateVisual();
-        return busy || item.Interlude && s == LineState.Active;
+        if (busy || changed || item.Interlude && isLit) InvalidateVisual();
+        return busy || item.Interlude && time >= item.Start && time < item.End;
     }
 
     /// Where a piece's springs head at time t: its curves at its progress (at rest before it, settled
@@ -349,21 +480,21 @@ public sealed class LineView : Control
         if (!p.Letter)
         {
             var x = Progress(p.Start, p.End);
-            return (Scale.At(x), Lift.At(x), state == LineState.Active ? Glow.At(x) : 0);
+            return (Scale.At(x), Lift.At(x), lit ? Glow.At(x) : 0);
         }
         var share = (p.WordEnd - p.WordStart) / p.Of;
-        var lit = (int)Math.Floor((t - p.WordStart) / Math.Max(1, share));
+        var at0 = (int)Math.Floor((t - p.WordStart) / Math.Max(1, share));
         var mine = Progress(p.Start, p.End);
-        if (lit < 0 || lit >= p.Of) return (LetterScale.At(mine), LetterLift.At(mine), 0);
-        var d = Math.Abs(p.Index - lit);
+        if (at0 < 0 || at0 >= p.Of) return (LetterScale.At(mine), LetterLift.At(mine), 0);
+        var d = Math.Abs(p.Index - at0);
         var fall = 1 / (1 + Math.Pow(d, 2.8));
         var glowFall = 1 / (1 + 0.9 * d);
-        var at = (t - (p.WordStart + lit * share)) / Math.Max(1, share);
+        var at = (t - (p.WordStart + at0 * share)) / Math.Max(1, share);
         double Lean(Spline s) => s.At(0) + (s.At(at) - s.At(0)) * fall;
         // Letters already sung keep their settled place; those to come lean toward the lit one.
-        return p.Index < lit
-            ? (LetterScale.At(1) + (LetterScale.At(at) - LetterScale.At(1)) * fall, LetterLift.At(1) + (LetterLift.At(at) - LetterLift.At(1)) * fall, state == LineState.Active ? Glow.At(at) * glowFall : 0)
-            : (Lean(LetterScale), Lean(LetterLift), state == LineState.Active ? Glow.At(at) * glowFall : 0);
+        return p.Index < at0
+            ? (LetterScale.At(1) + (LetterScale.At(at) - LetterScale.At(1)) * fall, LetterLift.At(1) + (LetterLift.At(at) - LetterLift.At(1)) * fall, lit ? Glow.At(at) * glowFall : 0)
+            : (Lean(LetterScale), Lean(LetterLift), lit ? Glow.At(at) * glowFall : 0);
     }
 
     double Progress(double start, double end) => end <= start ? (t >= start ? 1 : 0) : Math.Clamp((t - start) / (end - start), 0, 1);
@@ -372,12 +503,21 @@ public sealed class LineView : Control
     {
         pieces.Clear();
         words.Clear();
-        if (item.Line is not { } line) return new Size(available.Width, size * 1.2);
+        bgFrom = int.MaxValue;
         var width = double.IsInfinity(available.Width) ? 600 : available.Width;
-        var y = Flow(Split(line.Words, line.Text, line.Start, line.End ?? line.Start + 4000), size, 0, width, line.Words is not { Count: > 0 });
+        if (item.Line is not { } line) return new Size(width, size * 2);
+        // AMLL: 0.4 em above and below; in a song with a duet, each voice keeps 15 % clear on the far side.
+        var inner = Math.Max(1, width - pad * 2);
+        var room = duetSong ? inner * 0.85 : inner;
+        var left = RightAligned ? pad + inner - room : pad;
+        mainBottom = Flow(Split(line.Words, line.Text, line.Start, line.End ?? line.Start + 4000), size, size * 0.4, left, room, line.Words is not { Count: > 0 });
+        bgFrom = pieces.Count;
+        bgTop = mainBottom + size * 0.2;
+        var bottom = bgTop;
         foreach (var bg in line.Background ?? [])
-            y = Flow(Split(bg.Words, bg.Text, bg.Start ?? line.Start, bg.End ?? line.End ?? line.Start + 4000), size * 0.55, y + size * 0.1, width, bg.Words is not { Count: > 0 });
-        return new Size(width, y);
+            bottom = Flow(Split(bg.Words, bg.Text, bg.Start ?? line.Start, bg.End ?? line.End ?? line.Start + 4000), size * 0.7, bottom, left, room, bg.Words is not { Count: > 0 });
+        bgHeight = bottom - bgTop;
+        return new Size(width, (showBackground && bgHeight > 0 ? bottom : mainBottom) + size * 0.4);
     }
 
     /// The words with their times; a line timed only as a whole is spread over its length by
@@ -402,18 +542,15 @@ public sealed class LineView : Control
     static FormattedText Shape(string text, double em) => new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
         new Typeface(Face, FontStyle.Normal, FontWeight.Bold), em, Brushes.White);
 
-    /// Lays the words in rows within `width` from `top`, as text wraps; returns the bottom.
-    double Flow(List<(string Text, double Start, double End)> source, double em, double top, double width, bool lineTimed)
+    /// Lays the words in rows `width` wide from (`left`, `top`), as text wraps; returns the bottom.
+    double Flow(List<(string Text, double Start, double End)> source, double em, double top, double left, double width, bool lineTimed)
     {
         var row = new List<Piece>();
         double x = 0, y = top, lineHeight = em * 1.2;
         void End()
         {
-            if (RightAligned && row.Count > 0)
-            {
-                var shift = width - row.Max(p => p.X + p.W);
-                for (var i = 0; i < row.Count; i++) row[i] = Moved(row[i], shift);
-            }
+            var shift = left + (RightAligned && row.Count > 0 ? width - row.Max(p => p.X + p.W) : 0);
+            for (var i = 0; i < row.Count; i++) row[i] = Moved(row[i], shift);
             pieces.AddRange(row);
             row.Clear();
         }
@@ -466,46 +603,61 @@ public sealed class LineView : Control
         };
     }
 
-
     public override void Render(DrawingContext context)
     {
         if (hover && !plain)
-            context.DrawRectangle(HoverFill, null, new RoundedRect(new Rect(Bounds.Size).Inflate(new Thickness(size * 0.3, size * 0.12)), size * 0.25));
+            context.DrawRectangle(HoverFill, null, new RoundedRect(new Rect(Bounds.Size), size * 0.25));
         if (item.Interlude)
         {
-            if (state == LineState.Active) Dots(context);
+            if (t >= item.Start && t < item.End) Dots(context);
             return;
         }
-        foreach (var p in pieces)
+        for (var i = 0; i < pieces.Count; i++)
         {
+            var p = pieces[i];
+            var bg = i >= bgFrom;
+            if (bg && bgFade.X < 1) continue;
             var box = new Rect(p.X, p.Y, p.W, p.Em * 1.2);
             // Scale from the piece's foot, lift by its em (Spicy's translate in --DefaultLyricsSize).
             var m = Matrix.CreateTranslation(-box.Center.X, -box.Bottom) * Matrix.CreateScale(p.S.X, p.S.X) * Matrix.CreateTranslation(box.Center.X, box.Bottom + p.L.X * p.Em);
+            if (bg)
+            {
+                // Out from under the line: from 80 % of its own height up and 80 % of its size.
+                var k = Math.Clamp(bgIn.X / 100, 0, 1);
+                var (ox, oy) = (RightAligned ? Bounds.Width - pad : pad, bgTop);
+                var s = 0.8 + 0.2 * k;
+                m *= Matrix.CreateTranslation(-ox, -oy) * Matrix.CreateScale(s, s) * Matrix.CreateTranslation(ox, oy - 0.8 * (1 - k) * bgHeight);
+            }
+            var shown = bg ? Math.Clamp(bgFade.X / 100, 0, 1) : 1;
             using var _ = context.PushTransform(m);
-            if (p.G.X > 0.01 && p.Outline is { } outline) context.Custom(new GlowOp(box.Inflate(16), outline, p.G.X));
-            p.Shape.SetForegroundBrush(Fill(p));
+            if (p.G.X > 0.01 && p.Outline is { } outline) context.Custom(new GlowOp(box.Inflate(16), outline, p.G.X * shown));
+            p.Shape.SetForegroundBrush(Fill(p, bg, shown));
             context.DrawText(p.Shape, new Point(p.X, p.Y));
         }
     }
 
-    /// The colour across a piece: past lines 85 %, lines to come 50 %; on the current line the sung
-    /// part 85 % and the rest 40 %, the edge at −20 % + 120 % of the progress with a 20 % fade (Spicy's
-    /// --gradient-position).
-    IBrush Fill(Piece p)
+    static Color White(double alpha) => Color.FromArgb((byte)Math.Clamp(255 * alpha, 0, 255), 255, 255, 255);
+
+    /// The colour across a piece: dim, or as the line lights, white where sung and half-bright still to
+    /// come, the edge at −20 % + 120 % of the progress with a 20 % fade (Spicy's --gradient-position).
+    IBrush Fill(Piece p, bool bg, double shown)
     {
-        if (plain || state == LineState.Sung) return new SolidColorBrush(Sung);
-        if (state == LineState.NotSung) return new SolidColorBrush(Waiting);
+        if (plain) return new SolidColorBrush(White(Plain));
+        var f = Math.Clamp(fade.X / 100, 0, 1);
+        var (dim, on, waiting) = bg ? (BgDim, BgSung, BgWaiting) : (Dim, LitSung, LitWaiting);
+        var sung = White((dim + (on - dim) * f) * shown);
+        var toCome = White((dim + (waiting - dim) * f) * shown);
         var pos = (-20 + 120 * Progress(p.Start, p.End)) / 100;
-        if (pos <= -0.2) return new SolidColorBrush(Unsung);
-        if (pos >= 1) return new SolidColorBrush(Sung);
+        if (pos <= -0.2) return new SolidColorBrush(toCome);
+        if (pos >= 1) return new SolidColorBrush(sung);
         return new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0.5, RelativeUnit.Relative),
             EndPoint = new RelativePoint(1, 0.5, RelativeUnit.Relative),
             GradientStops =
             {
-                new GradientStop(Sung, Math.Clamp(pos, 0, 1)),
-                new GradientStop(Unsung, Math.Clamp(pos + 0.2, 0, 1)),
+                new GradientStop(sung, Math.Clamp(pos, 0, 1)),
+                new GradientStop(toCome, Math.Clamp(pos + 0.2, 0, 1)),
             },
         };
     }
@@ -520,11 +672,11 @@ public sealed class LineView : Control
         var outro = Math.Clamp((item.End - t) / 500, 0, 1);
         for (var i = 0; i < 3; i++)
         {
-            var lit = Math.Clamp(p * 3 - i, 0, 1);
-            var r = size * 0.13 * breathe * outro * (1 + 0.2 * lit);
-            var alpha = (byte)(255 * (0.35 + 0.5 * lit));
-            var centre = new Point(size * 0.2 + i * size * 0.45, size * 0.6);
-            if (lit > 0.01) context.DrawEllipse(new SolidColorBrush(Color.FromArgb((byte)(60 * lit), 255, 255, 255)), null, centre, r * 1.6, r * 1.6);
+            var on = Math.Clamp(p * 3 - i, 0, 1);
+            var r = size * 0.13 * breathe * outro * (1 + 0.2 * on);
+            var alpha = (byte)(255 * (0.35 + 0.5 * on));
+            var centre = new Point(pad + size * 0.2 + i * size * 0.45, size);
+            if (on > 0.01) context.DrawEllipse(new SolidColorBrush(Color.FromArgb((byte)(60 * on), 255, 255, 255)), null, centre, r * 1.6, r * 1.6);
             context.DrawEllipse(new SolidColorBrush(Color.FromArgb(alpha, 255, 255, 255)), null, centre, r, r);
         }
     }
