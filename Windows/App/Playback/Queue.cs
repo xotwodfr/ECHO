@@ -114,8 +114,8 @@ public sealed class Queue
         if (on) context = Shuffled(context, rng);
         else
         {
-            var left = context.ToHashSet();
-            context = order.Where(left.Contains).Concat(context.Where(t => !order.Contains(t))).ToList();
+            var (left, known) = (context.ToHashSet(), order.ToHashSet());
+            context = order.Where(left.Contains).Concat(context.Where(t => !known.Contains(t))).ToList();
         }
     }
 

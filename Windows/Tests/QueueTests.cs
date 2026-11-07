@@ -12,6 +12,20 @@ public class QueueTests
     static readonly PlayContext Ctx = new("album", "a", "Album");
 
     [Fact]
+    public void ShuffleOffOverAWholeLibraryIsQuick()
+    {
+        // Played from Songs: 22,000 songs, each looked for in a list of 22,000 froze the window.
+        var q = new Queue();
+        q.PlayList(Album(22_000), 0, Ctx);
+        q.SetShuffle(true, new Random(1));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        q.SetShuffle(false, new Random(1));
+        Assert.True(clock.ElapsedMilliseconds < 200, $"{clock.ElapsedMilliseconds} ms");
+        Assert.Equal("a1", q.Context[0].Id);
+        Assert.Equal("a21999", q.Context[^1].Id);
+    }
+
+    [Fact]
     public void NextUpPlaysBeforeTheContext()
     {
         var q = new Queue();
