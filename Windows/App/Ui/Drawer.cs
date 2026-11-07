@@ -74,44 +74,43 @@ public sealed class Drawer : Border
     }
 }
 
-/// views/components/queue.ejs (helpers.less .queue-panel; elements.less .cd-queue-item): "Queue" (or
-/// "History") as h3 18 px 6 px in; the songs — 42 px artwork, the title at 14 px over the artist at
-/// 0.7 em, the duration in 60 px, --selected on hover — and under them Queue | History and Clear All.
-/// Cider's Autoplay is Apple Music's and left out.
+/// The queue, as Cider 4 shows it (cider.sh's screenshots; Cider 1's queue.ejs underneath): Shuffle and
+/// Repeat with the count on top; "Now Playing" with the song on a lit card and the history's size (a
+/// click shows the history); "Playing Next" with where it plays from and how far in, Clear, and the
+/// songs numbered, each with its cover, title and "artist — album". A double click jumps there, a right
+/// click removes or goes to the artist or album. (Cider 4's AutoPlay is Apple Music's.)
 public sealed class QueuePanel : DockPanel
 {
     readonly Session session;
     readonly Nav nav;
-    readonly TextBlock heading = Blocks.H3("Queue");
-    readonly StackPanel items = new();
-    readonly Button queueTab, historyTab, clear;
+    readonly StackPanel content = new();
+    readonly TextBlock count = Kit.Text(null, 13, FontWeight.SemiBold);
     bool history;
 
     public QueuePanel(Session session, Nav nav)
     {
         this.session = session;
         this.nav = nav;
-        heading.Margin = new Thickness(18, 18, 6, 18);
-        SetDock(heading, Dock.Top);
-        Children.Add(heading);
-
-        queueTab = Kit.CiderButton("Queue", null, () => Show(false));
-        historyTab = Kit.CiderButton("History", null, () => Show(true));
-        clear = Kit.CiderButton("Clear All", null, session.Player.ClearUpcoming);
-        foreach (var b in new[] { queueTab, historyTab, clear })
+        var player = session.Player;
+        var top = new StackPanel
         {
-            b.Padding = new Thickness(8, 6);
-            b.FontSize = 13;
-            b.HorizontalAlignment = HorizontalAlignment.Stretch;
-        }
-        clear.Margin = new Thickness(0, 6, 0, 0);
-        var tabs = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*") };
-        tabs.Children.Add(queueTab);
-        tabs.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = historyTab });
-        var footer = new StackPanel { Margin = new Thickness(12), Children = { tabs, clear } };
-        SetDock(footer, Dock.Bottom);
-        Children.Add(footer);
-        Children.Add(new ScrollViewer { Content = items });
+            Orientation = Orientation.Horizontal,
+            Spacing = 6,
+            Margin = new Thickness(12, 12, 12, 4),
+            Children =
+            {
+                new Border
+                {
+                    CornerRadius = new CornerRadius(16),
+                    Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)),
+                    Child = new Transport.Toggles(player),
+                },
+                new Border { CornerRadius = new CornerRadius(16), Background = new SolidColorBrush(Color.FromArgb(20, 255, 255, 255)), Padding = new Thickness(12, 0), Child = count },
+            },
+        };
+        SetDock(top, Dock.Top);
+        Children.Add(top);
+        Children.Add(new ScrollViewer { Content = content });
 
         System.ComponentModel.PropertyChangedEventHandler track = (_, e) =>
         {
@@ -119,15 +118,15 @@ public sealed class QueuePanel : DockPanel
         };
         this.WhileShown(() =>
         {
-            session.Player.QueueChanged += Refresh;
-            session.Player.PropertyChanged += track;
+            player.QueueChanged += Refresh;
+            player.PropertyChanged += track;
             Refresh();
         }, () =>
         {
-            session.Player.QueueChanged -= Refresh;
-            session.Player.PropertyChanged -= track;
+            player.QueueChanged -= Refresh;
+            player.PropertyChanged -= track;
         });
-        Show(false);
+        Refresh();
     }
 
     /// The rows on show (tests read them).
@@ -136,36 +135,94 @@ public sealed class QueuePanel : DockPanel
     void Show(bool showHistory)
     {
         history = showHistory;
-        heading.Text = history ? "History" : "Queue";
-        queueTab.Classes.Set("primary", !history);
-        historyTab.Classes.Set("primary", history);
         Refresh();
     }
 
     void Refresh()
     {
         var q = session.Player.Queue;
-        Shown = history ? q.History.Reverse().ToList() : q.Upcoming;
-        clear.IsVisible = !history && Shown.Count > 1;
-        items.Children.Clear();
-        for (var i = 0; i < Shown.Count; i++) items.Children.Add(Row(Shown[i], i));
+        content.Children.Clear();
+        var upcoming = q.Upcoming;
+        count.Text = $"{upcoming.Count} {(upcoming.Count == 1 ? "item" : "items")}";
+        // The history's size by a clock, as Cider 4 has it; a click switches to the history and back.
+        var historyButton = Kit.IconButton(Icons.Info, 54, 26, 14, "History", () => Show(!history), 0.7);
+        historyButton.Content = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            Spacing = 4,
+            Children = { new Glyph(new Icon(24, 24, "", "M 3,12 a 9,9 0 1,0 3,-6.7 M 3,4 l 0,5 l 5,0 M 12,7 l 0,5 l 3,2", 2), 13), Kit.Text(q.History.Count.ToString(), 12) },
+        };
+        historyButton.Classes.Set("active", history);
+
+        if (history)
+        {
+            content.Children.Add(Heading("History", historyButton));
+            Shown = q.History.Reverse().ToList();
+            for (var i = 0; i < Shown.Count; i++) content.Children.Add(Row(Shown[i], null, i));
+            return;
+        }
+        content.Children.Add(Heading("Now Playing", historyButton));
+        if (q.Now is { } now)
+            content.Children.Add(new Border
+            {
+                Margin = new Thickness(8, 0),
+                CornerRadius = new CornerRadius(8),
+                Background = new SolidColorBrush(Color.FromArgb(22, 255, 255, 255)),
+                Child = Card(now),
+            });
+        var clear = new Button { Theme = Kit.Res<ControlTheme>("Plain"), Padding = new Thickness(8, 3), Content = Kit.Text("Clear", 13, FontWeight.SemiBold) };
+        ((TextBlock)clear.Content).Foreground = Kit.Brush("Key");
+        clear.Click += (_, _) => session.Player.ClearUpcoming();
+        clear.IsVisible = upcoming.Count > 1;
+        var next = Heading("Playing Next", clear);
+        next.Margin = new Thickness(14, 22, 10, 8);
+        content.Children.Add(next);
+        if (q.Source is { } source)
+        {
+            var at = q.History.Count + 1;
+            var total = at + upcoming.Count;
+            var from = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(14, -4, 14, 8) };
+            from.Children.Add(Kit.Text($"From {source.Title}", 14, opacity: 0.6));
+            from.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = Kit.Text($"{at} of {total}", 12, opacity: 0.5) });
+            content.Children.Add(from);
+        }
+        Shown = upcoming;
+        for (var i = 0; i < Shown.Count; i++) content.Children.Add(Row(Shown[i], q.History.Count + 2 + i, i));
     }
 
-    Control Row(Track t, int index)
+    static Control Heading(string text, Control? right)
     {
-        var row = new Button
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto"), Margin = new Thickness(14, 10, 10, 8) };
+        grid.Children.Add(new TextBlock { Text = text, FontSize = 18, FontWeight = FontWeight.Bold, VerticalAlignment = VerticalAlignment.Center });
+        if (right is not null) grid.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = right, VerticalAlignment = VerticalAlignment.Center });
+        return grid;
+    }
+
+    static Control Card(Track t) => new StackPanel
+    {
+        Orientation = Orientation.Horizontal,
+        Margin = new Thickness(8),
+        Spacing = 10,
+        Children =
         {
-            Theme = Kit.Res<ControlTheme>("QueueItem"),
-            Content = new DockPanel
-            {
-                Children =
-                {
-                    new CoverImage(t.Cover, 42, 96, 6) { Margin = new Thickness(0, 0, 10, 0), [DockPanel.DockProperty] = Dock.Left },
-                    new TextBlock { Text = Kit.Time(t.DurationMs), FontSize = 14, MinWidth = 60, TextAlignment = TextAlignment.Center, VerticalAlignment = VerticalAlignment.Center, [DockPanel.DockProperty] = Dock.Right },
-                    new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text(t.Title, 14), Kit.Text(t.Artist, 11.2, opacity: 0.7) } },
-                },
-            },
-        };
+            new CoverImage(t.Cover, 42, 96, 6),
+            new StackPanel { VerticalAlignment = VerticalAlignment.Center, Width = 200, Children = { Kit.Text(t.Title, 14, FontWeight.Medium), Kit.Text($"{t.Artist} — {t.Album.Title}", 12, opacity: 0.6) } },
+        },
+    };
+
+    Control Row(Track t, int? number, int index)
+    {
+        var line = new StackPanel { Orientation = Orientation.Horizontal };
+        if (number is { } n)
+        {
+            var num = Kit.Text(n.ToString(), 12, opacity: 0.5);
+            num.Width = 22;
+            num.TextAlignment = TextAlignment.Right;
+            num.Margin = new Thickness(0, 0, 6, 0);
+            line.Children.Add(num);
+        }
+        line.Children.Add(Card(t));
+        var row = new Button { Theme = Kit.Res<ControlTheme>("QueueItem"), Padding = new Thickness(4, 0), Content = line };
         if (history) row.DoubleTapped += (_, _) => _ = session.Player.PlayList([t], 0, new PlayContext("history", null, "History"));
         else row.DoubleTapped += (_, _) => _ = session.Player.JumpTo(index);
         MenuItem Item(string header, Action act)

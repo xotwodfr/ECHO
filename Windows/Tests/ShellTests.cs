@@ -213,7 +213,9 @@ public class DrawerTests
         ShellTests.Shot(w, "queue");
         var queue = Assert.IsType<QueuePanel>(drawer.Child);
         Assert.Equal(["Night Swim", "Overpass", "Glass Hours", "Low Tide", "Coda"], queue.Shown.Select(t => t.Title));
-        Assert.Contains("Clear All", ShellTests.Texts(drawer));
+        var texts = ShellTests.Texts(drawer).ToList();
+        foreach (var t in new[] { "Now Playing", "Playing Next", "From Neon Tide", "1 of 6", "5 items", "Clear" })
+            Assert.True(texts.Contains(t), $"missing \"{t}\"");
         drawer.Toggle("queue");
         Assert.False(drawer.IsVisible);
     }

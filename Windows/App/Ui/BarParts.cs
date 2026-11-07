@@ -56,6 +56,37 @@ public sealed class Transport : StackPanel
         if (e.PropertyName is nameof(Player.Playing) or nameof(Player.Track)) Show();
     }
 
+    /// Shuffle and Repeat alone (Cider 4's queue drawer has them on top).
+    public sealed class Toggles : StackPanel
+    {
+        readonly Player player;
+        readonly Button shuffle, repeat;
+
+        public Toggles(Player player)
+        {
+            this.player = player;
+            Orientation = Orientation.Horizontal;
+            shuffle = Kit.IconButton(Icons.Shuffle, 34, 28, 13, "Shuffle", () => player.SetShuffle(!player.Queue.Shuffle));
+            repeat = Kit.IconButton(Icons.Repeat, 34, 28, 13, "Repeat", () =>
+            {
+                player.CycleRepeat();
+                Show();
+            });
+            shuffle.CornerRadius = repeat.CornerRadius = new CornerRadius(14);
+            Children.Add(shuffle);
+            Children.Add(repeat);
+            this.WhileShown(() => player.QueueChanged += Show, () => player.QueueChanged -= Show);
+            Show();
+        }
+
+        void Show()
+        {
+            shuffle.Classes.Set("on", player.Queue.Shuffle);
+            repeat.Classes.Set("on", player.Queue.Repeat != Repeat.Off);
+            ((Glyph)repeat.Content!).Icon = player.Queue.Repeat == Repeat.One ? Icons.RepeatOne : Icons.Repeat;
+        }
+    }
+
     void Show()
     {
         ((Glyph)toggle.Content!).Icon = player.Playing ? Icons.Pause : Icons.Play;

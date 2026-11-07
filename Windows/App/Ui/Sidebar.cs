@@ -113,7 +113,8 @@ public sealed class Sidebar : Border
             {
                 Orientation = Orientation.Horizontal,
                 Spacing = 12,
-                Children = { new Glyph(icon, 18), new TextBlock { Text = name, FontSize = 14, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center } },
+                // The icon in the key colour, as Apple Music's sidebar has them.
+                Children = { new Glyph(icon, 18) { Foreground = Kit.Brush("Key") }, new TextBlock { Text = name, FontSize = 14, TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center } },
             },
         };
         if (to is not null)
