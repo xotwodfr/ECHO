@@ -122,6 +122,9 @@ public sealed class ChromeTop : Grid
     public BarTools? Tools { get; }
     public Lcd? Lcd { get; }
 
+    /// Ctrl+F: the field takes the keyboard (Mojave; Maverick's is in the sidebar).
+    public bool FocusSearch() => search.IsEffectivelyVisible && search.Focus();
+
     /// Clears the field (a new search starts empty).
     public string SearchText
     {

@@ -18,6 +18,7 @@ public sealed class Sidebar : Border
     readonly Nav nav;
     readonly StackPanel playlists = new();
     readonly List<(Button Item, Func<Route, bool> Active)> items = [];
+    readonly TextBox? search;
 
     /// Enter in Maverick's search field.
     public event Action<string>? Searched;
@@ -51,7 +52,7 @@ public sealed class Sidebar : Border
         {
             var home = new StackPanel { Children = { Item(Icons.Home, "Home", new Route("home")) } };
             groups.Children.InsertRange(0, [Header("ECHO", home), home]);
-            var search = new TextBox { Classes = { "search" }, PlaceholderText = "Search..." };
+            search = new TextBox { Classes = { "search" }, PlaceholderText = "Search..." };
             search.KeyDown += (_, e) =>
             {
                 if (e.Key == Avalonia.Input.Key.Enter && !string.IsNullOrWhiteSpace(search.Text)) Searched?.Invoke(search.Text.Trim());
@@ -64,6 +65,9 @@ public sealed class Sidebar : Border
         nav.Changed += Show;
         _ = LoadPlaylists();
     }
+
+    /// Ctrl+F in Maverick: its search field is here.
+    public bool FocusSearch() => search?.Focus() ?? false;
 
     /// The server's playlists under Playlists (again after one is made).
     public async Task LoadPlaylists()

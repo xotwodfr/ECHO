@@ -58,6 +58,27 @@ public class ShellTests
     }
 
     [AvaloniaFact]
+    public async Task SpacePlaysOrPausesAndCtrlFGoesToTheSearchField()
+    {
+        var w = await Open();
+        var player = Session.Current!.Player;
+        var changes = 0;
+        player.PropertyChanged += (_, _) => changes++;
+        void Space() => w.KeyPress(Avalonia.Input.Key.Space, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Space, " ");
+        // (The fixtures serve no audio, so the player is seen to answer rather than heard to play.)
+        Space();
+        await Settle();
+        Assert.True(changes > 0, "Space reached the player");
+        w.KeyPress(Avalonia.Input.Key.F, Avalonia.Input.RawInputModifiers.Control, Avalonia.Input.PhysicalKey.F, "f");
+        await Settle();
+        Assert.IsType<TextBox>(w.FocusManager!.GetFocusedElement());
+        changes = 0;
+        Space();
+        await Settle();
+        Assert.Equal(0, changes); // Space in the field types, it does not pause
+    }
+
+    [AvaloniaFact]
     public async Task BackAndForwardWalkThePagesOpened()
     {
         var w = await Open();

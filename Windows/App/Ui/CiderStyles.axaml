@@ -88,6 +88,15 @@
     <Setter Property="MaxWidth" Value="400" />
   </Style>
 
+  <!-- Keyboard focus as a 2 px ring that follows the button's own corners (every Cider theme names its body
+       Box), instead of Fluent's square adorner. -->
+  <Style Selector="Button">
+    <Setter Property="FocusAdorner" Value="{x:Null}" />
+  </Style>
+  <Style Selector="Button:focus-visible /template/ Border#Box">
+    <Setter Property="BoxShadow" Value="0 0 0 2 #E6FFFFFF" />
+  </Style>
+
   <!-- A press pushes a button in a little and lets it spring back (Cider 4's motion-press-scale); the
        window's own controls stay put, as Windows' do. -->
   <Style Selector="Button:not(.nopress)">

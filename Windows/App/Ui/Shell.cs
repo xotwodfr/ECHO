@@ -88,6 +88,19 @@ public sealed class Shell : Grid
 
     void Search(string term) => Nav.Open(new Route("search", term, term));
 
+    /// Today's keys (the window passes on what nothing else took): Ctrl+F goes to the search field, Space
+    /// plays or pauses unless a field has the keyboard.
+    public void Keys(Avalonia.Input.KeyEventArgs e)
+    {
+        if (e.Key == Avalonia.Input.Key.F && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control)
+            e.Handled = Top.FocusSearch() || sidebar.FocusSearch();
+        else if (e.Key == Avalonia.Input.Key.Space && e.KeyModifiers == Avalonia.Input.KeyModifiers.None && e.Source is not TextBox)
+        {
+            session.Player.Toggle();
+            e.Handled = true;
+        }
+    }
+
     /// Cider's settings window over the app, 90 % of it up to 980×680, the app dimmed behind it; a click
     /// on the dimmed app closes it.
     public SettingsWindow ShowSettings(string tab = "General")
