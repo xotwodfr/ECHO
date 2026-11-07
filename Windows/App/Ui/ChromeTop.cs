@@ -192,6 +192,7 @@ public sealed class ChromeTop : Grid
         var b = new Button
         {
             Theme = Kit.Res<ControlTheme>(close ? "CaptionClose" : "Caption"),
+            Classes = { "nopress" },
             Width = 46,
             Height = Height,
             Content = new Path { Data = Geometry.Parse(glyph), Stroke = Brushes.White, StrokeThickness = 1, Width = 10, Height = 10 },

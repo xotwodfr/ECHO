@@ -51,10 +51,29 @@ public sealed class Drawer : Border
     /// The bar's buttons: the same panel again closes the drawer.
     public void Toggle(string panel)
     {
-        var opening = !IsVisible;
         Panel = Panel == panel ? null : panel;
-        IsVisible = Panel is not null;
-        if (IsVisible && opening)
+        Changed?.Invoke();
+        if (Panel is null)
+        {
+            // Out to the right, fading, then gone.
+            Opacity = 0;
+            RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateX(24px)");
+            Avalonia.Threading.DispatcherTimer.RunOnce(() =>
+            {
+                if (Panel is not null) return;
+                IsVisible = false;
+                Child = null;
+            }, TimeSpan.FromMilliseconds(260));
+            return;
+        }
+        var opening = !IsVisible || Opacity < 1;
+        Child = Panel switch
+        {
+            "queue" => new QueuePanel(session, nav),
+            _ => new Panel { Children = { new LyricsBackdrop(session), new SongLyrics(session) { Margin = new Thickness(0, 12) } } },
+        };
+        IsVisible = true;
+        if (opening)
         {
             Opacity = 0;
             RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateX(24px)");
@@ -64,13 +83,6 @@ public sealed class Drawer : Border
                 RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("translateX(0px)");
             }, Avalonia.Threading.DispatcherPriority.Render);
         }
-        Child = Panel switch
-        {
-            "queue" => new QueuePanel(session, nav),
-            "lyrics" => new Panel { Children = { new LyricsBackdrop(session), new SongLyrics(session) { Margin = new Thickness(0, 12) } } },
-            _ => null,
-        };
-        Changed?.Invoke();
     }
 }
 

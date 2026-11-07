@@ -217,6 +217,9 @@ public class DrawerTests
         foreach (var t in new[] { "Now Playing", "Playing Next", "From Neon Tide", "1 of 6", "5 items", "Clear" })
             Assert.True(texts.Contains(t), $"missing \"{t}\"");
         drawer.Toggle("queue");
+        Assert.Null(drawer.Panel); // it slides out, then hides
+        await Task.Delay(400);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
         Assert.False(drawer.IsVisible);
     }
 

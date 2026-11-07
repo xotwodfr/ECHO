@@ -131,6 +131,8 @@ public sealed class ImmersiveView : Grid
         row.Children.Add(left);
         row.Children.Add(new Border { [Grid.ColumnProperty] = 1, Margin = new Thickness(0, 0, 48, 0), Child = Lyrics });
         Children.Add(row);
+        Motion.Enter(left, dx: -24, dy: 0, ms: 420);
+        Motion.Enter(Lyrics, dx: 24, dy: 0, ms: 420, delay: 60);
         SizeChanged += (_, e) =>
         {
             var side = Math.Min(e.NewSize.Width * 0.33, e.NewSize.Height * 0.55);

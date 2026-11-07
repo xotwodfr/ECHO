@@ -22,6 +22,8 @@ public sealed class ChromeBottom : Grid
     readonly TextBlock album = Kit.Text(null, 12, opacity: 0.8);
     readonly TextBlock elapsed = Kit.Text(null, 12.8), total = Kit.Text(null, 12.8);
     readonly SeekBar progress;
+    readonly StackPanel info;
+    string? shownKey;
 
     /// The "…" menu or a right click on the song.
     public event Action<Control>? MenuRequested;
@@ -53,7 +55,7 @@ public sealed class ChromeBottom : Grid
         };
         var more = Kit.IconButton(Icons.More, 32, 32, 22, "More", () => MenuRequested?.Invoke(this));
         more.VerticalAlignment = VerticalAlignment.Center;
-        var info = new StackPanel { Margin = new Thickness(8), VerticalAlignment = VerticalAlignment.Center, Spacing = 1, Children = { title, artist, album } };
+        info = new StackPanel { Margin = new Thickness(8), VerticalAlignment = VerticalAlignment.Center, Spacing = 1, Children = { title, artist, album } };
         var left = new DockPanel
         {
             Children = { art, new Border { Child = more, [DockPanel.DockProperty] = Dock.Right, Margin = new Thickness(0, 0, 8, 0) }, info },
@@ -117,6 +119,11 @@ public sealed class ChromeBottom : Grid
         title.Text = t?.Title ?? player.Notice;
         artist.Text = t?.Artist;
         album.Text = t?.Album.Title;
+        if (t?.Key != shownKey)
+        {
+            if (shownKey is not null) Motion.Enter(info, dx: 12, dy: 0, ms: 320); // a new song slides in
+            shownKey = t?.Key;
+        }
         ShowTime();
     }
 }

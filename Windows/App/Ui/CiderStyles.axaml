@@ -58,4 +58,17 @@
     <Setter Property="CornerRadius" Value="10" />
     <Setter Property="MaxWidth" Value="400" />
   </Style>
+
+  <!-- A press pushes a button in a little and lets it spring back (Cider 4's motion-press-scale); the
+       window's own controls stay put, as Windows' do. -->
+  <Style Selector="Button:not(.nopress)">
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.18" Easing="CubicEaseOut" />
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button:not(.nopress):pressed">
+    <Setter Property="RenderTransform" Value="scale(0.95)" />
+  </Style>
 </Styles>

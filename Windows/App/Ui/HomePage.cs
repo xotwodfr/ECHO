@@ -115,7 +115,7 @@ public static class Shelf
             Content = row,
             Padding = new Thickness(0, 0, 0, 16), // room for the covers' shadows
         };
-        void Page(int dir) => scroll.Offset = new Vector(Math.Clamp(scroll.Offset.X + dir * scroll.Viewport.Width * 0.9, 0, Math.Max(0, scroll.Extent.Width - scroll.Viewport.Width)), 0);
+        void Page(int dir) => Motion.GlideX(scroll, Math.Clamp(scroll.Offset.X + dir * scroll.Viewport.Width * 0.9, 0, Math.Max(0, scroll.Extent.Width - scroll.Viewport.Width)));
         var back = Kit.IconButton(Icons.ChevronLeft, 28, 28, 12, "Back", () => Page(-1));
         var on = Kit.IconButton(Icons.ChevronRight, 28, 28, 12, "More", () => Page(1));
         var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };

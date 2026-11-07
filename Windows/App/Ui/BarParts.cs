@@ -89,7 +89,16 @@ public sealed class Transport : StackPanel
 
     void Show()
     {
-        ((Glyph)toggle.Content!).Icon = player.Playing ? Icons.Pause : Icons.Play;
+        var glyph = (Glyph)toggle.Content!;
+        var icon = player.Playing ? Icons.Pause : Icons.Play;
+        if (glyph.Icon is not null && glyph.Icon != icon)
+        {
+            // The new glyph pops in from 70 %.
+            glyph.Transitions ??= [new Avalonia.Animation.TransformOperationsTransition { Property = Visual.RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(240), Easing = new Avalonia.Animation.Easings.BackEaseOut() }];
+            glyph.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(0.7)");
+            Avalonia.Threading.Dispatcher.UIThread.Post(() => glyph.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1)"), Avalonia.Threading.DispatcherPriority.Render);
+        }
+        glyph.Icon = icon;
         ToolTip.SetTip(toggle, player.Playing ? "Pause" : "Play");
         shuffle.Classes.Set("on", player.Queue.Shuffle);
         repeat.Classes.Set("on", player.Queue.Repeat != Repeat.Off);
@@ -180,6 +189,31 @@ public sealed class SeekBar : Slider
             held = false;
             player.Seek(player.Duration * Value);
         }, Avalonia.Interactivity.RoutingStrategies.Tunnel);
+        System.ComponentModel.PropertyChangedEventHandler playing = (_, e) =>
+        {
+            if (e.PropertyName == nameof(Player.Playing)) Glide();
+        };
+        this.WhileShown(() =>
+        {
+            player.PropertyChanged += playing;
+            Glide();
+        }, () => player.PropertyChanged -= playing);
+    }
+
+    bool gliding;
+
+    /// While the song plays the bar moves every frame from the player's own clock, not 4 times a second.
+    void Glide()
+    {
+        if (gliding || !player.Playing || TopLevel.GetTopLevel(this) is not { } top) return;
+        gliding = true;
+        top.RequestAnimationFrame(Frame);
+        void Frame(TimeSpan _)
+        {
+            if (!held && player.Duration > TimeSpan.Zero) Value = Math.Clamp(player.PositionNow / player.Duration, 0, 1);
+            if (player.Playing && TopLevel.GetTopLevel(this) is not null) top.RequestAnimationFrame(Frame);
+            else gliding = false;
+        }
     }
 
     protected override Type StyleKeyOverride => typeof(Slider);

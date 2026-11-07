@@ -122,7 +122,12 @@ public static class Blocks
         var shown = 0;
         void More()
         {
-            foreach (var a in albums.Skip(shown).Take(Step)) grid.Children.Add(Square(session, nav, a, subtitle?.Invoke(a)));
+            foreach (var a in albums.Skip(shown).Take(Step))
+            {
+                var tile = Square(session, nav, a, subtitle?.Invoke(a));
+                grid.Children.Add(tile);
+                if (shown == 0) Motion.Cascade(tile, grid.Children.Count - 1);
+            }
             shown = Math.Min(albums.Count, shown + Step);
         }
         More();
@@ -432,8 +437,18 @@ public sealed class Tile : StackPanel
             Cursor = new Cursor(StandardCursorType.Hand),
             Child = new Panel { Children = { art, buttons } },
         };
-        top.PointerEntered += (_, _) => buttons.Opacity = 1;
-        top.PointerExited += (_, _) => buttons.Opacity = 0;
+        // Under the pointer the cover lifts a little toward you (Apple Music's hover).
+        top.Transitions = [new Avalonia.Animation.TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = Motion.Out }];
+        top.PointerEntered += (_, _) =>
+        {
+            buttons.Opacity = 1;
+            top.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1.03)");
+        };
+        top.PointerExited += (_, _) =>
+        {
+            buttons.Opacity = 0;
+            top.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1)");
+        };
         title.Margin = new Thickness(0, 8, 0, 0);
         Children.Add(top);
         Children.Add(title);

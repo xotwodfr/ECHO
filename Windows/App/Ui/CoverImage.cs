@@ -54,22 +54,69 @@ public sealed class CoverImage : Control
     /// The loaded cover, or null (none, or not yet).
     public Bitmap? Bitmap { get; private set; }
 
+    Bitmap? previous;
+    double fade = 1;
+    bool loading;
+    static readonly IBrush Waiting = new SolidColorBrush(Color.Parse("#14FFFFFF"));
+
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
     {
         base.OnPropertyChanged(change);
         if (change.Property == UrlProperty || change.Property == PixelsProperty) _ = Load();
     }
 
+    /// A cover already in memory shows at once; one that has to come from the server fades in over
+    /// 350 ms (Cider's `.artwork img { transition: opacity .5s }`), over the one it replaces.
     async Task Load()
     {
         var url = Url;
+        previous = Bitmap ?? previous;
         Bitmap = null;
-        InvalidateVisual();
-        if (url is null || Session.Current is not { } session) return;
-        var bitmap = await session.Covers.Get(url, Pixels);
+        if (url is null || Session.Current is not { } session)
+        {
+            (previous, loading) = (null, false);
+            InvalidateVisual();
+            return;
+        }
+        var task = session.Covers.Get(url, Pixels);
+        var cached = task.IsCompleted;
+        loading = !cached;
+        var bitmap = await task;
         if (url != Url) return;
+        loading = false;
         Bitmap = bitmap;
+        if (cached || bitmap is null) (fade, previous) = (1, null);
+        else FadeIn();
         InvalidateVisual();
+    }
+
+    void FadeIn()
+    {
+        fade = 0;
+        if (TopLevel.GetTopLevel(this) is not { } top)
+        {
+            (fade, previous) = (1, null);
+            return;
+        }
+        var last = TimeSpan.Zero;
+        top.RequestAnimationFrame(Frame);
+        void Frame(TimeSpan at)
+        {
+            fade = Math.Min(1, fade + (last == TimeSpan.Zero ? 16 : (at - last).TotalMilliseconds) / 350);
+            last = at;
+            if (fade >= 1) previous = null;
+            InvalidateVisual();
+            if (fade < 1 && TopLevel.GetTopLevel(this) is not null) top.RequestAnimationFrame(Frame);
+            else (fade, previous) = (1, null);
+        }
+    }
+
+    /// Uniform to fill: the largest middle part of the cover with the box's shape.
+    static void Fill(DrawingContext context, Bitmap bitmap, Rect box)
+    {
+        var s = bitmap.Size;
+        var k = Math.Min(s.Width / box.Width, s.Height / box.Height);
+        context.DrawImage(bitmap, new Rect((s.Width - box.Width * k) / 2, (s.Height - box.Height * k) / 2, box.Width * k, box.Height * k), box);
     }
 
     public override void Render(DrawingContext context)
@@ -80,12 +127,21 @@ public sealed class CoverImage : Control
         var shape = new RoundedRect(box, r);
         using (context.PushClip(shape))
         {
-            if (Bitmap is { } bitmap)
+            if (Bitmap is null && (loading || previous is not null))
             {
-                // Uniform to fill: the largest middle part of the cover with the box's shape.
-                var s = bitmap.Size;
-                var k = Math.Min(s.Width / box.Width, s.Height / box.Height);
-                context.DrawImage(bitmap, new Rect((s.Width - box.Width * k) / 2, (s.Height - box.Height * k) / 2, box.Width * k, box.Height * k), box);
+                // Still coming: the cover it replaces, or a faint square.
+                if (previous is { } old) Fill(context, old, box);
+                else context.FillRectangle(Waiting, box);
+            }
+            else if (Bitmap is { } bitmap)
+            {
+                if (fade < 1)
+                {
+                    if (previous is { } old) Fill(context, old, box);
+                    else context.FillRectangle(Waiting, box);
+                    using (context.PushOpacity(fade)) Fill(context, bitmap, box);
+                }
+                else Fill(context, bitmap, box);
             }
             else
             {

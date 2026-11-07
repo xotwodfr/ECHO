@@ -43,7 +43,13 @@ public sealed class TrackList : ListBox
         }
         ItemTemplate = new FuncDataTemplate<Row>((row, _) => row is null ? null : RowView(row, nav));
         ItemsSource = tracks.Select((t, i) => new Row(t, i + 1, kind)).ToList();
-        ContainerPrepared += (_, e) => e.Container.Classes.Set("odd", kind != Rows.Compact && e.Index % 2 == 1);
+        var born = DateTime.UtcNow;
+        ContainerPrepared += (_, e) =>
+        {
+            e.Container.Classes.Set("odd", kind != Rows.Compact && e.Index % 2 == 1);
+            // The rows come in one after another when the list first shows, not while it scrolls.
+            if ((DateTime.UtcNow - born).TotalMilliseconds < 700) Motion.Cascade(e.Container, e.Index, 6);
+        };
         DoubleTapped += (_, e) =>
         {
             if (SelectedItem is Row row) _ = session.Player.PlayList(tracks, row.Number - 1, context);
