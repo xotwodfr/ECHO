@@ -14,7 +14,7 @@ using Echo.Playback;
 namespace Echo.Ui;
 
 /// Cider's drawer (style.less .app-drawer; views/app/app-navigation.ejs): 300 px, radius 12, 16 px from
-/// the right, floating over the page with Cider's shadow; the queue or the lyrics. Cider's drawer is
+/// the right, floating over the page with Cider's shadow; the queue or the lyrics (on a LyricsStage). Cider's drawer is
 /// --color2 under a 40 px backdrop blur; ECHO blurs no live pixels, so it is the colour that blur gives
 /// over Cider's dark pages, opaque so no crisp text shows through, and the lyrics lie over the playing
 /// cover blurred once.
@@ -50,7 +50,7 @@ public sealed class Drawer : Border
         Child = Panel switch
         {
             "queue" => new QueuePanel(session, nav),
-            "lyrics" => new LyricsPanel(session),
+            "lyrics" => new Panel { Children = { new LyricsBackdrop(session), new SongLyrics(session, 26) { Margin = new Thickness(0, 12) } } },
             _ => null,
         };
         Changed?.Invoke();
@@ -166,151 +166,22 @@ public sealed class QueuePanel : DockPanel
     }
 }
 
-/// views/components/lyrics-view.ejs (style.less .lyric-body, .lyric-line): the lines as 26 px h3s 10 px
-/// apart and 5 % in, the current one whole, the others at 80 % size and 75 % with a 1 px blur (gone while
-/// the pointer is over them); word-timed lines light word by word (the others at 60 %). A click seeks to
-/// the line. Behind it, the playing cover (bgArtworkMaterial: brightness 80 %, blurred, saturated).
-public sealed class LyricsPanel : Panel
-{
-    static readonly IBrush Lit = Brushes.White, Unlit = new SolidColorBrush(Color.FromArgb(153, 255, 255, 255));
-    readonly Session session;
-    readonly ScrollViewer scroll = new()
-    {
-        HorizontalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,
-        VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden,
-    };
-    readonly StackPanel lines = new() { Margin = new Thickness(0, 120) };
-    readonly DispatcherTimer tick = new() { Interval = TimeSpan.FromMilliseconds(50) };
-    readonly LyricsBackdrop backdrop = new();
-    LyricsDoc? doc;
-    int active = -2;
-
-    readonly double size;
-
-    /// `size`: the lines' font size (26 px in the drawer, 35 px in the fullscreen view, which has its own
-    /// backdrop).
-    public LyricsPanel(Session session, double size = 26, bool withBackdrop = true)
-    {
-        this.session = session;
-        this.size = size;
-        backdrop.IsVisible = withBackdrop;
-        scroll.Content = lines;
-        // .lyric-body's mask: whole down to 95 %, gone at the bottom.
-        scroll.OpacityMask = new LinearGradientBrush
-        {
-            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
-            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
-            GradientStops = { new GradientStop(Colors.Black, 0.95), new GradientStop(Colors.Transparent, 1) },
-        };
-        Children.Add(backdrop);
-        Children.Add(scroll);
-        scroll.PointerEntered += (_, _) => Blur(false);
-        scroll.PointerExited += (_, _) => Blur(true);
-        tick.Tick += (_, _) => Follow();
-        System.ComponentModel.PropertyChangedEventHandler lyrics = (_, _) => Build();
-        System.ComponentModel.PropertyChangedEventHandler track = (_, e) =>
-        {
-            if (e.PropertyName == nameof(Player.Track)) backdrop.Url = session.Player.Track?.Cover;
-        };
-        this.WhileShown(() =>
-        {
-            session.Lyrics.PropertyChanged += lyrics;
-            session.Player.PropertyChanged += track;
-            tick.Start();
-        }, () =>
-        {
-            session.Lyrics.PropertyChanged -= lyrics;
-            session.Player.PropertyChanged -= track;
-            tick.Stop();
-        });
-        backdrop.Url = session.Player.Track?.Cover;
-        Build();
-    }
-
-    /// The index of the lit line (tests read it).
-    public int Active => active;
-
-    void Build()
-    {
-        doc = session.Lyrics.Status == LyricsStatus.Ready ? session.Lyrics.Doc : null;
-        lines.Children.Clear();
-        active = -2;
-        if (doc is null)
-        {
-            lines.Children.Add(new TextBlock { Text = "No Lyrics", FontSize = size, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center });
-            return;
-        }
-        foreach (var line in doc.Lines)
-        {
-            var text = new TextBlock
-            {
-                FontSize = size,
-                FontWeight = FontWeight.Bold,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(15, 10, 10, 10),
-                Opacity = 0.75,
-                RenderTransformOrigin = new RelativePoint(0, 0.5, RelativeUnit.Relative),
-                RenderTransform = TransformOperations.Parse("scale(0.8)"),
-                Effect = new BlurEffect { Radius = 2 },
-                Cursor = new Cursor(StandardCursorType.Hand),
-                Transitions =
-                [
-                    new TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(500), Easing = new SineEaseInOut() },
-                    new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(350), Easing = new SineEaseInOut() },
-                ],
-            };
-            if (line.Words is { Count: > 0 } words)
-                foreach (var w in words) text.Inlines!.Add(new Run(w.IsPartOfWord ? w.Text : w.Text + " ") { Foreground = Unlit });
-            else text.Text = line.Text;
-            var start = line.Start;
-            text.PointerPressed += (_, _) => session.Player.Seek(TimeSpan.FromMilliseconds(Math.Max(0, start - Offset)));
-            lines.Children.Add(text);
-        }
-        Follow();
-    }
-
-    long Offset => (doc?.OffsetMs ?? 0) + session.Lyrics.OffsetMs;
-
-    void Follow()
-    {
-        if (doc is null || lines.Children.Count != doc.Lines.Count) return;
-        var at = (long)session.Player.PositionNow.TotalMilliseconds + Offset;
-        var now = -1;
-        for (var i = 0; i < doc.Lines.Count; i++)
-            if (doc.Lines[i].Start <= at) now = i;
-        if (now != active)
-        {
-            for (var i = 0; i < lines.Children.Count; i++)
-            {
-                var on = i == now;
-                var line = lines.Children[i];
-                line.Opacity = on ? 1 : 0.75;
-                line.RenderTransform = TransformOperations.Parse(on ? "scale(1)" : "scale(0.8)");
-                if (!scroll.IsPointerOver) line.Effect = on ? null : new BlurEffect { Radius = 2 };
-            }
-            active = now;
-        }
-        // Word by word on the lit line (Cider's verse-active), the rest of it at 60 %.
-        if (now >= 0 && doc.Lines[now].Words is { Count: > 0 } words && lines.Children[now] is TextBlock { Inlines: { } inlines })
-            for (var k = 0; k < words.Count && k < inlines.Count; k++)
-                ((Run)inlines[k]).Foreground = words[k].Start <= at ? Lit : Unlit;
-        // Keep the lit line a third of the way down, easing there.
-        var target = now < 0 ? 0 : Math.Max(0, lines.Children[now].Bounds.Y + lines.Margin.Top - scroll.Viewport.Height / 3);
-        var y = scroll.Offset.Y + (target - scroll.Offset.Y) * 0.2;
-        scroll.Offset = new Vector(0, Math.Abs(target - y) < 0.5 ? target : y);
-    }
-
-    void Blur(bool on)
-    {
-        for (var i = 0; i < lines.Children.Count; i++)
-            lines.Children[i].Effect = on && i != active ? new BlurEffect { Radius = 2 } : null;
-    }
-}
-
 /// The lyrics drawer's background (.app-drawer .bgArtworkMaterial): the playing cover at brightness 80 %,
-/// blurred and saturated, baked once per cover.
+/// blurred and saturated, baked once per cover; it follows the song.
 public sealed class LyricsBackdrop : Control
 {
+    public LyricsBackdrop() { }
+
+    public LyricsBackdrop(Session session)
+    {
+        Url = session.Player.Track?.Cover;
+        System.ComponentModel.PropertyChangedEventHandler track = (_, e) =>
+        {
+            if (e.PropertyName == nameof(Player.Track)) Url = session.Player.Track?.Cover;
+        };
+        this.WhileShown(() => session.Player.PropertyChanged += track, () => session.Player.PropertyChanged -= track);
+    }
+
     static readonly Dictionary<string, Avalonia.Media.Imaging.Bitmap?> baked = [];
     string? url;
     Avalonia.Media.Imaging.Bitmap? image;

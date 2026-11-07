@@ -73,20 +73,37 @@ public sealed class Fixtures : HttpMessageHandler
 
     static JsonArray Arr(IEnumerable<JsonNode> items) => new(items.ToArray());
 
-    /// Word-timed lyrics for Neon Tide's "Afterglow" (f11-0), around 1:18 where the smoke run shows it.
+    /// Word-timed lyrics for Neon Tide's "Afterglow" (f11-0), around 1:18 where the smoke run shows it:
+    /// a held word, background vocals, a 10 s break (the interlude's dots) and a duet line.
     public static readonly LyricsDoc Lyrics = new("navidrome:f11-0", "word", "fixture", new Attribution("Lyrics: fixture"),
-        new (string Text, long Start)[]
+        [
+            Timed("Streetlights hum a borrowed tune", 66_000, 3_600),
+            Timed("We drive until the city's gone", 70_500, 3_600),
+            Timed("Every echo finds its way home", 75_000, 3_600),
+            Timed("And the afterglow holds on", 80_000, 3_000, hold: "on"),
+            Timed("Hold on, hold on", 84_500, 2_800) with
+            {
+                Background = [new BackgroundLine("(hold on)", 86_000, 87_300, [new LyricWord("(hold", 86_000, 86_600), new LyricWord("on)", 86_600, 87_300)])],
+            },
+            Timed("Till the morning comes", 88_000, 3_600),
+            Timed("Every echo, every echo", 101_500, 3_200) with { OppositeAligned = true, Agent = "v2" },
+            Timed("Comes back to me", 105_500, 3_000),
+        ]);
+
+    /// A line sung word by word over `ms`, evenly, its `hold` word held for 1.2 s at the end.
+    static LyricLine Timed(string text, long start, long ms, string? hold = null)
+    {
+        var words = text.Split(' ');
+        var held = hold is null ? 0 : 1_200;
+        var step = (ms - held) / words.Length;
+        var timed = words.Select((w, i) =>
         {
-            ("Streetlights hum a borrowed tune", 66_000), ("We drive until the city's gone", 70_500),
-            ("Every echo finds its way home", 75_000), ("And the afterglow holds on", 80_000),
-            ("Hold on, hold on", 84_500), ("Till the morning comes", 88_000),
-        }.Select(l =>
-        {
-            var words = l.Text.Split(' ');
-            var step = 3600 / words.Length;
-            return new LyricLine(l.Text, l.Start, l.Start + 3600,
-                Words: words.Select((w, i) => new LyricWord(w, l.Start + i * step, l.Start + (i + 1) * step)).ToList());
-        }).ToList());
+            var from = start + i * step;
+            var last = i == words.Length - 1 && w == hold;
+            return new LyricWord(w, from, last ? from + step + held : from + step);
+        }).ToList();
+        return new LyricLine(text, start, timed[^1].End, Words: timed);
+    }
 
     /// The queue the smoke run opens on: Neon Tide from its first song, at 1:18.
     static JsonObject SavedQueue()

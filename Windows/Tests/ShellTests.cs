@@ -225,10 +225,11 @@ public class DrawerTests
         drawer.Toggle("lyrics");
         await ShellTests.Settle();
         ShellTests.Shot(w, "lyrics");
-        var lyrics = Assert.IsType<LyricsPanel>(drawer.Child);
-        // 1:18 is inside "Every echo finds its way home" (75.0 s to 78.6 s).
-        Assert.Equal(2, lyrics.Active);
-        Assert.Contains("Streetlights hum a borrowed tune", ShellTests.Texts(lyrics).Select(t => t.Trim()));
+        var stage = drawer.GetVisualDescendants().OfType<Echo.Stage.LyricsStage>().Single();
+        stage.Tick(16);
+        // 1:18 is inside "Every echo finds its way home" (75.0 s to 78.6 s), after the opening dots.
+        Assert.Equal("Every echo finds its way home", string.Join(" ", stage.Lines[stage.Active].Words));
+        Assert.True(stage.Lines[0].Item.Interlude);
     }
 }
 
@@ -246,7 +247,9 @@ public class ModeTests
         var view = Assert.IsType<FullscreenView>(w.Content);
         var texts = ShellTests.Texts(view).ToList();
         Assert.Contains("Afterglow", texts);
-        Assert.Contains("Every echo finds its way home", texts.Select(t => t.Trim()));
+        var stage = view.GetVisualDescendants().OfType<Echo.Stage.LyricsStage>().Single();
+        stage.Tick(16);
+        Assert.Equal("Every echo finds its way home", string.Join(" ", stage.Lines[stage.Active].Words));
         view.RaiseEvent(new Avalonia.Input.KeyEventArgs { RoutedEvent = Avalonia.Input.InputElement.KeyDownEvent, Key = Avalonia.Input.Key.Escape });
         Assert.Same(shell, w.Content);
     }

@@ -123,7 +123,7 @@ public sealed class FullscreenView : Grid
 
     void Show(string tab)
     {
-        right.Content = tab == "lyrics" ? new LyricsPanel(session, 35, withBackdrop: false) : new QueuePanel(session, nav);
+        right.Content = tab == "lyrics" ? new SongLyrics(session, 35) : new QueuePanel(session, nav);
         foreach (var (b, on) in new[] { (lyrics, tab == "lyrics"), (queue, tab == "queue") })
             b.Background = on ? new SolidColorBrush(Color.FromArgb(178, 200, 200, 200)) : Brushes.Transparent;
     }
