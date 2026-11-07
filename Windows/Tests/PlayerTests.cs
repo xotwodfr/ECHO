@@ -120,6 +120,39 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task AQueueFromAnotherDeviceOpensOnTheSameAudioOutput()
+    {
+        // Paused, and another device saved a newer queue: it shows, and Play opens its song, without
+        // leaving the old output (an audio device) open behind it.
+        var wav = Path.Combine(Path.GetTempPath(), $"echo-conflict-{Guid.NewGuid():N}.wav");
+        File.WriteAllBytes(wav, Wav.Silence(seconds: 5));
+        try
+        {
+            var other = QueueTests.Album(2, "b");
+            var api = new Api("https://echo.test", new NewerElsewhere(new QueueState(Now: other[0], Context: [other[1]], ContextSource: Ctx)));
+            var made = 0;
+            using var player = new Player(api, new Library(api), () =>
+            {
+                made++;
+                return new AudioOut(nullDevice: true);
+            }, _ => Task.FromResult(wav));
+            await player.PlayList(QueueTests.Album(3), 0, Ctx);
+            player.Toggle();
+            await player.SaveNow();
+            Assert.Equal("b0", player.Track?.Id);
+
+            player.Toggle();
+            for (var i = 0; i < 100 && !player.Playing; i++) await Task.Delay(10);
+            Assert.True(player.Playing);
+            Assert.Equal(1, made);
+        }
+        finally
+        {
+            File.Delete(wav);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task AnOfflineServerKeepsTheSongPlaying()
     {
         var wav = Path.Combine(Path.GetTempPath(), $"echo-offline-{Guid.NewGuid():N}.wav");
@@ -153,6 +186,24 @@ sealed class QueueServer : HttpMessageHandler
             return new HttpResponseMessage((HttpStatusCode)413) { Content = new StringContent("""{"error":"too_large"}""") };
         Saved = System.Text.Json.Nodes.JsonNode.Parse(body);
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"updatedAt":5}""") };
+    }
+}
+
+/// Another device saved a newer queue: a save answers 409, a read answers with that queue.
+sealed class NewerElsewhere(QueueState newer) : HttpMessageHandler
+{
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        var body = request.Method == HttpMethod.Put
+            ? new HttpResponseMessage(HttpStatusCode.Conflict) { Content = new StringContent("""{"error":"conflict"}""") }
+            : new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(new System.Text.Json.Nodes.JsonObject
+                {
+                    ["queue"] = Json.ToNode(newer), ["positionMs"] = 0, ["updatedAt"] = 9,
+                }.ToJsonString()),
+            };
+        return Task.FromResult(body);
     }
 }
 

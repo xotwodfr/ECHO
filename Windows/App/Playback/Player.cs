@@ -27,6 +27,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     long queueBase;
     string scrobbled = "none";
     bool recorded;
+    bool loaded; // the output holds Track (not a queue shown from the server, which opens on Play)
     int sinceSave;
 
     public Player(Api api, Library library, Func<AudioOut> output, Func<Track, Task<string>>? source = null)
@@ -65,7 +66,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     public event Action? QueueChanged;
 
     /// The position now, read from the output (the lyric field's clock; Position updates 4× a second).
-    public TimeSpan PositionNow => output?.Position ?? Position;
+    public TimeSpan PositionNow => loaded && output is not null ? output.Position : Position;
 
     AudioOut Output
     {
@@ -108,15 +109,16 @@ public sealed partial class Player : ObservableObject, IDisposable
         Track = state.Now;
         Position = at;
         Duration = TimeSpan.FromMilliseconds(state.Now?.DurationMs ?? 0);
+        loaded = false;
         QueueChanged?.Invoke();
     }
 
     public void Toggle()
     {
         if (Track is null) return;
-        if (output is null || Position >= Duration && Duration > TimeSpan.Zero && !Playing)
+        if (!loaded || output is null || Position >= Duration && Duration > TimeSpan.Zero && !Playing)
         {
-            _ = Start(Track, play: true, at: output is null ? Position : TimeSpan.Zero);
+            _ = Start(Track, play: true, at: loaded ? TimeSpan.Zero : Position);
             return;
         }
         if (Playing) output.Pause();
@@ -230,6 +232,7 @@ public sealed partial class Player : ObservableObject, IDisposable
         // The song is asked for before the window changes for it, and plays as soon as it comes.
         var opening = source is null ? Output.Open((from, token) => api.Stream(t, from, token), at, play) : OpenFile(t, at, play);
         Track = t;
+        loaded = true;
         scrobbled = "none";
         recorded = false;
         Duration = TimeSpan.FromMilliseconds(t.DurationMs);
@@ -285,7 +288,7 @@ public sealed partial class Player : ObservableObject, IDisposable
 
     void Tick()
     {
-        if (output is null) return;
+        if (output is null || !loaded) return; // a queue shown from the server keeps its own position
         Position = output.Position;
         if (output.Duration > TimeSpan.Zero) Duration = output.Duration;
         Progress = Duration > TimeSpan.Zero ? Math.Clamp(Position / Duration, 0, 1) : 0;
@@ -416,7 +419,6 @@ public sealed partial class Player : ObservableObject, IDisposable
                 if (!Playing && Json.From<QueueState>(newer["queue"]) is { Now: not null } q)
                 {
                     output?.Pause();
-                    output = null; // the restored song opens on Play
                     Show(q, TimeSpan.FromMilliseconds(Json.SavedPositionMs(newer)));
                 }
             }
