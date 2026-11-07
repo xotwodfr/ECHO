@@ -20,10 +20,12 @@ What looked dated or broken, and the fix:
    Favorites) scroll sideways with a stray scrollbar line across the page. → Captions melt out of the
    cover; song columns page with the shelf arrows like every other shelf.
 5. **Library.** Songs has no column header (playlists do); the Artists detail pane is mostly empty. →
-   Header row; the detail pane gets the artist large, Play, and the albums as a grid.
+   Header row; the detail pane gets the artist large with Go to Artist, and the albums as a grid.
 6. **Album / playlist.** "…" floats far right by the search. → "…" beside Play and Shuffle, as Apple's.
 7. **Settings.** Opens over the app without dimming it; Cider 1's grey header bars. → A scrim, and
    Windows 11 setting cards with the section name above.
 8. **Empty and error states.** A grey line of text at the top left. → Centred icon, title and note.
 
 Skipped: loading skeletons (the server answers in ~150 ms), light theme (the app is dark-only).
+
+Done 2026-11-07 (70f5bb3..d787d0d, 88 tests pass, both TFMs build); not pushed or released yet.
