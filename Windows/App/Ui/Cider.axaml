@@ -359,21 +359,21 @@
     </Style>
   </ControlTheme>
 
-  <!-- Spicy Lyrics' full-screen progress: 4 px, white over rgba(255 255 255 / .2), round ends, a white thumb on hover. -->
-  <ControlTheme x:Key="SpicyProgress" TargetType="Slider">
+  <!-- Apple Music's full-screen progress: 6 px, white 65 % over white 25 %, round ends, a white thumb on hover. -->
+  <ControlTheme x:Key="AppleProgress" TargetType="Slider">
     <Setter Property="Focusable" Value="False" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Grid Height="14" Background="Transparent">
-          <Border Height="4" CornerRadius="2" Background="#33FFFFFF" VerticalAlignment="Center" />
+        <Grid Height="16" Background="Transparent">
+          <Border Height="6" CornerRadius="3" Background="#40FFFFFF" VerticalAlignment="Center" />
           <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
                  Value="{TemplateBinding Value, Mode=TwoWay}">
             <Track.DecreaseButton>
-              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#E6FFFFFF" Height="4" CornerRadius="2,0,0,2" />
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#A6FFFFFF" Height="6" CornerRadius="3,0,0,3" />
             </Track.DecreaseButton>
             <Track.IncreaseButton>
-              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="6" />
             </Track.IncreaseButton>
             <Thumb Name="Knob" Width="12" Height="12" Opacity="0">
               <Thumb.Template>
@@ -390,4 +390,5 @@
       <Setter Property="Opacity" Value="1" />
     </Style>
   </ControlTheme>
+
 </ResourceDictionary>

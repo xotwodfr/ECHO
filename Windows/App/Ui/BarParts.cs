@@ -15,7 +15,7 @@ namespace Echo.Ui;
 public sealed class Transport : StackPanel
 {
     readonly Player player;
-    readonly Button shuffle, repeat, toggle;
+    readonly Button shuffle, repeat, toggle, back, on;
 
     public Transport(Player player)
     {
@@ -32,10 +32,12 @@ public sealed class Transport : StackPanel
         toggle = Kit.IconButton(Icons.Play, 42, 42, 38, "Play", player.Toggle);
         toggle.CornerRadius = new CornerRadius(21);
         toggle.Margin = new Thickness(6);
+        back = Kit.IconButton(Icons.Backward, 40, 36, 24, "Previous", () => _ = player.Previous());
+        on = Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next());
         Children.Add(shuffle);
-        Children.Add(Kit.IconButton(Icons.Backward, 40, 36, 24, "Previous", () => _ = player.Previous()));
+        Children.Add(back);
         Children.Add(toggle);
-        Children.Add(Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next()));
+        Children.Add(on);
         Children.Add(repeat);
         // Followed only while on screen: the fullscreen view and the mini player come and go.
         this.WhileShown(() =>
@@ -54,6 +56,26 @@ public sealed class Transport : StackPanel
     void OnPlayer(object? s, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(Player.Playing) or nameof(Player.Track)) Show();
+    }
+
+    /// Apple Music's row under a cover `width` wide: Shuffle and Repeat small and dim at its edges,
+    /// Previous, Play/Pause and Next large and white between them, spread evenly.
+    public void Spread(double width)
+    {
+        void Size(Button b, double box, double glyph, double opacity)
+        {
+            b.Width = b.Height = box;
+            b.Opacity = opacity;
+            ((Glyph)b.Content!).Width = ((Glyph)b.Content!).Height = glyph;
+        }
+        Size(shuffle, width * 0.1, width * 0.048, 0.55);
+        Size(repeat, width * 0.1, width * 0.048, 0.55);
+        Size(back, width * 0.16, width * 0.127, 1);
+        Size(on, width * 0.16, width * 0.127, 1);
+        Size(toggle, width * 0.16, width * 0.158, 1);
+        toggle.Margin = default;
+        toggle.CornerRadius = new CornerRadius(width * 0.08);
+        Spacing = Math.Max(0, (width - width * (0.1 * 2 + 0.16 * 3)) / 4);
     }
 
     /// Shuffle and Repeat alone (Cider 4's queue drawer has them on top).
