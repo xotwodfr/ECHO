@@ -32,8 +32,14 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   mixes). **Library**: Recently Added, Songs, Albums (search, sort), Artists (Cider's split view), the
   playlists, Create New. **Album / playlist / mix** pages, **artist** pages, **search**.
 - Playback through the queue: shuffle, repeat, volume, seek; scrobbles; the queue follows you across
-  devices (`/me/queue`). The **drawer**: the queue (and history) and synced **lyrics**, word by word.
-- Cider's **fullscreen view** and **mini player**, from the artwork's popover.
+  devices (`/me/queue`). The **drawer**: the queue (and history) and the lyrics.
+- **Lyrics** the Apple Music way (`App/Lyrics`, numbers from `docs/DESIGN_RESEARCH.md` §3.2): the sung
+  line at 35 % of the height, the others gliding after it on springs and blurred by distance, word-timed
+  lines lit word by word with each word lifting, held words swelling, background vocals, duets on the
+  right, breathing dots in breaks, click to seek.
+- Cider 4's **immersive view** (the artwork, the lyrics card, a floating player over the cover's slowly
+  turning colours) and Cider's **mini player**, from the artwork's popover.
+- Album pages take their cover's colour; pages and the drawer move in as Cider's do.
 
 Left out as Apple Music's: Listen Now, Browse, Radio, Videos, Podcasts, Apple Music playlists, Add to
 Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.
