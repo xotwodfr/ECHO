@@ -46,40 +46,54 @@ public sealed class HomePage : ScrollViewer
         if (mixes.Count > 0) column.Children.Add(Shelf.Of("Top Picks for You", mixes.Select(Pick), 20));
         if (played.Count > 0) column.Children.Add(Shelf.Of("Recently Played", played.Select(Played), 24));
         if (starred.Tracks.Count > 0)
-            column.Children.Add(Shelf.Section("Your Favorites", SongGrid.Of(session, nav, starred.Tracks.Take(12).ToList(), new PlayContext("favorites", null, "Your Favorites"))));
+            column.Children.Add(Shelf.Of("Your Favorites", SongGrid.Columns(session, nav, starred.Tracks.Take(12).ToList(), new PlayContext("favorites", null, "Your Favorites")), 24));
         if (column.Children.Count == 1) column.Children.Add(Blocks.Message("Play something: what you play and love shows up here."));
     }
 
-    /// Apple's Top Picks card: the cover over a block of its own colour with the title and subtitle.
+    /// Apple's Top Picks card: the cover, and under it its own colour rising out of the cover's foot to carry
+    /// the title and subtitle; it lifts a little under the pointer.
     Control Pick(Mix mix)
     {
         var cover = mix.Tracks.FirstOrDefault()?.Cover;
         var under = new Border
         {
-            Height = 84,
-            Padding = new Thickness(14, 12),
-            Background = new SolidColorBrush(Color.FromArgb(255, 40, 40, 44)),
-            Child = new StackPanel { Children = { Kit.Text(mix.Title, 15, FontWeight.SemiBold), Kit.Text(mix.Subtitle, 13, opacity: 0.8) } },
+            Height = 140,
+            VerticalAlignment = VerticalAlignment.Bottom,
+            Padding = new Thickness(16, 0, 16, 16),
+            Background = Rise(Color.FromRgb(40, 40, 44)),
+            Child = new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Spacing = 2, Children = { Kit.Text(mix.Title, 16, FontWeight.SemiBold), Kit.Text(mix.Subtitle, 13, opacity: 0.75) } },
         };
         _ = Tint(cover, under);
         var card = new Border
         {
             Width = 220,
-            CornerRadius = new CornerRadius(10),
+            Height = 300,
+            CornerRadius = new CornerRadius(12),
             ClipToBounds = true,
-            BoxShadow = BoxShadows.Parse("0 4 14 0 #40000000"),
+            BoxShadow = BoxShadows.Parse("0 6 20 0 #4D000000"),
             Cursor = new Cursor(StandardCursorType.Hand),
-            Child = new StackPanel { Children = { new CoverImage(cover, 220, 600, 0), under } },
+            Child = new Panel { Children = { new CoverImage(cover, 220, 600, 0) { VerticalAlignment = VerticalAlignment.Top }, under } },
+            Transitions = [new Avalonia.Animation.TransformOperationsTransition { Property = RenderTransformProperty, Duration = TimeSpan.FromMilliseconds(220), Easing = Motion.Out }],
         };
+        card.PointerEntered += (_, _) => card.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1.02)");
+        card.PointerExited += (_, _) => card.RenderTransform = Avalonia.Media.Transformation.TransformOperations.Parse("scale(1)");
         card.PointerPressed += (_, _) => nav.Open(new Route("mix", mix.Id, mix.Title));
         return card;
     }
+
+    /// Clear at the top, the colour solid from 40 % down: the cover melts into it.
+    static LinearGradientBrush Rise(Color c) => new()
+    {
+        StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+        EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+        GradientStops = { new GradientStop(Color.FromArgb(0, c.R, c.G, c.B), 0), new GradientStop(c, 0.42) },
+    };
 
     async Task Tint(string? cover, Border under)
     {
         if (await session.Covers.KeyColor(cover) is not { } key) return;
         // The key colour darkened to carry white text, as Apple's cards do.
-        under.Background = new SolidColorBrush(Color.FromRgb((byte)(key.R * 0.45), (byte)(key.G * 0.45), (byte)(key.B * 0.45)));
+        under.Background = Rise(Color.FromRgb((byte)(key.R * 0.45), (byte)(key.G * 0.45), (byte)(key.B * 0.45)));
     }
 
     Control Played(PlayedContext c)
@@ -103,7 +117,8 @@ public static class Shelf
 
     static TextBlock Title(string text) => new() { Text = text, FontSize = 20, FontWeight = FontWeight.Bold, LetterSpacing = -0.3, Margin = new Thickness(0, 0, 0, 12), VerticalAlignment = VerticalAlignment.Center };
 
-    /// A row of items that scrolls sideways, a viewport at a time with the header's arrows.
+    /// A row of items that scrolls sideways, a viewport at a time with the header's arrows; the arrows show
+    /// only when there is more than fits, each dim at its end.
     public static Control Of(string title, IEnumerable<Control> items, double gap)
     {
         var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = gap };
@@ -118,6 +133,13 @@ public static class Shelf
         void Page(int dir) => Motion.GlideX(scroll, Math.Clamp(scroll.Offset.X + dir * scroll.Viewport.Width * 0.9, 0, Math.Max(0, scroll.Extent.Width - scroll.Viewport.Width)));
         var back = Kit.IconButton(Icons.ChevronLeft, 28, 28, 12, "Back", () => Page(-1));
         var on = Kit.IconButton(Icons.ChevronRight, 28, 28, 12, "More", () => Page(1));
+        scroll.ScrollChanged += (_, _) =>
+        {
+            var room = scroll.Extent.Width - scroll.Viewport.Width;
+            back.IsVisible = on.IsVisible = room > 1;
+            back.Opacity = scroll.Offset.X > 1 ? 0.7 : 0.25;
+            on.Opacity = scroll.Offset.X < room - 1 ? 0.7 : 0.25;
+        };
         var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         head.Children.Add(Title(title));
         head.Children.Add(new StackPanel { [Grid.ColumnProperty] = 1, Orientation = Orientation.Horizontal, Spacing = 4, Children = { back, on } });
