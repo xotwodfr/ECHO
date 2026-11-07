@@ -60,8 +60,13 @@ deferred). Since 2026-10-29:
   computer, on that device: smaller animations and a still Listen room, lyrics still moving word by
   word. Measured on a throttled browser: Listen 7 → 60 fps, page changes 40 → 57.
 - **Native apps** (2026-11-04, F14, `ACCEPTANCE_CRITERIA.md` §10e): baselines beside the Android
-  app in `Linux/` (GTK 4, run here), `Windows/` (WPF, builds), `macOS/` and `iOS/` (SwiftUI, need a
-  Mac): sign in, albums, an album, playback.
+  app in `Linux/` (GTK 4, run here), `macOS/` and `iOS/` (SwiftUI, need a Mac): sign in, albums, an
+  album, playback.
+- **Windows app** (2026-11-06 to 11-07, branch `windows-baseline`, not merged to `main`): a full app
+  in Cider 1's layout, Avalonia on .NET 10: the library, playlists, search, the queue, lyrics as
+  Apple Music draws them, full screen, the mini player; a modern pass (the page as a floating card,
+  today's player bar, Space / Ctrl+F). Released as ECHO.exe on GitHub, newest **windows-v3.3.0**
+  (2026-11-07); `Windows/README.md`.
 
 **Live** at echo.folk3s.com: all of the above, `main` `dce56b4` since 2026-11-04 13:34 UTC (the
 native apps that follow it change nothing on the server).
@@ -72,8 +77,8 @@ greeting's box differs in width from the baseline's ("Good morning", "Good eveni
 depend on the time of day; settings ACC-03 fails when run together with other specs and passes
 alone; Firefox Made For You and "a menu animates out" fail in some full runs and pass alone
 (`reviews/2026-11-04-review.md`). SEC-10 passes strictly (distroless runtime). Still open, all
-needing the owner, people or real devices: the off-box backup's remote (DEP-05), the Windows and
-Apple apps on their platforms (NAT-03 to NAT-05), the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
+needing the owner, people or real devices: the off-box backup's remote (DEP-05), the Apple apps
+on a Mac (NAT-04, NAT-05), the TLS grade A (Cloudflare minimum TLS 1.2) and the cookie flags checked in DevTools
 (SEC-19; the on-box backup drill passed on 2026-10-24), the reference-client tuning and PERF-01, the 8 h soak
 (REL-06), the Orca pass, the five-second test (DS-05), and the 10-bit capture (VIS-09). Per-milestone records: [reviews/](reviews/) (M1–M9, plus
 [M8-security.md](reviews/M8-security.md) for the pre-share security review).

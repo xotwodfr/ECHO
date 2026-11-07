@@ -70,9 +70,9 @@ ECHO is a **self-hosted web service**. The ECHO server runs in Docker Compose on
 server, next to Navidrome, behind Caddy (HTTPS), and is **reachable from the public internet** at a
 domain such as `https://echo.example.com`. The MVP client is the **browser web app** on desktop
 browsers: **Google Chrome, Chromium and Firefox are all first-class**. Native clients use the same
-versioned API (`/api/v1`): the **Android** app (2026-10-29) is the full app, and **Linux, Windows,
-macOS and iOS** have baselines since 2026-11-04 (sign in, albums, an album, playback), each on its
-platform's own toolkit. The reasons are in `TECHNICAL_ARCHITECTURE.md` §2.
+versioned API (`/api/v1`): the **Android** app (2026-10-29) and the **Windows** app (2026-11-07,
+in Cider's layout) are full apps, and **Linux, macOS and iOS** have baselines since 2026-11-04
+(sign in, albums, an album, playback), each on its platform's own toolkit. The reasons are in `TECHNICAL_ARCHITECTURE.md` §2.
 
 Minimum supported viewport: **1024×640** for the full experience. A **compact layout** (≥ 360px wide)
 must stay usable for controlling playback and reading lyrics, but the phone is not a primary target.

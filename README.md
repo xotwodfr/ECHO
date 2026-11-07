@@ -60,13 +60,14 @@ the Subsonic proxy, signed stream URLs):
 |---|---|---|---|
 | `Android/` | Android | Kotlin, Compose, Media3 | `./gradlew assembleRelease` ([docs/ANDROID_CLIENT.md](docs/ANDROID_CLIENT.md)) |
 | `Linux/` | Linux | Rust, GTK 4, GStreamer, libsecret | `cargo run --release` |
-| `Windows/` | Windows 10/11 | C#, WPF on .NET 10 (Fluent theme) | `dotnet run` |
+| `Windows/` | Windows 10/11 | C#, Avalonia 12 on .NET 10, SoundFlow, DPAPI | `dotnet run --project Windows/App -f net10.0`; ECHO.exe from the `windows-v*` releases ([Windows/README.md](Windows/README.md)) |
 | `macOS/` | macOS 14+ | Swift, SwiftUI, AVPlayer | `xcodegen && open ECHO.xcodeproj` |
 | `iOS/` | iPhone, iPad (iOS 17+) | Swift, SwiftUI, AVPlayer | `xcodegen && open ECHO.xcodeproj` |
 
-macOS and iOS share their code in `Apple/Shared`. Android is the full app (Stage, lyrics, mixes);
-the other four are baselines (sign in, albums, an album's songs, a player that goes on through
-the album), each folder's README says what each has and has been checked with.
+macOS and iOS share their code in `Apple/Shared`. Android (Stage, lyrics, mixes) and Windows
+(Cider's layout, Apple Music-style lyrics, its own GitHub releases, newest windows-v3.3.0) are full
+apps; the other three are baselines (sign in, albums, an album's songs, a player that goes on
+through the album). Each folder's README says what each has and has been checked with.
 
 ## Develop
 

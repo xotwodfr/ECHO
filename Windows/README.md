@@ -88,7 +88,9 @@ dotnet publish Windows/App -c Release -f net10.0-windows10.0.19041.0 -r win-x64 
 
 `ECHO.exe --smoke` opens the shell on the built-in library and exits 0 after 8 s. The Windows workflow
 (`.github/workflows/windows.yml`) runs the tests and the smoke run on `windows-latest` and keeps a
-screenshot as the `smoke` artifact; a `windows-v*` tag publishes the exe as a pre-release.
+screenshot as the `smoke` artifact; a `windows-v*` tag publishes the exe as a pre-release with
+`Windows/RELEASE.md` as its notes, which is then made a normal release and marked Latest
+(`gh release edit <tag> --prerelease=false --latest`).
 
 (Earlier Windows apps stay on their branches as references: `windows-glass`, the liquid-glass app, and
 the plain baseline this one grew from, `windows-v2.0.0`.)

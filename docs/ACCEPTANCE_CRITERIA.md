@@ -294,7 +294,7 @@ through the album; sign out ending the device's session on the server.
 |---|---|---|---|
 | NAT-01 | Android (`Android/`): the full app (`docs/ANDROID_CLIENT.md`) | U + M | 2026-10-29 |
 | NAT-02 | Linux (`Linux/`, GTK 4): the baseline, the token in the Secret Service | M (GTK's Broadway backend against a test server: sign in, albums, a song in real time, pause, the album going on, sign out revoking the device) | 2026-11-04 |
-| NAT-03 | Windows (`Windows/`, WPF): the baseline, the token in DPAPI | I (builds without warnings) + M (`Api.cs` against a test server) | open: the window on Windows |
+| NAT-03 | Windows (`Windows/`, Avalonia 12): the full app in Cider's layout (`Windows/README.md`), the token in DPAPI | U (89 xUnit tests, every screen rendered headless) + I (CI on `windows-latest`: the tests, then the published exe's `--smoke` run) + M (the owner's PC, releases windows-v3.0.0 to v3.3.0) | 2026-11-07 |
 | NAT-04 | macOS (`macOS/`, SwiftUI): the baseline, the token in the Keychain | I (parses, Swift 6.2) + M (`Api.swift` on Linux against a test server) | open: needs a Mac |
 | NAT-05 | iOS (`iOS/`, SwiftUI): the baseline, the token in the Keychain (this device only), playing on with the screen off | as NAT-04 | open: needs a Mac |
 
