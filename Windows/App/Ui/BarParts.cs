@@ -11,13 +11,14 @@ namespace Echo.Ui;
 /// Cider's five playback buttons, wherever its player sits (the bottom chrome, Maverick's top chrome, the
 /// fullscreen view, the mini player): Shuffle and Repeat as small buttons (40×32, a 0.98 em glyph, rgb(200
 /// 200 200 / 25%) behind when on), Previous and Next (40×36, the glyph at 60 %), Play/Pause round (42 px,
-/// a 38 px glyph, 6 px apart).
+/// a 38 px glyph, 6 px apart). `solid`, for the bar: Play/Pause a white disc with a dark glyph, as
+/// today's players have it.
 public sealed class Transport : StackPanel
 {
     readonly Player player;
     readonly Button shuffle, repeat, toggle, back, on;
 
-    public Transport(Player player)
+    public Transport(Player player, bool solid = false)
     {
         this.player = player;
         Orientation = Orientation.Horizontal;
@@ -34,6 +35,15 @@ public sealed class Transport : StackPanel
         toggle.Margin = new Thickness(6);
         back = Kit.IconButton(Icons.Backward, 40, 36, 24, "Previous", () => _ = player.Previous());
         on = Kit.IconButton(Icons.Forward, 40, 36, 24, "Next", () => _ = player.Next());
+        if (solid)
+        {
+            toggle.Theme = Kit.Res<ControlTheme>("PlayCircle");
+            toggle.Width = toggle.Height = 36;
+            toggle.Opacity = 1;
+            toggle.Margin = new Thickness(12, 0);
+            ((Glyph)toggle.Content!).Width = ((Glyph)toggle.Content!).Height = 30;
+            back.Opacity = on.Opacity = 0.85;
+        }
         Children.Add(shuffle);
         Children.Add(back);
         Children.Add(toggle);
@@ -178,8 +188,12 @@ public sealed class BarTools : StackPanel
     {
         set
         {
-            queue.Classes.Set("active", value == "queue");
-            lyrics.Classes.Set("active", value == "lyrics");
+            // Today's players light the open panel's icon in the key colour rather than boxing it.
+            queue.Foreground = value == "queue" ? Kit.Brush("Key") : Kit.Brush("Text");
+            lyrics.Foreground = value == "lyrics" ? Kit.Brush("Key") : Kit.Brush("Text");
+            queue.Opacity = value == "queue" ? 1 : 0.7;
+            Show();
+            if (value == "lyrics") lyrics.Opacity = 1;
         }
     }
 

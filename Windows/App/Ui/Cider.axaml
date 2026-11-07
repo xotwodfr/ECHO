@@ -184,27 +184,61 @@
     </Setter>
   </ControlTheme>
 
-  <!-- The song's progress (directives.less .app-chrome-playback-duration-bottom): 5 px, radius 6, the key
-       colour played over #333, a 16 px key-coloured thumb that shows on hover. -->
+  <!-- The song's progress as today's players draw it: 4 px, round ends, white played over a faint track; under
+       the pointer the played part turns the key colour and a 12 px white thumb shows. -->
   <ControlTheme x:Key="CiderProgress" TargetType="Slider">
     <Setter Property="Focusable" Value="False" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <ControlTemplate>
         <Grid Height="16" Background="Transparent">
-          <Border Height="5" CornerRadius="6" Background="#333333" VerticalAlignment="Center" />
+          <Border Height="4" CornerRadius="2" Background="#2EFFFFFF" VerticalAlignment="Center" />
           <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
                  Value="{TemplateBinding Value, Mode=TwoWay}">
             <Track.DecreaseButton>
-              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="{DynamicResource Key}" Height="5" CornerRadius="6,0,0,6" />
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#D9FFFFFF" Height="4" CornerRadius="2,0,0,2" />
             </Track.DecreaseButton>
             <Track.IncreaseButton>
-              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="5" />
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
             </Track.IncreaseButton>
-            <Thumb Name="Knob" Width="16" Height="16" Opacity="0">
+            <Thumb Name="Knob" Width="12" Height="12" Opacity="0">
               <Thumb.Template>
                 <ControlTemplate>
-                  <Ellipse Fill="{DynamicResource Key}" />
+                  <Ellipse Fill="White" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Thumb#Knob">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+    <Style Selector="^:pointerover /template/ RepeatButton#PART_DecreaseButton">
+      <Setter Property="Background" Value="{DynamicResource Key}" />
+    </Style>
+  </ControlTheme>
+
+  <!-- The volume, drawn as the progress: 4 px, white over a faint track, the white thumb only under the pointer. -->
+  <ControlTheme x:Key="CiderVolume" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="16" Background="Transparent">
+          <Border Height="4" CornerRadius="2" Background="#2EFFFFFF" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#D9FFFFFF" Height="4" CornerRadius="2,0,0,2" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
+            </Track.IncreaseButton>
+            <Thumb Name="Knob" Width="12" Height="12" Opacity="0">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="White" />
                 </ControlTemplate>
               </Thumb.Template>
             </Thumb>
@@ -217,32 +251,23 @@
     </Style>
   </ControlTheme>
 
-  <!-- The volume (style.less .app-chrome-item.volume): 4 px, rgba(255 255 255 / .4), a 14 px #a5a8ba thumb. -->
-  <ControlTheme x:Key="CiderVolume" TargetType="Slider">
-    <Setter Property="Focusable" Value="False" />
+  <!-- The bar's Play/Pause: a white disc, the glyph dark on it, a touch larger under the pointer. -->
+  <ControlTheme x:Key="PlayCircle" TargetType="Button">
+    <Setter Property="Background" Value="#F2FFFFFF" />
+    <Setter Property="Foreground" Value="#161616" />
+    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Grid Height="16" Background="Transparent">
-          <Border Height="4" CornerRadius="5" Background="#66FFFFFF" VerticalAlignment="Center" />
-          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
-                 Value="{TemplateBinding Value, Mode=TwoWay}">
-            <Track.DecreaseButton>
-              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#99FFFFFF" Height="4" CornerRadius="5,0,0,5" />
-            </Track.DecreaseButton>
-            <Track.IncreaseButton>
-              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
-            </Track.IncreaseButton>
-            <Thumb Width="14" Height="14">
-              <Thumb.Template>
-                <ControlTemplate>
-                  <Ellipse Fill="#A5A8BA" Stroke="#1A000000" StrokeThickness="1" />
-                </ControlTemplate>
-              </Thumb.Template>
-            </Thumb>
-          </Track>
-        </Grid>
+        <Border Name="Box" Background="{TemplateBinding Background}" CornerRadius="999">
+          <Border.Transitions><Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.16" /></Transitions></Border.Transitions>
+          <ContentPresenter Content="{TemplateBinding Content}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
+        </Border>
       </ControlTemplate>
     </Setter>
+    <Style Selector="^:pointerover /template/ Border#Box">
+      <Setter Property="Background" Value="White" />
+      <Setter Property="RenderTransform" Value="scale(1.06)" />
+    </Style>
   </ControlTheme>
 
   <!-- A list with no look of its own: its rows bring Cider's. -->
