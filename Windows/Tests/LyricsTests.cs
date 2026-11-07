@@ -180,6 +180,24 @@ public class LyricsStageTests
     }
 
     [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void PerformanceModeNeitherBlursNorRipples()
+    {
+        var t = 79_500.0;
+        var stage = new LyricsStage(() => t, () => true, _ => { }, lite: () => true);
+        new Avalonia.Controls.Window { Width = 800, Height = 600, Content = stage }.Show();
+        stage.Show(Fixtures.Lyrics);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Run(stage, 60);
+        Assert.All(stage.Lines, l => Assert.Equal(0, l.BlurNow, 2));
+        t = 80_050;
+        var before = stage.Lines.Select(l => l.Top).ToArray();
+        stage.Tick(16);
+        var moved = stage.Lines.Select((l, i) => l.Top - before[i]).ToArray();
+        Assert.True(moved[1] < -0.5);
+        Assert.All(moved, m => Assert.Equal(moved[1], m, 3));
+    }
+
+    [Avalonia.Headless.XUnit.AvaloniaFact]
     public void BackgroundVocalsTakeRoomOnlyWhileTheirLineIsSung()
     {
         var (_, stage, set) = Open(83_000);

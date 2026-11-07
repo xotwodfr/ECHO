@@ -1,12 +1,11 @@
-ECHO for Windows: everything moves now, and songs start at once.
+ECHO for Windows: lyrics as Apple Music draws them.
 
-- **Songs start playing straight away** (in about a tenth of a second) instead of after 2–4 s: a song plays as it downloads instead of waiting for the whole file. Jumping ahead in a song that is still downloading no longer freezes the window.
-- **Smooth scrolling** everywhere: the mouse wheel glides instead of jumping in steps.
-- **Progress bars move smoothly** every frame, in the player bar, the full-screen view and the mini player.
-- **Covers fade in** as they load (and cross-fade when the song changes) instead of popping in over a grey placeholder.
-- **The playing song slides in** in the player bar when it changes; play/pause pops.
-- **Pages, album grids and song lists cascade in**; album covers lift a little under the mouse; buttons give a little press.
-- **The side panel slides out** when closed; Home's shelves page sideways smoothly; the full-screen view sweeps in.
-- And still: Spicy Lyrics-style lyrics, Cider's look with Apple Music's best layouts.
+- **The sung line sits a third of the way down**, and the lines ripple into place, each a moment after the one above.
+- **Everything not being sung is dim and soft**: lines already sung go dim again, lines further away blur more and shrink a little.
+- **Words light up with a soft edge** and rise as they are sung; a long held word swells and glows letter by letter.
+- **Duets**: the second singer sits on the right; background vocals slide out under their line while it is sung.
+- **Full screen gets Apple Music's controls** under the cover: title and artist with a "…" menu, a thin progress bar with the time left, large play controls, and a pill at the top to go back (Esc still works).
+- **Performance mode** (Settings → Visual) for slower computers: no blur or glow on the lyrics, and a still background.
+- And from the last build: songs start playing straight away, smooth scrolling, covers fading in, and animations throughout.
 
 **Windows may say it protected your PC** (the exe is not signed): More info → Run anyway.

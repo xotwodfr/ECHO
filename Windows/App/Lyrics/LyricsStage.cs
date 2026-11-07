@@ -42,7 +42,8 @@ public sealed class CubicBezier(double x1, double y1, double x2, double y2)
 /// the first one in view starts at once and each below it 50 ms later, the gap shrinking 5 % a line past
 /// the sung one, so the column ripples. Lines not lit shrink to 97 % (while playing) and blur 1 px plus
 /// 1 px a line away, at most 5 px. A click seeks to a line; the wheel scrolls freely and the column
-/// comes back 3 s later. Nothing moves while paused and settled.
+/// comes back 3 s later. Nothing moves while paused and settled. In Performance mode (`lite`) nothing
+/// blurs or glows and the lines move together.
 public sealed class LyricsStage : Panel
 {
     const double BackAfterMs = 3000;
@@ -60,7 +61,7 @@ public sealed class LyricsStage : Panel
     }
 
     readonly Func<double> clock;
-    readonly Func<bool> playing;
+    readonly Func<bool> playing, lite;
     readonly Action<double> seek;
     readonly double fixedSize;
     readonly List<LineView> views = [];
@@ -73,10 +74,11 @@ public sealed class LyricsStage : Panel
 
     /// `clock`: the song's time in ms with the lyrics' offsets applied; `seek` goes to such a time.
     /// `fontSize` 0: AMLL's size from the window.
-    public LyricsStage(Func<double> clock, Func<bool> playing, Action<double> seek, double fontSize = 0)
+    public LyricsStage(Func<double> clock, Func<bool> playing, Action<double> seek, double fontSize = 0, Func<bool>? lite = null)
     {
         this.clock = clock;
         this.playing = playing;
+        this.lite = lite ?? (() => false);
         this.seek = seek;
         fixedSize = fontSize;
         ClipToBounds = true;
@@ -210,6 +212,7 @@ public sealed class LyricsStage : Panel
         var jumped = first || t < lastT - 200 || t > lastT + dtMs + 1000;
         lastT = t;
         var isPlaying = playing();
+        var isLite = lite();
         var synced = timeline.Synced;
         var nowLit = timeline.LitAt(t);
         var focus = !synced ? -1 : nowLit.Count > 0 ? nowLit[0] : timeline.ActiveAt(t);
@@ -237,7 +240,7 @@ public sealed class LyricsStage : Panel
         var prev = anchor - 1;
         while (prev >= 0 && views[prev].Item.Interlude) prev--;
         var spring = jumped || prev < 0 || views[anchor].Item.Interlude ? Soft : Playback(views[anchor].Item.Start - views[prev].Item.Start);
-        var gap = changed && !jumped ? 50.0 : 0;
+        var gap = changed && !jumped && !isLite ? 50.0 : 0;
         var delay = 0.0;
         for (var i = 0; i < views.Count; i++)
         {
@@ -262,7 +265,8 @@ public sealed class LyricsStage : Panel
             var v = views[i];
             busy |= v.Move(now, dtMs, ScaleSpring, Bounds.Width);
             var d = i < focus ? focus - i + 1 : i - latest;
-            busy |= v.BlurTo(!synced || free || Holds(i) ? 0 : Math.Min(5, (1 + d) * (Narrow(Bounds.Width) ? 0.8 : 1)), first || jumped ? 1000 : dtMs);
+            busy |= v.BlurTo(!synced || free || isLite || Holds(i) ? 0 : Math.Min(5, (1 + d) * (Narrow(Bounds.Width) ? 0.8 : 1)), first || jumped ? 1000 : dtMs);
+            v.Lite = isLite;
             // Lines well out of view are not drawn.
             v.Opacity = v.Top + v.DesiredSize.Height < -Bounds.Height * 0.4 || v.Top > Bounds.Height * 1.4 ? 0 : 1;
             busy |= v.Step(t, nowLit.Contains(i), first || jumped ? 1000 : dtMs);
@@ -342,6 +346,9 @@ public sealed class LineView : Control
     public IReadOnlyList<string> Words => words;
 
     public bool IsLit => lit;
+
+    /// Performance mode: no glow.
+    public bool Lite { get; set; }
 
     /// The words sung letter by letter, with how much they swell and glow (tests read them).
     public IReadOnlyList<(string Word, double Swell, double Glow)> Held => held;
@@ -619,7 +626,7 @@ public sealed class LineView : Control
             }
             var shown = p.Bg ? Math.Clamp(bgFade.X / 100, 0, 1) : 1;
             using var _ = context.PushTransform(m);
-            if (glow * shown > 0.005 && p.Outline is { } outline) context.Custom(new GlowOp(box.Inflate(p.Em), outline, glow * shown, sigma));
+            if (!Lite && glow * shown > 0.005 && p.Outline is { } outline) context.Custom(new GlowOp(box.Inflate(p.Em), outline, glow * shown, sigma));
             p.Shape.SetForegroundBrush(Fill(p, shown));
             context.DrawText(p.Shape, new Point(p.X, p.Y));
         }

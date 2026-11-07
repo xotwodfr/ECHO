@@ -191,7 +191,9 @@ public sealed class SettingsWindow : Border
         foreach (var b in tabs.Children.OfType<Button>()) b.Classes.Set("active", (string?)b.Tag == tab);
         page.Content = tab switch
         {
-            "Visual" => Container("Visual", Line("Window Layout", "Mojave: the player at the bottom. Maverick: the player in the top bar.", Layout())),
+            "Visual" => Container("Visual",
+                Line("Window Layout", "Mojave: the player at the bottom. Maverick: the player in the top bar.", Layout()),
+                Line("Performance Mode", "For slower computers: no blur or glow on the lyrics, and a still background. The words still light up as they are sung.", Performance())),
             "Account" => Account(),
             "About" => About(),
             _ => Container("General", Line("Scrobble", "Send what you play to Navidrome (and on to Last.fm, when Navidrome is set up for it).", Scrobble())),
@@ -203,6 +205,13 @@ public sealed class SettingsWindow : Border
         var box = new ComboBox { Classes = { "md" }, ItemsSource = new[] { "Mojave", "Maverick" }, SelectedIndex = session.Prefs.Layout == "maverick" ? 1 : 0 };
         box.SelectionChanged += (_, _) => session.Set(session.Prefs with { Layout = box.SelectedIndex == 1 ? "maverick" : "mojave" });
         return box;
+    }
+
+    Control Performance()
+    {
+        var toggle = new ToggleSwitch { IsChecked = session.Prefs.Performance, OnContent = null, OffContent = null };
+        toggle.IsCheckedChanged += (_, _) => session.Set(session.Prefs with { Performance = toggle.IsChecked == true });
+        return toggle;
     }
 
     Control Scrobble()
@@ -241,7 +250,8 @@ public sealed class SettingsWindow : Border
         var version = Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "";
         return Container("About",
             Line("ECHO for Windows", null, new TextBlock { Text = version, FontSize = 13.6, Opacity = 0.7 }),
-            Line("Design", "After Cider 1 (github.com/ciderapp/Cider) by the Cider Collective, AGPL-3.0. ECHO is AGPL-3.0 too.", new Control()));
+            Line("Design", "After Cider 1 (github.com/ciderapp/Cider) by the Cider Collective, AGPL-3.0. ECHO is AGPL-3.0 too.", new Control()),
+            Line("Lyrics", "After AMLL, Apple Music-like Lyrics (github.com/amll-dev/applemusic-like-lyrics), AGPL-3.0.", new Control()));
     }
 
     /// .md-option-container: the header, then the lines with a rgb(0 0 0 / 15%) rule between.
