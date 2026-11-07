@@ -31,6 +31,10 @@
       </LinearGradientBrush>
     </Setter>
   </Style>
+  <!-- The top bar's pill: a soft key-coloured ring when focused (a bottom line does not suit a pill). -->
+  <Style Selector="TextBox.pill:focus /template/ Border#PART_BorderElement">
+    <Setter Property="BorderBrush" Value="#99FC3C44" />
+  </Style>
   <Style Selector="TextBox.search:focus, TextBox.field:focus">
     <Setter Property="Foreground" Value="#C8C8C8" />
   </Style>

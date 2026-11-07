@@ -97,16 +97,17 @@
     </Style>
   </ControlTheme>
 
-  <!-- .top-nav-group .app-sidebar-item (less/directives.less): a white layer 1 px in, 10 % on hover, 20 % active. -->
+  <!-- The top bar's round Home: a faint disc with a hairline, a white layer over it 10 % on hover, 20 % active. -->
   <ControlTheme x:Key="TopNavItem" TargetType="Button">
-    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Background" Value="#12FFFFFF" />
     <Setter Property="Foreground" Value="#EEEEEE" />
     <Setter Property="Padding" Value="6" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template">
       <ControlTemplate>
         <Panel>
-          <Border Name="Layer" Margin="1" CornerRadius="10" Background="White" Opacity="0">
+          <Border CornerRadius="999" Background="{TemplateBinding Background}" BorderBrush="#14FFFFFF" BorderThickness="1" />
+          <Border Name="Layer" Margin="1" CornerRadius="999" Background="White" Opacity="0">
             <Border.Transitions><Transitions><DoubleTransition Property="Opacity" Duration="0:0:0.2" /></Transitions></Border.Transitions>
           </Border>
           <ContentPresenter Content="{TemplateBinding Content}" Padding="{TemplateBinding Padding}" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" />
@@ -328,7 +329,7 @@
     </Style>
   </ControlTheme>
 
-  <!-- The album square's play and menu buttons: 30 px circles of rgba(50 50 50 / .7), rgba(250 0 0 / .7) on hover. -->
+  <!-- The album square's play and menu buttons: 30 px circles of rgba(50 50 50 / .7), the key colour on hover. -->
   <ControlTheme x:Key="TileCircle" TargetType="Button">
     <Setter Property="Width" Value="30" />
     <Setter Property="Height" Value="30" />
@@ -343,7 +344,7 @@
       </ControlTemplate>
     </Setter>
     <Style Selector="^:pointerover /template/ Border#Box">
-      <Setter Property="Background" Value="#B3FA0000" />
+      <Setter Property="Background" Value="{DynamicResource Key}" />
     </Style>
   </ControlTheme>
 

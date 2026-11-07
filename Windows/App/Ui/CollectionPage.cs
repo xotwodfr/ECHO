@@ -101,7 +101,7 @@ public sealed class CollectionPage : DockPanel
         {
             session.Player.SetShuffle(true);
             _ = list.Play(Random.Shared.Next(Math.Max(1, tracks.Count)));
-        }, primary: true);
+        });
         play.MinWidth = shuffle.MinWidth = 100;
         // "…" beside Play and Shuffle, as Apple's.
         var more = new Button
@@ -126,15 +126,31 @@ public sealed class CollectionPage : DockPanel
         row.Children.Add(artBox);
         row.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = info });
         row.Children.Add(new Border { [Grid.ColumnProperty] = 2, Child = tools });
+        // The header's colour fades into the songs: one surface, as today's album pages are.
         var header = new Border
         {
             MinHeight = 300,
-            BoxShadow = BoxShadows.Parse("0 4 6 3 #1A000000"),
-            Child = new Panel { Children = { new ArtworkMaterial { Url = cover }, row } },
+            Child = new Panel
+            {
+                Children =
+                {
+                    new ArtworkMaterial
+                    {
+                        Url = cover,
+                        OpacityMask = new LinearGradientBrush
+                        {
+                            StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),
+                            EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
+                            GradientStops = { new GradientStop(Colors.Black, 0.4), new GradientStop(Colors.Transparent, 1) },
+                        },
+                    },
+                    row,
+                },
+            },
         };
         SetDock(header, Dock.Top);
         Children.Add(header);
-        _ = Tint(cover, header, play, shuffle, by);
+        _ = Tint(cover, header, play, by);
 
         // ---- the songs (.playlist-body: var(--color3), 16 px / 40 px in) and the footer ----
         // Apple's footer: the year, then the count and length, small and grey.
@@ -153,7 +169,7 @@ public sealed class CollectionPage : DockPanel
             header.MinHeight = compact ? 200 : 300;
             desc.IsVisible = !compact && description is not null;
         };
-        Children.Add(new Border { Background = new SolidColorBrush(Color.Parse("#33000000")), Child = scroll });
+        Children.Add(scroll);
 
         search.TextChanged += (_, _) =>
         {
@@ -164,9 +180,9 @@ public sealed class CollectionPage : DockPanel
         };
     }
 
-    /// Cider 4 colours an album's page with its cover: the header glows with the key colour and Play and
-    /// Shuffle wear it (as md-btn-primary wears Cider's red, at 65 %).
-    async Task Tint(string? cover, Border header, Button play, Button shuffle, TextBlock by)
+    /// Cider 4 colours an album's page with its cover: the header glows with the key colour and Play wears
+    /// it solid (darkened when it is too light to carry white text); Shuffle stays the quieter button.
+    async Task Tint(string? cover, Border header, Button play, TextBlock by)
     {
         if (await session.Covers.KeyColor(cover) is not { } key) return;
         by.Foreground = new SolidColorBrush(key);
@@ -176,11 +192,9 @@ public sealed class CollectionPage : DockPanel
             EndPoint = new RelativePoint(0, 1, RelativeUnit.Relative),
             GradientStops = { new GradientStop(Color.FromArgb(90, key.R, key.G, key.B), 0), new GradientStop(Color.FromArgb(0, key.R, key.G, key.B), 1) },
         };
-        foreach (var b in new[] { play, shuffle })
-        {
-            b.Background = new SolidColorBrush(Color.FromArgb(166, key.R, key.G, key.B));
-            b.BorderBrush = new SolidColorBrush(Color.FromArgb(64, key.R, key.G, key.B));
-        }
+        var light = (0.2126 * key.R + 0.7152 * key.G + 0.0722 * key.B) / 255;
+        var k = light > 0.6 ? 0.6 / light : 1;
+        play.Background = new SolidColorBrush(Color.FromRgb((byte)(key.R * k), (byte)(key.G * k), (byte)(key.B * k)));
     }
 
     static string Duration(int minutes) => minutes >= 60

@@ -143,6 +143,7 @@ public sealed class Shell : Grid
         {
             b.Padding = new Thickness(8, 6);
             b.FontSize = 13;
+            b.FontWeight = FontWeight.Medium;
             b.HorizontalAlignment = HorizontalAlignment.Stretch;
         }
         buttons.Children.Add(mini);
