@@ -1,5 +1,6 @@
 ECHO for Windows: lyrics as Apple Music draws them.
 
+- **New in 3.2.2: songs start faster.** A song streams straight from the server in one request, on a connection already open; it is asked for before the window updates and starts as soon as it decodes; cover art embedded in the file is skipped instead of downloaded before the first note; and jumping ahead into a part that hasn't arrived yet plays at once.
 - **New in 3.2.1: lyrics timed only by line now light up a whole line at once** as it is sung, as Apple Music shows them, instead of sweeping across it at a steady pace that never matched the singing (about half of all lyrics are timed this way).
 - **The sung line sits a third of the way down**, and the lines ripple into place, each a moment after the one above.
 - **Everything not being sung is dim and soft**: lines already sung go dim again, lines further away blur more and shrink a little.
