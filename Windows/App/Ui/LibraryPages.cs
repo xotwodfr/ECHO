@@ -248,8 +248,8 @@ public sealed class AlbumsPage : ContentControl
     }
 }
 
-/// views/pages/library-songs.ejs: "Songs", a search field, every song in Cider's rows (virtualized; the
-/// pages after the first arrive while it shows).
+/// views/pages/library-songs.ejs: "Songs", a search field, the table's header, every song in Cider's rows
+/// (virtualized; the pages after the first arrive while it shows).
 public sealed class SongsPage : DockPanel
 {
     readonly Session session;
@@ -262,7 +262,7 @@ public sealed class SongsPage : DockPanel
     {
         this.session = session;
         this.nav = nav;
-        var top = Blocks.Column(new Thickness(32, 32, 32, 0), Blocks.H1("Songs"), Blocks.Search(search, new Thickness(0, 16)));
+        var top = Blocks.Column(new Thickness(32, 32, 32, 0), Blocks.H1("Songs"), Blocks.Search(search, new Thickness(0, 16)), TrackList.Header(Rows.Table));
         SetDock(top, Dock.Top);
         Children.Add(top);
         holder.Margin = new Thickness(32, 0, 32, 0);
@@ -301,8 +301,8 @@ public sealed class SongsPage : DockPanel
     }
 }
 
-/// views/pages/library-artists.ejs: Cider's split view. A 280 px column of artists (rgb(200 200 200 /
-/// 10%)) under a sticky search on #303030; the chosen artist's albums beside it (rgb(200 200 200 / 6%)).
+/// views/pages/library-artists.ejs: Cider's split view. A 280 px column of artists, faintly lit, under a
+/// sticky search; beside it the chosen artist large with Go to Artist, and their albums as a grid.
 public sealed class ArtistsPage : Grid
 {
     readonly Session session;
@@ -324,7 +324,7 @@ public sealed class ArtistsPage : Grid
             Orientation = Orientation.Horizontal,
             Children =
             {
-                new CoverImage(a.Image, 42, 96, 21) { Margin = new Thickness(12) },
+                new CoverImage(a.Image, 36, 96, 18) { Margin = new Thickness(8, 8, 12, 8) },
                 Kit.Text(a.Name, 14),
             },
         });
@@ -332,23 +332,17 @@ public sealed class ArtistsPage : Grid
         {
             if (list.SelectedItem is ArtistCard a) _ = Open(a);
         };
-        var bar = new Border
-        {
-            Background = new SolidColorBrush(Color.Parse("#303030")),
-            BorderBrush = Kit.Brush("Panel"),
-            BorderThickness = new Thickness(0, 0, 0, 1),
-            Padding = new Thickness(10),
-            Child = Blocks.Search(search, default),
-        };
+        list.Padding = new Thickness(6, 0, 6, 6);
+        var bar = new Border { Padding = new Thickness(10), Child = Blocks.Search(search, default) };
         DockPanel.SetDock(bar, Dock.Top);
         Children.Add(new Border
         {
-            Background = new SolidColorBrush(Color.Parse("#1AC8C8C8")),
-            BorderBrush = Kit.Brush("Panel"),
+            Background = new SolidColorBrush(Color.Parse("#08FFFFFF")),
+            BorderBrush = Kit.Brush("Hairline"),
             BorderThickness = new Thickness(0, 0, 1, 0),
             Child = new DockPanel { Children = { bar, list } },
         });
-        Children.Add(new Border { [Grid.ColumnProperty] = 1, Background = new SolidColorBrush(Color.Parse("#0FC8C8C8")), Child = detail });
+        Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = detail });
         search.TextChanged += (_, _) => Show();
         _ = Load();
     }
@@ -377,39 +371,23 @@ public sealed class ArtistsPage : Grid
         try
         {
             if (await session.Library.Artist(a.Id) is not { } page) return;
-            var rows = new StackPanel();
-            foreach (var album in page.Albums.OrderByDescending(x => x.Year ?? 0))
-            {
-                var row = new Button
-                {
-                    Theme = Kit.Res<ControlTheme>("Plain"),
-                    CornerRadius = new CornerRadius(8),
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    HorizontalContentAlignment = HorizontalAlignment.Left,
-                    Height = 60,
-                    Content = new StackPanel
-                    {
-                        Orientation = Orientation.Horizontal,
-                        Children =
-                        {
-                            new CoverImage(album.Cover, 42, 96, 6) { Margin = new Thickness(12) },
-                            new StackPanel { VerticalAlignment = VerticalAlignment.Center, Children = { Kit.Text(album.Title, 14), Kit.Text(album.Year?.ToString(), 11.2, opacity: 0.7) } },
-                        },
-                    },
-                };
-                row.Click += (_, _) => nav.Open(new Route("album", album.Id, album.Title));
-                rows.Children.Add(row);
-            }
+            var albums = new TileGrid { Min = 150, Margin = new Thickness(0, 0, 0, 8) };
+            foreach (var album in page.Albums.OrderByDescending(x => x.Year ?? 0)) albums.Children.Add(Blocks.Square(session, nav, album, album.Year?.ToString()));
             var go = Kit.CiderButton("Go to Artist", null, () => nav.Open(new Route("artist", a.Id, a.Name)));
-            var head = new StackPanel
+            go.HorizontalAlignment = HorizontalAlignment.Left;
+            var name = Blocks.H1(a.Name);
+            name.TextTrimming = TextTrimming.CharacterEllipsis;
+            var head = new DockPanel
             {
-                HorizontalAlignment = HorizontalAlignment.Center,
-                Spacing = 10,
-                Margin = new Thickness(14, 14, 14, 0),
-                Children = { new CoverImage(a.Image, 120, 300, 60), new TextBlock { Text = a.Name, FontSize = 20, FontWeight = FontWeight.Bold, HorizontalAlignment = HorizontalAlignment.Center }, go },
+                Children =
+                {
+                    new CoverImage(a.Image, 120, 300, 60) { [DockPanel.DockProperty] = Dock.Left, Margin = new Thickness(0, 0, 20, 0) },
+                    new StackPanel { VerticalAlignment = VerticalAlignment.Center, Spacing = 12, Children = { name, go } },
+                },
             };
-            go.HorizontalAlignment = HorizontalAlignment.Center;
-            detail.Content = new ScrollViewer { Content = Blocks.Column(new Thickness(0, 0, 0, 16), head, new Border { Margin = new Thickness(14), Child = rows }) };
+            var column = Blocks.Column(new Thickness(32, 28, 32, 32), head, Shelf.Section("Albums", albums));
+            detail.Content = new ScrollViewer { Content = column };
+            Motion.Enter(column);
         }
         catch (Exception e) when (Blocks.Expected(e))
         {
