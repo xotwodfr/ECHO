@@ -88,7 +88,8 @@ public sealed class Shell : Grid
 
     void Search(string term) => Nav.Open(new Route("search", term, term));
 
-    /// Cider's settings window over the app, 90 % of it.
+    /// Cider's settings window over the app, 90 % of it up to 980×680, the app dimmed behind it; a click
+    /// on the dimmed app closes it.
     public SettingsWindow ShowSettings(string tab = "General")
     {
         var window = new SettingsWindow(session, tab);
@@ -97,12 +98,15 @@ public sealed class Shell : Grid
             modal.Children.Clear();
             modal.IsVisible = false;
         };
+        var scrim = new Border { Background = new SolidColorBrush(Color.FromArgb(140, 0, 0, 0)) };
+        scrim.PointerPressed += (_, _) => window.Close();
         modal.Children.Clear();
-        modal.Children.Add(new Border { Background = Brushes.Transparent }); // clicks stay in the modal
-        window.Width = Bounds.Width * 0.9;
-        window.Height = Bounds.Height * 0.9;
+        modal.Children.Add(scrim);
+        window.Width = Math.Min(Bounds.Width * 0.9, 980);
+        window.Height = Math.Min(Bounds.Height * 0.9, 680);
         modal.Children.Add(window);
         modal.IsVisible = true;
+        Motion.Enter(window);
         return window;
     }
 
