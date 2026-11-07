@@ -3,7 +3,8 @@ using Avalonia.Controls;
 namespace Echo.Ui;
 
 /// Sign in with username and password; when the server asks for it, the two-factor code, in the same
-/// request again (POST /auth/device answers 401 totp_required). The token goes to `signedIn`.
+/// request again (POST /auth/device answers 401 totp_required). The token goes to `signedIn`. The window
+/// is frameless, so this screen carries the window's controls and moves it, as the shell's top bar does.
 public partial class SignInView : UserControl
 {
     readonly Api api;
@@ -16,6 +17,10 @@ public partial class SignInView : UserControl
         this.api = api;
         this.signedIn = signedIn;
         InitializeComponent();
+        Host.Text = new Uri(api.Base).Host;
+        Controls.Content = ChromeTop.WindowControls(this, 46);
+        Controls.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top;
+        Bar.PointerPressed += (_, e) => ChromeTop.DragWindow(Bar, e);
         SubmitButton.Click += (_, _) => _ = Submit();
     }
 

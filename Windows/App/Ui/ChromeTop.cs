@@ -73,7 +73,7 @@ public sealed class ChromeTop : Grid
                 [Grid.ColumnProperty] = 2,
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Right,
-                Children = { Tools, WindowControls() },
+                Children = { Tools, WindowControls(this, Height) },
             });
             nav.Changed += Show;
             Show();
@@ -114,7 +114,7 @@ public sealed class ChromeTop : Grid
             [Grid.ColumnProperty] = 2,
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Right,
-            Children = { field, WindowControls() },
+            Children = { field, WindowControls(this, Height) },
         });
 
         nav.Changed += Show;
@@ -157,25 +157,26 @@ public sealed class ChromeTop : Grid
         return b;
     }
 
-    // ---- the window's own controls: 138 px, three of 46, Windows' 10 px glyphs ----
+    // ---- the window's own controls: 138 px, three of 46, Windows' 10 px glyphs (the sign-in screen has them too) ----
 
-    Control WindowControls()
+    public static Control WindowControls(Control host, double height)
     {
-        var max = Caption("M0.5,0.5 H9.5 V9.5 H0.5 Z", "Maximize", w => w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized);
+        var max = Caption(host, height, "M0.5,0.5 H9.5 V9.5 H0.5 Z", "Maximize", w => w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized);
         var row = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Height = Height,
+            Height = height,
+            HorizontalAlignment = HorizontalAlignment.Right,
             Children =
             {
-                Caption("M0,5.5 H10", "Minimize", w => w.WindowState = WindowState.Minimized),
+                Caption(host, height, "M0,5.5 H10", "Minimize", w => w.WindowState = WindowState.Minimized),
                 max,
-                Caption("M0,0 L10,10 M10,0 L0,10", "Close", w => w.Close(), close: true),
+                Caption(host, height, "M0,0 L10,10 M10,0 L0,10", "Close", w => w.Close(), close: true),
             },
         };
-        AttachedToVisualTree += (_, _) =>
+        host.AttachedToVisualTree += (_, _) =>
         {
-            if (TopLevel.GetTopLevel(this) is not Window w) return;
+            if (TopLevel.GetTopLevel(host) is not Window w) return;
             w.PropertyChanged += (_, e) =>
             {
                 if (e.Property != Window.WindowStateProperty) return;
@@ -187,30 +188,36 @@ public sealed class ChromeTop : Grid
         return row;
     }
 
-    Button Caption(string glyph, string tip, Action<Window> act, bool close = false)
+    static Button Caption(Control host, double height, string glyph, string tip, Action<Window> act, bool close = false)
     {
         var b = new Button
         {
             Theme = Kit.Res<ControlTheme>(close ? "CaptionClose" : "Caption"),
             Classes = { "nopress" },
             Width = 46,
-            Height = Height,
+            Height = height,
             Content = new Path { Data = Geometry.Parse(glyph), Stroke = Brushes.White, StrokeThickness = 1, Width = 10, Height = 10 },
         };
         ToolTip.SetTip(b, tip);
         b.Click += (_, _) =>
         {
-            if (TopLevel.GetTopLevel(this) is Window w) act(w);
+            if (TopLevel.GetTopLevel(host) is Window w) act(w);
         };
         return b;
     }
 
-    // The bar itself moves the window, and a double click maximizes it (Electron's drag region).
+    /// Electron's drag region: a press moves the window, a double click maximizes it.
+    public static void DragWindow(Control from, PointerPressedEventArgs e)
+    {
+        if (e.Handled || TopLevel.GetTopLevel(from) is not Window w || !e.GetCurrentPoint(from).Properties.IsLeftButtonPressed) return;
+        if (e.ClickCount == 2) w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
+        else w.BeginMoveDrag(e);
+    }
+
+    // The bar itself moves the window.
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
         base.OnPointerPressed(e);
-        if (e.Handled || TopLevel.GetTopLevel(this) is not Window w || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        if (e.ClickCount == 2) w.WindowState = w.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;
-        else w.BeginMoveDrag(e);
+        DragWindow(this, e);
     }
 }

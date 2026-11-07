@@ -3,7 +3,7 @@
   <!-- Cider 1's .search-input, filled as today's fields are: 8 px radius, a faint white fill and hairline, the
        hairline key-coloured along the bottom when focused (as Windows 11's), #c8c8c8 at 500, room on the left
        for the magnifier. -->
-  <Style Selector="TextBox.search">
+  <Style Selector="TextBox.search, TextBox.field">
     <Setter Property="Background" Value="#12FFFFFF" />
     <Setter Property="BorderBrush" Value="#14FFFFFF" />
     <Setter Property="BorderThickness" Value="1" />
@@ -15,11 +15,11 @@
     <Setter Property="MinHeight" Value="0" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement">
+  <Style Selector="TextBox.search:pointerover /template/ Border#PART_BorderElement, TextBox.field:pointerover /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="#1AFFFFFF" />
     <Setter Property="BorderBrush" Value="#1FFFFFFF" />
   </Style>
-  <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement">
+  <Style Selector="TextBox.search:focus /template/ Border#PART_BorderElement, TextBox.field:focus /template/ Border#PART_BorderElement">
     <Setter Property="Background" Value="#991E1E1E" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="BorderBrush">
@@ -31,8 +31,17 @@
       </LinearGradientBrush>
     </Setter>
   </Style>
-  <Style Selector="TextBox.search:focus">
+  <Style Selector="TextBox.search:focus, TextBox.field:focus">
     <Setter Property="Foreground" Value="#C8C8C8" />
+  </Style>
+
+  <!-- The sign-in form's fields: the same finish, taller, no magnifier. -->
+  <Style Selector="TextBox.field">
+    <Setter Property="Padding" Value="12,10" />
+    <Setter Property="Foreground" Value="#EEEEEE" />
+  </Style>
+  <Style Selector="TextBox.field:focus">
+    <Setter Property="Foreground" Value="#EEEEEE" />
   </Style>
 
   <!-- .md-select: an md-btn that drops down. -->
