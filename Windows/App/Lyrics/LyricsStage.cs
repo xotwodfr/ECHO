@@ -347,6 +347,19 @@ public sealed class LineView : Control
 
     public bool IsLit => lit;
 
+    /// How much of the line's width is sung now, 0–1 (tests read it).
+    public double SungShare
+    {
+        get
+        {
+            var main = pieces.Where(p => !p.Bg).ToList();
+            return main.Count == 0 ? 0 : main.Sum(p => Math.Clamp((Edge(p) - p.X) / Math.Max(1, p.W), 0, 1) * p.W) / main.Sum(p => p.W);
+        }
+    }
+
+    /// Where the light's edge is on a piece's word at the line's time: across the word over its time.
+    double Edge(Piece p) => p.End <= p.Start ? (t >= p.Start ? double.PositiveInfinity : double.NegativeInfinity) : p.WordLeft + p.WordWidth * (t - p.Start) / (p.End - p.Start);
+
     /// Performance mode: no glow.
     public bool Lite { get; set; }
 
@@ -458,11 +471,11 @@ public sealed class LineView : Control
         var inner = Math.Max(1, width - pad * 2);
         var room = duetSong ? inner * 0.85 : inner;
         var left = RightAligned ? pad + inner - room : pad;
-        mainBottom = Flow(Split(line.Words, line.Text, line.Start, line.End ?? line.Start + 4000), size, size * 0.4, left, room, line.Words is not { Count: > 0 }, bg: false);
+        mainBottom = Flow(Split(line.Words, line.Text, line.Start), size, size * 0.4, left, room, line.Words is not { Count: > 0 }, bg: false);
         bgTop = mainBottom + size * 0.2;
         var bottom = bgTop;
         foreach (var bg in line.Background ?? [])
-            bottom = Flow(Split(bg.Words, bg.Text, bg.Start ?? line.Start, bg.End ?? line.End ?? line.Start + 4000), size * 0.7, bottom, left, room, bg.Words is not { Count: > 0 }, bg: true);
+            bottom = Flow(Split(bg.Words, bg.Text, bg.Start ?? line.Start), size * 0.7, bottom, left, room, bg.Words is not { Count: > 0 }, bg: true);
         bgHeight = bottom - bgTop;
         // Words move from their start until the longest of their motions ends (a held letter's 1.4 ×).
         movesFrom = pieces.Count == 0 ? 0 : pieces.Min(p => p.Start);
@@ -470,23 +483,15 @@ public sealed class LineView : Control
         return new Size(width, (showBackground && bgHeight > 0 ? bottom : mainBottom) + size * 0.4);
     }
 
-    /// The syllables with their times, each ending in a space where its word ends; a line timed only as
-    /// a whole is spread over its length by characters, so the light runs across it word by word.
-    static List<Syllable> Split(IReadOnlyList<LyricWord>? timed, string text, double start, double end)
+    /// The syllables with their times, each ending in a space where its word ends. A line timed only as
+    /// a whole (LRC: most of LRCLIB's) lights all at once as it starts, as Apple Music shows such lines:
+    /// spreading made-up word times across it ran the light at a steady pace that never matched the
+    /// singing.
+    static List<Syllable> Split(IReadOnlyList<LyricWord>? timed, string text, double start)
     {
         if (timed is { Count: > 0 })
             return timed.Select((w, i) => new Syllable(w.IsPartOfWord || i == timed.Count - 1 ? w.Text : w.Text + " ", w.Start, w.End)).ToList();
-        var parts = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        var total = Math.Max(1, parts.Sum(p => p.Length + 1));
-        var list = new List<Syllable>();
-        var at = start;
-        foreach (var p in parts)
-        {
-            var span = (end - start) * (p.Length + 1) / total;
-            list.Add(new Syllable(p + " ", at, at + span));
-            at += span;
-        }
-        return list;
+        return text.Split(' ', StringSplitOptions.RemoveEmptyEntries).Select(p => new Syllable(p + " ", start, start)).ToList();
     }
 
     static FormattedText Shape(string text, double em) => new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight,
@@ -644,7 +649,7 @@ public sealed class LineView : Control
         var (dim, on, waiting) = p.Bg ? (BgDim, BgSung, BgWaiting) : (Dim, LitSung, LitWaiting);
         var sung = White((dim + (on - dim) * f) * shown);
         var toCome = White((dim + (waiting - dim) * f) * shown);
-        var edge = p.WordLeft + p.WordWidth * (t - p.Start) / Math.Max(1, p.End - p.Start);
+        var edge = Edge(p);
         var half = 0.3 * p.Em;
         // How sung a point x is: 1 left of the band, 0 right of it.
         double Lit(double x) => Math.Clamp((edge + half - x) / (2 * half), 0, 1);

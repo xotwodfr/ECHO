@@ -280,6 +280,25 @@ public class LyricsStageTests
     }
 
     [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void ALineTimedOnlyAsAWholeLightsAllAtOnce()
+    {
+        // LRCLIB's lines have a start and nothing else.
+        var doc = Fixtures.Lyrics with { Sync = "line", Lines = [new LyricLine("Streetlights hum a borrowed tune", 66_000), new LyricLine("We drive until the city's gone", 72_500)] };
+        var t = 66_050.0;
+        var stage = new LyricsStage(() => t, () => true, _ => { });
+        new Avalonia.Controls.Window { Width = 800, Height = 600, Content = stage }.Show();
+        stage.Show(doc);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        stage.Tick(16);
+        Assert.Equal(1, stage.Lines[stage.Active].SungShare, 3);
+        Assert.Equal(0, stage.Lines[stage.Active + 1].SungShare, 3);
+        // Word by word, a line is part sung part way through.
+        var (_, words, _) = Open(76_800);
+        words.Tick(16);
+        Assert.InRange(words.Lines[words.Active].SungShare, 0.2, 0.8);
+    }
+
+    [Avalonia.Headless.XUnit.AvaloniaFact]
     public void PausedAndSettledTheStageStopsAskingForFrames()
     {
         var (_, stage, _) = Open(76_000, playing: false);
