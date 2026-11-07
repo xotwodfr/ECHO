@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,6 +15,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     const long ScrobbleMs = 4 * 60_000;
     const int SaveEveryMs = 15_000;
     const string Unreachable = "Can't reach the server.";
+    const int MaxQueueBytes = 60_000; // the web's; the server refuses bodies over 64 KB (http.ts BODY_LIMIT)
 
     readonly Api api;
     readonly Library library;
@@ -371,12 +373,22 @@ public sealed partial class Player : ObservableObject, IDisposable
         catch (Exception e) when (e is HttpRequestException or ApiException or TaskCanceledException or System.Text.Json.JsonException) { }
     }
 
+    /// The queue cut until it fits the server's 64 KB (queueSync.ts trimQueue): the far half of the
+    /// context at a time, then of Next up. Only what is saved is cut; this device keeps all of it.
+    static QueueState Fitted(QueueState q)
+    {
+        int Size() => JsonSerializer.SerializeToUtf8Bytes(q, Json.Options).Length;
+        while (Size() > MaxQueueBytes && q.Context.Count > 0) q = q with { Context = q.Context.Take(q.Context.Count / 2).ToList() };
+        while (Size() > MaxQueueBytes && q.NextUp.Count > 0) q = q with { NextUp = q.NextUp.Take(q.NextUp.Count / 2).ToList() };
+        return q;
+    }
+
     public async Task SaveNow()
     {
         if (!Sync) return;
         var body = new JsonObject
         {
-            ["queue"] = Queue.Now is null ? null : Json.ToNode(Queue.ToState()),
+            ["queue"] = Queue.Now is null ? null : Json.ToNode(Fitted(Queue.ToState())),
             ["positionMs"] = (long)PositionNow.TotalMilliseconds,
             ["baseUpdatedAt"] = queueBase,
         };

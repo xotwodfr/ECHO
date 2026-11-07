@@ -66,6 +66,25 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task ALongQueueIsTrimmedToFitTheServer()
+    {
+        // The server takes 64 KB at most: a whole library's queue is cut as the web cuts it (trimQueue).
+        var server = new QueueServer();
+        var api = new Api("https://echo.test", server);
+        using var player = new Player(api, new Library(api), () => new AudioOut(nullDevice: true));
+        var songs = QueueTests.Album(3000);
+        player.Show(new QueueState(Now: songs[100], Context: songs.Skip(101).ToList(), History: songs.Take(100).ToList(), ContextSource: Ctx), TimeSpan.Zero);
+
+        await player.SaveNow();
+
+        var saved = Json.From<QueueState>(server.Saved?["queue"]);
+        Assert.Equal("a100", saved?.Now?.Id);
+        Assert.Equal("a101", saved?.Context[0].Id);
+        Assert.Equal(20, saved?.History.Count);
+        Assert.Null(player.Notice);
+    }
+
+    [AvaloniaFact]
     public async Task AnOfflineServerKeepsTheSongPlaying()
     {
         var wav = Path.Combine(Path.GetTempPath(), $"echo-offline-{Guid.NewGuid():N}.wav");
@@ -84,6 +103,21 @@ public class PlayerTests
         {
             File.Delete(wav);
         }
+    }
+}
+
+/// The server's queue endpoint: refuses a body over 64 KB as ECHO does (http.ts BODY_LIMIT), else keeps it.
+sealed class QueueServer : HttpMessageHandler
+{
+    public System.Text.Json.Nodes.JsonNode? Saved { get; private set; }
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+    {
+        var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(token);
+        if (System.Text.Encoding.UTF8.GetByteCount(body) > 64 * 1024)
+            return new HttpResponseMessage((HttpStatusCode)413) { Content = new StringContent("""{"error":"too_large"}""") };
+        Saved = System.Text.Json.Nodes.JsonNode.Parse(body);
+        return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"updatedAt":5}""") };
     }
 }
 
