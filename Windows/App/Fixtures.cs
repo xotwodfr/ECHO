@@ -43,7 +43,7 @@ public sealed class Fixtures : HttpMessageHandler
         var a = new JsonObject
         {
             ["id"] = $"f{i + 1}", ["name"] = title, ["artist"] = artist, ["artistId"] = ArtistId(artist), ["year"] = year,
-            ["coverArt"] = $"f{i + 1}", ["songCount"] = SongTitles.Length,
+            ["coverArt"] = $"f{i + 1}", ["songCount"] = SongTitles.Length, ["genre"] = i % 3 == 0 ? "Synthpop" : i % 3 == 1 ? "Indie Rock" : "Electronic",
         };
         if (songs) a["song"] = new JsonArray(SongTitles.Select((_, k) => (JsonNode)Song(i, k)).ToArray());
         return a;

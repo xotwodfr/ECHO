@@ -255,31 +255,28 @@
     </Setter>
   </ControlTheme>
 
-  <!-- .cd-mediaitem-list-item: 60 px, radius 8; rgb(200 200 200 / 10%) and the 1 px ring on hover,
-       selected var(selected) with the ring, pressed var(selected-click). -->
+  <!-- Song rows, Apple Music's way: radius 6, every other one faintly lit, lighter on hover, a grey
+       highlight when selected. -->
   <ControlTheme x:Key="TrackRow" TargetType="ListBoxItem">
-    <Setter Property="Height" Value="60" />
     <Setter Property="Padding" Value="0" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="Template">
       <ControlTemplate>
-        <Border Name="Box" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="8">
+        <Border Name="Box" Background="Transparent" CornerRadius="6">
           <Border.Transitions><Transitions><BrushTransition Property="Background" Duration="0:0:0.12" /></Transitions></Border.Transitions>
           <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}"
                             HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" />
         </Border>
       </ControlTemplate>
     </Setter>
+    <Style Selector="^.odd /template/ Border#Box">
+      <Setter Property="Background" Value="#09FFFFFF" />
+    </Style>
     <Style Selector="^:pointerover /template/ Border#Box">
-      <Setter Property="Background" Value="#1AC8C8C8" />
-      <Setter Property="BorderBrush" Value="#29C8C8C8" />
+      <Setter Property="Background" Value="#17FFFFFF" />
     </Style>
     <Style Selector="^:selected /template/ Border#Box">
-      <Setter Property="Background" Value="#4D828282" />
-      <Setter Property="BorderBrush" Value="#29C8C8C8" />
-    </Style>
-    <Style Selector="^:pressed /template/ Border#Box">
-      <Setter Property="Background" Value="#4D505050" />
+      <Setter Property="Background" Value="#2EFFFFFF" />
     </Style>
   </ControlTheme>
 

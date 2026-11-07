@@ -97,7 +97,7 @@ public class CollectionPageTests
         ShellTests.Shot(w, "album");
         var page = Assert.IsType<CollectionPage>(w.Shell.Page);
         var texts = ShellTests.Texts(page).ToList();
-        foreach (var t in new[] { "Neon Tide", "Halcyon Drive", "Play", "Shuffle", "Afterglow", "Coda", "2024", "6 Songs, 22 minutes" })
+        foreach (var t in new[] { "Neon Tide", "Halcyon Drive", "INDIE ROCK · 2024", "Play", "Shuffle", "Afterglow", "Coda", "2024", "6 Songs, 22 minutes" })
             Assert.True(texts.Contains(t), $"missing \"{t}\" in [{string.Join(" | ", texts)}]");
         Assert.Equal(6, page.List!.ItemCount);
         page.List.SelectedIndex = 2;
@@ -115,7 +115,9 @@ public class CollectionPageTests
         ShellTests.Shot(w, "playlist");
         var page = Assert.IsType<CollectionPage>(w.Shell.Page);
         Assert.Equal(5, page.List!.ItemCount);
-        Assert.Contains("Halcyon Drive — Neon Tide", ShellTests.Texts(page));
+        var texts = ShellTests.Texts(page).ToList();
+        foreach (var t in new[] { "Song", "Artist", "Album", "Time", "Halcyon Drive", "Neon Tide", "5 SONGS · 17 MINUTES" })
+            Assert.True(texts.Contains(t), $"missing \"{t}\"");
     }
 }
 

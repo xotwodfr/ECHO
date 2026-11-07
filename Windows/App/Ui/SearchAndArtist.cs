@@ -17,7 +17,7 @@ public static class SongGrid
         var columns = new StackPanel { Orientation = Orientation.Horizontal };
         for (var i = 0; i < tracks.Count; i += 4)
         {
-            var list = new TrackList(session, nav, tracks, context, artwork: true) { Width = 350 };
+            var list = new TrackList(session, nav, tracks, context, Rows.Compact) { Width = 350 };
             list.ItemsSource = ((IEnumerable<TrackList.Row>)list.ItemsSource!).Skip(i).Take(4).ToList();
             columns.Children.Add(list);
         }

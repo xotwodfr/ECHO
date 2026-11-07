@@ -37,7 +37,7 @@ public sealed class CollectionPage : DockPanel
                 if (await session.Library.Album(route.Id!) is not { } a) Say("This album is not in your library any more.");
                 else Show(a.Title, a.Artist, a.ArtistId is null ? null : new Route("artist", a.ArtistId, a.Artist), null,
                     a.Tracks.FirstOrDefault()?.Cover ?? a.Cover, a.Tracks, new PlayContext("album", a.Id, a.Title), artwork: false,
-                    a.Year is { } y ? y.ToString() : null);
+                    a.Year is { } y ? y.ToString() : null, string.Join(" · ", new[] { a.Genre, a.Year?.ToString() }.OfType<string>()));
             }
             else if (route.Page == "mix")
             {
@@ -45,12 +45,12 @@ public sealed class CollectionPage : DockPanel
                 else
                 {
                     var songs = m.Tracks.Select(t => t.ToTrack()).ToList();
-                    Show(m.Title, m.Subtitle, null, null, songs.FirstOrDefault()?.Cover, songs, new PlayContext("mix", m.Id, m.Title), artwork: true, null);
+                    Show(m.Title, m.Subtitle, null, null, songs.FirstOrDefault()?.Cover, songs, new PlayContext("mix", m.Id, m.Title), artwork: true, null, null);
                 }
             }
             else if (await session.Library.Playlist(route.Id!) is not { } p) Say("This playlist is gone.");
             else Show(p.Playlist.Name, p.Playlist.Owner ?? "", null, p.Comment, p.Entries.FirstOrDefault()?.Cover ?? p.Playlist.Cover,
-                p.Entries, new PlayContext("playlist", p.Playlist.Id, p.Playlist.Name), artwork: true, null);
+                p.Entries, new PlayContext("playlist", p.Playlist.Id, p.Playlist.Name), artwork: true, null, null);
         }
         catch (ApiException e) when (e.SignedOut)
         {
@@ -66,9 +66,9 @@ public sealed class CollectionPage : DockPanel
     void Say(string text) => Children.Add(new TextBlock { Text = text, Margin = new Thickness(40, 32), Opacity = 0.7, FontSize = 14 });
 
     void Show(string name, string artistName, Route? artist, string? description, string? cover, IReadOnlyList<Track> tracks,
-        PlayContext context, bool artwork, string? date)
+        PlayContext context, bool artwork, string? date, string? meta)
     {
-        var list = List = new TrackList(session, nav, tracks, context, artwork);
+        var list = List = new TrackList(session, nav, tracks, context, artwork ? Rows.Table : Rows.Album);
 
         // ---- the header (.playlist-display) ----
         var art = new CoverImage(cover, 260, 600) { VerticalAlignment = VerticalAlignment.Center };
@@ -79,8 +79,13 @@ public sealed class CollectionPage : DockPanel
             VerticalAlignment = VerticalAlignment.Center,
             Child = art,
         };
-        var title = new TextBlock { Text = name, FontSize = 25.6, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 6, 6), TextTrimming = TextTrimming.CharacterEllipsis };
-        var by = new TextBlock { Text = artistName, FontSize = 20, Margin = new Thickness(0, 0, 6, 6), TextTrimming = TextTrimming.CharacterEllipsis };
+        // Apple Music's header: the name large, the artist in the page's colour, then a small capitals line.
+        var count = tracks.Count;
+        var minutes = (int)Math.Round(tracks.Sum(t => t.DurationMs) / 60_000.0);
+        meta ??= $"{count} {(count == 1 ? "song" : "songs")} · {Duration(minutes)}";
+        var title = new TextBlock { Text = name, FontSize = 28, FontWeight = FontWeight.Bold, Margin = new Thickness(0, 0, 6, 2), TextTrimming = TextTrimming.CharacterEllipsis };
+        var by = new TextBlock { Text = artistName, FontSize = 22, FontWeight = FontWeight.Medium, Foreground = Kit.Brush("Key"), Margin = new Thickness(0, 0, 6, 6), TextTrimming = TextTrimming.CharacterEllipsis };
+        var caps = new TextBlock { Text = meta.ToUpperInvariant(), FontSize = 12, FontWeight = FontWeight.SemiBold, Opacity = 0.6, Margin = new Thickness(0, 0, 0, 8), IsVisible = meta.Length > 0 };
         if (artist is not null)
         {
             by.Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand);
@@ -102,7 +107,7 @@ public sealed class CollectionPage : DockPanel
         {
             VerticalAlignment = VerticalAlignment.Bottom,
             Margin = new Thickness(24, 0, 0, 0),
-            Children = { title, by, desc, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4, Margin = new Thickness(0, 6, 0, 0), Children = { play, shuffle } } },
+            Children = { title, by, caps, desc, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 0), Children = { play, shuffle } } },
         };
 
         var search = new TextBox { Classes = { "search" }, Width = 225, PlaceholderText = "Search..." };
@@ -140,16 +145,18 @@ public sealed class CollectionPage : DockPanel
         };
         SetDock(header, Dock.Top);
         Children.Add(header);
-        _ = Tint(cover, header, play, shuffle);
+        _ = Tint(cover, header, play, shuffle, by);
 
         // ---- the songs (.playlist-body: var(--color3), 16 px / 40 px in) and the footer ----
-        var count = tracks.Count;
-        var minutes = (int)Math.Round(tracks.Sum(t => t.DurationMs) / 60_000.0);
-        var footer = new StackPanel { Margin = new Thickness(6, 12, 0, 0) };
-        if (date is not null) footer.Children.Add(Kit.Text(date, 14.4, opacity: 0.7));
-        footer.Children.Add(Kit.Text($"{count} {(count == 1 ? "Song" : "Songs")}, {Duration(minutes)}", 14.4, opacity: 0.7));
-        foreach (var t in footer.Children) t.Margin = new Thickness(6);
-        var scroll = new ScrollViewer { Content = new StackPanel { Margin = new Thickness(40, 16), Children = { list, footer } } };
+        // Apple's footer: the year, then the count and length, small and grey.
+        var footer = new StackPanel { Margin = new Thickness(4, 16, 0, 0), Spacing = 2 };
+        if (date is not null) footer.Children.Add(Kit.Text(date, 13, opacity: 0.55));
+        footer.Children.Add(Kit.Text($"{count} {(count == 1 ? "Song" : "Songs")}, {Duration(minutes)}", 13, opacity: 0.55));
+        var body = new StackPanel { Margin = new Thickness(40, 16) };
+        if (artwork) body.Children.Add(TrackList.Header(Rows.Table));
+        body.Children.Add(list);
+        body.Children.Add(footer);
+        var scroll = new ScrollViewer { Content = body };
         scroll.ScrollChanged += (_, _) =>
         {
             var compact = scroll.Offset.Y > 0;
@@ -163,16 +170,17 @@ public sealed class CollectionPage : DockPanel
         {
             var q = search.Text?.Trim() ?? "";
             var shown = q.Length == 0 ? tracks : tracks.Where(t => t.Title.Contains(q, StringComparison.OrdinalIgnoreCase) || t.Artist.Contains(q, StringComparison.OrdinalIgnoreCase)).ToList();
-            list = List = new TrackList(session, nav, shown, context, artwork);
-            ((StackPanel)scroll.Content!).Children[0] = list;
+            list = List = new TrackList(session, nav, shown, context, artwork ? Rows.Table : Rows.Album);
+            body.Children[artwork ? 1 : 0] = list;
         };
     }
 
     /// Cider 4 colours an album's page with its cover: the header glows with the key colour and Play and
     /// Shuffle wear it (as md-btn-primary wears Cider's red, at 65 %).
-    async Task Tint(string? cover, Border header, Button play, Button shuffle)
+    async Task Tint(string? cover, Border header, Button play, Button shuffle, TextBlock by)
     {
         if (await session.Covers.KeyColor(cover) is not { } key) return;
+        by.Foreground = new SolidColorBrush(key);
         header.Background = new LinearGradientBrush
         {
             StartPoint = new RelativePoint(0, 0, RelativeUnit.Relative),

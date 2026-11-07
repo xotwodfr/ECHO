@@ -46,7 +46,7 @@ public sealed class HomePage : ScrollViewer
         var recent = new StackPanel();
         foreach (var c in played.Take(6)) recent.Children.Add(ContextRow(c));
         if (played.Count == 0) recent.Children.Add(Blocks.Message("What you play shows up here."));
-        var favorites = new TrackList(session, nav, starred.Tracks.Take(6).ToList(), new PlayContext("favorites", null, "Your Favorites"), artwork: true);
+        var favorites = new TrackList(session, nav, starred.Tracks.Take(6).ToList(), new PlayContext("favorites", null, "Your Favorites"), Rows.Compact);
         var columns = new Grid { ColumnDefinitions = new ColumnDefinitions("*,32,*") };
         columns.Children.Add(Section("Recently Played", recent, null));
         columns.Children.Add(new Border

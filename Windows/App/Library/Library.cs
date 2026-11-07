@@ -43,7 +43,7 @@ public sealed partial class Library(Api api)
     sealed record SubSong(string Id, string Title, string? Artist, string? ArtistId, string? Album, string? AlbumId,
         string? CoverArt, long? Duration, string? ContentType, string? Suffix, JsonElement? Isrc, ReplayGain? ReplayGain);
 
-    sealed record SubAlbum(string Id, string Name, string? Artist, string? ArtistId, int? Year, string? CoverArt, List<SubSong>? Song);
+    sealed record SubAlbum(string Id, string Name, string? Artist, string? ArtistId, int? Year, string? CoverArt, List<SubSong>? Song, string? Genre = null);
 
     sealed record SubArtist(string Id, string Name, string? CoverArt);
 
@@ -70,7 +70,7 @@ public sealed partial class Library(Api api)
 
     static ArtistCard ArtistOf(SubArtist a) => new(a.Id, a.Name, Cover(a.CoverArt ?? $"ar-{a.Id}"));
 
-    static Album AlbumOf(SubAlbum a) => new(a.Id, a.Name, a.Artist ?? "", a.ArtistId, a.Year, Cover(a.CoverArt))
+    static Album AlbumOf(SubAlbum a) => new(a.Id, a.Name, a.Artist ?? "", a.ArtistId, a.Year, Cover(a.CoverArt), a.Genre)
     {
         Tracks = (a.Song ?? []).Select(s => TrackOf(s, a)).ToList(),
     };

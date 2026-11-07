@@ -301,7 +301,7 @@ public sealed class SongsPage : DockPanel
         var q = search.Text?.Trim() ?? "";
         var list = q.Length == 0 ? all.ToList() : all.Where(t => t.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase)
             || t.Artist.Contains(q, StringComparison.CurrentCultureIgnoreCase) || t.Album.Title.Contains(q, StringComparison.CurrentCultureIgnoreCase)).ToList();
-        holder.Child = new TrackList(session, nav, list, new PlayContext("songs", null, "Songs"), artwork: true, virtualize: true);
+        holder.Child = new TrackList(session, nav, list, new PlayContext("songs", null, "Songs"), Rows.Table, virtualize: true);
     }
 }
 

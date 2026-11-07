@@ -31,7 +31,7 @@ public sealed record Track(
     [JsonIgnore] public string? Cover => Artwork is { Count: > 0 } a ? a[0].Url : null;
 }
 
-public sealed record Album(string Id, string Title, string Artist, string? ArtistId = null, int? Year = null, string? Cover = null)
+public sealed record Album(string Id, string Title, string Artist, string? ArtistId = null, int? Year = null, string? Cover = null, string? Genre = null)
 {
     public IReadOnlyList<Track> Tracks { get; init; } = [];
     public string Key => $"navidrome:{Id}";

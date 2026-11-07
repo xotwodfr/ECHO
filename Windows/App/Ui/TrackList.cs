@@ -10,23 +10,29 @@ using Echo.Playback;
 
 namespace Echo.Ui;
 
-/// Cider's `mediaitem-list-item` rows (views/components/mediaitem-list-item.ejs; elements.less
-/// .cd-mediaitem-list-item): 60 px, radius 8; the number (or Cider's playing bars) in 40 px, the 42 px
-/// artwork for lists of many albums, the title over "artist — album" at 0.8 em and 70 %, the duration in
-/// 60 px. A click selects (--selected), a double click plays from there, a right click offers the rest.
+/// How a list of songs is laid out: an album's (number, title, time), a playlist's or the library's table
+/// (artwork, title, artist, album, time, under a header), or compact (artwork, title over the artist and
+/// album, for grids of top songs).
+public enum Rows { Album, Table, Compact }
+
+/// Song rows, Cider's (mediaitem-list-item: select, double-click plays, right-click menu) drawn the way
+/// Apple Music draws its song tables: rows 44 px (52 with artwork), every other one faintly lit, radius 6;
+/// the number in grey turns into a play button under the pointer and into Cider's playing bars (the title
+/// in the key colour) for the song that plays; the time in grey; "…" at the end on hover.
 public sealed class TrackList : ListBox
 {
-    public sealed record Row(Track Track, int Number, bool Artwork);
+    public sealed record Row(Track Track, int Number, Rows Kind);
 
     readonly Session session;
     readonly IReadOnlyList<Track> tracks;
     readonly PlayContext context;
 
-    public TrackList(Session session, Nav nav, IReadOnlyList<Track> tracks, PlayContext context, bool artwork, bool virtualize = false)
+    public TrackList(Session session, Nav nav, IReadOnlyList<Track> tracks, PlayContext context, Rows kind, bool virtualize = false)
     {
         this.session = session;
         this.tracks = tracks;
         this.context = context;
+        Kind = kind;
         Theme = Kit.Res<ControlTheme>("PlainList");
         ItemContainerTheme = Kit.Res<ControlTheme>("TrackRow");
         SelectionMode = SelectionMode.Single;
@@ -36,7 +42,8 @@ public sealed class TrackList : ListBox
             ScrollViewer.SetVerticalScrollBarVisibility(this, Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled);
         }
         ItemTemplate = new FuncDataTemplate<Row>((row, _) => row is null ? null : RowView(row, nav));
-        ItemsSource = tracks.Select((t, i) => new Row(t, i + 1, artwork)).ToList();
+        ItemsSource = tracks.Select((t, i) => new Row(t, i + 1, kind)).ToList();
+        ContainerPrepared += (_, e) => e.Container.Classes.Set("odd", e.Index % 2 == 1);
         DoubleTapped += (_, e) =>
         {
             if (SelectedItem is Row row) _ = session.Player.PlayList(tracks, row.Number - 1, context);
@@ -48,6 +55,8 @@ public sealed class TrackList : ListBox
         this.WhileShown(() => session.Player.PropertyChanged += follow, () => session.Player.PropertyChanged -= follow);
     }
 
+    public Rows Kind { get; }
+
     /// Plays the list from `index` (the page's Play, Shuffle).
     public Task Play(int index = 0) => session.Player.PlayList(tracks, index, context);
 
@@ -56,50 +65,139 @@ public sealed class TrackList : ListBox
         foreach (var bars in this.GetVisualDescendants().OfType<PlayingBars>()) bars.Refresh();
     }
 
+    static string Columns(Rows kind) => kind switch
+    {
+        Rows.Album => "36,*,60,36",
+        Rows.Table => "36,52,3*,2*,2*,60,36",
+        _ => "52,*,36",
+    };
+
+    /// The table's header (Apple's "Song  Artist  Album  Time"), aligned with its rows.
+    public static Control Header(Rows kind)
+    {
+        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(Columns(kind)), Height = 28, Margin = new Thickness(0, 0, 0, 4) };
+        void Add(string text, int column, bool right = false)
+        {
+            var t = Kit.Text(text, 12, FontWeight.SemiBold, 0.5);
+            if (right) t.HorizontalAlignment = HorizontalAlignment.Center;
+            grid.Children.Add(new Border { [Grid.ColumnProperty] = column, Child = t });
+        }
+        if (kind == Rows.Table)
+        {
+            Add("Song", 2);
+            Add("Artist", 3);
+            Add("Album", 4);
+            Add("Time", 5, right: true);
+        }
+        return new Border { BorderBrush = Kit.Brush("ChromeLine"), BorderThickness = new Thickness(0, 0, 0, 1), Child = grid };
+    }
+
     Control RowView(Row row, Nav nav)
     {
         var t = row.Track;
-        var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(row.Artwork ? "40,66,*,60" : "40,*,60"), Background = Brushes.Transparent };
-        var number = Kit.Text(row.Number.ToString(), 14);
-        number.HorizontalAlignment = HorizontalAlignment.Center;
-        var bars = new PlayingBars(session.Player, t.Id) { HorizontalAlignment = HorizontalAlignment.Center };
-        grid.Children.Add(new Panel { Margin = new Thickness(11, 0, 0, 0), Children = { number, bars } });
-        bars.Shown += shown => number.IsVisible = !shown;
-
-        var column = 1;
-        if (row.Artwork)
+        var kind = row.Kind;
+        var grid = new Grid
         {
-            var art = new CoverImage(t.Cover, 42, 96, 6) { Margin = new Thickness(12) };
-            var overlay = new Border
+            ColumnDefinitions = new ColumnDefinitions(Columns(kind)),
+            Background = Brushes.Transparent,
+            Height = kind == Rows.Album ? 44 : kind == Rows.Table ? 52 : 56,
+        };
+        var title = Kit.Text(t.Title, 14);
+        var more = Kit.IconButton(Icons.More, 30, 30, 18, "More", () => { }, 1);
+        more.Foreground = Kit.Brush("Key");
+        more.Opacity = 0;
+        more.ContextMenu = Menu(t, nav);
+        more.Click += (_, _) => more.ContextMenu.Open(more);
+        grid.ContextMenu = more.ContextMenu;
+
+        // The number column: grey number, the play button under the pointer, the bars when it plays.
+        PlayingBars? bars = null;
+        if (kind != Rows.Compact)
+        {
+            var number = Kit.Text(row.Number.ToString(), 14, opacity: 0.5);
+            number.HorizontalAlignment = HorizontalAlignment.Center;
+            var play = new Glyph(Icons.PlaySmall, 11) { IsVisible = false, Cursor = new Cursor(StandardCursorType.Hand) };
+            bars = new PlayingBars(session.Player, t.Id) { HorizontalAlignment = HorizontalAlignment.Center };
+            bars.Shown += shown =>
             {
-                Background = new SolidColorBrush(Color.Parse("#80000000")),
-                CornerRadius = new CornerRadius(6),
-                Margin = new Thickness(12),
-                Opacity = 0,
-                Child = new Glyph(Icons.PlayFeather, 14) { Foreground = Brushes.White },
+                number.IsVisible = !shown && !play.IsVisible;
+                title.Foreground = shown ? Kit.Brush("Key") : Kit.Brush("Text");
             };
-            grid.PointerEntered += (_, _) => overlay.Opacity = 1;
-            grid.PointerExited += (_, _) => overlay.Opacity = 0;
-            overlay.PointerPressed += (_, e) =>
+            play.PointerPressed += (_, e) =>
             {
                 _ = session.Player.PlayList(tracks, row.Number - 1, context);
                 e.Handled = true;
             };
-            grid.Children.Add(new Panel { [Grid.ColumnProperty] = column++, Children = { art, overlay } });
+            grid.PointerEntered += (_, _) =>
+            {
+                play.IsVisible = true;
+                number.IsVisible = false;
+                bars.Opacity = 0;
+                more.Opacity = 1;
+            };
+            grid.PointerExited += (_, _) =>
+            {
+                play.IsVisible = false;
+                bars.Opacity = 1;
+                bars.Refresh();
+                more.Opacity = 0;
+            };
+            grid.Children.Add(new Panel { Children = { number, play, bars } });
+        }
+        else
+        {
+            grid.PointerEntered += (_, _) => more.Opacity = 1;
+            grid.PointerExited += (_, _) => more.Opacity = 0;
         }
 
-        var subtitle = Kit.Text($"{t.Artist}{(t.Album.Title.Length > 0 ? " — " + t.Album.Title : "")}", 11.2, opacity: 0.7);
-        grid.Children.Add(new StackPanel
+        var column = kind == Rows.Compact ? 0 : 1;
+        if (kind != Rows.Album)
         {
-            [Grid.ColumnProperty] = column++,
-            VerticalAlignment = VerticalAlignment.Center,
-            Margin = new Thickness(row.Artwork ? 0 : 16, 0, 0, 0),
-            Children = { Kit.Text(t.Title, 14), subtitle },
-        });
-        var duration = Kit.Text(Kit.Time(t.DurationMs), 14);
-        duration.HorizontalAlignment = HorizontalAlignment.Center;
-        grid.Children.Add(new Border { [Grid.ColumnProperty] = column, Child = duration });
-        grid.ContextMenu = Menu(t, nav);
+            var art = new CoverImage(t.Cover, 40, 96, 4) { Margin = new Thickness(6, 0) };
+            grid.Children.Add(new Border { [Grid.ColumnProperty] = column++, Child = art });
+        }
+        Control Link(string? text, Route? to)
+        {
+            var link = Kit.Text(text, 14, opacity: 0.6);
+            link.Margin = new Thickness(0, 0, 12, 0);
+            if (to is not null)
+            {
+                link.Cursor = new Cursor(StandardCursorType.Hand);
+                link.PointerPressed += (_, e) =>
+                {
+                    nav.Open(to);
+                    e.Handled = true;
+                };
+            }
+            return link;
+        }
+        var artist = t.Artists.FirstOrDefault()?.Id is { } aid ? new Route("artist", aid, t.Artist) : null;
+        var album = t.Album.Id is { } alid ? new Route("album", alid, t.Album.Title) : null;
+        title.Margin = new Thickness(kind == Rows.Album ? 4 : 6, 0, 12, 0);
+        if (kind == Rows.Compact)
+        {
+            grid.Children.Add(new StackPanel
+            {
+                [Grid.ColumnProperty] = column++,
+                VerticalAlignment = VerticalAlignment.Center,
+                Children = { title, Kit.Text($"{t.Artist} · {t.Album.Title}", 12, opacity: 0.6) },
+            });
+        }
+        else
+        {
+            grid.Children.Add(new Border { [Grid.ColumnProperty] = column++, Child = title });
+            if (kind == Rows.Table)
+            {
+                grid.Children.Add(new Border { [Grid.ColumnProperty] = column++, Child = Link(t.Artist, artist) });
+                grid.Children.Add(new Border { [Grid.ColumnProperty] = column++, Child = Link(t.Album.Title, album) });
+            }
+            var duration = Kit.Text(Kit.Time(t.DurationMs), 14, opacity: 0.6);
+            duration.HorizontalAlignment = HorizontalAlignment.Center;
+            grid.Children.Add(new Border { [Grid.ColumnProperty] = column++, Child = duration });
+        }
+        more.HorizontalAlignment = HorizontalAlignment.Center;
+        more.VerticalAlignment = VerticalAlignment.Center;
+        grid.Children.Add(new Border { [Grid.ColumnProperty] = column, Child = more });
         return grid;
     }
 
