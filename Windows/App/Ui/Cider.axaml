@@ -358,4 +358,36 @@
       <Setter Property="Opacity" Value="0.85" />
     </Style>
   </ControlTheme>
+
+  <!-- Spicy Lyrics' full-screen progress: 4 px, white over rgba(255 255 255 / .2), round ends, a white thumb on hover. -->
+  <ControlTheme x:Key="SpicyProgress" TargetType="Slider">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Grid Height="14" Background="Transparent">
+          <Border Height="4" CornerRadius="2" Background="#33FFFFFF" VerticalAlignment="Center" />
+          <Track Name="PART_Track" Orientation="Horizontal" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}"
+                 Value="{TemplateBinding Value, Mode=TwoWay}">
+            <Track.DecreaseButton>
+              <RepeatButton Name="PART_DecreaseButton" Theme="{StaticResource SliderBar}" Background="#E6FFFFFF" Height="4" CornerRadius="2,0,0,2" />
+            </Track.DecreaseButton>
+            <Track.IncreaseButton>
+              <RepeatButton Name="PART_IncreaseButton" Theme="{StaticResource SliderBar}" Background="Transparent" Height="4" />
+            </Track.IncreaseButton>
+            <Thumb Name="Knob" Width="12" Height="12" Opacity="0">
+              <Thumb.Template>
+                <ControlTemplate>
+                  <Ellipse Fill="White" />
+                </ControlTemplate>
+              </Thumb.Template>
+            </Thumb>
+          </Track>
+        </Grid>
+      </ControlTemplate>
+    </Setter>
+    <Style Selector="^:pointerover /template/ Thumb#Knob">
+      <Setter Property="Opacity" Value="1" />
+    </Style>
+  </ControlTheme>
 </ResourceDictionary>

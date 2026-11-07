@@ -247,8 +247,9 @@ public class ModeTests
         var shell = w.Shell!;
         w.Fullscreen(shell);
         await ShellTests.Settle();
-        ShellTests.Shot(w, "fullscreen");
         var view = Assert.IsType<ImmersiveView>(w.Content);
+        foreach (var s in view.GetVisualDescendants().OfType<Echo.Stage.LyricsStage>()) for (var i = 0; i < 60; i++) s.Tick(16);
+        ShellTests.Shot(w, "fullscreen");
         var texts = ShellTests.Texts(view).ToList();
         Assert.Contains("Afterglow", texts);
         var stage = view.GetVisualDescendants().OfType<Echo.Stage.LyricsStage>().Single();

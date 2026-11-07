@@ -15,19 +15,19 @@ public sealed class SongLyrics : Panel
     readonly Session session;
     readonly TextBlock none;
 
-    public SongLyrics(Session session, double fontSize)
+    /// The lyrics at Spicy Lyrics' size for the room they have.
+    public SongLyrics(Session session)
     {
         this.session = session;
         var player = session.Player;
         Stage = new LyricsStage(
             () => player.PositionNow.TotalMilliseconds + Offset,
             () => player.Playing,
-            ms => player.Seek(TimeSpan.FromMilliseconds(Math.Max(0, ms - Offset))),
-            fontSize);
+            ms => player.Seek(TimeSpan.FromMilliseconds(Math.Max(0, ms - Offset))));
         none = new TextBlock
         {
             Text = "No Lyrics",
-            FontSize = fontSize,
+            FontSize = 29.6,
             FontWeight = FontWeight.Bold,
             Opacity = 0.6,
             HorizontalAlignment = HorizontalAlignment.Center,

@@ -7,13 +7,14 @@ using Echo.Playback;
 
 namespace Echo.Ui;
 
-/// Apple Music's moving background behind the lyrics (AMLL's mesh, Cider 4's immersive): the cover,
-/// blurred once and darkened, three copies turning slowly at different speeds around different points,
-/// so the colours drift. Only transforms move each frame (no live blur), and only while the song plays.
+/// The flowing background behind the full-screen lyrics (Spicy Lyrics' dynamic background: the cover
+/// warped and blurred, `saturate(2.5) brightness(0.65)`): the cover blurred once, three copies turning
+/// slowly at different speeds around different points, so the colours drift. Only transforms move each
+/// frame (no live blur), and only while the song plays.
 public sealed class FluidBackground : Control
 {
     static readonly Dictionary<string, Bitmap?> baked = [];
-    static readonly IBrush Shade = new SolidColorBrush(Color.FromArgb(110, 0, 0, 0));
+    static readonly IBrush Shade = new SolidColorBrush(Color.FromArgb(40, 0, 0, 0));
     readonly Session session;
     string? url;
     Bitmap? image;
@@ -44,7 +45,7 @@ public sealed class FluidBackground : Control
         if (!baked.TryGetValue(which, out var done))
         {
             var cover = await s.Covers.Get(which, 300);
-            done = baked[which] = cover is null ? null : ArtworkMaterial.Bake(cover, sigma: 6, saturate: 1.6f, brightness: 0.8f);
+            done = baked[which] = cover is null ? null : ArtworkMaterial.Bake(cover, sigma: 6, saturate: 2.5f, brightness: 0.65f);
         }
         if (which != url) return;
         image = done;

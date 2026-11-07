@@ -64,81 +64,85 @@ public sealed class PlayerControls : StackPanel
     }
 }
 
-/// Cider 4's immersive view (cider.sh; its plugin kit's CustomImmersiveLayout), in place of Cider 1's
-/// fullscreen view: the window full screen over the cover's fluid background, the artwork on the left
-/// (80 % of its half, at most 60 % of the height, radius 10, Cider's large shadow), the lyrics on the
-/// right in a rounded card, and Cider's floating player along the bottom, which hides (with the
-/// pointer) after 3 s without a move while the song plays. A click on the artwork hides the lyrics and
-/// centres it; Escape goes back.
+/// The full-screen lyrics as Spicy Lyrics lays them out (its Fullscreen.ts and CanvasImmersive.css):
+/// the cover's flowing background; on the left the cover (a third of the width, at most 55 % of the
+/// height, radius 10, a deep shadow) with the progress bar, its times either side, the title and the
+/// artist centred under it, and the controls appearing there on a move (gone, with the pointer, after
+/// 3 s still while the song plays); on the right the lyrics, no card. Escape or the exit button goes back.
 public sealed class ImmersiveView : Grid
 {
     readonly Session session;
-    readonly Border pill;
+    readonly StackPanel controls;
     readonly Avalonia.Threading.DispatcherTimer idle = new() { Interval = TimeSpan.FromSeconds(3) };
-    bool lyricsShown = true;
 
     public event Action? Closed;
 
     public ImmersiveView(Session session, Nav nav)
     {
         this.session = session;
+        var player = session.Player;
         Background = Brushes.Black;
         Focusable = true;
         Children.Add(new FluidBackground(session));
 
-        var art = new CoverImage(session.Player.Track?.Cover, 400, 1200, 10) { Cursor = new Cursor(StandardCursorType.Hand) };
-        var artBox = new Border
+        var art = new CoverImage(player.Track?.Cover, 400, 1200, 10);
+        var artBox = new Border { CornerRadius = new CornerRadius(10), BoxShadow = BoxShadows.Parse("0 12 48 0 #99000000"), Child = art };
+        var elapsed = Kit.Text(null, 12.8, FontWeight.Medium, 0.8);
+        var total = Kit.Text(null, 12.8, FontWeight.Medium, 0.8);
+        var seek = new SeekBar(player, "SpicyProgress") { Margin = new Thickness(10, 0) };
+        var bar = new DockPanel { Margin = new Thickness(0, 18, 0, 0) };
+        DockPanel.SetDock(elapsed, Dock.Left);
+        DockPanel.SetDock(total, Dock.Right);
+        bar.Children.Add(elapsed);
+        bar.Children.Add(total);
+        bar.Children.Add(seek);
+        var title = Kit.Text(null, 22, FontWeight.Bold);
+        var artist = Kit.Text(null, 16, opacity: 0.7);
+        title.HorizontalAlignment = artist.HorizontalAlignment = HorizontalAlignment.Center;
+        title.Margin = new Thickness(0, 14, 0, 2);
+        var leave = Kit.IconButton(new Icon(24, 24, "", "M 4,14 l 6,0 l 0,6 M 20,10 l -6,0 l 0,-6 M 14,10 l 7,-7 M 3,21 l 7,-7", 2), 36, 32, 16, "Exit Full Screen", () => Closed?.Invoke());
+        controls = new StackPanel
         {
-            CornerRadius = new CornerRadius(10),
-            BoxShadow = BoxShadows.Parse("0 8 40 0 #8C000000"),
+            Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Center,
-            Child = art,
+            Margin = new Thickness(0, 12, 0, 0),
+            Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(300) }],
+            Children = { new Transport(player), leave },
         };
-        PropertyChangedEventHandler track = (_, e) =>
+        var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = HorizontalAlignment.Center, Children = { artBox, bar, title, artist, controls } };
+        void Show()
         {
-            if (e.PropertyName == nameof(Player.Track)) art.Url = session.Player.Track?.Cover;
-        };
-        this.WhileShown(() => session.Player.PropertyChanged += track, () => session.Player.PropertyChanged -= track);
-
-        Lyrics = new SongLyrics(session, 40);
-        var card = new Border
-        {
-            CornerRadius = new CornerRadius(20),
-            Background = new SolidColorBrush(Color.FromArgb(70, 0, 0, 0)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(26, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            ClipToBounds = true,
-            Padding = new Thickness(8, 24),
-            Child = Lyrics,
-        };
-        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), Margin = new Thickness(0, 0, 0, 96) };
-        row.Children.Add(artBox);
-        var right = new Border { [Grid.ColumnProperty] = 1, Margin = new Thickness(0, 56, 56, 0), Child = card };
-        row.Children.Add(right);
-        Children.Add(row);
-        art.PointerPressed += (_, _) =>
-        {
-            lyricsShown = !lyricsShown;
-            right.IsVisible = lyricsShown;
-            Grid.SetColumnSpan(artBox, lyricsShown ? 1 : 2);
-            Fit();
-        };
-
-        pill = Pill();
-        Children.Add(pill);
-        void Fit()
-        {
-            var side = Math.Min((lyricsShown ? Bounds.Width / 2 : Bounds.Width) * 0.8, Bounds.Height * 0.6);
-            art.Width = art.Height = Math.Max(120, side);
+            art.Url = player.Track?.Cover;
+            title.Text = player.Track?.Title;
+            artist.Text = player.Track?.Artist;
+            elapsed.Text = player.Track is null ? "" : Kit.Time(player.Position);
+            total.Text = player.Track is null ? "" : Kit.Time(player.Duration);
+            seek.Follow();
         }
-        SizeChanged += (_, _) => Fit();
+        PropertyChangedEventHandler follow = (_, _) => Show();
+        this.WhileShown(() =>
+        {
+            player.PropertyChanged += follow;
+            Show();
+        }, () => player.PropertyChanged -= follow);
+
+        Lyrics = new SongLyrics(session);
+        var row = new Grid { ColumnDefinitions = new ColumnDefinitions("44*,56*") };
+        row.Children.Add(left);
+        row.Children.Add(new Border { [Grid.ColumnProperty] = 1, Margin = new Thickness(0, 0, 48, 0), Child = Lyrics });
+        Children.Add(row);
+        SizeChanged += (_, e) =>
+        {
+            var side = Math.Min(e.NewSize.Width * 0.33, e.NewSize.Height * 0.55);
+            art.Width = art.Height = Math.Max(160, side);
+            bar.Width = title.MaxWidth = artist.MaxWidth = art.Width;
+        };
 
         idle.Tick += (_, _) =>
         {
             idle.Stop();
-            if (!session.Player.Playing || pill.IsPointerOver) return;
-            pill.Opacity = 0;
+            if (!player.Playing || controls.IsPointerOver) return;
+            controls.Opacity = 0;
             Cursor = new Cursor(StandardCursorType.None);
         };
         PointerMoved += (_, _) => Wake();
@@ -150,77 +154,10 @@ public sealed class ImmersiveView : Grid
 
     void Wake()
     {
-        pill.Opacity = 1;
+        controls.Opacity = 1;
         Cursor = Cursor.Default;
         idle.Stop();
         idle.Start();
-    }
-
-    /// Cider 4's floating player (cider-mojave-player): the Transport, the time, the song over its
-    /// progress, the volume, and leaving full screen; dark glass in Cider, here its colour, opaque enough.
-    Border Pill()
-    {
-        var player = session.Player;
-        var time = Kit.Text(null, 12.8);
-        time.Opacity = 0.8;
-        time.Margin = new Thickness(10, 0);
-        var title = Kit.Text(null, 13, FontWeight.SemiBold);
-        var by = Kit.Text(null, 12, opacity: 0.75);
-        var seek = new SeekBar(player) { Height = 10, Margin = new Thickness(0, 2, 0, 0) };
-        void Show()
-        {
-            title.Text = player.Track?.Title;
-            by.Text = player.Track is { } t ? $"{t.Album.Title} — {t.Artist}" : null;
-            time.Text = player.Track is null ? "" : $"{Kit.Time(player.Position)} / -{Kit.Time(player.Duration - player.Position)}";
-            seek.Follow();
-        }
-        PropertyChangedEventHandler follow = (_, _) => Show();
-        var info = new Border
-        {
-            Width = 380,
-            Padding = new Thickness(10, 4),
-            CornerRadius = new CornerRadius(8),
-            Background = new SolidColorBrush(Color.FromArgb(18, 255, 255, 255)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(26, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            Child = new StackPanel { Children = { title, by, seek } },
-        };
-        var volume = new Slider { Theme = Kit.Res<ControlTheme>("CiderVolume"), Minimum = 0, Maximum = 1, Width = 90, Value = player.Volume, VerticalAlignment = VerticalAlignment.Center };
-        volume.PropertyChanged += (_, e) =>
-        {
-            if (e.Property == Avalonia.Controls.Primitives.RangeBase.ValueProperty) player.Volume = (float)volume.Value;
-        };
-        var leave = Kit.IconButton(new Icon(24, 24, "", "M 4,14 l 6,0 l 0,6 M 20,10 l -6,0 l 0,-6 M 14,10 l 7,-7 M 3,21 l 7,-7", 2), 36, 32, 16, "Exit Full Screen", () => Closed?.Invoke());
-        var row = new StackPanel
-        {
-            Orientation = Orientation.Horizontal,
-            VerticalAlignment = VerticalAlignment.Center,
-            Children =
-            {
-                new Transport(player), time, info,
-                new Glyph(Icons.Volume2, 16) { Margin = new Thickness(16, 0, 6, 0), Opacity = 0.7 }, volume, leave,
-            },
-        };
-        var box = new Border
-        {
-            HorizontalAlignment = HorizontalAlignment.Center,
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(0, 0, 0, 24),
-            Padding = new Thickness(14, 6),
-            CornerRadius = new CornerRadius(16),
-            Background = new SolidColorBrush(Color.FromArgb(200, 22, 22, 22)),
-            BorderBrush = new SolidColorBrush(Color.FromArgb(30, 255, 255, 255)),
-            BorderThickness = new Thickness(1),
-            BoxShadow = BoxShadows.Parse("0 8 40 0 #8C000000"),
-            Transitions = [new DoubleTransition { Property = OpacityProperty, Duration = TimeSpan.FromMilliseconds(400) }],
-            Child = row,
-        };
-        box.WhileShown(() =>
-        {
-            player.PropertyChanged += follow;
-            Show();
-        }, () => player.PropertyChanged -= follow);
-        return box;
     }
 
     protected override void OnKeyDown(KeyEventArgs e)

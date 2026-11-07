@@ -51,17 +51,16 @@ public class TimelineTests
         Assert.Equal(0, Timeline.Fill(w, 500));
         Assert.Equal(0.5, Timeline.Fill(w, 1_500));
         Assert.Equal(1, Timeline.Fill(w, 2_500));
-        Assert.True(Timeline.Emphasised(w));
-        Assert.False(Timeline.Emphasised(w with { End = 1_400 })); // too short
-        Assert.False(Timeline.Emphasised(new LyricWord("a", 0, 2_000))); // one letter
     }
 
     [Fact]
-    public void TheStaggerShortensStepByStep()
+    public void SpicysCurvesPassThroughTheirPoints()
     {
-        Assert.Equal(0, Timeline.StaggerMs(0));
-        Assert.Equal(50, Timeline.StaggerMs(1));
-        Assert.Equal(50 + 50 / 1.05, Timeline.StaggerMs(2), 6);
+        var scale = new Spline((0, 0.95), (0.7, 1.0505), (1, 1));
+        Assert.Equal(0.95, scale.At(-1));
+        Assert.Equal(1.0505, scale.At(0.7), 9);
+        Assert.Equal(1, scale.At(2));
+        Assert.True(scale.At(0.5) > 1); // on its way up past full size
     }
 
     [Fact]
@@ -87,7 +86,7 @@ public class LyricsStageTests
     static (Avalonia.Controls.Window W, LyricsStage Stage, Func<double, double> Set) Open(double startMs)
     {
         var t = startMs;
-        var stage = new LyricsStage(() => t, () => true, ms => t = ms, 40);
+        var stage = new LyricsStage(() => t, () => true, ms => t = ms);
         var w = new Avalonia.Controls.Window { Width = 800, Height = 600, Content = stage };
         w.Show();
         stage.Show(Fixtures.Lyrics);
@@ -95,22 +94,28 @@ public class LyricsStageTests
         return (w, stage, v => t = v);
     }
 
+    static double Middle(LyricsStage stage, int i) => stage.TopOf(i) + stage.Lines[i].Bounds.Height / 2;
+
     [Avalonia.Headless.XUnit.AvaloniaFact]
-    public void TheSungLineSitsAtAThirdOfTheHeightAndTheNextGlidesIntoPlace()
+    public void TheSungLineIsCentredAndTheColumnGlidesToTheNext()
     {
         var (w, stage, set) = Open(79_500);
         stage.Tick(16);
         var current = stage.Active;
         Assert.Equal("Every echo finds its way home", string.Join(" ", stage.Lines[current].Words));
-        Assert.Equal(600 * 0.35, stage.TopOf(current), 1);
-        var nextWasAt = stage.TopOf(current + 1);
+        Assert.Equal(300, Middle(stage, current), 1);
+        Assert.Equal(LineState.Sung, stage.Lines[current - 1].State);
+        Assert.Equal(LineState.NotSung, stage.Lines[current + 1].State);
+        var nextWasAt = Middle(stage, current + 1);
 
         set(80_050); // the next line begins (half a second on: playing, not a seek)
         stage.Tick(16);
         Assert.Equal(current + 1, stage.Active);
-        Assert.InRange(stage.TopOf(current + 1), 600 * 0.35 + 1, nextWasAt); // on its way, not there yet
-        for (var i = 0; i < 90; i++) stage.Tick(16);
-        Assert.Equal(600 * 0.35, stage.TopOf(current + 1), 1);
+        Assert.InRange(Middle(stage, current + 1), 301, nextWasAt); // on its way, not there yet
+        for (var i = 0; i < 120; i++) stage.Tick(16);
+        Assert.Equal(300, Middle(stage, current + 1), 1);
+        set(80_900);
+        for (var i = 0; i < 10; i++) stage.Tick(16);
         ShellTests.Shot(w, "lyrics-stage");
     }
 
@@ -122,7 +127,7 @@ public class LyricsStageTests
         set(66_500); // back to the first line
         stage.Tick(16);
         Assert.Equal("Streetlights hum a borrowed tune", string.Join(" ", stage.Lines[stage.Active].Words));
-        Assert.Equal(600 * 0.35, stage.TopOf(stage.Active), 1);
+        Assert.Equal(300, Middle(stage, stage.Active), 1);
     }
 
     [Avalonia.Headless.XUnit.AvaloniaFact]
@@ -142,7 +147,7 @@ public class LyricsStageTests
     public void PausedAndSettledTheStageStopsAskingForFrames()
     {
         var t = 76_000.0;
-        var stage = new LyricsStage(() => t, () => false, _ => { }, 40);
+        var stage = new LyricsStage(() => t, () => false, _ => { });
         new Avalonia.Controls.Window { Width = 800, Height = 600, Content = stage }.Show();
         stage.Show(Fixtures.Lyrics);
         Avalonia.Threading.Dispatcher.UIThread.RunJobs();

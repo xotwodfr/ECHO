@@ -33,12 +33,14 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   playlists, Create New. **Album / playlist / mix** pages, **artist** pages, **search**.
 - Playback through the queue: shuffle, repeat, volume, seek; scrobbles; the queue follows you across
   devices (`/me/queue`). The **drawer**: the queue (and history) and the lyrics.
-- **Lyrics** the Apple Music way (`App/Lyrics`, numbers from `docs/DESIGN_RESEARCH.md` §3.2): the sung
-  line at 35 % of the height, the others gliding after it on springs and blurred by distance, word-timed
-  lines lit word by word with each word lifting, held words swelling, background vocals, duets on the
-  right, breathing dots in breaks, click to seek.
-- Cider 4's **immersive view** (the artwork, the lyrics card, a floating player over the cover's slowly
-  turning colours) and Cider's **mini player**, from the artwork's popover.
+- **Lyrics** as Spicy Lyrics draws them (`App/Lyrics`; Spicy Lyrics, github.com/Spikerko/spicy-lyrics,
+  AGPL-3.0, its numbers ported, not its code): the sung line centred and the column gliding to it as
+  one; lines sung at 85 % white, lines to come at 50 %, blurred 1.25 px a line away; each word (or, held
+  a second or more, each letter) springs from 95 % past 105 % to full size, lifts and glows as it is
+  sung; background vocals, duets, interlude dots; click to seek.
+- The **full-screen lyrics** as Spicy Lyrics lays them out (the cover with the progress, title and
+  artist under it, the lyrics beside it, over the cover's flowing colours) and Cider's **mini player**,
+  from the artwork's popover.
 - Album pages take their cover's colour; pages and the drawer move in as Cider's do.
 - Where Apple Music does it better, its layout inside Cider's look: song tables (striped, columns,
   play on hover), the album header (artist in the page's colour, GENRE · YEAR), Home's shelves (Top

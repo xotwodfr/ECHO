@@ -67,7 +67,7 @@ public sealed class Drawer : Border
         Child = Panel switch
         {
             "queue" => new QueuePanel(session, nav),
-            "lyrics" => new Panel { Children = { new LyricsBackdrop(session), new SongLyrics(session, 26) { Margin = new Thickness(0, 12) } } },
+            "lyrics" => new Panel { Children = { new LyricsBackdrop(session), new SongLyrics(session) { Margin = new Thickness(0, 12) } } },
             _ => null,
         };
         Changed?.Invoke();

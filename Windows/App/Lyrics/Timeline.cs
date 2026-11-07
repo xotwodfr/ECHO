@@ -6,9 +6,9 @@ public sealed record Item(LyricLine? Line, double Start, double End)
     public bool Interlude => Line is null;
 }
 
-/// What is sung when (Apple Music's lyrics as AMLL and Spicy Lyrics measure them, DESIGN_RESEARCH.md
-/// §3.2): the column's items in order, with dots where the singing stops for 7 s or more (and before the
-/// first line, when it comes that late); which item holds the column at a time; how far a word is sung.
+/// What is sung when: the column's items in order, with dots where the singing stops for 7 s or more (and
+/// before the first line, when it comes that late); which item holds the column at a time; how far a
+/// word is sung.
 public sealed class Timeline
 {
     public const double InterludeMs = 7000;
@@ -50,17 +50,4 @@ public sealed class Timeline
     /// How much of a word is sung at `t`, 0–1.
     public static double Fill(LyricWord w, double t) =>
         w.End <= w.Start ? (t >= w.Start ? 1 : 0) : Math.Clamp((t - w.Start) / (w.End - w.Start), 0, 1);
-
-    /// A held word grows and lifts (≥ 1 s, 2–12 letters, as Spicy Lyrics and Beautiful Lyrics have it).
-    public static bool Emphasised(LyricWord w) =>
-        w.End - w.Start >= 1000 && w.Text.Count(char.IsLetter) is >= 2 and <= 12;
-
-    /// When a line `steps` away from the new current one starts moving: 50 ms per line, each step 5 %
-    /// shorter than the one before (AMLL).
-    public static double StaggerMs(int steps)
-    {
-        double total = 0, step = 50;
-        for (var k = 0; k < steps; k++, step /= 1.05) total += step;
-        return total;
-    }
 }
