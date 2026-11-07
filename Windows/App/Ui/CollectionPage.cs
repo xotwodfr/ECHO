@@ -8,7 +8,7 @@ namespace Echo.Ui;
 
 /// Cider's collection page for an album, a playlist or one of ECHO's mixes (views/pages/cider-playlist.ejs; pages.less
 /// .playlist-page): a 300 px header over the cover's artwork material — the 260 px artwork, the name
-/// (1.6 rem, 700), the artist (20 px), the description, Play and Shuffle, a search field and "…" — then
+/// (1.6 rem, 700), the artist (20 px), the description, Play, Shuffle and "…", a search field — then
 /// the songs on --color3, 40 px in, and the date and total time under them. Scrolling the songs shrinks
 /// the header to 200 px and the artwork to 128 px, as Cider's `plmin`. (Add to Library is Apple Music's.)
 public sealed class CollectionPage : DockPanel
@@ -103,36 +103,25 @@ public sealed class CollectionPage : DockPanel
             _ = list.Play(Random.Shared.Next(Math.Max(1, tracks.Count)));
         }, primary: true);
         play.MinWidth = shuffle.MinWidth = 100;
-        var info = new StackPanel
-        {
-            VerticalAlignment = VerticalAlignment.Bottom,
-            Margin = new Thickness(24, 0, 0, 0),
-            Children = { title, by, caps, desc, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 0), Children = { play, shuffle } } },
-        };
-
-        var search = new TextBox { Classes = { "search" }, Width = 225, PlaceholderText = "Search..." };
+        // "…" beside Play and Shuffle, as Apple's.
         var more = new Button
         {
             Theme = Kit.Res<ControlTheme>("RoundMore"),
             Content = new Glyph(Icons.More, 20),
-            Margin = new Thickness(8, 0, 0, 0),
+            VerticalAlignment = VerticalAlignment.Center,
         };
         more.Click += (_, _) => more.ContextMenu?.Open(more);
         more.ContextMenu = Menu(tracks, artist);
-        var tools = new StackPanel
+        var info = new StackPanel
         {
-            Orientation = Orientation.Horizontal,
             VerticalAlignment = VerticalAlignment.Bottom,
-            Children =
-            {
-                new Panel
-                {
-                    VerticalAlignment = VerticalAlignment.Center,
-                    Children = { search, new Glyph(Icons.Search, 12) { Margin = new Thickness(10, 0, 0, 0), HorizontalAlignment = HorizontalAlignment.Left, Opacity = 0.55, IsHitTestVisible = false } },
-                },
-                more,
-            },
+            Margin = new Thickness(24, 0, 0, 0),
+            Children = { title, by, caps, desc, new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 6, 0, 0), Children = { play, shuffle, more } } },
         };
+
+        var search = new TextBox { Classes = { "search" }, Width = 225, PlaceholderText = "Search..." };
+        var tools = Blocks.Search(search, default);
+        tools.VerticalAlignment = VerticalAlignment.Bottom;
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"), Margin = new Thickness(16) };
         row.Children.Add(artBox);
         row.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = info });
