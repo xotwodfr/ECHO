@@ -1,5 +1,6 @@
 ECHO for Windows: lyrics as Apple Music draws them.
 
+- **New in 3.2.1: lyrics timed only by line now light up a whole line at once** as it is sung, as Apple Music shows them, instead of sweeping across it at a steady pace that never matched the singing (about half of all lyrics are timed this way).
 - **The sung line sits a third of the way down**, and the lines ripple into place, each a moment after the one above.
 - **Everything not being sung is dim and soft**: lines already sung go dim again, lines further away blur more and shrink a little.
 - **Words light up with a soft edge** and rise as they are sung; a long held word swells and glows letter by letter.
