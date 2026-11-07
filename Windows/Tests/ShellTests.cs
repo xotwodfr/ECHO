@@ -178,6 +178,49 @@ public class LibraryPageTests
         Assert.Equal(12, page.GetVisualDescendants().OfType<Tile>().Count());
     }
 
+    sealed class Counting(HttpMessageHandler inner) : DelegatingHandler(inner)
+    {
+        public List<string> Asked { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        {
+            Asked.Add(request.RequestUri!.PathAndQuery);
+            return base.SendAsync(request, token);
+        }
+    }
+
+    [AvaloniaFact]
+    public async Task SongsAsksForEverySongOnlyOnce()
+    {
+        // 22,000 songs are 46 requests: asked for once, not on every visit.
+        var server = new Counting(new Fixtures());
+        var session = new Session(new Api(Fixtures.Base, server), fixtures: true);
+        var first = new SongsPage(session, new Nav());
+        await ShellTests.Settle();
+        var asked = server.Asked.Count(u => u.Contains("search3"));
+        var again = new SongsPage(session, new Nav());
+        await ShellTests.Settle();
+        Assert.Equal(asked, server.Asked.Count(u => u.Contains("search3")));
+        Assert.Equal(72, again.List!.ItemCount);
+    }
+
+    [AvaloniaFact]
+    public async Task SongsSearchesWhenTypingPauses()
+    {
+        var (_, page) = await Open("library-songs");
+        var songs = Assert.IsType<SongsPage>(page);
+        var list = songs.List;
+        var box = songs.GetVisualDescendants().OfType<TextBox>().Single();
+        box.Text = "a";
+        box.Text = "af";
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs(); // TextChanged comes on the dispatcher
+        Assert.Same(list, songs.List); // not a new list of thousands per key
+        await Task.Delay(300);
+        Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+        Assert.NotSame(list, songs.List);
+        Assert.InRange(songs.List!.ItemCount, 1, 71);
+    }
+
     [AvaloniaFact]
     public async Task SongsListsEverySongAndArtistsShowsTheirAlbums()
     {

@@ -50,6 +50,22 @@ public static class Blocks
         return b;
     }
 
+    /// `filter` once typing in `box` pauses (200 ms), not per key: a library list is thousands long.
+    public static void WhenTypingPauses(TextBox box, Action filter)
+    {
+        var pause = new Avalonia.Threading.DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+        pause.Tick += (_, _) =>
+        {
+            pause.Stop();
+            filter();
+        };
+        box.TextChanged += (_, _) =>
+        {
+            pause.Stop();
+            pause.Start();
+        };
+    }
+
     /// The search field Cider puts over its library lists.
     public static Panel Search(TextBox box, Thickness margin) => new()
     {
@@ -235,7 +251,7 @@ public sealed class AlbumsPage : ContentControl
         column = Blocks.Column(new Thickness(32), Blocks.H1("Albums"), header);
         scroll.Content = column;
         Content = scroll;
-        search.TextChanged += (_, _) => Show();
+        Blocks.WhenTypingPauses(search, Show);
         sort.SelectionChanged += (_, _) => Show();
         order.SelectionChanged += (_, _) => Show();
         _ = Load();
@@ -284,7 +300,7 @@ public sealed class SongsPage : DockPanel
         Children.Add(top);
         holder.Margin = new Thickness(32, 0, 32, 0);
         Children.Add(holder);
-        search.TextChanged += (_, _) => Show();
+        Blocks.WhenTypingPauses(search, Show);
         _ = Load();
     }
 
@@ -292,6 +308,12 @@ public sealed class SongsPage : DockPanel
 
     async Task Load()
     {
+        if (session.Library.EverySong is { } kept)
+        {
+            all.AddRange(kept);
+            Show();
+            return;
+        }
         try
         {
             // The first page shows at once; the rest once all are in (each new list would reset the scroll).
@@ -300,8 +322,9 @@ public sealed class SongsPage : DockPanel
                 var page = await session.Library.Songs(offset);
                 all.AddRange(page);
                 if (offset == 0 || page.Count < 500) Show();
-                if (page.Count < 500) return;
+                if (page.Count < 500) break;
             }
+            session.Library.EverySong = all.ToList();
         }
         catch (Exception e) when (Blocks.Expected(e))
         {
@@ -360,7 +383,7 @@ public sealed class ArtistsPage : Grid
             Child = new DockPanel { Children = { bar, list } },
         });
         Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = detail });
-        search.TextChanged += (_, _) => Show();
+        Blocks.WhenTypingPauses(search, Show);
         _ = Load();
     }
 

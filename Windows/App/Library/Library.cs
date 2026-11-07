@@ -216,6 +216,15 @@ public sealed partial class Library(Api api)
     public Task AddToPlaylist(string playlist, IEnumerable<string> songs) =>
         Write("updatePlaylist", $"playlistId={Enc(playlist)}" + string.Concat(songs.Select(s => $"&songIdToAdd={Enc(s)}")));
 
+    (IReadOnlyList<Track> Songs, DateTime At)? everySong;
+
+    /// Every song (the Songs page), kept 10 minutes once all are in: a library of 22,000 is 46 requests.
+    public IReadOnlyList<Track>? EverySong
+    {
+        get => everySong is { } e && DateTime.UtcNow - e.At < TimeSpan.FromMinutes(10) ? e.Songs : null;
+        set => everySong = value is null ? null : (value, DateTime.UtcNow);
+    }
+
     /// A page of every song, A–Z by title (search3 with an empty query, as Navidrome allows).
     public async Task<IReadOnlyList<Track>> Songs(int offset, int size = Page) =>
         Songs((await Rest("search3", $"query=&artistCount=0&albumCount=0&songCount={size}&songOffset={offset}"))["searchResult3"]?["song"]);
