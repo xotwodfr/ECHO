@@ -245,6 +245,23 @@ public class DrawerTests
     }
 
     [AvaloniaFact]
+    public async Task AWholeLibraryInTheQueueShowsItsFirstHundred()
+    {
+        // Played from Songs: 22,000 rows with covers froze the window.
+        var w = await ShellTests.Open();
+        var songs = QueueTests.Album(3000);
+        Session.Current!.Player.Show(new QueueState(Now: songs[0], Context: songs.Skip(1).ToList(), ContextSource: new PlayContext("songs", null, "Songs")), TimeSpan.Zero);
+        var drawer = w.Shell!.Drawer;
+        drawer.Toggle("queue");
+        await ShellTests.Settle();
+        var queue = Assert.IsType<QueuePanel>(drawer.Child);
+        Assert.Equal(100, queue.Shown.Count);
+        var texts = ShellTests.Texts(drawer).ToList();
+        Assert.Contains("2999 items", texts);
+        Assert.Contains("And 2,899 more", texts);
+    }
+
+    [AvaloniaFact]
     public async Task TheLyricsLightTheLineThatIsSung()
     {
         var w = await ShellTests.Open();

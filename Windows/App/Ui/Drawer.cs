@@ -169,8 +169,9 @@ public sealed class QueuePanel : DockPanel
         if (history)
         {
             content.Children.Add(Heading("History", historyButton));
-            Shown = q.History.Reverse().ToList();
+            Shown = q.History.Reverse().Take(MaxRows).ToList();
             for (var i = 0; i < Shown.Count; i++) content.Children.Add(Row(Shown[i], null, i));
+            More(q.History.Count);
             return;
         }
         content.Children.Add(Heading("Now Playing", historyButton));
@@ -198,8 +199,18 @@ public sealed class QueuePanel : DockPanel
             from.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = Kit.Text($"{at} of {total}", 12, opacity: 0.5) });
             content.Children.Add(from);
         }
-        Shown = upcoming;
+        Shown = upcoming.Take(MaxRows).ToList();
         for (var i = 0; i < Shown.Count; i++) content.Children.Add(Row(Shown[i], q.History.Count + 2 + i, i));
+        More(upcoming.Count);
+    }
+
+    /// A row per song for the first hundred only: a whole library (Songs) is thousands of rows with covers.
+    const int MaxRows = 100;
+
+    void More(int all)
+    {
+        if (all > Shown.Count)
+            content.Children.Add(new Border { Margin = new Thickness(14, 8, 14, 16), Child = Kit.Text($"And {all - Shown.Count:N0} more", 13, opacity: 0.5) });
     }
 
     static Control Heading(string text, Control? right)
