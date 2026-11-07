@@ -228,7 +228,7 @@ public sealed partial class Player : ObservableObject, IDisposable
         {
             var url = await source(t);
             await Output.Open(url);
-            if (at > TimeSpan.Zero) Output.Seek(at);
+            if (at > TimeSpan.Zero) await Output.Seek(at); // before Play: no blip of the song's start
             if (play) Output.Play();
             Playing = play;
         }
