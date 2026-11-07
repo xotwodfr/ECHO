@@ -14,8 +14,12 @@ public sealed class ProgressiveStream : Stream
     /// How far past the download a read may be and still wait for it rather than start again there:
     /// about what arrives while a new request is answered.
     const long Near = 256 * 1024;
+    /// Times a download that stops (dropped, or silent for `quiet`) is asked for again, a fifth of `quiet`
+    /// apart, before the song fails: about 20 s for a laptop waking or changing Wi-Fi.
+    const int Retries = 5;
 
     readonly Func<long, CancellationToken, Task<HttpResponseMessage>> fetch;
+    readonly TimeSpan quiet;
     readonly object gate = new();
     readonly List<(long From, long To)> have = []; // sorted, apart
     byte[] buffer;
@@ -24,9 +28,10 @@ public sealed class ProgressiveStream : Stream
     Exception? failed;
     CancellationTokenSource? download;
 
-    ProgressiveStream(HttpResponseMessage first, Func<long, CancellationToken, Task<HttpResponseMessage>> fetch)
+    ProgressiveStream(HttpResponseMessage first, Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, TimeSpan quiet)
     {
         this.fetch = fetch;
+        this.quiet = quiet;
         length = first.Content.Headers.ContentLength ?? 0;
         ranges = length > 0 && first.Headers.AcceptRanges.Contains("bytes");
         buffer = new byte[Math.Clamp(length, 64 * 1024, int.MaxValue)];
@@ -34,8 +39,10 @@ public sealed class ProgressiveStream : Stream
     }
 
     /// The song from its first byte; `fetch(from)` answers with its bytes from `from` on (headers read).
-    public static async Task<ProgressiveStream> Open(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, CancellationToken token = default) =>
-        new(await fetch(0, token), fetch);
+    /// `quiet`: how long the download may hear nothing before it is asked for again (10 s).
+    public static async Task<ProgressiveStream> Open(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, CancellationToken token = default,
+        TimeSpan? quiet = null) =>
+        new(await fetch(0, token), fetch, quiet ?? TimeSpan.FromSeconds(10));
 
     /// Starts the download at `from`, dropping the one before (its bytes stay); under the gate.
     void Begin(long from, HttpResponseMessage? answered = null)
@@ -48,54 +55,80 @@ public sealed class ProgressiveStream : Stream
 
     async Task Fill(long from, HttpResponseMessage? answered, CancellationToken stop)
     {
-        try
+        var at = from;
+        for (var tries = 0; ; tries++)
         {
-            using var response = answered ?? await fetch(from, stop);
-            if (from > 0 && (response.StatusCode != HttpStatusCode.PartialContent || response.Content.Headers.ContentRange?.From != from))
+            // Cancelled by `stop`, or by hearing nothing for `quiet`: a dead connection never answers.
+            using var heard = CancellationTokenSource.CreateLinkedTokenSource(stop);
+            try
             {
-                // Not the range asked for: the whole song again, in order.
-                lock (gate)
+                heard.CancelAfter(quiet);
+                using var response = answered ?? await fetch(at, heard.Token);
+                answered = null;
+                if (at > 0 && (response.StatusCode != HttpStatusCode.PartialContent || response.Content.Headers.ContentRange?.From != at))
                 {
-                    if (stop.IsCancellationRequested) return;
-                    ranges = false;
-                    cursor = from = 0;
+                    // Not the range asked for: the whole song again, in order.
+                    lock (gate)
+                    {
+                        if (stop.IsCancellationRequested) return;
+                        ranges = false;
+                        cursor = at = 0;
+                    }
                 }
-            }
-            await using var source = await response.Content.ReadAsStreamAsync(stop);
-            var chunk = new byte[64 * 1024];
-            var at = from;
-            while (true)
-            {
-                var n = await source.ReadAsync(chunk, stop);
-                if (n == 0) break;
+                await using var source = await response.Content.ReadAsStreamAsync(heard.Token);
+                var chunk = new byte[64 * 1024];
+                while (true)
+                {
+                    heard.CancelAfter(quiet);
+                    var n = await source.ReadAsync(chunk, heard.Token);
+                    if (n == 0) break;
+                    tries = 0; // arriving again
+                    lock (gate)
+                    {
+                        if (stop.IsCancellationRequested) return;
+                        if (at + n > buffer.Length) Array.Resize(ref buffer, (int)Math.Min(int.MaxValue, Math.Max(buffer.Length * 2L, at + n)));
+                        Array.Copy(chunk, 0, buffer, at, n);
+                        Have(at, at + n);
+                        at += n;
+                        cursor = at;
+                        length = Math.Max(length, at);
+                        Monitor.PulseAll(gate);
+                    }
+                }
                 lock (gate)
                 {
                     if (stop.IsCancellationRequested) return;
-                    if (at + n > buffer.Length) Array.Resize(ref buffer, (int)Math.Min(int.MaxValue, Math.Max(buffer.Length * 2L, at + n)));
-                    Array.Copy(chunk, 0, buffer, at, n);
-                    Have(at, at + n);
-                    at += n;
-                    cursor = at;
-                    length = Math.Max(length, at);
+                    // Every download runs to the song's end: its length is known now.
+                    length = at;
+                    final = true;
                     Monitor.PulseAll(gate);
                 }
+                return;
             }
-            lock (gate)
+            catch (Exception) when (stop.IsCancellationRequested)
             {
-                if (stop.IsCancellationRequested) return;
-                // Every download runs to the song's end: its length is known now.
-                length = at;
-                final = true;
-                Monitor.PulseAll(gate);
+                return;
             }
-        }
-        catch (Exception) when (stop.IsCancellationRequested) { }
-        catch (Exception e)
-        {
-            lock (gate)
+            catch (Exception) when (tries < Retries)
             {
-                failed = e;
-                Monitor.PulseAll(gate);
+                // Dropped or silent (a laptop waking, a new Wi-Fi network): from where it got to, in a moment.
+                try
+                {
+                    await Task.Delay(quiet / 5, stop);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                lock (gate)
+                {
+                    failed = e;
+                    Monitor.PulseAll(gate);
+                }
+                return;
             }
         }
     }

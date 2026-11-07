@@ -104,6 +104,71 @@ public class StreamingStartTests(ITestOutputHelper output)
         return (listener, port, requests);
     }
 
+    /// The song's bytes up to `upTo`, then the connection drops (an error) or goes silent (sleep, a new
+    /// Wi-Fi network: nothing more ever comes).
+    sealed class Cut(byte[] bytes, int upTo, bool silent) : Stream
+    {
+        int at;
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> into, CancellationToken token = default)
+        {
+            if (at >= upTo)
+            {
+                if (!silent) throw new IOException("connection reset");
+                await Task.Delay(Timeout.Infinite, token);
+            }
+            var n = Math.Min(into.Length, upTo - at);
+            bytes.AsMemory(at, n).CopyTo(into);
+            at += n;
+            return n;
+        }
+
+        public override Task<int> ReadAsync(byte[] b, int o, int c, CancellationToken token) => ReadAsync(b.AsMemory(o, c), token).AsTask();
+        public override int Read(byte[] b, int o, int c) => ReadAsync(b.AsMemory(o, c)).AsTask().GetAwaiter().GetResult();
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => at; set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long o, SeekOrigin s) => throw new NotSupportedException();
+        public override void SetLength(long v) => throw new NotSupportedException();
+        public override void Write(byte[] b, int o, int c) => throw new NotSupportedException();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ASongWhoseConnectionDiesCarriesOnFromWhereItGotTo(bool silent)
+    {
+        var bytes = new byte[300_000];
+        Random.Shared.NextBytes(bytes);
+        var asked = new List<long>();
+        Task<HttpResponseMessage> Fetch(long from, CancellationToken token)
+        {
+            int n;
+            lock (asked)
+            {
+                asked.Add(from);
+                n = asked.Count;
+            }
+            Stream body = n == 1 ? new Cut(bytes, 100_000, silent) : new MemoryStream(bytes, (int)from, bytes.Length - (int)from);
+            var r = new HttpResponseMessage(from > 0 ? HttpStatusCode.PartialContent : HttpStatusCode.OK) { Content = new StreamContent(body) };
+            r.Content.Headers.ContentLength = bytes.Length - from;
+            r.Headers.AcceptRanges.Add("bytes");
+            if (from > 0) r.Content.Headers.ContentRange = new System.Net.Http.Headers.ContentRangeHeaderValue(from, bytes.Length - 1, bytes.Length);
+            return Task.FromResult(r);
+        }
+
+        using var song = await ProgressiveStream.Open(Fetch, quiet: TimeSpan.FromMilliseconds(300));
+        var read = new byte[bytes.Length];
+        var all = Task.Run(() => song.ReadExactly(read), TestContext.Current.CancellationToken);
+        Assert.Same(all, await Task.WhenAny(all, Task.Delay(10_000, TestContext.Current.CancellationToken)));
+        await all;
+        Assert.Equal(bytes, read);
+        lock (asked) Assert.Equal([0L, 100_000L], asked);
+    }
+
     [Theory]
     [InlineData(".wav", "audio/wav", false)]
     [InlineData(".flac", "audio/flac", false)]
