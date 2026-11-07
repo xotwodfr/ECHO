@@ -140,7 +140,24 @@ public static class Blocks
         return grid;
     }
 
-    public static TextBlock Message(string text) => new() { Text = text, Opacity = 0.7, FontSize = 14, Margin = new Thickness(0, 16) };
+    /// An empty or failed page as today's apps say it: centred, a faint icon over the title and a note.
+    public static Control Message(string text, string? note = null)
+    {
+        var block = new StackPanel
+        {
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 72, 0, 16),
+            Spacing = 6,
+            MaxWidth = 360,
+            Children =
+            {
+                new Glyph(Icons.Music, 40) { Opacity = 0.3, Margin = new Thickness(0, 0, 0, 8) },
+                new TextBlock { Text = text, FontSize = 16, FontWeight = FontWeight.SemiBold, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap },
+            },
+        };
+        if (note is not null) block.Children.Add(new TextBlock { Text = note, FontSize = 13, Opacity = 0.6, TextAlignment = TextAlignment.Center, TextWrapping = TextWrapping.Wrap });
+        return block;
+    }
 
     /// What a page says when its load fails; a refused token signs out.
     public static async Task<string> Failed(Session session, Exception e)

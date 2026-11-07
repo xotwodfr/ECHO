@@ -63,7 +63,7 @@ public sealed class CollectionPage : DockPanel
         }
     }
 
-    void Say(string text) => Children.Add(new TextBlock { Text = text, Margin = new Thickness(40, 32), Opacity = 0.7, FontSize = 14 });
+    void Say(string text) => Children.Add(Blocks.Message(text));
 
     void Show(string name, string artistName, Route? artist, string? description, string? cover, IReadOnlyList<Track> tracks,
         PlayContext context, bool artwork, string? date, string? meta)

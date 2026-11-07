@@ -47,7 +47,7 @@ public sealed class HomePage : ScrollViewer
         if (played.Count > 0) column.Children.Add(Shelf.Of("Recently Played", played.Select(Played), 24));
         if (starred.Tracks.Count > 0)
             column.Children.Add(Shelf.Of("Your Favorites", SongGrid.Columns(session, nav, starred.Tracks.Take(12).ToList(), new PlayContext("favorites", null, "Your Favorites")), 24));
-        if (column.Children.Count == 1) column.Children.Add(Blocks.Message("Play something: what you play and love shows up here."));
+        if (column.Children.Count == 1) column.Children.Add(Blocks.Message("Nothing here yet", "Play something: what you play and love shows up here."));
     }
 
     /// Apple's Top Picks card: the cover, and under it its own colour rising out of the cover's foot to carry

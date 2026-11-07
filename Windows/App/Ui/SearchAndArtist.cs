@@ -61,7 +61,7 @@ public sealed class SearchPage : ScrollViewer
         }
         if (r.Tracks.Count + r.Albums.Count + r.Artists.Count == 0)
         {
-            column.Children.Add(Shelf.Section("No Results", new TextBlock { Text = "Try a new search.", FontSize = 14, Opacity = 0.7 }));
+            column.Children.Add(Blocks.Message("No Results", "Try a new search."));
             return;
         }
         var ctx = new PlayContext("search", null, term);
