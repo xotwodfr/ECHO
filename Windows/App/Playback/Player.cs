@@ -127,6 +127,17 @@ public sealed partial class Player : ObservableObject, IDisposable
         Changed();
     }
 
+    /// Plays, or keeps playing (Windows' media controls ask for a state, not a toggle).
+    public void Play()
+    {
+        if (!Playing) Toggle();
+    }
+
+    public void Pause()
+    {
+        if (Playing) Toggle();
+    }
+
     public async Task Next()
     {
         if (Queue.Advance(userSkip: true) is { } next) await Start(next, play: true);

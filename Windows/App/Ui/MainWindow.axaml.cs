@@ -40,6 +40,8 @@ public partial class MainWindow : Window
 
     void ShowSignIn(Api api)
     {
+        media?.Dispose();
+        media = null;
         session?.Player.Dispose();
         session = Session.Current = null;
         api.Token = null;
@@ -51,9 +53,25 @@ public partial class MainWindow : Window
         });
     }
 
+    /// Windows' media controls for the session (MediaControls): media keys, the volume flyout, the lock screen.
+    IDisposable? media;
+
+    void AttachMediaControls()
+    {
+        media?.Dispose();
+        media = session is null ? null : MediaControls.For(this, session);
+    }
+
+    protected override void OnOpened(EventArgs e)
+    {
+        base.OnOpened(e);
+        if (media is null) AttachMediaControls(); // in case the window had no handle before it opened
+    }
+
     public void Open(Session s)
     {
         session = Session.Current = s;
+        AttachMediaControls();
         s.SignedOut += () => Dispatcher.UIThread.Post(() =>
         {
             TokenStore.Forget();
@@ -147,6 +165,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        media?.Dispose();
         session?.Player.Dispose();
         base.OnClosed(e);
     }

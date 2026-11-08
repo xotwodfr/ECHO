@@ -40,6 +40,31 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task PlayAndPauseAskForAStateNotAToggle()
+    {
+        // Windows' media controls send Play or Pause: Pause twice stays paused.
+        var wav = Path.Combine(Path.GetTempPath(), $"echo-state-{Guid.NewGuid():N}.wav");
+        File.WriteAllBytes(wav, Wav.Silence(seconds: 5));
+        try
+        {
+            var api = new Api("https://echo.test", new Unreachable());
+            using var player = new Player(api, new Library(api), () => new AudioOut(nullDevice: true), _ => Task.FromResult(wav)) { Sync = false };
+            await player.PlayList(QueueTests.Album(2), 0, Ctx);
+            player.Play();
+            Assert.True(player.Playing);
+            player.Pause();
+            player.Pause();
+            Assert.False(player.Playing);
+            player.Play();
+            Assert.True(player.Playing);
+        }
+        finally
+        {
+            File.Delete(wav);
+        }
+    }
+
+    [AvaloniaFact]
     public async Task PlayAfterTheServerWasUnreachableAsksAgain()
     {
         var server = new Unreachable();
