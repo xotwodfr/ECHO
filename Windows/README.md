@@ -32,7 +32,14 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   mixes). **Library**: Recently Added, Songs, Albums (search, sort), Artists (Cider's split view), the
   playlists, Create New. **Album / playlist / mix** pages, **artist** pages, **search**.
 - Playback through the queue: shuffle, repeat, volume, seek; scrobbles; the queue follows you across
-  devices (`/me/queue`). The **drawer**: the queue (and history) and the lyrics.
+  devices (`/me/queue`, cut to the server's 64 KB as the web cuts it). A song whose connection drops or
+  goes quiet carries on from where it got to; a server that fails is said so, not skipped through. The
+  **drawer**: the queue (its first hundred, and how many more) and history, and the lyrics.
+- **Windows' media controls**: the keyboard's media keys and a headset's buttons, and the song with its
+  cover and time in the volume flyout and on the lock screen (`Ui/MediaControls.cs`).
+- **Love** and **Unlove** for songs, albums and artists, knowing what is loved already.
+- Kept between runs (`prefs.json`): the volume, the window's place and size (maximized too), the sidebar
+  hidden or shown. An error nothing caught goes to `crash.log` beside it, with the version.
 - **Lyrics** as Apple Music draws them, the look of Lyricify's Apple Music style with the numbers of
   AMLL (`App/Lyrics`; Apple Music-like Lyrics, github.com/amll-dev/applemusic-like-lyrics, AGPL-3.0,
   its numbers ported, not its code): the first line lit a third of the way down, each line on its own
@@ -57,8 +64,8 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   (the controls over a thin progress bar, Play a white disc), album headers fade into their songs,
   Settings opens over a dimmed app in Windows 11's setting cards, menus are dark and rounded, empty
   pages say so centred, the sign-in screen is a card (and can be moved and closed).
-- Keys: **Space** plays or pauses (not while typing), **Ctrl+F** goes to the search field; keyboard
-  focus shows as a rounded ring.
+- Keys: **Space** plays or pauses (not while typing; in full screen and the mini player too), **Ctrl+F**
+  goes to the search field; keyboard focus shows as a rounded ring.
 
 Left out as Apple Music's: Listen Now, Browse, Radio, Videos, Podcasts, Apple Music playlists, Add to
 Library, Autoplay, Start Radio, Cast/AirPlay, social and Replay.
