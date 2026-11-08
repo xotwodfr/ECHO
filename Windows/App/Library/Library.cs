@@ -187,6 +187,40 @@ public sealed partial class Library(Api api)
         }
     }
 
+    Task<HashSet<string>>? loved;
+
+    /// Whether a song, album or artist is loved: what is loved is asked for once (getStarred2), then kept as
+    /// Love changes it.
+    public async Task<bool> IsLoved(string id)
+    {
+        try
+        {
+            return (await (loved ??= LoadLoved())).Contains(id);
+        }
+        catch
+        {
+            loved = null; // asked again next time
+            throw;
+        }
+    }
+
+    async Task<HashSet<string>> LoadLoved()
+    {
+        var s = await Starred();
+        return [.. s.Tracks.Select(t => t.Id), .. s.Albums.Select(a => a.Id), .. s.Artists.Select(a => a.Id)];
+    }
+
+    /// Loves (or unloves) on the server, and remembers it.
+    public async Task Love(StarKind kind, string id, bool on)
+    {
+        await Star(kind, id, on);
+        if (loved is { IsCompletedSuccessfully: true } known)
+        {
+            if (on) known.Result.Add(id);
+            else known.Result.Remove(id);
+        }
+    }
+
     public async Task<Starred> Starred()
     {
         var r = (await Rest("getStarred2"))["starred2"];

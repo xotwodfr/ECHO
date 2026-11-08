@@ -220,7 +220,7 @@ public sealed class CollectionPage : DockPanel
                 foreach (var t in tracks) _ = session.Player.AddToQueue(t);
             }),
         };
-        if (route.Page == "album") items.Add(Item("Love", () => _ = session.Library.Star(StarKind.Album, route.Id!, true)));
+        if (route.Page == "album") items.Add(LoveMenu.Item(session, StarKind.Album, route.Id!));
         if (artist is not null) items.Add(Item("Go to Artist", () => nav.Open(artist)));
         return new ContextMenu { ItemsSource = items };
     }

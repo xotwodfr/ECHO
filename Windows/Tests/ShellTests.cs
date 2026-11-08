@@ -72,6 +72,21 @@ public class ShellTests
     }
 
     [AvaloniaFact]
+    public async Task LoveSaysUnloveForWhatIsLovedAndSwitchesIt()
+    {
+        await Open();
+        var s = Session.Current!;
+        var item = LoveMenu.Item(s, StarKind.Track, "f1-0"); // loved in the fixtures
+        await Settle();
+        Assert.Equal("Unlove", item.Header);
+        item.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(MenuItem.ClickEvent));
+        await Settle();
+        Assert.False(await s.Library.IsLoved("f1-0"));
+        Assert.Equal("Removed from Loved", s.Player.Notice);
+        Assert.Equal("Love", LoveMenu.Item(s, StarKind.Track, "f1-1").Header);
+    }
+
+    [AvaloniaFact]
     public async Task HidingTheSidebarIsKept()
     {
         var w = await Open();

@@ -15,6 +15,21 @@ public class LibraryTests
         """;
 
     [Fact]
+    public async Task LoveKnowsWhatIsLovedAndKeepsUpWithIt()
+    {
+        // The fixtures love every 7th song (f1-0 among them) and the albums f11 and f4.
+        var library = new Library(new Api(Fixtures.Base, new Fixtures()));
+        Assert.True(await library.IsLoved("f1-0"));
+        Assert.True(await library.IsLoved("f11"));
+        Assert.False(await library.IsLoved("f1-1"));
+
+        await library.Love(StarKind.Track, "f1-1", true);
+        await library.Love(StarKind.Track, "f1-0", false);
+        Assert.True(await library.IsLoved("f1-1"));
+        Assert.False(await library.IsLoved("f1-0"));
+    }
+
+    [Fact]
     public async Task ASubsonicAlbumBecomesTracksWithCoverAndIsrc()
     {
         var library = new Library(new Api("https://echo.test", new Answer(HttpStatusCode.OK, GetAlbum)));

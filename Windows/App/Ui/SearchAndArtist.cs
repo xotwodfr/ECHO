@@ -154,8 +154,7 @@ public sealed class ArtistPage : ScrollViewer
             if (songs.Count > 0) _ = session.Player.PlayList(songs, 0, ctx);
         };
         var more = new Button { Theme = Kit.Res<ControlTheme>("RoundMore"), Content = new Glyph(Icons.More, 20) };
-        var love = new MenuItem { Header = "Favorite" };
-        love.Click += (_, _) => _ = session.Library.Star(StarKind.Artist, route.Id!, true);
+        var love = LoveMenu.Item(session, StarKind.Artist, route.Id!);
         more.ContextMenu = new ContextMenu { ItemsSource = new[] { love } };
         more.Click += (_, _) => more.ContextMenu.Open(more);
         var name = new TextBlock { Text = page.Name, FontSize = 48, FontWeight = FontWeight.Bold, LetterSpacing = -1.2, VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis };

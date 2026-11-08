@@ -94,6 +94,42 @@ public static class MainMenu
 
 /// Cider's now-playing menu (the bar's "…" and a right click on the song): Love, Add to Playlist, Go to
 /// Artist, Go to Album. (Add to Library, Start Radio and Share are Apple Music's.)
+/// Love in a menu, as Cider has it: "Love", or "Unlove" for what is loved already (known as the menu
+/// opens); a click switches it and says so over the player.
+public static class LoveMenu
+{
+    public static MenuItem Item(Session session, StarKind kind, string id)
+    {
+        var item = new MenuItem { Header = "Love" };
+        var loved = false;
+        _ = Know();
+        item.Click += async (_, _) =>
+        {
+            try
+            {
+                await session.Library.Love(kind, id, !loved);
+                loved = !loved; // a menu kept open (the artist page's) switches again next time
+                item.Header = loved ? "Unlove" : "Love";
+                session.Player.Notice = loved ? "Loved" : "Removed from Loved";
+            }
+            catch (Exception e) when (Blocks.Expected(e))
+            {
+                session.Player.Notice = "Can't reach the server.";
+            }
+        };
+        return item;
+
+        async Task Know()
+        {
+            try
+            {
+                if (loved = await session.Library.IsLoved(id)) item.Header = "Unlove";
+            }
+            catch (Exception e) when (Blocks.Expected(e)) { } // stays "Love"
+        }
+    }
+}
+
 public static class NowPlayingMenu
 {
     public static void Show(Control anchor, Session session, Nav nav)
@@ -109,7 +145,7 @@ public static class NowPlayingMenu
         _ = FillPlaylists(add, session, t);
         var items = new List<MenuItem>
         {
-            Item("Love", () => _ = Quietly(session.Library.Star(StarKind.Track, t.Id, true))),
+            LoveMenu.Item(session, StarKind.Track, t.Id),
             add,
         };
         if (t.Artists.FirstOrDefault()?.Id is { } artist) items.Add(Item("Go to Artist", () => nav.Open(new Route("artist", artist, t.Artist))));

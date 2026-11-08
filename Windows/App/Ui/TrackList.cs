@@ -219,20 +219,11 @@ public sealed class TrackList : ListBox
         {
             Item("Play Next", () => _ = session.Player.PlayNext(t)),
             Item("Play Later", () => _ = session.Player.AddToQueue(t)),
-            Item("Love", () => _ = Quietly(session.Library.Star(StarKind.Track, t.Id, true))),
+            LoveMenu.Item(session, StarKind.Track, t.Id),
         };
         if (t.Album.Id is { } album) items.Add(Item("Go to Album", () => nav.Open(new Route("album", album, t.Album.Title))));
         if (t.Artists.FirstOrDefault()?.Id is { } artist) items.Add(Item("Go to Artist", () => nav.Open(new Route("artist", artist, t.Artist))));
         return new ContextMenu { ItemsSource = items };
-    }
-
-    static async Task Quietly(Task call)
-    {
-        try
-        {
-            await call;
-        }
-        catch (Exception e) when (e is HttpRequestException or ApiException or TaskCanceledException) { }
     }
 }
 
