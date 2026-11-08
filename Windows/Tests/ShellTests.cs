@@ -146,6 +146,32 @@ public class ShellTests
     }
 
     [AvaloniaFact]
+    public async Task SpacePlaysOrPausesInFullScreenAndTheMiniPlayer()
+    {
+        // The fixtures serve no audio: each Play is seen as the song asked for again.
+        var server = new Counting(new Fixtures());
+        var session = new Session(new Api(Fixtures.Base, server), fixtures: true);
+        await session.Player.Restore(); // the fixtures' queue, paused
+        var w = new MainWindow { Width = 1336, Height = 768 };
+        w.Open(session);
+        w.Show();
+        await Settle();
+        var shell = w.Shell!;
+        int Asked() => server.Asked.Count(u => u.Contains("/navidrome/stream/"));
+        foreach (var open in new Action[] { () => w.Fullscreen(shell), () => w.Mini(shell) })
+        {
+            open();
+            await Settle();
+            var before = Asked();
+            w.KeyPress(Avalonia.Input.Key.Space, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Space, " ");
+            await Settle();
+            Assert.True(Asked() > before, $"Space reached the player from {w.Content?.GetType().Name}");
+            w.KeyPress(Avalonia.Input.Key.Escape, Avalonia.Input.RawInputModifiers.None, Avalonia.Input.PhysicalKey.Escape, "");
+            await Settle();
+        }
+    }
+
+    [AvaloniaFact]
     public async Task BackAndForwardWalkThePagesOpened()
     {
         var w = await Open();

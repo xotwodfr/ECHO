@@ -146,7 +146,15 @@ public partial class MainWindow : Window
     protected override void OnKeyDown(Avalonia.Input.KeyEventArgs e)
     {
         base.OnKeyDown(e);
-        if (!e.Handled && Content is Shell shell) shell.Keys(e);
+        if (e.Handled) return;
+        // Space plays or pauses wherever the window is (the shell, full screen, the mini player), unless a
+        // field has the keyboard.
+        if (e.Key == Avalonia.Input.Key.Space && e.KeyModifiers == Avalonia.Input.KeyModifiers.None && e.Source is not TextBox && session is not null)
+        {
+            session.Player.Toggle();
+            e.Handled = true;
+        }
+        else if (Content is Shell shell) shell.Keys(e);
     }
 
     /// Puts back what closing kept (Keep): the volume, and the window's place if that is on a screen still.
