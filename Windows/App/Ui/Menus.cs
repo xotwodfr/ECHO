@@ -318,6 +318,8 @@ public sealed class SettingsWindow : Border
         if (note is not null) text.Children.Add(new TextBlock { Text = note, FontSize = 12, Opacity = 0.6, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 16, 0) });
         grid.Children.Add(text);
         control.VerticalAlignment = VerticalAlignment.Center;
+        // Fluent's switch keeps 12 px after it for its On/Off words (none here): the switch lines up with the rest.
+        if (control is ToggleSwitch) control.Margin = new Thickness(0, 0, -12, 0);
         grid.Children.Add(new Border { [Grid.ColumnProperty] = 1, Child = control });
         return grid;
     }

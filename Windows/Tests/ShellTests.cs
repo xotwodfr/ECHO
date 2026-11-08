@@ -458,6 +458,19 @@ public class ModeTests
 public class SettingsTests
 {
     [AvaloniaFact]
+    public async Task SettingsControlsLineUpOnTheRight()
+    {
+        var w = await ShellTests.Open();
+        var settings = w.Shell!.ShowSettings("Visual");
+        await ShellTests.Settle();
+        double Right(Visual v) => v.TranslatePoint(new Point(v.Bounds.Width, 0), w)!.Value.X;
+        var layout = settings.GetVisualDescendants().OfType<ComboBox>().Single();
+        var track = settings.GetVisualDescendants().OfType<ToggleSwitch>().Single()
+            .GetVisualDescendants().OfType<Border>().First(b => b.Name == "OuterBorder"); // the switch itself
+        Assert.Equal(Right(layout), Right(track), 1);
+    }
+
+    [AvaloniaFact]
     public async Task SettingsSwitchesToMaverickWithThePlayerInTheTopChrome()
     {
         var w = await ShellTests.Open();
