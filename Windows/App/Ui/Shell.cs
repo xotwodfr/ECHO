@@ -62,7 +62,9 @@ public sealed class Shell : Grid
         {
             sidebar.IsVisible = !sidebar.IsVisible;
             card.Margin = new Thickness(sidebar.IsVisible ? 0 : 8, 0, 8, card.Margin.Bottom);
+            if (session.Prefs.Sidebar != sidebar.IsVisible) session.Set(session.Prefs with { Sidebar = sidebar.IsVisible });
         };
+        if (!session.Prefs.Sidebar) Top.ToggleSidebar(); // hidden last time
         Top.MenuRequested += anchor => MainMenu.Show(anchor, session, () => ShowSettings(), () => ShowSettings("About"));
         Tools.DrawerRequested += Drawer.Toggle;
         Drawer.Changed += () => Tools.OpenPanel = Drawer.Panel;

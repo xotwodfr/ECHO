@@ -29,6 +29,15 @@ public sealed class ChromeTop : Grid
 
     public event Action<Control>? MenuRequested;
     public event Action? SidebarToggled;
+
+    /// The sidebar button: shows or hides the library sidebar.
+    public void ToggleSidebar()
+    {
+        sidebarShown = !sidebarShown;
+        ((Glyph)toggle.Content!).Icon = sidebarShown ? Icons.SidebarShown : Icons.SidebarHidden;
+        ToolTip.SetTip(toggle, sidebarShown ? "Hide Library" : "Show Library");
+        SidebarToggled?.Invoke();
+    }
     /// Enter in the search field.
     public event Action<string>? Searched;
 
@@ -52,13 +61,7 @@ public sealed class ChromeTop : Grid
         menu.Click += (_, _) => MenuRequested?.Invoke(menu);
         back = Kit.IconButton(Icons.ChevronLeft, 40, 36, 14, "Back", nav.Back);
         forward = Kit.IconButton(Icons.ChevronRight, 40, 36, 14, "Forward", nav.Forward);
-        toggle = Kit.IconButton(Icons.SidebarShown, 40, 36, 16, "Hide Library", () =>
-        {
-            sidebarShown = !sidebarShown;
-            ((Glyph)toggle!.Content!).Icon = sidebarShown ? Icons.SidebarShown : Icons.SidebarHidden;
-            ToolTip.SetTip(toggle, sidebarShown ? "Hide Library" : "Show Library");
-            SidebarToggled?.Invoke();
-        });
+        toggle = Kit.IconButton(Icons.SidebarShown, 40, 36, 16, "Hide Library", ToggleSidebar);
         var vdiv = new Rectangle { Width = 1, Height = Height / 2, Fill = Brushes.White, Opacity = 0.25, Margin = new Thickness(6) };
         var left = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
         Children.Add(left);

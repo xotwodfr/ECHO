@@ -74,16 +74,24 @@ public sealed partial class Player : ObservableObject, IDisposable
         {
             if (output is not null) return output;
             output = makeOutput();
-            output.Ended += () => Dispatcher.UIThread.Post(() => _ = Ended());
+            output.Volume = volume;
+            output.Ended +=() => Dispatcher.UIThread.Post(() => _ = Ended());
             tick.Start();
             return output;
         }
     }
 
+    float volume = 1;
+
+    /// Kept here, so setting it (the saved volume, at start) opens no audio device before a song plays.
     public float Volume
     {
-        get => output?.Volume ?? 1;
-        set => Output.Volume = value;
+        get => volume;
+        set
+        {
+            volume = Math.Clamp(value, 0, 1);
+            if (output is not null) output.Volume = volume;
+        }
     }
 
     public bool Muted

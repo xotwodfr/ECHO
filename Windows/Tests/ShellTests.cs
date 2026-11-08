@@ -39,6 +39,46 @@ public class ShellTests
         Assert.False(w.IsVisible);
     }
 
+    [AvaloniaFact]
+    public async Task ClosingKeepsTheWindowsPlaceAndTheVolume()
+    {
+        var s = Session.ForFixtures();
+        var w = new MainWindow { Width = 1336, Height = 768 };
+        w.Open(s);
+        w.Show();
+        await Settle();
+        (w.Width, w.Height, w.Position) = (1200, 700, new PixelPoint(40, 50));
+        s.Player.Volume = 0.4f;
+        await Settle(); // the window takes its new size
+        w.Close();
+        await Settle();
+        Assert.Equal(0.4f, s.Prefs.Volume);
+        Assert.Equal(new WindowPlace(40, 50, 1200, 700, false), s.Prefs.Window);
+    }
+
+    [AvaloniaFact]
+    public async Task OpeningPutsBackTheWindowsPlaceTheVolumeAndTheSidebar()
+    {
+        var s = Session.ForFixtures();
+        s.Set(s.Prefs with { Window = new WindowPlace(40, 50, 1200, 700, false), Volume = 0.4f, Sidebar = false });
+        var w = new MainWindow();
+        w.Open(s);
+        w.Show();
+        await Settle();
+        Assert.Equal((1200d, 700d), (w.Width, w.Height));
+        Assert.Equal(new PixelPoint(40, 50), w.Position);
+        Assert.Equal(0.4f, s.Player.Volume);
+        Assert.False(w.GetVisualDescendants().OfType<Sidebar>().Single().IsVisible);
+    }
+
+    [AvaloniaFact]
+    public async Task HidingTheSidebarIsKept()
+    {
+        var w = await Open();
+        w.Shell!.Top.ToggleSidebar();
+        Assert.False(Session.Current!.Prefs.Sidebar);
+    }
+
     internal static async Task<MainWindow> Open()
     {
         var w = new MainWindow { Width = 1336, Height = 768 };

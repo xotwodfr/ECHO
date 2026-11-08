@@ -78,6 +78,7 @@ public partial class MainWindow : Window
             ShowSignIn(s.Api);
         });
         Show(s);
+        PutBack(s);
         // Settings → Visual → Window Layout: the shell is built again in the other layout.
         s.PrefsChanged += () =>
         {
@@ -148,6 +149,29 @@ public partial class MainWindow : Window
         if (!e.Handled && Content is Shell shell) shell.Keys(e);
     }
 
+    /// Puts back what closing kept (Keep): the volume, and the window's place if that is on a screen still.
+    void PutBack(Session s)
+    {
+        s.Player.Volume = s.Prefs.Volume;
+        if (s.Prefs.Window is not { } at) return;
+        (Width, Height) = (Math.Max(at.Width, MinWidth), Math.Max(at.Height, MinHeight));
+        var corner = new PixelPoint(at.X, at.Y);
+        if (Screens.ScreenCount == 0 || Screens.ScreenFromPoint(corner) is not null) Position = corner;
+        if (at.Maximized) WindowState = WindowState.Maximized;
+    }
+
+    /// The volume and the window's place, for next time. The place only from the shell: the mini player and
+    /// full screen are not the window's own size. Maximized, the size kept is the one from before.
+    // ponytail: the size before maximizing is the last one kept; track it live if that ever surprises.
+    void Keep()
+    {
+        if (session is not { } s) return;
+        var place = Shell is null ? s.Prefs.Window
+            : WindowState == WindowState.Maximized ? (s.Prefs.Window ?? new WindowPlace(Position.X, Position.Y, 1336, 768, false)) with { Maximized = true }
+            : new WindowPlace(Position.X, Position.Y, ClientSize.Width, ClientSize.Height, false);
+        s.Set(s.Prefs with { Volume = s.Player.Volume, Window = place });
+    }
+
     bool saved;
 
     /// Where the song is, saved before the window goes (it is saved 15 s apart while playing): the window
@@ -155,6 +179,7 @@ public partial class MainWindow : Window
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
+        if (!e.Cancel && !saved) Keep();
         if (e.Cancel || saved || session is null || e.CloseReason == WindowCloseReason.ApplicationShutdown) return;
         e.Cancel = true;
         saved = true;
