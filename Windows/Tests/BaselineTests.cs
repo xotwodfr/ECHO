@@ -41,6 +41,28 @@ public class BaselineTests
 }
 
 /// An HTTP answer for every request, and the requests it got.
+public class CrashLogTests
+{
+    [Fact]
+    public void AnErrorNothingCaughtIsWrittenDownWithTheVersion()
+    {
+        var file = Path.Combine(Path.GetTempPath(), $"echo-crash-{Guid.NewGuid():N}", "crash.log");
+        try
+        {
+            CrashLog.Write(new InvalidOperationException("first"), file);
+            CrashLog.Write(new InvalidOperationException("second"), file);
+            var log = File.ReadAllText(file);
+            Assert.Contains("first", log);
+            Assert.Contains("second", log); // added to, not replaced
+            Assert.Contains($"ECHO {typeof(CrashLog).Assembly.GetName().Version}", log);
+        }
+        finally
+        {
+            Directory.Delete(Path.GetDirectoryName(file)!, recursive: true);
+        }
+    }
+}
+
 sealed class Answer(HttpStatusCode status, string json) : HttpMessageHandler
 {
     public List<HttpRequestMessage> Requests { get; } = [];
