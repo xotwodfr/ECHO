@@ -76,6 +76,12 @@ public sealed class SearchPage : ScrollViewer
             var t = r.Tracks[i];
             top.Children.Add(Result(t.Cover, false, t.Title, $"Song · {t.Artist}", () => _ = session.Player.PlayList(r.Tracks, at, ctx)));
         }
+        // As many cards across as fit at 280 px or more, widened to end where the shelves under them end.
+        top.SizeChanged += (_, e) =>
+        {
+            var across = Math.Max(1, (int)((e.NewSize.Width + 12) / (280 + 12)));
+            foreach (var card in top.Children) card.Width = (e.NewSize.Width - 12 * (across - 1)) / across;
+        };
         column.Children.Add(Shelf.Section("Top Results", top));
         if (r.Tracks.Count > 0) column.Children.Add(Shelf.Of("Songs", SongGrid.Columns(session, nav, r.Tracks, ctx), 24));
         if (r.Albums.Count > 0) column.Children.Add(Shelf.Of("Albums", r.Albums.Select(a => Blocks.Square(session, nav, a)), 24));

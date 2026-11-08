@@ -335,6 +335,18 @@ public class LibraryPageTests
 public class SearchAndArtistTests
 {
     [AvaloniaFact]
+    public async Task TopResultsFillTheirRow()
+    {
+        // Fixed 300 px cards ended a row ~80 px short of the shelves under it.
+        var w = await ShellTests.Open();
+        w.Shell!.Nav.Open(new Route("search", "ostrava", "ostrava"));
+        await ShellTests.Settle(20);
+        var top = w.Shell.Page!.GetVisualDescendants().OfType<WrapPanel>().First();
+        double Right(Visual v) => v.TranslatePoint(new Point(v.Bounds.Width, 0), w)!.Value.X;
+        Assert.Equal(Right(top), top.Children.Max(Right), 1);
+    }
+
+    [AvaloniaFact]
     public async Task SearchShowsSongsAlbumsAndArtistsOrNoResults()
     {
         var w = await ShellTests.Open();
