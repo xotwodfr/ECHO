@@ -1,5 +1,9 @@
 ECHO for Windows: a modern look, and lyrics as Apple Music draws them.
 
+- **Fixed in 3.3.1: playback holds up on a real library and a real network.** A song whose connection drops or goes quiet (a laptop waking, a new Wi-Fi network) carries on from where it got to; when the music server is down the player says so and stays on the song instead of skipping through the whole queue, and Play then asks again; a queue that can't play at all stops instead of looping.
+- **Fixed in 3.3.1: big queues.** A queue played from Songs or a big playlist syncs to your other devices again (it was too big for the server and silently never saved); the queue panel lists the first hundred songs instead of freezing on thousands; turning shuffle off over a whole library is instant (it took seconds).
+- **Fixed in 3.3.1: Songs opens at once the second time** (the library is kept for 10 minutes instead of fetched on every visit), and the search fields over Songs, Albums and Artists wait for a pause in typing instead of rebuilding the list on every key.
+- **Fixed in 3.3.1: closing the window keeps your place in the song**, and a queue changed on another device no longer leaves an audio device open.
 - **New in 3.3.0: a modern look throughout.** The page floats as a rounded card; the top bar has a round Home beside a wide search field; the player bar puts the controls over a thin progress bar with a white Play button; album pages fade from the cover's colour into the songs, with Play in the album's colour; Settings opens over a dimmed app with a card per setting; menus are dark and rounded; Songs has column headers and Artists shows each artist's albums as a grid.
 - **New in 3.3.0: keys.** Space plays or pauses (not while typing), Ctrl+F goes to search, and keyboard focus shows as a rounded ring.
 - **Fixed in 3.3.0: the sign-in screen can be moved, minimized and closed** (it had no window controls).
