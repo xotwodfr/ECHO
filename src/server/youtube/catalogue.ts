@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { Innertube, Log } from 'youtubei.js';
 import type { Track } from '../../shared/types.ts';
 import type {
@@ -246,7 +247,8 @@ export function createCatalogue(opts: {
 }): Catalogue {
   // Every InnerTube answer says whether it was answered signed in (`logged_in`). With a cookie, a
   // "0" means Google no longer accepts it (rotated): signed out, on every page, Home included.
-  let staleSeen = false;
+  // Each call() has its own flag (review 2026-11-04 B6): overlapping calls share `checked`.
+  const callState = new AsyncLocalStorage<{ staleSeen: boolean }>();
   const notSongs = new Map<string, number>(); // videoId → until when meta() answers null unasked
   const base = opts.fetch ?? fetch;
   const checked: typeof fetch = async (input, init) => {
@@ -265,7 +267,8 @@ export function createCatalogue(opts: {
         ?.flatMap((p) => p.params ?? [])
         .find((p) => p.key === 'logged_in')?.value;
       if (loggedIn === '0') {
-        staleSeen = true;
+        const state = callState.getStore();
+        if (state) state.staleSeen = true;
         throw new YtSignedOut('YouTube answered signed out');
       }
     }
@@ -273,17 +276,26 @@ export function createCatalogue(opts: {
   };
   let session: Promise<Innertube> | null = null;
   const yt = () => {
-    session ??= Innertube.create({
-      retrieve_player: false,
-      generate_session_locally: true,
-      lang: opts.lang ?? 'en',
-      location: opts.region ?? 'SE',
-      ...(opts.cookie && { cookie: opts.cookie }),
-      fetch: checked,
-    }).catch((err: unknown) => {
-      session = null; // the next call tries again
-      throw err;
-    });
+    // The session is shared by every call waiting on it: its start-up requests get their own flag,
+    // so a signed-out answer there reaches all of them as YtSignedOut.
+    const starting = { staleSeen: false };
+    session ??= callState
+      .run(starting, () =>
+        Innertube.create({
+          retrieve_player: false,
+          generate_session_locally: true,
+          lang: opts.lang ?? 'en',
+          location: opts.region ?? 'SE',
+          ...(opts.cookie && { cookie: opts.cookie }),
+          fetch: checked,
+        }),
+      )
+      .catch((err: unknown) => {
+        session = null; // the next call tries again
+        throw starting.staleSeen && !(err instanceof YtSignedOut)
+          ? new YtSignedOut('signed out')
+          : err;
+      });
     return session;
   };
   const signedIn = () => {
@@ -291,12 +303,12 @@ export function createCatalogue(opts: {
   };
   /** Runs `fn`, turning a signed-out answer into YtSignedOut. */
   async function call<T>(fn: (y: Innertube) => Promise<T>): Promise<T> {
-    staleSeen = false;
+    const state = { staleSeen: false };
     try {
-      return await fn(await yt());
+      return await callState.run(state, async () => fn(await yt()));
     } catch (err) {
       // youtubei.js may wrap what `checked` threw: the flag says it was a signed-out answer.
-      if (err instanceof YtSignedOut || staleSeen) throw new YtSignedOut('signed out');
+      if (err instanceof YtSignedOut || state.staleSeen) throw new YtSignedOut('signed out');
       const e = err as { message?: string; info?: unknown };
       if (SIGNED_OUT.test(`${e.message ?? ''} ${String(e.info ?? '')}`))
         throw new YtSignedOut(e.message ?? 'signed out');
