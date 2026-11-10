@@ -30,9 +30,12 @@ export const sessionStore = createStore<SessionState>()(() => ({ status: 'unknow
 export const sessionExpired = createStore<{ expired: boolean }>()(() => ({ expired: false }));
 
 export async function loadSession(): Promise<SessionState> {
-  const state = await api<SessionState>('/session').catch(
+  const state = await api<SessionState | null>('/session').catch(
     (): SessionState => ({ status: 'offline' }),
   );
+  // api() answers null for a 2xx whose body did not parse (a read cut short as the page moves on):
+  // that is no session, so the one there is kept rather than replaced by null for every reader.
+  if (typeof state?.status !== 'string') return sessionStore.getState();
   sessionStore.setState(state, true);
   return state;
 }
