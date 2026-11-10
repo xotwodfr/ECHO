@@ -35,4 +35,9 @@
 16. **Existing docs updated**: `docs/PLAYBACK_ARCHITECTURE.md` §5.5 and §5.8,
     `docs/TECHNICAL_ARCHITECTURE.md` (route table), `Windows/README.md`.
 17. **E2E suite** run; results in [TESTING.md](TESTING.md).
-18. **Android, Linux, Apple** left unchanged; findings in [TODO.md](TODO.md).
+18. **Android** (after the first report): baseline `./gradlew testDebugUnitTest` passes (11 tests).
+    `fitted()`, position-only save, read retries; 2 tests added (13 pass); `assembleDebug` builds.
+    Not run on a device.
+19. **Linux**: baseline had no tests. 30 s timeout and read retries in `Linux/src/api.rs`; 2 tests
+    added and pass; `cargo clippy` clean.
+20. **Apple** left unchanged: never built.

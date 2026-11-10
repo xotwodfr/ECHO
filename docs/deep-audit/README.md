@@ -33,7 +33,10 @@ Every statement in these files is one of:
 | Audio streaming: server proxy | COMPLETED | One bug found and fixed (a paused listener lost its stream) |
 | Audio streaming: web client | COMPLETED | No change needed; reviewed |
 | Audio streaming: Windows client | COMPLETED | Stream retries now back off |
-| Audio streaming: Android, Linux, Apple clients | BLOCKED | Reviewed by reading; not changed, because the changes cannot be exercised here ([TODO.md](TODO.md)) |
+| Audio streaming: Android, Linux, Apple clients | COMPLETED (review) | Read; no defect found in the audio paths. Linux and Apple improvements are in [TODO.md](TODO.md) |
+| Communication: Android client | TESTING | Queue trim, position-only save, read retries: built and unit-tested, not run on a device |
+| Communication: Linux client | COMPLETED | 30 s timeout, bounded retries for reads |
+| Communication: Apple client | BLOCKED | Never built; not changed |
 | Communication: web client | COMPLETED | Timeouts, bounded retries with backoff and jitter, probe timeout |
 | Communication: Windows client | COMPLETED | Bounded retries for reads |
 | Communication: queue save | COMPLETED | Position-only `PATCH` on server, web and Windows |
@@ -55,22 +58,26 @@ Every statement in these files is one of:
    never sent twice. The Windows client's `Api.Send` does the same.
 3. **The queue was uploaded whole every 15 s.** Up to 60 KB each time, though only the position
    had changed. A new `PATCH /api/v1/me/queue` moves the position alone, under the same
-   compare-and-set as the `PUT`. Web and Windows use it and fall back to `PUT`.
+   compare-and-set as the `PUT`. Web, Windows and Android use it and fall back to `PUT`.
 4. **Two suspected costs were measured and are not real.** The proxy builds its Subsonic client
    per request and checks the URL per request; both cost microseconds, and the upstream connection
    is reused. ECHO adds about 2–4 ms to a request on loopback. No caching was added.
-5. **Security:** the controls were read and are sound. No dependency has a known vulnerability.
+5. **Android never trimmed its saved queue.** A queue over the server's 64 KB limit was refused and
+   the error dropped, so a long queue was never saved. A unit test shows a 3,000-song queue is over
+   the limit; `fitted()` now cuts it as web and Windows do. Not reproduced on a device.
+6. **Security:** the controls were read and are sound. No dependency has a known vulnerability.
 
 ## Remaining
 
-See [TODO.md](TODO.md). The first three: Android never trims its saved queue to the server's 64 KB
-(found by reading, not reproduced on a device); Android and Linux/Apple have no retries; Linux and
-Apple fetch a signed URL before every song (one round trip more than Windows and Android).
+See [TODO.md](TODO.md). The first three: deploy and release (the owner's word); run the Android
+changes on a device (they are built and unit-tested only); Linux and Apple fetch a signed URL before
+every song (one round trip more than the others).
 
 ## For whoever continues
 
 - `pnpm check` (typecheck, Biome, Vitest, build) and `pnpm test:e2e` for the server and web;
-  `dotnet test Windows/Tests` for Windows. Known E2E failures are listed in [TESTING.md](TESTING.md).
+  `dotnet test Windows/Tests` for Windows; `./gradlew testDebugUnitTest` in `Android/`; `cargo test`
+  in `Linux/`. Known E2E failures are listed in [TESTING.md](TESTING.md).
 - `node scripts/bench-proxy.ts 100` repeats the proxy measurement.
 - The machine this was written on is also the production server. The tests and the bench use their
   own ports (18787/18788, 18797/18798) and temp directories, and touch nothing that is live.

@@ -1,7 +1,7 @@
 # Audio streaming
 
-Status: server COMPLETED · web COMPLETED · Windows COMPLETED · Android, Linux, Apple BLOCKED (read,
-not changed; see §6).
+Status: server COMPLETED · web COMPLETED · Windows COMPLETED · Android, Linux, Apple: audio paths
+read, not changed (see §6).
 
 ## 1. The path
 
@@ -85,8 +85,8 @@ measured, and the existing streaming tests (`Windows/Tests/StreamingStartTests.c
 
 ## 6. Not done
 
-- **Android**: `Playback.kt` was read, not changed. See [TODO.md](TODO.md) P1 for the queue save.
-  Its audio path is Media3's and showed no defect in reading.
+- **Android**: the audio path is Media3's and showed no defect in reading; it was not changed. (Its
+  queue save was: [ECHO-COMMUNICATION.md](ECHO-COMMUNICATION.md) §6.)
 - **Linux, Apple**: one round trip more per song (the signed URL), no retry, no preparation of the
   next song. The Apple client has never been built; changing it blind would be guessing.
 - **Real network conditions** (loss, latency, a phone changing networks) were not tested. Every

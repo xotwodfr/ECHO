@@ -53,7 +53,8 @@ with covers, WAV streams and timed lyrics.
 - **Library**: albums (four sorts), artists, playlists, starred, album and artist pages, search
   (what is loaded at once, search3 a moment later), Play next and Add to queue.
 - **Playback**: background play, notification, lock screen and headset controls, shuffle,
-  repeat, the queue sheet (move, remove, clear), the queue saved to and restored from the server
+  repeat, the queue sheet (move, remove, clear), the queue saved to (cut to the server's 64 KB; the
+  position alone while the queue is unchanged) and restored from the server
   (the device that is playing wins a conflict), scrobbles at half or 4 minutes.
 - **The Stage**: the room on the blurred cover, the album palette crossfaded in OKLab, Reverb from
   the audio itself, brightness, Lyrics / Visual / Cover views, full screen, chrome that hides after

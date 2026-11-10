@@ -11,6 +11,8 @@ phone, or over a real network.
 | Typecheck, Biome, unit and integration tests, build | `pnpm check` | exit 0; 72 files, 1,505 tests pass; 20 Biome warnings | exit 0; 74 files, 1,515 tests pass; 20 Biome warnings (the same) |
 | Windows | `dotnet test Windows/Tests` | 112 pass | 114 pass |
 | End to end (Chromium, Firefox) | `pnpm test:e2e` | 517 pass, 4 fail, 99 skipped, 19 did not run (at `166a407`) | three runs, see §3 |
+| Android | `./gradlew testDebugUnitTest assembleDebug` (in `Android/`) | 11 pass | 13 pass; debug build succeeds |
+| Linux | `cargo test`, `cargo clippy` (in `Linux/`) | no tests | 2 pass; clippy clean |
 | Dependencies | `pnpm audit --prod` | no known vulnerabilities | not rerun: no dependency changed |
 | Proxy benchmark | `node scripts/bench-proxy.ts 100` | [PERFORMANCE.md](PERFORMANCE.md) §2 | same section |
 
@@ -28,6 +30,8 @@ shown to be isolated between users. That test now covers it.
 | `src/server/isolation.test.ts` (extended) | one user's `PATCH` cannot move another's position | the real app |
 | `src/client/api.test.ts` (+4, 1 adapted) | retry twice at most; 429 waits `retry-after`; a write is sent once; the delays | `fetch` mocked, fake timers |
 | `src/client/playback/queueSync.test.ts` (+1, 1 adapted) | saves after the first are `PATCH` without the queue; a refused `PATCH` falls back to `PUT` | `fetch` mocked |
+| `Android/.../QueueTest.kt` (+2) | a 3,000-song queue is over the server's limit and the cut one fits, from the far end; the retry delays | pure functions |
+| `Linux/src/api.rs` tests (2) | a read answered 502 twice by a proxy is asked a third time and succeeds; the retry delays | a real local socket |
 | `Windows/Tests/PlayerTests.cs` (+2) | the same two behaviours on Windows; retries of reads, none of writes | `HttpMessageHandler` fakes |
 
 The client tests mock the network, so they show the client's logic, not an exchange with a server.
@@ -64,7 +68,11 @@ passed in every run.
 
 ## 4. Not tested
 
-- **Android, Linux, Apple:** not built, not run. Their code was not changed.
+- **Android on a device or emulator:** the save path in `Playback.save()` (PATCH, the fallback) and
+  the retry loop in `Api.call()` compile but no test runs them; only `fitted()` and `retryDelay()`
+  are tested.
+- **Linux app itself** was not launched; its API client is tested.
+- **Apple:** not built, not run, not changed.
 - **Windows on Windows:** the test suite runs headless on Linux with a null audio device. The app
   was not run on a Windows machine in this audit.
 - **A new client against the deployed server**, and the reverse: production was not touched. The

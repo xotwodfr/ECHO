@@ -1,7 +1,7 @@
 # Client ↔ ECHO communication
 
-Status: web COMPLETED · Windows COMPLETED · queue save COMPLETED · Android, Linux, Apple reviewed
-only.
+Status: web COMPLETED · Windows COMPLETED · queue save COMPLETED · Linux COMPLETED · Android
+TESTING (not run on a device) · Apple BLOCKED (never built).
 
 ## 1. What was there (verified by reading, before any change)
 
@@ -96,16 +96,32 @@ as the web: GET only, twice at most, the same delays (`RetryDelay`), on `HttpReq
 bodiless 502–504, and 429 with its `Retry-After`. A timeout (`TaskCanceledException`) is not
 retried.
 
-## 6. Where each client stands now
+## 6. Android and Linux
+
+**Android** (`Android/app/src/main/kotlin/com/folk3s/echo/`), built and unit-tested, **not run on a
+device**:
+
+- `playback/Playback.kt` `fitted()`: the saved queue is cut to 60 KB as `trimQueue` and `Fitted`
+  cut it. Before, `save()` sent everything, the server refused a body over 64 KB, and `save()`
+  dropped every error but 409: a long queue was silently never saved. `QueueTest` shows a
+  3,000-song queue is over the server's limit and that the cut one fits.
+- `save()`: `PATCH` when the queue is the one last saved whole (`savedQueue`), else `PUT`; a
+  refused `PATCH` (4xx other than 401 and 409) falls back to `PUT`.
+- `api/Api.kt` `call()`: the same retry policy for GET. A timeout is not retried.
+
+**Linux** (`Linux/src/api.rs`), built and tested (`cargo test`, a local socket that answers 502
+twice): a 30 s timeout on every request (there was none: a hung request held its worker thread for
+ever), and the same retry policy in `get()`.
+
+## 6a. Where each client stands now
 
 | | Web | Windows | Android | Linux | Apple |
 |---|---|---|---|---|---|
-| Request timeout | 45 s | 30 s | OkHttp defaults (10 s each phase) | not checked | not checked |
-| Bounded retry of reads | yes | yes | no | no | no |
-| Position-only save | yes | yes | no | n/a (no queue save seen) | n/a |
-| Queue trimmed to 64 KB | yes | yes | **no** | n/a | n/a |
-
-Android's missing trim is [TODO.md](TODO.md) P1.
+| Request timeout | 45 s | 30 s | OkHttp defaults (10 s each phase) | 30 s | not checked |
+| Bounded retry of reads | yes | yes | yes | yes | no |
+| Position-only save | yes | yes | yes | n/a (no queue save) | n/a |
+| Queue trimmed to 64 KB | yes | yes | yes | n/a | n/a |
+| Exercised by | unit + E2E | unit (headless) | unit only | unit | nothing |
 
 ## 7. UI
 

@@ -32,7 +32,7 @@ no fix in them was needed, and an upgrade is its own change with its own test ru
 
 ## 3. The changes in this audit, seen from security
 
-- **Retries** (`api()`, `Api.Send`): reads only. A write is never repeated, so nothing can be
+- **Retries** (`api()`, `Api.Send`, Android `Api.call`, Linux `Api::get`): reads only. A write is never repeated, so nothing can be
   applied twice. A 401 is never retried. At most two extra requests per failed read, with backoff,
   so a client cannot hammer a struggling server; a 429 waits for the server's `retry-after`.
 - **Idle timeout** (`client.ts`): a stream can now stay open while its listener is paused. This is
