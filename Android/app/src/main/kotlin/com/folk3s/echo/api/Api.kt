@@ -3,6 +3,7 @@ package com.folk3s.echo.api
 import android.os.Build
 import com.folk3s.echo.BuildConfig
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.withContext
@@ -28,6 +29,11 @@ val EchoJson = Json {
 
 /** For what other clients read back (the saved queue): every field, defaults and empty lists too. */
 val EchoJsonFull = Json(EchoJson) { encodeDefaults = true }
+
+private const val RETRIES = 2
+
+/** The wait before retry `attempt` (0, 1): 300 ms then 900 ms, each ×0.5–1.5 (retryDelay in api.ts). */
+internal fun retryDelay(attempt: Int, rand: Double): Long = (300 * Math.pow(3.0, attempt.toDouble()) * (0.5 + rand)).toLong()
 
 /** An answer other than 2xx: the HTTP status and ECHO's error code (`{ error }`), when it sent one. */
 class ApiError(val status: Int, val code: String?) : Exception("HTTP $status${code?.let { " $it" } ?: ""}")
@@ -75,14 +81,31 @@ class Api(private val tokens: TokenStore) {
 
   private suspend fun call(req: Request): JsonElement =
     withContext(Dispatchers.IO) {
-      http.newCall(req).execute().use { res ->
-        val text = res.body.string()
-        val json = runCatching { EchoJson.parseToJsonElement(text) }.getOrDefault(JsonNull)
-        if (!res.isSuccessful) {
-          throw ApiError(res.code, (json as? JsonObject)?.get("error")?.jsonPrimitive?.contentOrNull)
-        }
-        json
+      var attempt = 0
+      while (true) {
+        // A read that failed on the way is asked again, twice at most (src/client/api.ts); a write never.
+        val again = req.method == "GET" && attempt < RETRIES
+        val wait =
+          try {
+            http.newCall(req).execute().use { res ->
+              val text = res.body.string()
+              val json = runCatching { EchoJson.parseToJsonElement(text) }.getOrDefault(JsonNull)
+              if (res.isSuccessful) return@withContext json
+              val code = (json as? JsonObject)?.get("error")?.jsonPrimitive?.contentOrNull
+              // ECHO's own 502 (Navidrome is down) carries a code and is an answer; a proxy's has none.
+              val passing = res.code == 429 || (code == null && res.code in 502..504)
+              if (!again || !passing) throw ApiError(res.code, code)
+              if (res.code == 429) (res.header("Retry-After")?.toLongOrNull() ?: 0) * 1000 else 0
+            }
+          } catch (e: java.io.InterruptedIOException) {
+            throw e // a timeout already took its time
+          } catch (e: java.io.IOException) {
+            if (!again) throw e
+            0L
+          }
+        delay(wait + retryDelay(attempt++, Math.random()))
       }
+      @Suppress("UNREACHABLE_CODE") JsonNull
     }
 
   /**

@@ -73,6 +73,21 @@ private const val HISTORY = 50
 /** The saved queue's position: any JSON number, as the web writes a fraction of a ms (QueueTest). */
 internal fun savedPositionMs(saved: JsonObject): Long = saved["positionMs"]?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0
 
+/** Request bodies are capped at 64 KB by the server (http.ts BODY_LIMIT). */
+private const val MAX_QUEUE_BYTES = 60_000
+
+/**
+ * The queue cut until it fits the server (queueSync.ts trimQueue): the far half of the context at a
+ * time, then of Next up. Only what is saved is cut; this device keeps all of it.
+ */
+internal fun fitted(q: QueueState): QueueState {
+  var out = q
+  fun size() = EchoJsonFull.encodeToString(QueueState.serializer(), out).toByteArray().size
+  while (size() > MAX_QUEUE_BYTES && out.context.isNotEmpty()) out = out.copy(context = out.context.take(out.context.size / 2))
+  while (size() > MAX_QUEUE_BYTES && out.nextUp.isNotEmpty()) out = out.copy(nextUp = out.nextUp.take(out.nextUp.size / 2))
+  return out
+}
+
 /**
  * The player as the app sees it (src/client/playback/controller.ts on Android): a MediaController
  * on [PlaybackService]'s session, the queue model on top of ExoPlayer's playlist, scrobbles, and the
@@ -99,6 +114,7 @@ class Playback(private val app: EchoApp) {
   /** Whether this track's play is in ECHO's history yet (whatever the scrobble setting). */
   private var recorded = false
   private var queueBase = 0L
+  private var savedQueue: String? = null // the queue the server holds, as this device last saved it whole
   private var saveJob: Job? = null
 
   init {
@@ -235,6 +251,7 @@ class Playback(private val app: EchoApp) {
     nextUp = 0
     source = null
     queueBase = 0
+    savedQueue = null
   }
 
   fun dismissNotice() {
@@ -418,22 +435,35 @@ class Playback(private val app: EchoApp) {
     if (app.tokens.token.value == null) return
     val s = _state.value
     val q = s.queue
-    val body =
+    val queue =
+      if (q.now == null) kotlinx.serialization.json.JsonNull
+      else EchoJsonFull.encodeToJsonElement(fitted(QueueState("navidrome", q.now, q.nextUp, q.context, q.source, q.history.takeLast(20))))
+    val json = queue.toString()
+    val at =
       buildJsonObject {
-        put(
-          "queue",
-          if (q.now == null) kotlinx.serialization.json.JsonNull
-          else EchoJsonFull.encodeToJsonElement(QueueState("navidrome", q.now, q.nextUp, q.context, q.source, q.history.takeLast(20))),
-        )
         put("positionMs", s.positionNow())
         put("baseUpdatedAt", queueBase)
       }
     try {
-      queueBase = (app.api.send("PUT", "/me/queue", body) as JsonObject)["updatedAt"]?.jsonPrimitive?.long ?: queueBase
+      // The server holds this queue already (the save every 15 s, a pause, a seek): the position
+      // alone goes, not the queue again. A server that refuses it gets the whole queue.
+      val moved =
+        if (q.now != null && json == savedQueue) {
+          try {
+            app.api.send("PATCH", "/me/queue", at)
+          } catch (e: ApiError) {
+            if (e.status == 409 || e.status == 401 || e.status >= 500) throw e
+            null
+          }
+        } else null
+      val answer = moved ?: app.api.send("PUT", "/me/queue", JsonObject(at + ("queue" to queue)))
+      queueBase = (answer as JsonObject)["updatedAt"]?.jsonPrimitive?.long ?: queueBase
+      savedQueue = json
     } catch (e: ApiError) {
       if (e.status != 409) return
       // Another device changed the queue: the one that is playing keeps its own.
       note("Your queue changed on another device.")
+      savedQueue = null
       val newer = runCatching { app.api.get("/me/queue").jsonObject }.getOrNull() ?: return
       queueBase = newer["updatedAt"]?.jsonPrimitive?.long ?: queueBase
       val nq = newer["queue"]?.let { runCatching { EchoJson.decodeFromJsonElement<QueueState>(it) }.getOrNull() }
