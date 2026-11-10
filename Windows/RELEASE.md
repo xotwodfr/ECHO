@@ -1,5 +1,10 @@
 ECHO for Windows: a modern look, and lyrics as Apple Music draws them.
 
+- **New in 3.4.0: the lyrics are a page of their own.** The lyrics button swaps the page for the lyrics on the cover's slowly moving colours, with the cover, title and artist beside them, as Spicy Lyrics shows them in Spotify, instead of a panel floating over another page. Full Screen and Close are at the top right; Esc, the lyrics button again or going to another page closes it.
+- **New in 3.4.0: media keys.** The keyboard's play, pause, next and previous keys and a headset's buttons work, and Windows shows the song in its media controls.
+- **New in 3.4.0: the app remembers** the volume, the window's size and place, and whether the sidebar was hidden.
+- **New in 3.4.0: Love knows what is loved**, offers Unlove for it, and says what it did.
+- **Fixed in 3.4.0:** Space plays and pauses in full screen and the mini player too; Settings' switches line up; search's Top Results fill their row; a crash is written to `%LOCALAPPDATA%\ECHO\crash.log`.
 - **Fixed in 3.3.1: playback holds up on a real library and a real network.** A song whose connection drops or goes quiet (a laptop waking, a new Wi-Fi network) carries on from where it got to; when the music server is down the player says so and stays on the song instead of skipping through the whole queue, and Play then asks again; a queue that can't play at all stops instead of looping.
 - **Fixed in 3.3.1: big queues.** A queue played from Songs or a big playlist syncs to your other devices again (it was too big for the server and silently never saved); the queue panel lists the first hundred songs instead of freezing on thousands; turning shuffle off over a whole library is instant (it took seconds).
 - **Fixed in 3.3.1: Songs opens at once the second time** (the library is kept for 10 minutes instead of fetched on every visit), and the search fields over Songs, Albums and Artists wait for a pause in typing instead of rebuilding the list on every key.
