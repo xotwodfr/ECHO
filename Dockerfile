@@ -27,7 +27,7 @@ RUN chmod 0755 /app/bin/yt-dlp
 # Runtime: distroless Node 24 on Debian 13 (M9, SEC-10): no shell, no package manager, no
 # util-linux, ncurses or perl, so none of their CVEs (the 43 HIGH findings of the slim base,
 # docs/reviews/M1-SEC-10-exception.md). glibc and libstdc++ are there for the native modules.
-FROM gcr.io/distroless/nodejs24-debian13@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8
+FROM gcr.io/distroless/nodejs24-debian13@sha256:b770c59f44ed459329508a73794e6d284f6c10143f83c8012a8f775cd514eca2
 ENV NODE_ENV=production ECHO_PORT=8080 ECHO_DATA_DIR=/data ECHO_YTDLP=/app/bin/yt-dlp
 WORKDIR /app
 COPY --from=build /app/package.json ./
