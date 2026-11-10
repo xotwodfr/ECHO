@@ -16,13 +16,15 @@ import type { Tried } from './resolve.ts';
 // The shared lyric cache (LYRICS_INTEGRATION.md §7): one JSON file per track key (sha1) under
 // /data/cache/lyrics, shared by the server's users. Spicy docs live 30 days, hard (deleted, never
 // served stale: Spicy terms §7), LRCLIB 30 days, Navidrome 1 day (the user may edit their files),
-// and a negative entry 3 days. A sweep at start and every 24 h deletes what has expired and trims
+// NetEase 1 day (unofficial API, terms unconfirmed: kept short until the owner decides), and a
+// negative entry 3 days. A sweep at start and every 24 h deletes what has expired and trims
 // the cache to 200 MB, least recently read first (reads touch the file).
 
 const DAY = 86_400_000;
-export const TTL: Record<string, number> = {
+export const TTL: Record<LyricsDoc['source'] | 'negative', number> = {
   spicy: 30 * DAY,
   lrclib: 30 * DAY,
+  netease: DAY,
   navidrome: DAY,
   'navidrome-plain': DAY,
   fixture: DAY,
