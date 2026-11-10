@@ -206,4 +206,42 @@ public class StreamingStartTests(ITestOutputHelper output)
         Assert.InRange(audio.Position.TotalSeconds, 39.5, 42);
         listener.Stop();
     }
+
+    [Fact]
+    public async Task TheNextSongIsAskedForWhileThisOneIsPlayingAndStartsWithoutAnotherRequest()
+    {
+        // WAV needs no ffmpeg, so this runs on CI too.
+        var bytes = Encode(".wav", false)!;
+        var (listener, port, requests) = Serve(bytes, "audio/wav");
+        using var _ = listener;
+        var api = new Api($"http://127.0.0.1:{port}") { Token = "device" };
+        var tracks = QueueTests.Album(3).Select(t => t with { ContentType = "audio/wav" }).ToList();
+        using var audio = new AudioOut(nullDevice: true);
+        await audio.Open((from, token) => api.Stream(tracks[0], from, token), play: true, key: tracks[0].Id);
+        audio.Prepare(tracks[1].Id, (from, token) => api.Stream(tracks[1], from, token));
+        var clock = Stopwatch.StartNew();
+        while (true)
+        {
+            lock (requests) if (requests.Count >= 2) break;
+            Assert.True(clock.ElapsedMilliseconds < 5000, "the next song was never asked for");
+            await Task.Delay(10);
+        }
+        int before;
+        lock (requests) before = requests.Count;
+
+        // Taking it: no new request, and it sounds within a few frames, not a request's round trip.
+        clock.Restart();
+        await audio.Open((from, token) => api.Stream(tracks[1], from, token), play: true, key: tracks[1].Id);
+        while (audio.Position <= TimeSpan.Zero && clock.ElapsedMilliseconds < 5000) await Task.Delay(2);
+        output.WriteLine($"the prepared song sounded after {clock.ElapsedMilliseconds} ms");
+        Assert.True(clock.ElapsedMilliseconds < 300, $"{clock.ElapsedMilliseconds} ms");
+        lock (requests) Assert.Equal(before, requests.Count);
+
+        // A song that is not the one prepared is asked for as before, and the prepared one is let go.
+        audio.Prepare(tracks[2].Id, (from, token) => api.Stream(tracks[2], from, token));
+        audio.Unprepare();
+        await audio.Open((from, token) => api.Stream(tracks[0], from, token), play: true, key: tracks[0].Id);
+        Assert.True(audio.Playing);
+        listener.Stop();
+    }
 }

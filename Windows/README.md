@@ -35,6 +35,9 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   devices (`/me/queue`, cut to the server's 64 KB as the web cuts it). A song whose connection drops or
   goes quiet carries on from where it got to; a server that fails is said so, not skipped through. The
   **drawer**: the queue (its first hundred, and how many more) and history.
+- **The next song is made ready while this one plays** (its request answered, cover art jumped, decoder open,
+  download running), so Next and the end of a song start it at once instead of from a cold request; it is
+  let go if the queue, Shuffle or Repeat change what comes next.
 - **Windows' media controls**: the keyboard's media keys and a headset's buttons, and the song with its
   cover and time in the volume flyout and on the lock screen (`Ui/MediaControls.cs`).
 - **Love** and **Unlove** for songs, albums and artists, knowing what is loved already.

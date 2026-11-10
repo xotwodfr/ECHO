@@ -76,20 +76,73 @@ public sealed class AudioOut : IDisposable
     /// It starts at `at`, playing if `play`, as soon as it can, on a worker (the window may be busy
     /// laying out the new song). The decoder converts to the device's format: a 44.1 kHz song on a
     /// 48 kHz device keeps its pitch.
-    public Task Open(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, TimeSpan at = default, bool play = false) =>
+    public Task Open(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, TimeSpan at = default, bool play = false, string? key = null) =>
         Open(async () =>
         {
-            var stream = await ProgressiveStream.Open(fetch);
-            try
+            Task<(ISoundDataProvider, ProgressiveStream?)>? ready = null;
+            lock (sync)
             {
-                return (new StreamDataProvider(engine, DeviceFormat, stream), stream);
+                if (key is not null && prepared is { } p && p.Key == key)
+                {
+                    ready = p.Made;
+                    prepared = null;
+                }
             }
-            catch
-            {
-                stream.Dispose();
-                throw;
-            }
+            if (ready is not null)
+                try
+                {
+                    return await ready;
+                }
+                catch (Exception) { } // it failed in the background: ask again, as for any song
+            return await Make(fetch);
         }, at, play);
+
+    static async Task<(ISoundDataProvider, ProgressiveStream?)> Make(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch, AudioOut self)
+    {
+        var stream = await ProgressiveStream.Open(fetch);
+        try
+        {
+            return (new StreamDataProvider(self.engine, DeviceFormat, stream), stream);
+        }
+        catch
+        {
+            stream.Dispose();
+            throw;
+        }
+    }
+
+    Task<(ISoundDataProvider, ProgressiveStream?)> Make(Func<long, CancellationToken, Task<HttpResponseMessage>> fetch) => Make(fetch, this);
+
+    (string Key, Task<(ISoundDataProvider, ProgressiveStream?)> Made)? prepared;
+
+    /// Gets the song after this one ready while this one plays: its request answered, its cover art
+    /// jumped, its decoder open, the download running. An Open with the same `key` takes it, so the next
+    /// song starts at once. One song is kept ready; asking for another lets the first go.
+    public void Prepare(string key, Func<long, CancellationToken, Task<HttpResponseMessage>> fetch)
+    {
+        lock (sync)
+        {
+            if (prepared is { } p && p.Key == key) return;
+            Unprepare();
+            prepared = (key, Task.Run(() => Make(fetch)));
+        }
+    }
+
+    /// Lets the song kept ready go (the queue changed, so it is not the next one).
+    public void Unprepare()
+    {
+        lock (sync)
+        {
+            if (prepared is not { } p) return;
+            prepared = null;
+            _ = p.Made.ContinueWith(t =>
+            {
+                if (t.Status != TaskStatus.RanToCompletion) return;
+                t.Result.Item2?.Dispose();
+                (t.Result.Item1 as IDisposable)?.Dispose();
+            }, TaskScheduler.Default);
+        }
+    }
 
     /// Opens a file (tests), as above.
     public Task Open(string path, TimeSpan at = default, bool play = false) =>
@@ -207,6 +260,7 @@ public sealed class AudioOut : IDisposable
     public void Dispose()
     {
         stop.Cancel();
+        Unprepare();
         lock (sync) Close();
         device?.Stop();
         device?.Dispose();

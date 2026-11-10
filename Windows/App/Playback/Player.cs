@@ -169,6 +169,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     public void SetShuffle(bool on)
     {
         Queue.SetShuffle(on, Random.Shared);
+        if (Playing) Prefetch();
         QueueChanged?.Invoke();
         Changed();
     }
@@ -176,6 +177,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     public void CycleRepeat()
     {
         Queue.Repeat = Queue.Repeat switch { Repeat.Off => Repeat.All, Repeat.All => Repeat.One, _ => Repeat.Off };
+        if (Playing) Prefetch();
         QueueChanged?.Invoke();
     }
 
@@ -214,6 +216,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     void Edit(Action change)
     {
         change();
+        if (Playing) Prefetch();
         QueueChanged?.Invoke();
         Changed();
     }
@@ -249,7 +252,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     async Task Start(Track t, bool play, TimeSpan at = default, int failed = 0)
     {
         // The song is asked for before the window changes for it, and plays as soon as it comes.
-        var opening = source is null ? Output.Open((from, token) => api.Stream(t, from, token), at, play) : OpenFile(t, at, play);
+        var opening = source is null ? Output.Open((from, token) => api.Stream(t, from, token), at, play, t.Id) : OpenFile(t, at, play);
         Track = t;
         loaded = true;
         scrobbled = "none";
@@ -261,6 +264,7 @@ public sealed partial class Player : ObservableObject, IDisposable
             await opening;
             if (Track != t) return; // another song was asked for meanwhile
             Playing = play;
+            if (play) Prefetch();
         }
         catch (Exception) when (Track != t)
         {
@@ -294,6 +298,16 @@ public sealed partial class Player : ObservableObject, IDisposable
             Playing = false;
         }
         Changed();
+    }
+
+    /// The song that plays after this one is made ready while this one plays (a skip or the end then
+    /// starts it at once instead of from a cold request); one that is no longer next is let go.
+    void Prefetch()
+    {
+        if (source is not null || output is null) return;
+        var next = Queue.Repeat == Repeat.One ? null : Queue.NextUp.FirstOrDefault() ?? Queue.Context.FirstOrDefault();
+        if (next is null) output.Unprepare();
+        else output.Prepare(next.Id, (from, token) => api.Stream(next, from, token));
     }
 
     async Task Ended()
