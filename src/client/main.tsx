@@ -81,7 +81,7 @@ const applyLyricPrefs = () => {
 };
 prefsStore.subscribe((s, prev) => s.lyrics !== prev.lyrics && applyLyricPrefs());
 
-// Development builds let e2e flip the Settings → Lyrics preferences that have no UI yet (M8).
+// Development builds let e2e flip the Settings → Lyrics preferences without the Settings page.
 if (__ECHO_FIXTURES__) Object.assign(window, { __echoLyricPrefs: lyricPrefs });
 
 // Deterministic frames never ask the server who is signed in: the same frame on every load.

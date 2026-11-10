@@ -371,10 +371,9 @@ export function createSpotifyMatcher(deps: MatchDeps) {
 
   return {
     /**
-     * The Spotify ids for a Navidrome track (best first): stored, or matched now with the fast
-     * matchers from Navidrome's own metadata. Empty when none is known; errors match nothing.
+     * The Spotify ids for a Navidrome track (best first): stored, or matched now from its details
+     * in its own Navidrome (getSong). Empty when none is known; errors match nothing.
      */
-    /** A Navidrome track's ids, its details from its own Navidrome (getSong) when not stored. */
     idsFor(scope: string, navidromeId: string, client: () => Promise<SubsonicClient | null>) {
       return this.idsForTrack(scope, navidromeId, async () => {
         const c = await client();

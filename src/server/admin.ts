@@ -10,9 +10,8 @@ import type { LyricsCache } from './lyrics/cache.ts';
 
 // Admin → Server settings (SETTINGS_AND_SECURITY.md §6.2, §6.3, §7.2): the Spicy Lyrics secret key,
 // sealed in `server_settings`, write-only (the API says whether one is saved, never what it is),
-// and read only by the server's lyric source; the Spotify app's Client ID (public in PKCE), its
-// seats, its optional client secret (sealed, write-only; only for Spotify matching), the library
-// matching switch, and the policy gates G1/G2 (PLAYBACK_ARCHITECTURE.md §4.6, both on by default).
+// and read only by the server's lyric source; the Spotify library matching switch; "Require TOTP
+// for all"; and YouTube Music for everyone. Then users, invites and the audit log.
 
 const SPICY = { table: 'server_settings', rowId: 'lyrics.spicyKey', column: 'secret_enc' } as const;
 

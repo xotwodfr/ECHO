@@ -60,7 +60,7 @@ the Subsonic proxy, signed stream URLs):
 |---|---|---|---|
 | `Android/` | Android | Kotlin, Compose, Media3 | `./gradlew assembleRelease` ([docs/ANDROID_CLIENT.md](docs/ANDROID_CLIENT.md)) |
 | `Linux/` | Linux | Rust, GTK 4, GStreamer, libsecret | `cargo run --release` |
-| `Windows/` | Windows 10/11 | C#, WPF on .NET 10 (Fluent theme) | `dotnet run` |
+| `Windows/` | Windows 10/11 | C#, Avalonia on .NET 10 | `dotnet run` |
 | `macOS/` | macOS 14+ | Swift, SwiftUI, AVPlayer | `xcodegen && open ECHO.xcodeproj` |
 | `iOS/` | iPhone, iPad (iOS 17+) | Swift, SwiftUI, AVPlayer | `xcodegen && open ECHO.xcodeproj` |
 
