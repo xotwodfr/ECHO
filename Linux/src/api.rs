@@ -4,6 +4,14 @@
 //! no header of its own. Blocking: the window calls it from a worker thread (gio::spawn_blocking).
 
 use serde_json::{Value, json};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+const RETRIES: u32 = 2;
+
+/// The wait before retry `attempt` (0, 1): 300 ms then 900 ms, each ×0.5–1.5.
+fn retry_delay(attempt: u32, rand: f64) -> Duration {
+    Duration::from_secs_f64(0.3 * 3f64.powi(attempt as i32) * (0.5 + rand))
+}
 
 #[derive(Debug)]
 pub enum ApiError {
@@ -47,8 +55,10 @@ pub struct Api {
 impl Api {
     pub fn new(base: &str) -> Self {
         // Error answers carry ECHO's code ({ "error": … }): read them instead of failing on status.
+        // No answer in 30 s is a failure: a request left hanging would hold its worker for ever.
         let config = ureq::Agent::config_builder()
             .http_status_as_error(false)
+            .timeout_global(Some(Duration::from_secs(30)))
             .build();
         Api {
             base: base.trim_end_matches('/').to_string(),
@@ -75,13 +85,51 @@ impl Api {
         }
     }
 
+    /// A read that failed on the way (no connection, a proxy's 502–504, 429) is asked again, twice
+    /// at most, as the web does (src/client/api.ts). Writes go once.
     fn get(&self, token: &str, path: &str) -> Result<Value, ApiError> {
-        let res = self
-            .agent
-            .get(format!("{}/api/v1{path}", self.base))
-            .header("Authorization", format!("Bearer {token}"))
-            .call();
-        Self::answer(res)
+        for attempt in 0.. {
+            let res = self
+                .agent
+                .get(format!("{}/api/v1{path}", self.base))
+                .header("Authorization", format!("Bearer {token}"))
+                .call();
+            let passing = match &res {
+                Err(ureq::Error::Timeout(_)) => false, // it already took its time
+                Err(_) => true,
+                // ECHO's own 502 (Navidrome is down) has a JSON body and is an answer.
+                Ok(r) => match r.status().as_u16() {
+                    429 => true,
+                    502..=504 => r
+                        .headers()
+                        .get("content-type")
+                        .is_none_or(|t| !t.to_str().unwrap_or("").starts_with("application/json")),
+                    _ => false,
+                },
+            };
+            if !passing || attempt == RETRIES {
+                return Self::answer(res);
+            }
+            let after = res.ok().and_then(|r| {
+                r.headers()
+                    .get("retry-after")?
+                    .to_str()
+                    .ok()?
+                    .parse::<u64>()
+                    .ok()
+            });
+            // The clock's nanoseconds are jitter enough: devices that lost the server together
+            // do not come back in step.
+            let rand = f64::from(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .map_or(0, |d| d.subsec_nanos()),
+            ) / 1e9;
+            std::thread::sleep(
+                Duration::from_secs(after.unwrap_or(0)) + retry_delay(attempt, rand),
+            );
+        }
+        unreachable!()
     }
 
     /// A device token for this computer: credentials and, with two-factor on, the code, in one go.
@@ -188,4 +236,43 @@ fn encode(s: &str) -> String {
             _ => format!("%{b:02X}"),
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::{Read, Write};
+
+    #[test]
+    fn a_retry_waits_longer_each_time() {
+        assert_eq!(retry_delay(0, 0.0), Duration::from_millis(150));
+        assert_eq!(retry_delay(1, 1.0), Duration::from_millis(1350));
+    }
+
+    /// A proxy's 502 twice, then the answer: the read is asked three times and succeeds.
+    #[test]
+    fn a_read_that_failed_on_the_way_is_asked_again() {
+        let server = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let base = format!("http://{}", server.local_addr().unwrap());
+        let asked = std::thread::spawn(move || {
+            for n in 0..3 {
+                let (mut c, _) = server.accept().unwrap();
+                let _ = c.read(&mut [0; 2048]);
+                let res = if n < 2 {
+                    "HTTP/1.1 502 Bad Gateway\r\nconnection: close\r\ncontent-length: 0\r\n\r\n"
+                        .to_string()
+                } else {
+                    let body = r#"{"url":"/s"}"#;
+                    format!(
+                        "HTTP/1.1 200 OK\r\nconnection: close\r\ncontent-type: application/json\r\ncontent-length: {}\r\n\r\n{body}",
+                        body.len()
+                    )
+                };
+                c.write_all(res.as_bytes()).unwrap();
+            }
+        });
+        let url = Api::new(&base).stream_url("t", "a1").unwrap();
+        assert_eq!(url, format!("{base}/s&format=raw"));
+        asked.join().unwrap();
+    }
 }
