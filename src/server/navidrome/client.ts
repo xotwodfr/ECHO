@@ -46,7 +46,7 @@ type Params = Record<string, string | string[]>;
 /** Query parameters a caller may never set: auth and protocol are ours. */
 const RESERVED = new Set(['u', 'p', 't', 's', 'apiKey', 'c', 'v', 'f']);
 
-export function createClient(target: Target, creds: Credentials) {
+export function createClient(target: Target, creds: Credentials, idleMs = TIMEOUT_MS) {
   const lookup: LookupFunction = (_host, opts, cb) => {
     const family = target.address.includes(':') ? 6 : 4;
     if (opts?.all) cb(null, [{ address: target.address, family }]);
@@ -71,8 +71,17 @@ export function createClient(target: Target, creds: Credentials) {
     const url = urlFor(method, params);
     const mod = url.startsWith('https:') ? https : http;
     return new Promise<IncomingMessage>((resolve, reject) => {
-      const req = mod.get(url, { lookup, headers, timeout: TIMEOUT_MS }, resolve);
-      req.on('timeout', () => req.destroy(new SubsonicError('timeout', 0)));
+      let res: IncomingMessage | undefined;
+      const req = mod.get(url, { lookup, headers, timeout: idleMs }, (r) => {
+        res = r;
+        resolve(r);
+      });
+      // The socket is idle too when our reader stopped reading (a paused player, a full buffer):
+      // bytes we hold unread are not the server's silence, and cutting the stream there ends the
+      // song for a client that cannot ask for the rest (a transcode has no Range).
+      req.on('timeout', () => {
+        if (!res?.readableLength) req.destroy(new SubsonicError('timeout', 0));
+      });
       req.on('error', (err) =>
         reject(err instanceof SubsonicError ? err : new SubsonicError(err.message, 0)),
       );
