@@ -146,7 +146,7 @@ public sealed class BarTools : StackPanel
     readonly Session session;
     readonly Button queue, lyrics, mute;
 
-    /// The queue or lyrics button: Cider's drawer opens (or closes) on that panel.
+    /// The queue or lyrics button: the queue's drawer or the lyrics page opens (or closes).
     public event Action<string>? DrawerRequested;
 
     public BarTools(Session session)
@@ -183,17 +183,27 @@ public sealed class BarTools : StackPanel
         Show();
     }
 
-    /// Which drawer panel is open, for the buttons' active look.
+    /// Which drawer panel is open, for the button's active look.
     public string? OpenPanel
     {
         set
         {
             // Today's players light the open panel's icon in the key colour rather than boxing it.
             queue.Foreground = value == "queue" ? Kit.Brush("Key") : Kit.Brush("Text");
-            lyrics.Foreground = value == "lyrics" ? Kit.Brush("Key") : Kit.Brush("Text");
             queue.Opacity = value == "queue" ? 1 : 0.7;
+        }
+    }
+
+    bool lyricsOpen;
+
+    /// The lyrics page is open: its button lit the same way.
+    public bool LyricsOpen
+    {
+        set
+        {
+            lyricsOpen = value;
+            lyrics.Foreground = value ? Kit.Brush("Key") : Kit.Brush("Text");
             Show();
-            if (value == "lyrics") lyrics.Opacity = 1;
         }
     }
 
@@ -201,8 +211,8 @@ public sealed class BarTools : StackPanel
     {
         ((Glyph)mute.Content!).Icon = session.Player.Muted ? Icons.Volume : Icons.Volume2;
         var has = session.Lyrics.Status == LyricsStatus.Ready;
-        lyrics.Opacity = has ? 0.7 : 0.3;
-        lyrics.IsHitTestVisible = has;
+        lyrics.Opacity = lyricsOpen ? 1 : has ? 0.7 : 0.3;
+        lyrics.IsHitTestVisible = has || lyricsOpen;
     }
 }
 

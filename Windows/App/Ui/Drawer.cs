@@ -14,10 +14,9 @@ using Echo.Playback;
 namespace Echo.Ui;
 
 /// Cider's drawer (style.less .app-drawer; views/app/app-navigation.ejs): 300 px, radius 12, 16 px from
-/// the right, floating over the page with Cider's shadow; the queue or the lyrics (on a LyricsStage). Cider's drawer is
-/// --color2 under a 40 px backdrop blur; ECHO blurs no live pixels, so it is the colour that blur gives
-/// over Cider's dark pages, opaque so no crisp text shows through, and the lyrics lie over the playing
-/// cover blurred once.
+/// the right, floating over the page with Cider's shadow; the queue (the lyrics are a page: LyricsPage). Cider's
+/// drawer is --color2 under a 40 px backdrop blur; ECHO blurs no live pixels, so it is the colour that
+/// blur gives over Cider's dark pages, opaque so no crisp text shows through.
 public sealed class Drawer : Border
 {
     readonly Session session;
@@ -43,7 +42,7 @@ public sealed class Drawer : Border
         ];
     }
 
-    /// "queue", "lyrics" or null (closed).
+    /// "queue" or null (closed).
     public string? Panel { get; private set; }
 
     public event Action? Changed;
@@ -67,11 +66,7 @@ public sealed class Drawer : Border
             return;
         }
         var opening = !IsVisible || Opacity < 1;
-        Child = Panel switch
-        {
-            "queue" => new QueuePanel(session, nav),
-            _ => new Panel { Children = { new LyricsBackdrop(session), new SongLyrics(session) { Margin = new Thickness(0, 12) } } },
-        };
+        Child = new QueuePanel(session, nav);
         IsVisible = true;
         if (opening)
         {
@@ -260,61 +255,5 @@ public sealed class QueuePanel : DockPanel
         if (t.Album.Id is { } album) menu.Add(Item("Go to Album", () => nav.Open(new Route("album", album, t.Album.Title))));
         row.ContextMenu = new ContextMenu { ItemsSource = menu };
         return row;
-    }
-}
-
-/// The lyrics drawer's background (.app-drawer .bgArtworkMaterial): the playing cover at brightness 80 %,
-/// blurred and saturated, baked once per cover; it follows the song.
-public sealed class LyricsBackdrop : Control
-{
-    public LyricsBackdrop() { }
-
-    public LyricsBackdrop(Session session)
-    {
-        Url = session.Player.Track?.Cover;
-        System.ComponentModel.PropertyChangedEventHandler track = (_, e) =>
-        {
-            if (e.PropertyName == nameof(Player.Track)) Url = session.Player.Track?.Cover;
-        };
-        this.WhileShown(() => session.Player.PropertyChanged += track, () => session.Player.PropertyChanged -= track);
-    }
-
-    static readonly Dictionary<string, Avalonia.Media.Imaging.Bitmap?> baked = [];
-    string? url;
-    Avalonia.Media.Imaging.Bitmap? image;
-
-    public string? Url
-    {
-        get => url;
-        set
-        {
-            if (value == url) return;
-            url = value;
-            _ = Load(value);
-        }
-    }
-
-    async Task Load(string? which)
-    {
-        image = null;
-        InvalidateVisual();
-        if (which is null || Session.Current is not { } s) return;
-        if (!baked.TryGetValue(which, out var done))
-        {
-            var cover = await s.Covers.Get(which, 300);
-            done = baked[which] = cover is null ? null : ArtworkMaterial.Bake(cover, sigma: 8, saturate: 1.8f, brightness: 0.8f);
-        }
-        if (which != url) return;
-        image = done;
-        InvalidateVisual();
-    }
-
-    public override void Render(DrawingContext context)
-    {
-        if (image is null) return;
-        var side = Math.Max(Bounds.Width, Bounds.Height) * 1.4;
-        using (context.PushClip(new Rect(Bounds.Size)))
-            context.DrawImage(image, new Rect(image.Size), new Rect((Bounds.Width - side) / 2, (Bounds.Height - side) / 2, side, side));
-        context.FillRectangle(new SolidColorBrush(Color.FromArgb(90, 0, 0, 0)), new Rect(Bounds.Size));
     }
 }

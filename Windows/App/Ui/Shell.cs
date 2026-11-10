@@ -8,7 +8,8 @@ namespace Echo.Ui;
 
 /// Cider's main window (views/main.ejs, #app-main), in the layout Settings chose: Mojave, Cider's default
 /// (the top chrome over the sidebar and the page, the bottom chrome under it all), or Maverick (the player
-/// in the top chrome, no bottom chrome); the drawer floats at the right in both. The sidebar and the bars
+/// in the top chrome, no bottom chrome); the drawer (the queue) floats at the right in both, and the
+/// lyrics take the page's place while they are open. The sidebar and the bars
 /// lie on #app-main's translucent ground; the page floats over it as a card.
 public sealed class Shell : Grid
 {
@@ -47,7 +48,7 @@ public sealed class Shell : Grid
             CornerRadius = new CornerRadius(10),
             Margin = new Thickness(0, 0, 8, Maverick ? 8 : 0),
             ClipToBounds = true,
-            Child = page,
+            Child = new Panel { Children = { page, lyricsLayer } },
         };
         navigation.Children.Add(card);
         Drawer = new Drawer(session, Nav) { [Grid.RowProperty] = 1, [Grid.ColumnProperty] = 1 };
@@ -66,7 +67,11 @@ public sealed class Shell : Grid
         };
         if (!session.Prefs.Sidebar) Top.ToggleSidebar(); // hidden last time
         Top.MenuRequested += anchor => MainMenu.Show(anchor, session, () => ShowSettings(), () => ShowSettings("About"));
-        Tools.DrawerRequested += Drawer.Toggle;
+        Tools.DrawerRequested += panel =>
+        {
+            if (panel == "lyrics") ToggleLyrics();
+            else Drawer.Toggle(panel);
+        };
         Drawer.Changed += () => Tools.OpenPanel = Drawer.Panel;
         Top.Searched += Search;
         sidebar.Searched += Search;
@@ -82,6 +87,28 @@ public sealed class Shell : Grid
     }
 
     readonly Panel modal = new() { IsVisible = false };
+    readonly Panel lyricsLayer = new();
+
+    /// The lyrics page, while it is open.
+    public LyricsPage? Lyrics { get; private set; }
+
+    /// The bar's lyrics button: the lyrics over the page, or away again. Going anywhere closes them too.
+    public void ToggleLyrics()
+    {
+        if (Lyrics is { } open)
+        {
+            Lyrics = null;
+            open.Leave(() => lyricsLayer.Children.Remove(open));
+        }
+        else
+        {
+            Lyrics = new LyricsPage(session);
+            Lyrics.CloseRequested += ToggleLyrics;
+            Lyrics.FullscreenRequested += () => FullscreenRequested?.Invoke();
+            lyricsLayer.Children.Add(Lyrics);
+        }
+        Tools.LyricsOpen = Lyrics is not null;
+    }
 
     /// Maverick: the player in the top chrome, no bottom chrome.
     public bool Maverick { get; }
@@ -90,12 +117,18 @@ public sealed class Shell : Grid
 
     void Search(string term) => Nav.Open(new Route("search", term, term));
 
-    /// Today's keys (the window passes on what nothing else took): Ctrl+F goes to the search field. (Space
+    /// Today's keys (the window passes on what nothing else took): Ctrl+F goes to the search field, Escape
+    /// closes the lyrics. (Space
     /// is the window's: it works in full screen and the mini player too.)
     public void Keys(Avalonia.Input.KeyEventArgs e)
     {
         if (e.Key == Avalonia.Input.Key.F && e.KeyModifiers == Avalonia.Input.KeyModifiers.Control)
             e.Handled = Top.FocusSearch() || sidebar.FocusSearch();
+        if (e.Key == Avalonia.Input.Key.Escape && Lyrics is not null)
+        {
+            ToggleLyrics();
+            e.Handled = true;
+        }
     }
 
     /// Cider's settings window over the app, 90 % of it up to 980×680, the app dimmed behind it; a click
@@ -182,6 +215,7 @@ public sealed class Shell : Grid
     /// A page comes in as Cider's do (wpfade): from 12 px lower and transparent, in 260 ms.
     void Show()
     {
+        if (Lyrics is not null) ToggleLyrics();
         var next = Pages.Create(session, Nav, Nav.Current);
         page.Content = next;
         Motion.Enter(next);

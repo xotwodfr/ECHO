@@ -34,7 +34,7 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
 - Playback through the queue: shuffle, repeat, volume, seek; scrobbles; the queue follows you across
   devices (`/me/queue`, cut to the server's 64 KB as the web cuts it). A song whose connection drops or
   goes quiet carries on from where it got to; a server that fails is said so, not skipped through. The
-  **drawer**: the queue (its first hundred, and how many more) and history, and the lyrics.
+  **drawer**: the queue (its first hundred, and how many more) and history.
 - **Windows' media controls**: the keyboard's media keys and a headset's buttons, and the song with its
   cover and time in the volume flyout and on the lock screen (`Ui/MediaControls.cs`).
 - **Love** and **Unlove** for songs, albums and artists, knowing what is loved already.
@@ -49,6 +49,9 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   rising as it is sung, and a held word (1 s or more, 2-7 letters) swelling, spreading and glowing
   letter by letter; background vocals sliding out under their line while it is sung, duets on
   opposite sides, interlude dots; click to seek.
+- The **lyrics page**, where Spicy Lyrics puts it in Spotify: the lyrics button swaps the page for the
+  lyrics on the cover's flowing background, the cover, title and artist beside them, with Full Screen
+  and Close (Escape, or going to another page, closes it too).
 - The **full-screen lyrics** as Apple Music lays them out (the cover with the title, artist and "…"
   under it, a thin progress bar with the time left, Apple's controls, a pill to go back; the lyrics
   beside it, over the cover's flowing colours) and Cider's **mini player**, from the artwork's

@@ -418,15 +418,23 @@ public class DrawerTests
     {
         var w = await ShellTests.Open();
         await ShellTests.Settle(30); // the lyrics loader waits 250 ms before it asks
-        var drawer = w.Shell!.Drawer;
-        drawer.Toggle("lyrics");
+        var shell = w.Shell!;
+        shell.ToggleLyrics();
         await ShellTests.Settle();
+        var page = Assert.IsType<LyricsPage>(shell.Lyrics);
+        var stage = page.GetVisualDescendants().OfType<Echo.Stage.LyricsStage>().Single();
+        for (var i = 0; i < 60; i++) stage.Tick(16);
         ShellTests.Shot(w, "lyrics");
-        var stage = drawer.GetVisualDescendants().OfType<Echo.Stage.LyricsStage>().Single();
+        // The lyrics are a page with the song beside them, not a panel over another page.
+        Assert.False(shell.Drawer.IsVisible);
+        Assert.Contains("Afterglow", ShellTests.Texts(page));
         stage.Tick(16);
         // 1:18 is inside "Every echo finds its way home" (75.0 s to 78.6 s), after the opening dots.
         Assert.Equal("Every echo finds its way home", string.Join(" ", stage.Lines[stage.Active].Words));
         Assert.True(stage.Lines[0].Item.Interlude);
+        // Going somewhere else closes them.
+        shell.Nav.Open(new Route("library-songs"));
+        Assert.Null(shell.Lyrics);
     }
 }
 
