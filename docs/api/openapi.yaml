@@ -360,6 +360,23 @@ paths:
         '200': { description: Saved, content: { application/json: { schema: { type: object, properties: { updatedAt: { type: integer } } } } } }
         '400': { description: Not a queue }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
+    patch:
+      summary: Save the position alone, into the queue this device last saw (what a player sends while a song plays)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [positionMs, baseUpdatedAt]
+              properties:
+                positionMs: { type: number, minimum: 0 }
+                baseUpdatedAt: { type: integer, description: The updatedAt this device last saw }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { type: object, properties: { updatedAt: { type: integer } } } } } }
+        '400': { description: Not a position }
+        '404': { description: 'no_queue: nothing is saved yet; PUT the whole queue' }
+        '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
   /me/queue/youtube:
     get:
@@ -384,6 +401,23 @@ paths:
       responses:
         '200': { description: Saved, content: { application/json: { schema: { type: object, properties: { updatedAt: { type: integer } } } } } }
         '400': { description: Not a queue }
+        '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
+    patch:
+      summary: Save the position alone, into the queue this device last saw (what a player sends while a song plays)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [positionMs, baseUpdatedAt]
+              properties:
+                positionMs: { type: number, minimum: 0 }
+                baseUpdatedAt: { type: integer, description: The updatedAt this device last saw }
+      responses:
+        '200': { description: Saved, content: { application/json: { schema: { type: object, properties: { updatedAt: { type: integer } } } } } }
+        '400': { description: Not a position }
+        '404': { description: 'no_queue: nothing is saved yet; PUT the whole queue' }
         '409': { description: 'changed_elsewhere: a newer queue from another device (returned)' }
 
   /wanted:

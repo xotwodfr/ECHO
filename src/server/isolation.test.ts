@@ -186,6 +186,17 @@ describe('SEC-11: isolation between users', () => {
     ).toBe(false);
 
     // B writes with A's identifiers: A's data is unchanged.
+    // B has no queue: moving "the" position (with A's timestamp as the base) moves nobody's.
+    for (const slot of ['', '/youtube']) {
+      const moved = await as(B, 'PATCH', `/api/v1/me/queue${slot}`, {
+        positionMs: 9999,
+        baseUpdatedAt: Number.MAX_SAFE_INTEGER,
+      });
+      expect(moved.status).toBe(404);
+      expect((await as(A, 'GET', `/api/v1/me/queue${slot}`).then((r) => r.json())).positionMs).toBe(
+        1234,
+      );
+    }
     await as(B, 'PUT', '/api/v1/me/queue', { queue: null, positionMs: 0, baseUpdatedAt: 0 });
     await as(B, 'PUT', '/api/v1/me/queue/youtube', {
       queue: null,

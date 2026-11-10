@@ -123,9 +123,10 @@ describe('queue sync start', () => {
   it('a pause or a seek saves the position', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('addEventListener', () => {});
-    const puts: { positionMs: number }[] = [];
+    const puts: { positionMs: number; queue?: unknown }[] = [];
     vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
-      if (init?.method === 'PUT') puts.push(JSON.parse(String(init.body)));
+      if (init?.method === 'PUT' || init?.method === 'PATCH')
+        puts.push(JSON.parse(String(init.body)));
       return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
     });
     const clock = new ManualClock();
@@ -139,6 +140,29 @@ describe('queue sync start', () => {
     c.seek(100_000);
     await vi.advanceTimersByTimeAsync(2500);
     expect(puts.slice(1).map((p) => Math.round(p.positionMs / 1000))).toEqual([30, 100]);
+    // The server holds this queue already: the position goes alone, not 60 KB of queue again.
+    expect(puts.map((p) => 'queue' in p)).toEqual([true, false, false]);
+  });
+
+  it('a position the server cannot take alone goes with the whole queue', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    const sent: string[] = [];
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      if (init?.method && init.method !== 'GET') sent.push(init.method);
+      return init?.method === 'PATCH'
+        ? Response.json({ error: 'no_queue' }, { status: 404 })
+        : Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    await startQueueSync(c, () => {});
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    await vi.advanceTimersByTimeAsync(2500);
+    clock.advance(30_000);
+    c.toggle();
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(sent).toEqual(['PUT', 'PATCH', 'PUT']);
   });
 
   it('a Navidrome queue saved after YouTube songs leaves them out of its history', async () => {

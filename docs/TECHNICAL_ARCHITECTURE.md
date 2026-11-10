@@ -313,7 +313,7 @@ audio itself.
 | `GET /lyrics?trackKey=&title=&artist=&album=&durationMs=&isrc=` | Resolved `LyricsDoc` (provider ids come from the track key) |
 | `GET/PUT /me/tracks/:trackKey/override` | Lyric offset and pin |
 | `GET /palette/:albumKey` | Palette (computed on miss) |
-| `GET/PUT /me/queue` | Queue persistence (compare-and-set) |
+| `GET/PUT/PATCH /me/queue` | Queue persistence (compare-and-set); `PATCH` moves the position alone |
 | `GET/POST /wanted` · `DELETE /wanted/:id` | The Wanted list: one for everyone on the server; items marked found only by the server's own Navidrome (`src/server/wanted.ts`) |
 | `GET/PUT /admin/settings` · `GET /admin/users` · `PATCH/DELETE /admin/users/:id` · `POST /admin/users/:id/unlock` · `GET/POST /admin/invites` · `DELETE /admin/invites/:id` · `GET /admin/audit` | Admin only |
 

@@ -139,4 +139,37 @@ describe('the queue follows the user', () => {
     );
     expect(stale.status).toBe(409);
   });
+
+  it('PATCH moves the position alone, under the same compare-and-set', async () => {
+    const s = setup();
+    const ada = s.cookieFor('ada');
+    const patch = (positionMs: unknown, baseUpdatedAt: number) =>
+      call(s.app, 'PATCH', '/api/v1/me/queue', { positionMs, baseUpdatedAt }, ada);
+    expect((await patch(1000, 0)).status).toBe(404); // nothing saved yet: the whole queue first
+    const put = await call(
+      s.app,
+      'PUT',
+      '/api/v1/me/queue',
+      { queue: Q('one'), positionMs: 5, baseUpdatedAt: 0 },
+      ada,
+    );
+    const { updatedAt } = (await put.json()) as { updatedAt: number };
+
+    const moved = await patch(61_500.5, updatedAt);
+    expect(moved.status).toBe(200);
+    const next = ((await moved.json()) as { updatedAt: number }).updatedAt;
+    expect(next).toBeGreaterThan(updatedAt);
+    expect(await (await call(s.app, 'GET', '/api/v1/me/queue', undefined, ada)).json()).toEqual({
+      queue: Q('one'),
+      positionMs: 61_500.5,
+      updatedAt: next,
+    });
+
+    // Another device saw the older version: refused, with what is saved.
+    const stale = await patch(1, updatedAt);
+    expect(stale.status).toBe(409);
+    expect(await stale.json()).toMatchObject({ error: 'changed_elsewhere', positionMs: 61_500.5 });
+    expect((await patch(-1, next)).status).toBe(400);
+    expect((await patch('1', next)).status).toBe(400);
+  });
 });

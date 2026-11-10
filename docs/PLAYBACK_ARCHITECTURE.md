@@ -167,6 +167,9 @@ OpenSubsonic responses]), `isrc` (an OpenSubsonic **array** when tags provide it
   track is disabled with the tooltip "This server can't seek in converted audio."
 - The proxy forwards `Range` and streams the body without buffering (no transcoding or storage in
   ECHO).
+- An upstream request ends after 15 s of silence from Navidrome. A listener that stopped reading (a
+  paused player with a full buffer) is not that silence: bytes ECHO holds unread keep the stream open
+  (`navidrome/client.ts`), since a live transcode cannot be asked for its rest.
 
 ### 5.6 Gapless and crossfade
 
@@ -187,7 +190,9 @@ or 4 minutes have played, whichever is first. Plays count in Navidrome only with
 The queue and position are saved **per user on the ECHO server** (`PUT /api/v1/me/queue`, debounced
 2 s) and restored on start in a paused state, so the queue follows the user from the laptop to the
 gaming PC (and later to native clients). If two clients play at once, the last writer wins and the
-other client shows "Queue changed on another device · Reload". Navidrome's own
+other client shows "Queue changed on another device · Reload". A save of a queue the server already
+holds (the periodic one, a pause, a seek) sends the position alone (`PATCH /api/v1/me/queue`, same
+compare-and-set); a client falls back to the full `PUT` when the server refuses it. Navidrome's own
 `savePlayQueue`/`getPlayQueue` sync is not used.
 
 ---

@@ -6,8 +6,9 @@ import type { PlaybackController } from './controller.ts';
 import { positionNow } from './controller.ts';
 
 // The queue follows the user (IMPLEMENTATION_PLAN.md M5 task 9): restored at start, saved to the
-// server a moment after it changes and every 15 s while playing. Another device's newer queue
-// shows a notice; it replaces this one unless this one is playing.
+// server a moment after it changes and every 15 s while playing. A save of a queue the server
+// already holds sends the position alone (PATCH), not the queue again. Another device's newer
+// queue shows a notice; it replaces this one unless this one is playing.
 
 /** Navidrome was disconnected and the page is about to reload: no save may bring its queue back. */
 export const queueSyncStopped = createStore<{ stopped: boolean }>()(() => ({ stopped: false }));
@@ -96,28 +97,40 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null;
+  /** The slot that holds the queue as it is now; null once the queue changes. */
+  let held: Slot | null = null;
+  c.queue.subscribe(() => {
+    held = null;
+  });
   async function save(keepalive = false) {
     timer = null;
     // The session ended: whoever signs in next must not receive this queue (REL-05).
     if (sessionExpired.getState().expired || queueSyncStopped.getState().stopped) return;
     const p = c.player.getState();
-    const all = trimQueue(c.queue.getState());
+    const state = c.queue.getState();
+    const all = trimQueue(state);
     const slot = queueSlot(all);
-    const queue = forSlot(all, slot);
-    const body = {
-      queue,
-      positionMs: positionNow(p, performance.now()),
-      baseUpdatedAt: base[slot],
-    };
+    const at = { positionMs: positionNow(p, performance.now()), baseUpdatedAt: base[slot] };
+    const send = (method: 'PUT' | 'PATCH', body: object) =>
+      api<{ updatedAt: number }>(slot, { method, body, keepalive });
     try {
-      base[slot] = (
-        await api<{ updatedAt: number }>(slot, { method: 'PUT', body, keepalive })
-      ).updatedAt;
+      // A refused PATCH that is not a newer queue (nothing saved there, or a server from before
+      // PATCH) is answered with the whole queue.
+      const moved =
+        held === slot
+          ? await send('PATCH', at).catch((err: unknown) => {
+              if (err instanceof ApiError && err.status < 500 && err.status !== 409) return null;
+              throw err;
+            })
+          : null;
+      base[slot] = (moved ?? (await send('PUT', { queue: forSlot(all, slot), ...at }))).updatedAt;
+      if (c.queue.getState() === state) held = slot;
     } catch (err) {
       if (!(err instanceof ApiError) || err.status !== 409) return;
       notify('Your queue changed on another device.');
       const newer = await api<Saved>(slot);
       base[slot] = newer.updatedAt;
+      held = null;
       // The device that is playing keeps its queue (and wins on its next save).
       if (p.status !== 'playing' && newer.queue)
         c.restore(savedQueue(newer.queue), newer.positionMs);
