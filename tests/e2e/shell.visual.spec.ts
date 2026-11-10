@@ -25,7 +25,9 @@ const shot = {
 
 /** Plays Harbour Lights track 1 and pauses it at 0:42, with fonts and covers loaded. */
 async function pausedAt42(page: Page, url: string) {
-  await page.clock.install();
+  // A fixed afternoon: the greeting follows the hour and its mask is as wide as its text, so with
+  // the real time "Good evening" changed ~935 pixels against an afternoon baseline.
+  await page.clock.install({ time: new Date('2026-11-10T15:00:00') });
   await page.goto('/library/album/al-harbour');
   await page.locator('.action-bar').getByRole('button', { name: 'Play Harbour Lights' }).click();
   await page.clock.runFor(150 + 42_000);
@@ -64,7 +66,7 @@ for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);
     await pausedAt42(page, '/');
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(/^Good /);
-    // The greeting follows the hour: masked, so the baseline holds all day.
+    // The greeting is masked: its words are not what this baseline checks.
     await expect(page).toHaveScreenshot(`home-${vp.width}.png`, {
       ...shot,
       mask: [page.locator('.home-greeting')],
