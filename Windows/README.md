@@ -32,7 +32,8 @@ backgrounds are baked once per cover. The window sits on Windows 11's Mica, whic
   mixes). **Library**: Recently Added, Songs, Albums (search, sort), Artists (Cider's split view), the
   playlists, Create New. **Album / playlist / mix** pages, **artist** pages, **search**.
 - Playback through the queue: shuffle, repeat, volume, seek; scrobbles; the queue follows you across
-  devices (`/me/queue`, cut to the server's 64 KB as the web cuts it). A song whose connection drops or
+  devices (`/me/queue`, cut to the server's 64 KB as the web cuts it; the position alone when the
+  queue has not changed). A read the network dropped is asked again, twice at most. A song whose connection drops or
   goes quiet carries on from where it got to; a server that fails is said so, not skipped through. The
   **drawer**: the queue (its first hundred, and how many more) and history.
 - **The next song is made ready while this one plays** (its request answered, cover art jumped, decoder open,

@@ -38,21 +38,48 @@ public sealed class Api
 
     public Task<JsonNode> Get(string path) => Send(HttpMethod.Get, path);
 
+    /// Times a GET that failed on the way (no connection, a proxy's 502–504, 429) is asked again:
+    /// the web's api() does the same (src/client/api.ts). A write is never sent twice.
+    const int Retries = 2;
+
+    /// The wait before retry `attempt` (0, 1): 300 ms then 900 ms, each ×0.5–1.5 so devices that lost
+    /// the server together do not come back together.
+    internal static TimeSpan RetryDelay(int attempt, double rand) =>
+        TimeSpan.FromMilliseconds(300 * Math.Pow(3, attempt) * (0.5 + rand));
+
     public async Task<JsonNode> Send(HttpMethod method, string path, JsonNode? body = null)
     {
-        using var req = new HttpRequestMessage(method, $"{Base}/api/v1{path}");
-        if (Token is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
-        if (body is not null) req.Content = JsonContent.Create(body);
-        using var res = await http.SendAsync(req);
-        JsonNode? answer = null;
-        try
+        for (var attempt = 0; ; attempt++)
         {
-            answer = JsonNode.Parse(await res.Content.ReadAsStringAsync());
+            var again = method == HttpMethod.Get && attempt < Retries;
+            using var req = new HttpRequestMessage(method, $"{Base}/api/v1{path}");
+            if (Token is not null) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
+            if (body is not null) req.Content = JsonContent.Create(body);
+            HttpResponseMessage res;
+            try
+            {
+                res = await http.SendAsync(req);
+            }
+            catch (HttpRequestException) when (again)
+            {
+                await Task.Delay(RetryDelay(attempt, Random.Shared.NextDouble()));
+                continue;
+            }
+            using var _ = res;
+            JsonNode? answer = null;
+            try
+            {
+                answer = JsonNode.Parse(await res.Content.ReadAsStringAsync());
+            }
+            catch (JsonException) { }
+            if (res.IsSuccessStatusCode) return answer ?? new JsonObject();
+            var code = Text(answer?["error"] ?? answer?["code"]) is { Length: > 0 } c ? c : null;
+            // ECHO's own 502 (Navidrome is down) carries a code and is an answer; a proxy's has none.
+            var busy = res.StatusCode == HttpStatusCode.TooManyRequests;
+            var proxy = code is null && (int)res.StatusCode is >= 502 and <= 504;
+            if (!again || !(busy || proxy)) throw new ApiException(res.StatusCode, code);
+            await Task.Delay(RetryDelay(attempt, Random.Shared.NextDouble()) + (busy ? res.Headers.RetryAfter?.Delta ?? TimeSpan.Zero : TimeSpan.Zero));
         }
-        catch (JsonException) { }
-        if (!res.IsSuccessStatusCode)
-            throw new ApiException(res.StatusCode, Text(answer?["error"] ?? answer?["code"]) is { Length: > 0 } c ? c : null);
-        return answer ?? new JsonObject();
     }
 
     /// A device token for this computer: credentials and, with two-factor on, the code, in one go.

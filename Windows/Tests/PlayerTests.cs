@@ -160,6 +160,54 @@ public class PlayerTests
     }
 
     [AvaloniaFact]
+    public async Task AQueueTheServerHoldsIsNotSentAgain()
+    {
+        // The save every 15 s, a pause, a seek: the position alone (PATCH), until the queue changes.
+        var server = new QueueServer();
+        var api = new Api("https://echo.test", server);
+        using var player = new Player(api, new Library(api), () => new AudioOut(nullDevice: true));
+        var songs = QueueTests.Album(3);
+        player.Show(new QueueState(Now: songs[0], Context: [songs[1]], ContextSource: Ctx), TimeSpan.FromSeconds(7));
+
+        await player.SaveNow();
+        await player.SaveNow();
+        Assert.Equal(["PUT", "PATCH"], server.Methods);
+        Assert.Null(server.Saved?["queue"]);
+        Assert.Equal(7000, server.Saved?["positionMs"]?.GetValue<long>());
+        Assert.Equal(5, server.Saved?["baseUpdatedAt"]?.GetValue<long>());
+
+        player.Show(new QueueState(Now: songs[1], Context: [songs[2]], ContextSource: Ctx), TimeSpan.Zero);
+        await player.SaveNow();
+        Assert.Equal("PUT", server.Methods[^1]);
+
+        // A server without PATCH (an older one), or with no queue saved: the whole queue, as before.
+        server.NoPatch = true;
+        await player.SaveNow();
+        Assert.Equal(["PATCH", "PUT"], server.Methods[^2..]);
+        Assert.Equal("a1", Json.From<QueueState>(server.Saved?["queue"])?.Now?.Id);
+    }
+
+    [Fact]
+    public async Task AReadThatFailedOnTheWayIsAskedAgainAndAWriteIsNot()
+    {
+        var flaky = new Flaky(fails: 2);
+        var api = new Api("https://echo.test", flaky);
+        Assert.Equal(1, (await api.Get("/me"))["ok"]?.GetValue<int>());
+        Assert.Equal(3, flaky.Asked);
+
+        flaky = new Flaky(fails: 3); // twice at most
+        await Assert.ThrowsAsync<HttpRequestException>(() => new Api("https://echo.test", flaky).Get("/me"));
+        Assert.Equal(3, flaky.Asked);
+
+        flaky = new Flaky(fails: 1);
+        await Assert.ThrowsAsync<HttpRequestException>(() => new Api("https://echo.test", flaky).Send(HttpMethod.Post, "/me", new System.Text.Json.Nodes.JsonObject()));
+        Assert.Equal(1, flaky.Asked);
+
+        Assert.Equal(150, Api.RetryDelay(0, 0).TotalMilliseconds);
+        Assert.Equal(1350, Api.RetryDelay(1, 1).TotalMilliseconds);
+    }
+
+    [AvaloniaFact]
     public async Task AQueueFromAnotherDeviceOpensOnTheSameAudioOutput()
     {
         // Paused, and another device saved a newer queue: it shows, and Play opens its song, without
@@ -218,15 +266,31 @@ public class PlayerTests
 sealed class QueueServer : HttpMessageHandler
 {
     public System.Text.Json.Nodes.JsonNode? Saved { get; private set; }
+    public List<string> Methods { get; } = [];
+    public bool NoPatch { get; set; }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
     {
+        Methods.Add(request.Method.Method);
+        if (NoPatch && request.Method == HttpMethod.Patch)
+            return new HttpResponseMessage(HttpStatusCode.NotFound) { Content = new StringContent("""{"error":"no_queue"}""") };
         var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(token);
         if (System.Text.Encoding.UTF8.GetByteCount(body) > 64 * 1024)
             return new HttpResponseMessage((HttpStatusCode)413) { Content = new StringContent("""{"error":"too_large"}""") };
         Saved = System.Text.Json.Nodes.JsonNode.Parse(body);
         return new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"updatedAt":5}""") };
     }
+}
+
+/// A connection that fails `fails` times, then answers.
+sealed class Flaky(int fails) : HttpMessageHandler
+{
+    public int Asked { get; private set; }
+
+    protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token) =>
+        ++Asked <= fails
+            ? Task.FromException<HttpResponseMessage>(new HttpRequestException("no route"))
+            : Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("""{"ok":1}""") });
 }
 
 /// Another device saved a newer queue: a save answers 409, a read answers with that queue.

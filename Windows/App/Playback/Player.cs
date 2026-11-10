@@ -25,6 +25,7 @@ public sealed partial class Player : ObservableObject, IDisposable
     readonly DispatcherTimer saveSoon = new() { Interval = TimeSpan.FromSeconds(2) };
     AudioOut? output;
     long queueBase;
+    string? savedQueue; // the queue the server holds, as this device last saved it whole
     string scrobbled = "none";
     bool recorded;
     bool loaded; // the output holds Track (not a queue shown from the server, which opens on Play)
@@ -382,6 +383,7 @@ public sealed partial class Player : ObservableObject, IDisposable
         Position = TimeSpan.Zero;
         Progress = 0;
         queueBase = 0;
+        savedQueue = null;
         QueueChanged?.Invoke();
         SignedOut?.Invoke();
     }
@@ -427,15 +429,29 @@ public sealed partial class Player : ObservableObject, IDisposable
     public async Task SaveNow()
     {
         if (!Sync) return;
-        var body = new JsonObject
-        {
-            ["queue"] = Queue.Now is null ? null : Json.ToNode(Fitted(Queue.ToState())),
-            ["positionMs"] = (long)PositionNow.TotalMilliseconds,
-            ["baseUpdatedAt"] = queueBase,
-        };
+        var queue = Queue.Now is null ? null : Json.ToNode(Fitted(Queue.ToState()));
+        var json = queue?.ToJsonString();
+        var body = new JsonObject { ["positionMs"] = (long)PositionNow.TotalMilliseconds, ["baseUpdatedAt"] = queueBase };
         try
         {
-            queueBase = (await api.Send(HttpMethod.Put, "/me/queue", body))["updatedAt"]?.GetValue<long>() ?? queueBase;
+            // The server holds this queue already (the save every 15 s, a pause, a seek): the position
+            // alone goes, not the queue's 60 KB again. A server that refuses it gets the whole queue.
+            JsonNode? answer = null;
+            if (json is not null && json == savedQueue)
+            {
+                try
+                {
+                    answer = await api.Send(HttpMethod.Patch, "/me/queue", body);
+                }
+                catch (ApiException e) when (!e.SignedOut && e.Status != HttpStatusCode.Conflict && (int)e.Status is >= 400 and < 500) { }
+            }
+            if (answer is null)
+            {
+                body["queue"] = queue;
+                answer = await api.Send(HttpMethod.Put, "/me/queue", body);
+            }
+            queueBase = answer["updatedAt"]?.GetValue<long>() ?? queueBase;
+            savedQueue = json;
             if (Notice == Unreachable) Notice = null;
         }
         catch (ApiException e) when (e.SignedOut)
@@ -446,6 +462,7 @@ public sealed partial class Player : ObservableObject, IDisposable
         {
             // Another device changed the queue: the one that is playing keeps its own.
             Notice = "Your queue changed on another device.";
+            savedQueue = null;
             try
             {
                 var newer = await api.Get("/me/queue");

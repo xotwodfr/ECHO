@@ -14,8 +14,9 @@ public sealed class ProgressiveStream : Stream
     /// How far past the download a read may be and still wait for it rather than start again there:
     /// about what arrives while a new request is answered.
     const long Near = 256 * 1024;
-    /// Times a download that stops (dropped, or silent for `quiet`) is asked for again, a fifth of `quiet`
-    /// apart, before the song fails: about 20 s for a laptop waking or changing Wi-Fi.
+    /// Times a download that stops (dropped, or silent for `quiet`) is asked for again before the song
+    /// fails, for a laptop waking or changing Wi-Fi: soon at first, then twice as long each time
+    /// (0.5, 1, 2, 4, 8 s for a `quiet` of 10 s, each ×0.75–1.25).
     const int Retries = 5;
 
     readonly Func<long, CancellationToken, Task<HttpResponseMessage>> fetch;
@@ -114,7 +115,7 @@ public sealed class ProgressiveStream : Stream
                 // Dropped or silent (a laptop waking, a new Wi-Fi network): from where it got to, in a moment.
                 try
                 {
-                    await Task.Delay(quiet / 5, stop);
+                    await Task.Delay(quiet / 20 * Math.Pow(2, tries) * (0.75 + Random.Shared.NextDouble() / 2), stop);
                 }
                 catch (OperationCanceledException)
                 {
