@@ -310,7 +310,14 @@ test('the heart pops when liked, and not when the page loads', async ({ page }) 
 
     await page.reload();
     await expect(liked).toBeAttached();
-    expect(await liked.evaluate((el) => el.getAnimations({ subtree: true }).length)).toBe(0);
+    // No pop: the pop and its ring are CSS animations. The mouse is still over the heart, and
+    // Firefox applies :hover to the reloaded page at once, so its hover scale (a transition) may run.
+    expect(
+      await liked.evaluate(
+        (el) => el.getAnimations({ subtree: true }).filter((a) => a instanceof CSSAnimation).length,
+      ),
+    ).toBe(0);
+    await expect(liked).not.toHaveAttribute('data-pop');
   } finally {
     // The mock's Liked Songs is shared: leave it as it was.
     if (await liked.count()) await liked.click();

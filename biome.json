@@ -2,14 +2,7 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
   "files": {
-    "includes": [
-      "**",
-      "!docs",
-      "!src/client/fonts",
-      "!src/client/tokens.css",
-      "!.remember",
-      "!src/client/shell/spotify-logo-white.svg"
-    ]
+    "includes": ["**", "!docs", "!src/client/fonts", "!src/client/tokens.css", "!.remember"]
   },
   "formatter": { "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
   "javascript": { "formatter": { "quoteStyle": "single" } },

@@ -59,8 +59,8 @@ describe('sealed values', () => {
   });
 
   it('purpose subkeys are distinct and stable', () => {
-    expect(subkey(master, 'cookie')).toEqual(subkey(master, 'cookie'));
-    expect(subkey(master, 'cookie')).not.toEqual(subkey(master, 'stream-url'));
+    expect(subkey(master, 'stream-url')).toEqual(subkey(master, 'stream-url'));
+    expect(subkey(master, 'secrets')).not.toEqual(subkey(master, 'stream-url'));
     expect(subkey(master, 'secrets')).not.toEqual(master);
   });
 });

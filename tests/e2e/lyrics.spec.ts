@@ -408,7 +408,9 @@ async function seekTo(page: Page, atS: number) {
   const box = await s.boundingBox();
   const total = (doc('ballad-word').durationMs ?? 1) / 1000;
   if (!box) throw new Error('scrubber');
-  await page.mouse.click(box.x + box.width * (atS / total), box.y + box.height / 2);
+  // On a whole pixel: Firefox drops the fraction (Chromium keeps it), and a pixel of the scrubber is
+  // most of a second of a song, so a fractional click lands up to a pixel apart between the two.
+  await page.mouse.click(Math.round(box.x + box.width * (atS / total)), box.y + box.height / 2);
 }
 
 /** The sweeping word of the active line: its text, --p and glow alpha. */
@@ -435,7 +437,9 @@ test('pause freezes the sweep and dims the glow to 60%; resume restores it (LYR-
   await playGuide(page, 'ballad-word', held.start / 1000 - 3);
   await dock(page).getByRole('button', { name: 'Pause' }).click();
   await expect(dock(page)).toHaveAttribute('data-status', 'paused');
-  await seekTo(page, (held.start + 250) / 1000); // early in the word: most of it is left to resume into
+  // The middle of the word (1.5 s long), so half a pixel of the scrubber either way (about 0.35 s
+  // of this song) still lands inside it, with most of a second left to resume into.
+  await seekTo(page, (held.start + held.end) / 2 / 1000);
   await expect.poll(() => sweeping(page).then((s) => s?.text), { timeout: 3000 }).toBe(held.text);
   await expect
     .poll(() => sweeping(page).then((s) => s?.glow), { timeout: 3000 })

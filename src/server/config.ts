@@ -1,6 +1,5 @@
-// Environment configuration (docs/TECHNICAL_ARCHITECTURE.md §6.3).
-// M1 reads only what the server uses so far. Later milestones add their own keys
-// (ECHO_NAVIDROME_URL, ECHO_TRUSTED_PROXY, the master key) when the code needing them lands.
+// Environment configuration (docs/TECHNICAL_ARCHITECTURE.md §6.3): every ECHO_* key the server
+// reads, with its default.
 
 export const LOG_LEVELS = ['debug', 'info', 'warn', 'error'] as const;
 export type LogLevel = (typeof LOG_LEVELS)[number];

@@ -24,7 +24,7 @@ export function loadMasterKey(path = MASTER_KEY_FILE): Buffer {
   return key;
 }
 
-export type Purpose = 'secrets' | 'stream-url' | 'cookie';
+export type Purpose = 'secrets' | 'stream-url';
 
 /** A 32-byte subkey of the master key for one purpose. */
 export const subkey = (master: Buffer, purpose: Purpose) =>

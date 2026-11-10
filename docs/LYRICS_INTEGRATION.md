@@ -226,6 +226,7 @@ and `fetchedAt` stored:
 | Spicy Lyrics doc | **30 days, hard** (refetch or delete) | Spicy terms §7 [C] |
 | LRCLIB doc | 30 days | Freshness; community data changes |
 | Navidrome doc | 1 day, then revalidate | The user may edit their files |
+| NetEase doc | 1 day | Unofficial API, terms for third-party use unconfirmed (S5): kept short until the owner decides |
 | Negative ("not found") | 3 days per source | Avoid hammering sources for instrumental tracks |
 | Spotify ID match | kept until corrected; "none found" is asked again after 30 days | §4.3 |
 | Per-track offset & source pin | never expires (per-user data in the `track_overrides` table, not cache) | |

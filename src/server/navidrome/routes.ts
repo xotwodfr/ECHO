@@ -125,10 +125,6 @@ export function navidromeUrlOf(db: Db, userId: number) {
 }
 
 /**
- * A cover's bytes from the user's own Navidrome, for palette extraction (VISUALIZER_SPEC.md §6.1);
- * null when the user has no connection or the answer is not a raster image.
- */
-/**
  * A signed client for the user's own Navidrome (the URL re-checked and its address pinned), or
  * null when the user has no connection. For server-side lookups: covers, lyrics.
  */
@@ -162,6 +158,10 @@ export async function navidromeClientFor(
   return createClient(target, creds);
 }
 
+/**
+ * Reads a cover's bytes from the user's own Navidrome, for palette extraction (VISUALIZER_SPEC.md §6.1);
+ * null when the user has no connection or the answer is not a raster image.
+ */
 export function navidromeCovers(deps: NavidromeDeps) {
   return async (userId: number, coverId: string, size = 256): Promise<Buffer | null> => {
     try {

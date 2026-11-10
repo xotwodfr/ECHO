@@ -186,6 +186,39 @@ describe('the YouTube Music catalogue (recorded answers)', () => {
     expect((await cat().home()).shelves.length).toBeGreaterThan(0); // without a cookie: fine
   });
 
+  // Review 2026-11-04 B6: the signed-out flag was one per catalogue, so a call failing for another
+  // reason while an overlapping call got a signed-out answer was misreported as signed out.
+  it('a signed-out answer in one call does not mark an overlapping call signed out', async () => {
+    let releaseHome = () => {};
+    const homeMayFail = new Promise<void>((r) => {
+      releaseHome = r;
+    });
+    const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
+      // The session's own start-up request: answered neutrally, so only the two calls differ.
+      if (String(input instanceof Request ? input.url : input).includes('/youtubei/v1/config'))
+        return new Response('{}', { headers: { 'content-type': 'application/json' } });
+      const body =
+        typeof init?.body === 'string'
+          ? init.body
+          : input instanceof Request && input.method === 'POST'
+            ? await input.clone().text()
+            : '';
+      if (body.includes('FEmusic_home')) {
+        await homeMayFail;
+        throw new TypeError('network down');
+      }
+      return replay(input, init);
+    }) as typeof fetch;
+    const c = createCatalogue({ cookie: 'SAPISID=rotated', fetch: fetchFn });
+    const home = c.home();
+    const search = c.search('bohemian rhapsody', 'songs');
+    await expect(search).rejects.toBeInstanceOf(YtSignedOut);
+    releaseHome();
+    const err = await home.catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(YtSignedOut);
+  });
+
   it('library without a cookie throws YtSignedOut', async () => {
     await expect(cat().library()).rejects.toBeInstanceOf(YtSignedOut);
     await expect(cat().account()).rejects.toBeInstanceOf(YtSignedOut);
