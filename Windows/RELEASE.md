@@ -1,5 +1,6 @@
 ECHO for Windows: a modern look, and lyrics as Apple Music draws them.
 
+- **New in 3.4.1: the next song starts at once.** It is made ready while the current one plays (its request answered, its cover art skipped, its decoder open), so Next and the end of a song no longer wait for a fresh request. The first song you pick still starts from a cold request.
 - **New in 3.4.0: the lyrics are a page of their own.** The lyrics button swaps the page for the lyrics on the cover's slowly moving colours, with the cover, title and artist beside them, as Spicy Lyrics shows them in Spotify, instead of a panel floating over another page. Full Screen and Close are at the top right; Esc, the lyrics button again or going to another page closes it.
 - **New in 3.4.0: media keys.** The keyboard's play, pause, next and previous keys and a headset's buttons work, and Windows shows the song in its media controls.
 - **New in 3.4.0: the app remembers** the volume, the window's size and place, and whether the sidebar was hidden.
