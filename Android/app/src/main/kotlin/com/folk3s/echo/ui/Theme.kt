@@ -1,6 +1,7 @@
 package com.folk3s.echo.ui
 
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
@@ -20,15 +21,15 @@ import com.materialkolor.DynamicMaterialTheme
 import com.materialkolor.PaletteStyle
 import com.materialkolor.dynamiccolor.ColorSpec
 
-// ECHO: Spotify's layout, Material 3's surfaces (docs/DESIGN_SYSTEM.md Draft 5, 2026-10-29). The
-// colour scheme is the dark M3 content scheme of the playing album's accent (the web's
-// palette/m3.ts), animated over 1200 ms like the web's palette; Figtree everywhere.
+// ECHO v0.2 (2026-11-17): large bold titles, rounded art, a floating mini player and a full-screen
+// Now Playing on the album's colours, in Material 3's components. The scheme is the M3 content
+// scheme of the playing album's accent, light or dark with the system, animated over 1200 ms.
 
 /** The frame's colours as M3 roles (tokens.css): read in composition, they follow the album. */
 object Chamber {
   private val c @Composable @ReadOnlyComposable get() = MaterialTheme.colorScheme
-  val ground @Composable @ReadOnlyComposable get() = c.surfaceContainerLowest
-  val surface1 @Composable @ReadOnlyComposable get() = c.surfaceContainerLow
+  val ground @Composable @ReadOnlyComposable get() = c.surface
+  val surface1 @Composable @ReadOnlyComposable get() = c.surface
   val surface2 @Composable @ReadOnlyComposable get() = c.surfaceContainer
   val surface3 @Composable @ReadOnlyComposable get() = c.surfaceContainerHigh
   val surface4 @Composable @ReadOnlyComposable get() = c.surfaceContainerHighest
@@ -56,13 +57,14 @@ private fun style(weight: Int, size: Int, line: Int, tracking: Double) =
 /** The M3 type scale (tokens.css --md-sys-typescale-*), in Figtree. */
 private val EchoTypography =
   Typography(
-    displayLarge = style(400, 57, 64, -0.25),
-    displayMedium = style(400, 45, 52, 0.0),
-    displaySmall = style(400, 36, 44, 0.0),
-    headlineLarge = style(400, 32, 40, 0.0),
-    headlineMedium = style(400, 28, 36, 0.0),
-    headlineSmall = style(400, 24, 32, 0.0),
-    titleLarge = style(400, 22, 28, 0.0),
+    // Big, bold, tight headings (the large-title look); the body stays the M3 scale.
+    displayLarge = style(800, 57, 64, -0.5),
+    displayMedium = style(800, 45, 52, -0.5),
+    displaySmall = style(800, 34, 40, -0.5),
+    headlineLarge = style(800, 32, 40, -0.4),
+    headlineMedium = style(800, 26, 32, -0.3),
+    headlineSmall = style(750, 21, 28, -0.2),
+    titleLarge = style(700, 20, 26, -0.1),
     titleMedium = style(600, 16, 24, 0.15),
     titleSmall = style(600, 14, 20, 0.1),
     bodyLarge = style(400, 16, 24, 0.5),
@@ -73,11 +75,15 @@ private val EchoTypography =
     labelSmall = style(600, 11, 16, 0.5),
   )
 
+/**
+ * The app's theme: light or dark with the system, the scheme seeded by the playing album's accent.
+ * [dark] forces the dark scheme (Now Playing and the lyrics view sit on the album's colours).
+ */
 @Composable
-fun EchoTheme(content: @Composable () -> Unit) {
+fun EchoTheme(dark: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
   DynamicMaterialTheme(
     seedColor = stagePalette().accentColor,
-    isDark = true,
+    isDark = dark,
     style = PaletteStyle.Content,
     specVersion = ColorSpec.SpecVersion.SPEC_2025,
     typography = EchoTypography,

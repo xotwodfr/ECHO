@@ -371,6 +371,9 @@ class Library(private val api: Api, private val scope: CoroutineScope) {
     songs(rest("getTopSongs", "artist=${enc(artist)}&count=$count").at("topSongs", "song"))
 
   /** Song radio: Navidrome's similar songs (Last.fm), or random ones without them. */
+  /** Songs at random from the whole library (the Games' questions). */
+  suspend fun randomSongs(count: Int): List<Track> = songs(rest("getRandomSongs", "size=$count").at("randomSongs", "song"))
+
   suspend fun similarSongs(t: Track, count: Int): List<Track> {
     val similar = runCatching { songs(rest("getSimilarSongs2", "id=${enc(t.id)}&count=$count").at("similarSongs2", "song")) }.getOrDefault(emptyList())
     if (similar.isNotEmpty()) return similar

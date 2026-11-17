@@ -13,7 +13,7 @@
     android:allowBackup="false"
     android:icon="@mipmap/ic_launcher"
     android:label="ECHO"
-    android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+    android:theme="@android:style/Theme.DeviceDefault.DayNight"
     android:usesCleartextTraffic="${cleartext}">
 
     <activity

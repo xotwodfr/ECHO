@@ -1,5 +1,12 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -97,6 +104,23 @@ fun SettingsScreen() {
   Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
     Text("Settings", style = MaterialTheme.typography.headlineMedium)
 
+    Section("Tabs")
+    Text("The order of the tabs at the bottom. The first one opens when ECHO starts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    val order = p.tabOrder
+    Column(Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
+      order.forEachIndexed { i, id ->
+        val (label, icon) = tabInfo(id)
+        Row(Modifier.fillMaxWidth().height(56.dp).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+          Icon(icon, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+          Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(start = 14.dp))
+          fun move(to: Int) = set { it.copy(tabs = order.toMutableList().apply { add(to, removeAt(i)) }) }
+          IconButton(onClick = { move(i - 1) }, enabled = i > 0, modifier = Modifier.semantics { contentDescription = "Move $label up" }) { Icon(EchoIcons.chevronUp, null) }
+          IconButton(onClick = { move(i + 1) }, enabled = i < order.lastIndex, modifier = Modifier.semantics { contentDescription = "Move $label down" }) { Icon(EchoIcons.chevronDown, null) }
+        }
+      }
+    }
+    if (order != com.folk3s.echo.DEFAULT_TABS) TextButton(onClick = { set { it.copy(tabs = com.folk3s.echo.DEFAULT_TABS) } }) { Text("Reset to default order") }
+
     Section("Visuals")
     Choice("Stage visuals", "Reverb follows the music where ECHO can hear it.", VisualMode.entries.map { it to it.label }, p.mode) { v -> set { it.copy(mode = v) } }
     Choice("Reverb intensity", null, Intensity.entries.map { it to it.name }, p.intensity) { v -> set { it.copy(intensity = v) } }
@@ -135,6 +159,6 @@ fun SettingsScreen() {
       color = MaterialTheme.colorScheme.onSurfaceVariant,
       style = MaterialTheme.typography.bodySmall,
     )
-    Spacer(Modifier.padding(24.dp))
+    Spacer(Modifier.height(160.dp))
   }
 }

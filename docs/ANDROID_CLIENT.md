@@ -1,6 +1,6 @@
 # ECHO — Android client
 
-Status: **v0.1 built** (2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
+Status: **v0.2 built** (2026-11-17, the redesign below; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
 
 The other native apps (2026-11-04: `Linux/`, `Windows/`, `macOS/`, `iOS/`) are baselines on the
 same API; this one is the full app. Each folder's README says what it has
@@ -44,6 +44,29 @@ way) take `-Pecho.devUrl=http://10.0.2.2:<port>` and allow plain HTTP; release n
 throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port>`, user
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
+
+## v0.2: the redesign (2026-11-17)
+
+Owner decisions (2026-11-17): a modern look in the spirit of Apple Music, built with Material 3
+components; light or dark **with the system**; the accent **from the playing album**; four tabs.
+
+- **Frame**: Home, Mixes, Library, Search in an M3 navigation bar; a floating rounded mini player
+  (play/pause, next, a hairline of progress in the accent) above it. The window theme and system
+  bars follow light/dark; Now Playing and the lyrics view are always dark, with light bar icons.
+- **Type**: large bold titles (Figtree 800, `displaySmall` 34 sp) on each tab, bold headings.
+- **Home**: a featured card (today's first mix, or a recent album) with its own play button, then
+  shelves of rounded (16 dp) covers.
+- **Mixes** (new tab): today's mixes and this year's Wrapped as a two-column grid, Jump back in.
+- **Library**: Playlists, Artists, Albums and Liked Songs as a list (`Route.LibraryList`), then
+  Recently added as a grid; Albums keeps the four sorts as chips.
+- **Pages** (album, playlist, Liked Songs, mix): a centred 260 dp cover with a soft shadow, the
+  title, the artist or owner in the accent, facts in small caps, Play and Shuffle as pill buttons;
+  albums list numbered tracks with hairlines and the total running time.
+- **Search**: a rounded filled field, "Browse by genre" as rounded gradient cards.
+- **Now Playing**: the album's colours drifting behind a big 24 dp-rounded cover that sits back
+  (84%) while paused; the song with heart and menu in translucent circles; a wavy seek bar while
+  playing (flat when paused or under reduced motion) with the time left counting down; a play
+  button that morphs from circle to rounded square; Lyrics and Up next pills; the lyrics card.
 
 ## As built (v0.1)
 

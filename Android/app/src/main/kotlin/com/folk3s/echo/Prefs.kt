@@ -17,6 +17,9 @@ enum class Motion(val label: String) { System("System"), Full("Full"), Reduced("
 
 enum class Quality(val label: String) { Auto("Auto"), High("High"), Balanced("Balanced"), Low("Low"), Minimal("Minimal") }
 
+/** The bottom tabs, in their default order; the user can reorder them in Settings. */
+val DEFAULT_TABS = listOf("home", "mixes", "games", "library", "search")
+
 @Serializable
 data class Prefs(
   val mode: VisualMode = VisualMode.Auto,
@@ -28,7 +31,11 @@ data class Prefs(
   val lyricOffsetMs: Long = 0,
   val showUnsynced: Boolean = true,
   val scrobble: Boolean = true,
-)
+  val tabs: List<String> = DEFAULT_TABS,
+) {
+  /** The tabs in the user's order: every known tab once, whatever an older save holds. */
+  val tabOrder: List<String> get() = (tabs.filter { it in DEFAULT_TABS } + DEFAULT_TABS).distinct()
+}
 
 class PrefsStore(private val ctx: Context) {
   private val sp = ctx.getSharedPreferences("echo.prefs", Context.MODE_PRIVATE)

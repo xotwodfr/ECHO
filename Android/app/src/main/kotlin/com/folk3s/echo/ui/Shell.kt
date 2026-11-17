@@ -63,22 +63,29 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.folk3s.echo.api.Track
+import com.folk3s.echo.games.GameKind
 import com.folk3s.echo.echo
 import com.folk3s.echo.playback.PlayerState
 import com.folk3s.echo.stage.StageChrome
 import com.folk3s.echo.stage.StageScreen
 import kotlinx.coroutines.delay
 
-// The app after Spotify's (docs/superpowers/specs/2026-10-29-spotify-redesign-design.md), in
-// Material 3's surfaces: three tabs (Home, Search, Your Library) in an M3 navigation bar, the mini
-// player tinted by the playing album above it, the Now Playing screen, and the lyrics view.
+// The app's frame (v0.2, 2026-11-17): five tabs (Home, Mixes, Games, Library, Search, in the
+// user's order) in an M3 navigation
+// bar, a floating rounded mini player above it, Now Playing rising over the page on the album's
+// colours, and the lyrics view.
 
 sealed interface Route {
   data object Home : Route
   data object Search : Route
   data object Library : Route
+  data object Mixes : Route
+  data object Games : Route
+  data class Game(val kind: GameKind) : Route
+  data class LibraryList(val kind: String) : Route
   data class Album(val id: String) : Route
   data class Artist(val id: String) : Route
   data class Playlist(val id: String) : Route
@@ -91,9 +98,9 @@ sealed interface Route {
   data object Listen : Route
 }
 
-/** The back stack: the three tabs are roots; pages stack on them. */
-class Nav {
-  val stack = mutableStateListOf<Route>(Route.Home)
+/** The back stack: the tabs are roots; pages stack on them. */
+class Nav(first: Route = Route.Home) {
+  val stack = mutableStateListOf(first)
   val top: Route get() = stack.last()
 
   fun go(r: Route) {
@@ -110,6 +117,25 @@ class Nav {
   }
 }
 
+/** While it is in composition, the system bars' icons are light (for the album-coloured screens). */
+@Composable
+fun LightBarIcons() {
+  val view = androidx.compose.ui.platform.LocalView.current
+  if (view.isInEditMode) return
+  androidx.compose.runtime.DisposableEffect(view) {
+    val window = (view.context as? android.app.Activity)?.window ?: return@DisposableEffect onDispose {}
+    val c = androidx.core.view.WindowCompat.getInsetsController(window, view)
+    val status = c.isAppearanceLightStatusBars
+    val nav = c.isAppearanceLightNavigationBars
+    c.isAppearanceLightStatusBars = false
+    c.isAppearanceLightNavigationBars = false
+    onDispose {
+      c.isAppearanceLightStatusBars = status
+      c.isAppearanceLightNavigationBars = nav
+    }
+  }
+}
+
 @Composable
 fun EchoRoot() {
   val app = LocalContext.current.echo
@@ -121,11 +147,12 @@ fun EchoRoot() {
 @Composable
 private fun Shell() {
   val app = LocalContext.current.echo
-  val nav = remember { Nav() }
+  val nav = remember { Nav(tabRoute(app.prefs.state.value.tabOrder.first())) }
   val player by app.playback.state.collectAsStateWithLifecycle()
   var queueOpen by remember { mutableStateOf(false) }
   var picking by remember { mutableStateOf<List<Track>?>(null) }
   val chrome = remember { StageChrome() }
+  val prefs by app.prefs.state.collectAsStateWithLifecycle()
   BackHandler(enabled = nav.stack.size > 1) { nav.back() }
   val picker = { t: Track -> picking = listOf(t) }
 
@@ -134,10 +161,11 @@ private fun Shell() {
       // The page under Now Playing and the lyrics view: the stack's top below them.
       val page = nav.stack.lastOrNull { it != Route.NowPlaying && it != Route.Listen } ?: Route.Home
       val pages = rememberSaveableStateHolder()
-      val prefs by app.prefs.state.collectAsStateWithLifecycle()
       val still = app.prefs.reducedMotion(prefs)
       if (nav.top == Route.Listen)
-        // The lyrics view: the room and the lyrics, the transport floating over it.
+        // The lyrics view: the room and the lyrics, the transport floating over it, always dark.
+        EchoTheme(dark = true) {
+        LightBarIcons()
         StageScreen(
           chrome,
           onClose = { nav.back() },
@@ -147,10 +175,11 @@ private fun Shell() {
             }
           },
         )
+        }
       else {
         // The page. A new one fades and rises in (the web's View Transition), the old one fades out
         // quickly.
-        Box(Modifier.fillMaxSize().background(Chamber.surface1).windowInsetsPadding(WindowInsets.statusBars)) {
+        Box(Modifier.fillMaxSize().background(Chamber.ground).windowInsetsPadding(WindowInsets.statusBars)) {
           AnimatedContent(
             page,
             transitionSpec = {
@@ -165,6 +194,10 @@ private fun Shell() {
               Route.Home -> HomeScreen(nav, onProfile = { nav.go(Route.Settings) })
               Route.Search -> SearchScreen(nav, picker)
               Route.Library -> YourLibraryScreen(nav, onProfile = { nav.go(Route.Settings) })
+              Route.Mixes -> MixesScreen(nav)
+              Route.Games -> GamesScreen(nav)
+              is Route.Game -> GameScreen(r.kind, nav)
+              is Route.LibraryList -> LibraryListScreen(r.kind, nav)
               is Route.Album -> AlbumScreen(r.id, nav, picker)
               is Route.Artist -> ArtistScreen(r.id, nav, picker)
               is Route.Playlist -> PlaylistScreen(r.id, nav, picker)
@@ -179,8 +212,8 @@ private fun Shell() {
           }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-          if (player.track != null) Box(Modifier.padding(8.dp)) { MiniPlayer(player) { nav.go(Route.NowPlaying) } }
-          TabBar(nav)
+          if (player.track != null && nav.top !is Route.Game) Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) { MiniPlayer(player) { nav.go(Route.NowPlaying) } }
+          TabBar(nav, prefs.tabOrder)
         }
       }
       // Now Playing rises from the mini player over the page, and sinks back (Spotify's).
@@ -189,7 +222,7 @@ private fun Shell() {
         enter = if (still) EnterTransition.None else slideInVertically(spring(dampingRatio = 0.9f, stiffness = 420f)) { it } + fadeIn(tween(160)),
         exit = if (still) ExitTransition.None else slideOutVertically(tween(260)) { it } + fadeOut(tween(260)),
       ) {
-        NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker)
+        EchoTheme(dark = true) { LightBarIcons(); NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker) }
       }
       player.notice?.let { msg ->
         LaunchedEffect(msg) {
@@ -210,10 +243,29 @@ private fun Shell() {
   }
 }
 
-/** The three tabs, Spotify's, as an M3 navigation bar: a pill behind the current one's icon. */
+/** A tab's label and icon by its id (Prefs.tabs). */
+fun tabInfo(id: String): Pair<String, ImageVector> =
+  when (id) {
+    "mixes" -> "Mixes" to EchoIcons.radio
+    "games" -> "Games" to EchoIcons.gamepad
+    "library" -> "Library" to EchoIcons.library
+    "search" -> "Search" to EchoIcons.search
+    else -> "Home" to EchoIcons.home
+  }
+
+fun tabRoute(id: String): Route =
+  when (id) {
+    "mixes" -> Route.Mixes
+    "games" -> Route.Games
+    "library" -> Route.Library
+    "search" -> Route.Search
+    else -> Route.Home
+  }
+
+/** The tabs, in the user's order, as an M3 navigation bar: a pill behind the current one's icon. */
 @Composable
-private fun TabBar(nav: Nav) {
-  val tabs = listOf(Triple("Home", Route.Home, EchoIcons.home), Triple("Search", Route.Search, EchoIcons.search), Triple("Your Library", Route.Library, EchoIcons.library))
+private fun TabBar(nav: Nav, order: List<String>) {
+  val tabs = order.map { id -> tabInfo(id).let { (label, icon) -> Triple(label, tabRoute(id), icon) } }
   val root = nav.stack.first()
   NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
     for ((label, route, icon) in tabs) {
@@ -229,32 +281,34 @@ private fun TabBar(nav: Nav) {
   }
 }
 
-/** Spotify's mini player: the playing album's tone, a hairline of progress. */
+/** The mini player: a floating rounded bar over the page, play/pause and next, a hairline of progress. */
 @Composable
 private fun MiniPlayer(p: PlayerState, onOpen: () -> Unit) {
   val app = LocalContext.current.echo
   val t = p.track ?: return
-  val tint = headerTone(albumAccent())
-  Surface(Modifier.fillMaxWidth().height(56.dp), RoundedCornerShape(8.dp), tint, Chamber.text, shadowElevation = 3.dp) {
+  Surface(Modifier.fillMaxWidth().height(64.dp), RoundedCornerShape(22.dp), MaterialTheme.colorScheme.surfaceContainerHighest, Chamber.text, shadowElevation = 8.dp, tonalElevation = 2.dp) {
     Box(Modifier.fillMaxSize()) {
       // Swipe sideways for the next or previous song, up for Now Playing (Spotify's mini player).
       Row(
         Modifier.fillMaxSize().swipes(left = app.playback::next, right = app.playback::previous, up = onOpen).clickable(onClick = onOpen)
-          .padding(start = 8.dp, end = 4.dp),
+          .padding(start = 8.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Artwork(t.cover, t.album.title, 40.dp)
-        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+        Artwork(t.cover, t.album.title, 48.dp, radius = 12.dp)
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
           Text(t.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
-          Text(t.artist, color = Chamber.text.copy(alpha = 0.75f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+          Text(t.artist, color = Chamber.muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Heart(t, 22)
         Box(
           Modifier.size(44.dp).clip(CircleShape).clickable(onClick = app.playback::toggle).semantics { contentDescription = if (p.playing) "Pause" else "Play" },
           contentAlignment = Alignment.Center,
-        ) { Icon(if (p.playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.text, modifier = Modifier.size(24.dp)) }
+        ) { Icon(if (p.playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.text, modifier = Modifier.size(26.dp)) }
+        Box(
+          Modifier.size(44.dp).clip(CircleShape).clickable(onClick = app.playback::next).semantics { contentDescription = "Next" },
+          contentAlignment = Alignment.Center,
+        ) { Icon(EchoIcons.next, null, tint = Chamber.text, modifier = Modifier.size(24.dp)) }
       }
-      Progress(p, Modifier.align(Alignment.BottomCenter).padding(horizontal = 8.dp))
+      Progress(p, Modifier.align(Alignment.BottomCenter).padding(horizontal = 22.dp), fill = MaterialTheme.colorScheme.primary, track = Color.Transparent)
     }
   }
 }
@@ -295,11 +349,12 @@ private fun StageDock(p: PlayerState, chrome: StageChrome, onQueue: () -> Unit) 
   }
 }
 
-/** Play/pause: Spotify's white disc, the glyph in black. */
+/** Play/pause: a rounded square in the ink colour (more round when small), the glyph cut out of it. */
 @Composable
 fun PlayButton(playing: Boolean, enabled: Boolean, onClick: () -> Unit, size: Int = 48) {
+  val corner by animateFloatAsState(if (playing) 0.34f else 0.5f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "shape")
   Box(
-    Modifier.size(size.dp).clip(CircleShape).background(if (enabled) Chamber.text else Chamber.surface3).clickable(enabled = enabled, onClick = onClick)
+    Modifier.size(size.dp).clip(RoundedCornerShape((size * corner).dp)).background(if (enabled) Chamber.text else Chamber.surface3).clickable(enabled = enabled, onClick = onClick)
       .semantics { contentDescription = if (playing) "Pause" else "Play" },
     contentAlignment = Alignment.Center,
   ) {

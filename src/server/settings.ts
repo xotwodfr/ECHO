@@ -20,6 +20,15 @@ const subsetOf =
     v.every((x) => xs.includes(x)) &&
     new Set(v).size === v.length;
 const bool: Check = (v) => typeof v === 'boolean';
+/** A game's record (Android's Games, 2026-11-17): best round score, best streak, rounds played. */
+const gameRecord: Check = (v) => {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return false;
+  const o = v as Record<string, unknown>;
+  const keys = Object.keys(o);
+  const n = (x: unknown, max: number) =>
+    typeof x === 'number' && Number.isInteger(x) && x >= 0 && x <= max;
+  return keys.length === 3 && n(o.best, 100_000) && n(o.streak, 100_000) && n(o.rounds, 10_000_000);
+};
 const intIn =
   (min: number, max: number, step = 1): Check =>
   (v) =>
@@ -47,6 +56,13 @@ const SCHEMA = {
     motion: { check: oneOf('system', 'full', 'reduced', 'off'), default: 'system' },
     grain: { check: bool, default: false },
     pointerParallax: { check: bool, default: true },
+  },
+  // Each game's record, kept on the account so it follows the user to every device.
+  games: {
+    songGuesser: { check: gameRecord, default: { best: 0, streak: 0, rounds: 0 } },
+    finishLyric: { check: gameRecord, default: { best: 0, streak: 0, rounds: 0 } },
+    coverReveal: { check: gameRecord, default: { best: 0, streak: 0, rounds: 0 } },
+    timeline: { check: gameRecord, default: { best: 0, streak: 0, rounds: 0 } },
   },
 } as const;
 
