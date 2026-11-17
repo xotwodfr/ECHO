@@ -68,6 +68,25 @@ components; light or dark **with the system**; the accent **from the playing alb
   playing (flat when paused or under reduced motion) with the time left counting down; a play
   button that morphs from circle to rounded square; Lyrics and Up next pills; the lyrics card.
 
+- **Games** (new tab, `games/Games.kt`, `ui/Games.kt`): Song Guesser (a 2 s clip, longer clips
+  of 5 and 10 s cost a quarter of the points each), Finish the Lyric (a synced line cut before its
+  last 2–3 words, the clip stopping where they start), Cover Reveal (the cover from 16 px blocks to
+  sharp, a step every 2.5 s), Timeline (which of two albums came out first). Ten questions a round,
+  15 s each, 50 points for a right answer plus up to 50 for speed. Clips play on the games' own
+  ExoPlayer, which takes audio focus. Each game's record (best round, best streak, rounds) is kept
+  on the account in `/me/settings` → `games`, cached on the phone, and uploaded by the next sync
+  when the server is older than that section.
+- **Tabs**: reorder them in Settings → Tabs (`Prefs.tabs`); the first opens at start.
+
+## Releases
+
+Pushing a tag `vX.Y.Z` runs `.github/workflows/android-release.yml`: it builds the APK, runs the
+unit tests and publishes a GitHub release with `ECHO-vX.Y.Z.apk`, its SHA-256 and the notes in
+`.github/release-notes/vX.Y.Z.md`. With the secrets `ECHO_KEYSTORE_B64` (the keystore, base64),
+`ECHO_KEYSTORE_PASSWORD`, `ECHO_KEY_ALIAS` and `ECHO_KEY_PASSWORD` set, it signs with that key, so
+every release installs over the last; without them it uses the runner's debug key (a fresh one each
+run: uninstall before updating).
+
 ## As built (v0.1)
 
 - **Sign-in** with username, password and, with two-factor on, the code; the device appears in
