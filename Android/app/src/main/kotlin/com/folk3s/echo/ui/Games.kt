@@ -1,5 +1,11 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -79,11 +85,41 @@ import kotlinx.coroutines.delay
 
 private fun GameKind.colours(): List<Color> =
   when (this) {
-    GameKind.SongGuesser -> listOf(Color(0xFFE5375B), Color(0xFF7B2FBE))
-    GameKind.FinishLyric -> listOf(Color(0xFFF08A24), Color(0xFFD9365E))
-    GameKind.CoverReveal -> listOf(Color(0xFF14A38B), Color(0xFF2266C7))
-    GameKind.Timeline -> listOf(Color(0xFF3D5AFE), Color(0xFF1B1F6B))
+    GameKind.SongGuesser -> listOf(Color(0xFFFF4D6D), Color(0xFFC9184A), Color(0xFF6A1FB0))
+    GameKind.FinishLyric -> listOf(Color(0xFFFFB347), Color(0xFFFF6A3D), Color(0xFFD6336C))
+    GameKind.CoverReveal -> listOf(Color(0xFF2EE6B6), Color(0xFF12A4A0), Color(0xFF1D5FD1))
+    GameKind.Timeline -> listOf(Color(0xFF7C6CFF), Color(0xFF4A3BD6), Color(0xFF1E1863))
   }
+
+/** A game's ground: its gradient, two soft lights drifting in it, and its glyph, large and faint. */
+@Composable
+private fun GameGround(kind: GameKind, glyph: androidx.compose.ui.unit.Dp, content: @Composable androidx.compose.foundation.layout.BoxScope.() -> Unit) {
+  val c = kind.colours()
+  Box(
+    Modifier.fillMaxSize().background(Brush.linearGradient(c)).drawBehind {
+      drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = 0.28f), Color.Transparent), Offset(size.width * 0.85f, size.height * 0.1f), size.minDimension * 0.7f), size.minDimension * 0.7f, Offset(size.width * 0.85f, size.height * 0.1f))
+      drawCircle(Brush.radialGradient(listOf(c.last().copy(alpha = 0.9f), Color.Transparent), Offset(size.width * 0.05f, size.height), size.minDimension * 0.8f), size.minDimension * 0.8f, Offset(size.width * 0.05f, size.height))
+    },
+  ) {
+    Icon(kind.icon(), null, tint = Color.White.copy(alpha = 0.13f), modifier = Modifier.align(Alignment.TopEnd).offset(x = glyph * 0.28f, y = -glyph * 0.12f).size(glyph).rotate(-12f))
+    content()
+  }
+}
+
+/** A small frosted label on a game's colours. */
+@Composable
+private fun Frost(text: String, modifier: Modifier = Modifier, icon: ImageVector? = null) {
+  Row(
+    modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.2f)).padding(horizontal = 12.dp, vertical = 6.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    if (icon != null) {
+      Icon(icon, null, tint = Color.White, modifier = Modifier.size(14.dp))
+      Spacer(Modifier.width(6.dp))
+    }
+    Text(text, color = Color.White, style = MaterialTheme.typography.labelMedium)
+  }
+}
 
 private fun GameKind.icon(): ImageVector =
   when (this) {
@@ -100,41 +136,85 @@ fun GamesScreen(nav: Nav) {
   val app = LocalContext.current.echo
   val records by app.games.records.collectAsStateWithLifecycle()
   LaunchedEffect(Unit) { app.games.sync() }
+  // Today's pick changes with the day, the same on every device.
+  val today = GameKind.entries[(java.time.LocalDate.now().toEpochDay() % GameKind.entries.size).toInt()]
+  val all = records.values
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item { LargeTitle("Games") { Avatar { nav.go(Route.Settings) } } }
     item {
+      Text("Quizzes made from your own library.", color = Chamber.muted, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 16.dp))
+    }
+    // Your numbers across the four games.
+    item {
+      Row(Modifier.padding(horizontal = 20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Stat("${all.sumOf { it.rounds }}", "Rounds", Modifier.weight(1f))
+        Stat("${all.maxOfOrNull { it.best } ?: 0}", "Best score", Modifier.weight(1f))
+        Stat("${all.maxOfOrNull { it.streak } ?: 0}", "Best streak", Modifier.weight(1f))
+      }
+    }
+    item { SectionTitle("Today's pick", Modifier.padding(top = 12.dp)) }
+    item { Featured(today, records[today.id]) { nav.go(Route.Game(today)) } }
+    item { SectionTitle("All games", Modifier.padding(top = 12.dp)) }
+    items(GameKind.entries.chunked(2), key = { row -> row.joinToString { it.id } }) { row ->
+      Row(Modifier.padding(horizontal = 20.dp, vertical = 7.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        for (k in row) Box(Modifier.weight(1f)) { GameTile(k, records[k.id]) { nav.go(Route.Game(k)) } }
+      }
+    }
+    item {
       Text(
-        "Quizzes made from your own library. Your best scores are saved to your ECHO account.",
+        "Your best scores are saved to your ECHO account, so they follow you to every device.",
         color = Chamber.muted,
-        style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 40.dp, vertical = 20.dp),
       )
     }
-    items(GameKind.entries, key = { it.id }) { k -> GameCard(k, records[k.id]) { nav.go(Route.Game(k)) } }
   }
 }
 
+/** Today's pick: a tall card with room to breathe, the blurb, and a Play button. */
 @Composable
-private fun GameCard(kind: GameKind, record: GameRecord?, onClick: () -> Unit) {
+private fun Featured(kind: GameKind, record: GameRecord?, onPlay: () -> Unit) {
+  val shape = RoundedCornerShape(if (look.circleArt) 32.dp else look.hero.coerceAtLeast(look.panel))
   Box(
-    Modifier.padding(horizontal = 20.dp, vertical = 7.dp).fillMaxWidth().height(150.dp).bouncy(scale = 0.97f, onClick = onClick).clip(RoundedCornerShape(look.panel))
-      .background(Brush.linearGradient(kind.colours())).semantics { contentDescription = "Play ${kind.title}" },
+    Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(280.dp).bouncy(scale = 0.98f, label = "Play ${kind.title}", onClick = onPlay)
+      .shadow(18.dp, shape, ambientColor = kind.colours()[1], spotColor = kind.colours()[1]).clip(shape),
   ) {
-    Icon(kind.icon(), null, tint = Color.White.copy(alpha = 0.18f), modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp).size(120.dp))
-    Column(Modifier.align(Alignment.BottomStart).padding(20.dp).padding(end = 80.dp)) {
-      Text(kind.title, color = Color.White, style = MaterialTheme.typography.headlineSmall)
-      Text(kind.blurb, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium, maxLines = 2)
-      Spacer(Modifier.height(8.dp))
-      Text(
-        if (record == null || record.rounds == 0) "Not played yet" else "Best ${record.best} · Streak ${record.streak} · ${record.rounds} round${if (record.rounds == 1) "" else "s"}",
-        color = Color.White,
-        style = MaterialTheme.typography.labelLarge,
-      )
+    GameGround(kind, 220.dp) {
+      Frost(if (record == null || record.rounds == 0) "New for you" else "Best ${record.best}", Modifier.align(Alignment.TopStart).padding(20.dp))
+      Column(Modifier.align(Alignment.BottomStart).padding(24.dp)) {
+        Text(kind.title, color = Color.White, style = MaterialTheme.typography.displaySmall)
+        Spacer(Modifier.height(6.dp))
+        Text(kind.blurb, color = Color.White.copy(alpha = 0.88f), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(end = 24.dp))
+        Spacer(Modifier.height(18.dp))
+        Row(
+          Modifier.clip(RoundedCornerShape(look.button.coerceAtMost(26.dp))).background(Color.White).padding(horizontal = 22.dp, vertical = 12.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          Icon(EchoIcons.play, null, tint = kind.colours()[1], modifier = Modifier.size(18.dp))
+          Spacer(Modifier.width(8.dp))
+          Text("Play", color = kind.colours()[1], style = MaterialTheme.typography.titleMedium)
+        }
+      }
     }
-    Box(
-      Modifier.align(Alignment.TopEnd).padding(16.dp).size(44.dp).clip(RoundedCornerShape(16.dp)).background(Color.White),
-      contentAlignment = Alignment.Center,
-    ) { Icon(EchoIcons.play, null, tint = kind.colours().last(), modifier = Modifier.size(20.dp)) }
+  }
+}
+
+/** A game in the grid: its colours, a frosted glyph, its name and your best. */
+@Composable
+private fun GameTile(kind: GameKind, record: GameRecord?, onClick: () -> Unit) {
+  val shape = RoundedCornerShape(look.panel)
+  Box(Modifier.fillMaxWidth().aspectRatio(0.84f).bouncy(scale = 0.96f, label = "Play ${kind.title}", onClick = onClick).clip(shape)) {
+    GameGround(kind, 140.dp) {
+      Box(Modifier.padding(16.dp).size(46.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.22f)), contentAlignment = Alignment.Center) {
+        Icon(kind.icon(), null, tint = Color.White, modifier = Modifier.size(24.dp))
+      }
+      Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+        Text(kind.title, color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 2)
+        Spacer(Modifier.height(8.dp))
+        Frost(if (record == null || record.rounds == 0) "New" else "Best ${record.best}")
+      }
+    }
   }
 }
 
@@ -269,19 +349,29 @@ private fun Round(kind: GameKind, qs: List<Question>, clips: ClipPlayer, onAgain
     }
   }
 
-  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 32.dp)) {
-    // Close, where we are, the score.
-    Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+  val shown by animateIntAsState(score, tween(600), label = "score")
+  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 40.dp)) {
+    // Close, the game and where we are, the score.
+    Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 16.dp, top = 8.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
       Box(
-        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onExit)
+        Modifier.size(42.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onExit)
           .semantics { contentDescription = "Leave the game" },
         contentAlignment = Alignment.Center,
       ) { Icon(EchoIcons.close, null, modifier = Modifier.size(20.dp)) }
-      Text("${kind.title} · ${index + 1} of ${qs.size}", style = MaterialTheme.typography.titleSmall, color = Chamber.muted, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
-      Text("$score", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(end = 8.dp).semantics { contentDescription = "Score $score" })
+      Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+        Text(kind.title, style = MaterialTheme.typography.titleMedium)
+        Text("Question ${index + 1} of ${qs.size}", style = MaterialTheme.typography.bodySmall, color = Chamber.muted)
+      }
+      Row(
+        Modifier.clip(CircleShape).background(Brush.linearGradient(kind.colours())).padding(horizontal = 14.dp, vertical = 8.dp).semantics { contentDescription = "Score $score" },
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Text("$shown", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Text(" pts", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
+      }
     }
     // A segment per question: right, wrong, this one, to come.
-    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
       for (i in qs.indices) {
         val c =
           when (marks.getOrNull(i)) {
@@ -289,18 +379,18 @@ private fun Round(kind: GameKind, qs: List<Question>, clips: ClipPlayer, onAgain
             Mark.Wrong, Mark.Missed -> MaterialTheme.colorScheme.error
             null -> if (i == index) MaterialTheme.colorScheme.primary.copy(alpha = 0.5f) else Chamber.line
           }
-        Box(Modifier.weight(1f).height(5.dp).clip(CircleShape).background(c))
+        Box(Modifier.weight(1f).height(if (i == index) 6.dp else 4.dp).clip(CircleShape).background(c))
       }
     }
     LinearProgressIndicator(
       progress = { if (started == null) 1f else (1f - elapsed.toFloat() / LIMIT_MS).coerceIn(0f, 1f) },
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp).height(6.dp).clip(CircleShape),
+      modifier = Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp).height(4.dp).clip(CircleShape),
       color = if (elapsed > LIMIT_MS * 0.7) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
       trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
       drawStopIndicator = {},
     )
     // The question itself.
-    Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
       when (q) {
         is GuessQ -> {
           Listening(kind, playing, chosen != null, q.track.cover, if (chosen != null) "${q.track.title} · ${q.track.artist}" else "What's this song?", canMore = hints < 2) {
@@ -318,8 +408,8 @@ private fun Round(kind: GameKind, qs: List<Question>, clips: ClipPlayer, onAgain
     }
     if (q is TimelineQ) TimelinePrompt(q, chosen) { answer(it) }
     else
-      Column(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        q.choices.forEachIndexed { i, c -> ChoiceButton(c, stateOf(i, q.answer, chosen)) { answer(i) } }
+      Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        q.choices.forEachIndexed { i, c -> ChoiceButton("ABCD"[i], c, stateOf(i, q.answer, chosen)) { answer(i) } }
       }
     if (chosen != null)
       Text(
@@ -352,7 +442,7 @@ private fun stateOf(i: Int, answer: Int, chosen: Int?): ChoiceState =
   }
 
 @Composable
-private fun ChoiceButton(text: String, state: ChoiceState, onClick: () -> Unit) {
+private fun ChoiceButton(letter: Char, text: String, state: ChoiceState, onClick: () -> Unit) {
   val bg by animateColorAsState(
     when (state) {
       ChoiceState.Right -> RIGHT
@@ -363,11 +453,21 @@ private fun ChoiceButton(text: String, state: ChoiceState, onClick: () -> Unit) 
     label = "choice",
   )
   val fg = if (state == ChoiceState.Right || state == ChoiceState.Wrong) Color.White else Chamber.text
-  Box(
-    Modifier.fillMaxWidth().heightIn(min = 60.dp).alpha(if (state == ChoiceState.Dim) 0.45f else 1f).bouncy(enabled = state == ChoiceState.Open, scale = 0.97f, onClick = onClick)
-      .clip(RoundedCornerShape(look.button.coerceAtMost(20.dp))).background(bg).padding(horizontal = 20.dp, vertical = 14.dp),
-    contentAlignment = Alignment.CenterStart,
-  ) { Text(text, color = fg, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+  Row(
+    Modifier.fillMaxWidth().heightIn(min = 64.dp).alpha(if (state == ChoiceState.Dim) 0.45f else 1f).bouncy(enabled = state == ChoiceState.Open, scale = 0.97f, onClick = onClick)
+      .clip(RoundedCornerShape(look.button.coerceAtMost(22.dp))).background(bg).padding(start = 12.dp, end = 18.dp, top = 12.dp, bottom = 12.dp),
+    verticalAlignment = Alignment.CenterVertically,
+  ) {
+    // The letter in a soft disc; once answered, a tick or a cross in its place.
+    Box(Modifier.size(36.dp).clip(CircleShape).background(fg.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+      when (state) {
+        ChoiceState.Right -> Icon(EchoIcons.check, null, tint = fg, modifier = Modifier.size(20.dp))
+        ChoiceState.Wrong -> Icon(EchoIcons.close, null, tint = fg, modifier = Modifier.size(18.dp))
+        else -> Text("$letter", color = fg, style = MaterialTheme.typography.titleSmall)
+      }
+    }
+    Text(text, color = fg, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 14.dp))
+  }
 }
 
 /** The listening card: the cover hidden until the answer, a pulse while the clip plays. */
