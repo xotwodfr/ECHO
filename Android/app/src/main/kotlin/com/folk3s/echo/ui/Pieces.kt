@@ -147,7 +147,8 @@ fun PlayShuffle(label: String, live: Boolean, playing: Boolean, onPlay: () -> Un
       },
       modifier = Modifier.weight(1f).height(52.dp).semantics { contentDescription = "Shuffle $label" },
       shape = RoundedCornerShape(look.button.coerceAtMost(26.dp)),
-      colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+      // The accent on a faint wash of itself: readable whatever the theme's accent.
+      colors = ButtonDefaults.filledTonalButtonColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.14f), contentColor = MaterialTheme.colorScheme.primary),
     ) {
       Icon(EchoIcons.shuffle, null, modifier = Modifier.size(20.dp))
       Spacer(Modifier.width(8.dp))

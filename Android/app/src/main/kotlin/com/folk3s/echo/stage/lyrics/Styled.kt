@@ -298,15 +298,15 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
       val t = time.value
       translate(0f, pad) {
         when {
-          style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f))
-          !active -> drawText(layout, color = dim)
+          style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f), shadow = Shadow.None)
+          !active -> drawText(layout, color = dim, shadow = Shadow.None)
           else ->
             line.words.forEachIndexed { k, word ->
               val r = boxes[k].inflate(em * 0.12f)
               val p = if (!line.wordTimed && !rules.sweep) (if (t >= line.start) 1f else 0f) else progress(t, word.start, word.end)
               when (style) {
                 LyricStyle.Karaoke -> clipRect(r.left, r.top - pad, r.right, r.bottom + pad) {
-                  drawText(layout, brush = sweep(r, p, accent, white, 0.5f))
+                  drawText(layout, brush = sweep(r, p, accent, white, 0.5f), shadow = Shadow.None)
                 }
                 LyricStyle.Spicy -> {
                   val sung = p > 0f
@@ -317,14 +317,14 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
                     scale(1f + 0.07f * swell, 1f + 0.07f * swell, r.center)
                   }) {
                     clipRect(r.left, r.top - pad, r.right, r.bottom + pad) {
-                      if (!sung) drawText(layout, color = dim)
+                      if (!sung) drawText(layout, color = dim, shadow = Shadow.None)
                       else drawText(layout, brush = sweep(r, p, white, dim, 0.25f), shadow = Shadow(white.copy(alpha = 0.75f * glow), Offset.Zero, 22f * glow))
                     }
                   }
                 }
                 else -> // Apple Music style and Cinema: a soft fill, and the word rises a little as it's sung.
                   withTransform({ translate(0f, -lift * easeOut(p)) }) {
-                    clipRect(r.left, r.top - pad, r.right, r.bottom + pad) { drawText(layout, brush = sweep(r, p, white, dim, 0.45f * em / max(1f, r.width))) }
+                    clipRect(r.left, r.top - pad, r.right, r.bottom + pad) { drawText(layout, brush = sweep(r, p, white, dim, 0.45f * em / max(1f, r.width)), shadow = Shadow.None) }
                   }
               }
             }

@@ -106,7 +106,8 @@ class Playback(private val app: EchoApp) {
     val future = MediaController.Builder(app, token).buildAsync()
     future.addListener(
       {
-        val mc = future.get()
+        // A refused connection leaves the player idle rather than crashing the app.
+        val mc = runCatching { future.get() }.getOrNull() ?: return@addListener
         c = mc
         mc.addListener(listener)
         pending.forEach { it(mc) }
