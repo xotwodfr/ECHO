@@ -208,20 +208,13 @@ fun StageScreen(
         }
       else ->
         // The song as a header, the lyric column under it (the phone layout of the reference).
+        // The lyric column right under the top row (the song sits in that row, between its buttons).
         Column(Modifier.fillMaxSize()) {
-          Spacer(Modifier.windowInsetsPadding(WindowInsets.statusBars).height(72.dp))
-          if (style != LyricStyle.Cinema && style != LyricStyle.Kinetic)
-          Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
-            Artwork(t.cover, t.album.title, 48.dp, radius = 6.dp)
-            Column(Modifier.padding(start = 12.dp)) {
-              Text(t.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleMedium, maxLines = 1)
-              Text(t.artist, color = Chamber.muted, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, maxLines = 1)
-            }
-          }
+          Spacer(Modifier.windowInsetsPadding(WindowInsets.statusBars).height(64.dp))
           Box(Modifier.weight(1f).fillMaxWidth()) { LyricsView(s, dockPx, chrome, style) }
         }
     }
-    TopChrome(chrome, onClose, dp) { picking = true }
+    TopChrome(chrome, onClose, dp, if (view == StageViewMode.Lyrics && style != LyricStyle.Cinema && style != LyricStyle.Kinetic) t else null) { picking = true }
     Box(Modifier.align(Alignment.BottomCenter).onGloballyPositioned { dockPx = it.size.height.toFloat() }) { dock() }
     // Hidden chrome takes no input: a blind tap brings it back and never hits a control (§6.1).
     if (!chrome.visible) Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { touchedAt = System.currentTimeMillis() } })
@@ -269,22 +262,32 @@ private fun StylePicker(onClose: () -> Unit) {
 }
 
 @Composable
-private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float, onStyle: () -> Unit) {
+private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float, song: com.folk3s.echo.api.Track?, onStyle: () -> Unit) {
   val alpha by animateFloatAsState(if (chrome.visible) 1f else 0f, tween(if (chrome.visible) 160 else 640), label = "chrome")
   val app = LocalContext.current.echo
   val ctx by app.playback.context.collectAsStateWithLifecycle()
+  // The buttons fade with the chrome; the song stays, so the lyrics never lose their title.
   Row(
-    Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 16.dp, vertical = 12.dp).alpha(alpha),
+    Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = 12.dp, vertical = 8.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    StageButton(EchoIcons.chevronDown, "Close Now playing", false, chrome.visible, Modifier, onClose)
-    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-      ctx?.let {
-        Text("PLAYING FROM", color = Chamber.text.copy(alpha = 0.7f), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
-        Text(it.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, maxLines = 1)
+    Box(Modifier.alpha(alpha)) { StageButton(EchoIcons.chevronDown, "Close Now playing", false, chrome.visible, Modifier, onClose) }
+    if (song != null)
+      Row(Modifier.weight(1f).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Artwork(song.cover, song.album.title, 40.dp, radius = 8.dp)
+        Column(Modifier.padding(start = 10.dp)) {
+          Text(song.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+          Text(song.artist, color = Chamber.text.copy(alpha = 0.65f), style = androidx.compose.material3.MaterialTheme.typography.bodySmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+        }
       }
-    }
-    StageButton(EchoIcons.textStyle, "Lyrics style", false, chrome.visible, Modifier, onStyle)
+    else
+      Column(Modifier.weight(1f).alpha(alpha), horizontalAlignment = Alignment.CenterHorizontally) {
+        ctx?.let {
+          Text("PLAYING FROM", color = Chamber.text.copy(alpha = 0.7f), style = androidx.compose.material3.MaterialTheme.typography.labelSmall)
+          Text(it.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, maxLines = 1)
+        }
+      }
+    Box(Modifier.alpha(alpha)) { StageButton(EchoIcons.textStyle, "Lyrics style", false, chrome.visible, Modifier, onStyle) }
   }
 }
 

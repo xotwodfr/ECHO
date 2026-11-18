@@ -69,8 +69,11 @@ test('API-02: device token with TOTP, bearer use, signed stream URL, revocation'
   const stream = await app.get(url);
   expect(stream.status()).toBe(200);
   expect(stream.headers()['content-type']).toMatch(/^audio\//);
-  // A tampered signature fails.
-  expect((await app.get(url.replace(/sig=./, 'sig=A'))).status()).toBe(401);
+  // A tampered signature fails: its first character changed (to another one, always: a signature
+  // that already starts with "A" would otherwise come back untouched, about 1 run in 64).
+  const tampered = url.replace(/sig=(.)/, (_: string, c: string) => `sig=${c === 'A' ? 'B' : 'A'}`);
+  expect(tampered).not.toBe(url);
+  expect((await app.get(tampered)).status()).toBe(401);
 
   // Revoked from the device list: the token stops working.
   const sessions = await (await app.get('/api/v1/me/sessions', { headers: auth })).json();

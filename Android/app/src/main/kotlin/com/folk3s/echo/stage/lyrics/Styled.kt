@@ -51,10 +51,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -174,7 +174,7 @@ private data class Rules(
 
 private fun rulesOf(s: LyricStyle) =
   when (s) {
-    LyricStyle.Apple -> Rules(30f, 800, false, 0.3f, true, 0.35f, 45, 0, false)
+    LyricStyle.Apple -> Rules(30f, 800, false, 0.26f, true, 0.3f, 45, 0, false)
     LyricStyle.Spicy -> Rules(31f, 900, false, 0.3f, false, 0.28f, 30, 0, false)
     LyricStyle.Cinema -> Rules(36f, 800, true, 0.42f, true, 0.4f, 35, 1, false)
     LyricStyle.ColourBlock -> Rules(26f, 800, false, 0.28f, false, 1f, 0, 0, false)
@@ -241,7 +241,8 @@ fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, 
           val dist = i - active
           val near = rules.onlyNear == 0 || dist in (if (style == LyricStyle.Karaoke) 0..1 else -rules.onlyNear..rules.onlyNear)
           val alpha by animateFloatAsState(if (near) 1f else 0f, tween(260), label = "a")
-          val blurDp by animateFloatAsState(if (rules.blur && dist != 0) min(abs(dist) * 1.3f, 5f) else 0f, tween(400), label = "b")
+          // Apple's depth: a little blur per line away from the one being sung, never smearing.
+          val blurDp by animateFloatAsState(if (rules.blur && dist != 0) min(abs(dist) * 0.8f, 3f) else 0f, tween(500), label = "b")
           val scale by animateFloatAsState(if (dist == 0 || style == LyricStyle.ColourBlock) 1f else 0.96f, spring(dampingRatio = 0.8f, stiffness = 200f), label = "s")
           Box(
             Modifier.fillMaxWidth()
@@ -287,45 +288,69 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
   BoxWithConstraints(Modifier.fillMaxWidth()) {
     val w = constraints.maxWidth
     val layout = remember(line.text, text, w, align) { tm.measure(AnnotatedString(line.text), text.copy(textAlign = align), constraints = Constraints(maxWidth = w)) }
-    val boxes = remember(layout, line) { line.words.map { rectOf(layout, it.from, it.to) } }
-    val pad = with(density) { 8.dp.toPx() }
-    val lift = with(density) { 2.5.dp.toPx() }
+    // On the line being sung, each word is its own small layout set on the line's baseline at its
+    // place: a word can rise, swell and glow without clipping, and never doubles a neighbour.
+    val words =
+      remember(layout, active) {
+        if (!active || !line.wordTimed) null
+        else
+          line.words.map { wd ->
+            val sub = tm.measure(AnnotatedString(line.text.substring(wd.from, wd.to)), text.copy(textAlign = TextAlign.Start), softWrap = false)
+            val row = layout.getLineForOffset(wd.from)
+            Placed(sub, Offset(layout.getHorizontalPosition(wd.from, true).let { if (layout.getParagraphDirection(wd.from) == androidx.compose.ui.text.style.ResolvedTextDirection.Rtl) it - sub.size.width else it }, layout.getLineBaseline(row) - sub.firstBaseline))
+          }
+      }
+    val pad = with(density) { 10.dp.toPx() }
     val em = with(density) { text.fontSize.toPx() }
     val heightDp = with(density) { (layout.size.height + 2 * pad).toDp() }
     val white = Color.White
     val dim = white.copy(alpha = rules.dim)
+    // The unsung part of the line being sung: a little brighter than the lines around it.
+    val ahead = white.copy(alpha = min(1f, rules.dim + 0.12f))
     Canvas(Modifier.fillMaxWidth().height(heightDp)) {
       val t = time.value
       translate(0f, pad) {
         when {
           style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f), shadow = Shadow.None)
           !active -> drawText(layout, color = dim, shadow = Shadow.None)
+          words == null -> {
+            // A line without word timing: it lights in a quarter of a second (Karaoke sweeps it).
+            val whole = Rect(0f, 0f, layout.size.width.toFloat(), layout.size.height.toFloat())
+            if (rules.sweep) drawText(layout, brush = sweep(whole, progress(t, line.start, line.end), accent, white, em * 0.3f), shadow = Shadow.None)
+            else drawText(layout, color = lerp(ahead, white, progress(t, line.start, line.start + 250)), shadow = Shadow.None)
+          }
           else ->
             line.words.forEachIndexed { k, word ->
-              val r = boxes[k].inflate(em * 0.12f)
-              val p = if (!line.wordTimed && !rules.sweep) (if (t >= line.start) 1f else 0f) else progress(t, word.start, word.end)
-              when (style) {
-                LyricStyle.Karaoke -> clipRect(r.left, r.top - pad, r.right, r.bottom + pad) {
-                  drawText(layout, brush = sweep(r, p, accent, white, 0.5f), shadow = Shadow.None)
-                }
-                LyricStyle.Spicy -> {
-                  val sung = p > 0f
-                  val swell = if (p in 0f..1f && t in word.start..word.end) sin(PI * p).toFloat() else 0f
-                  val glow = if (sung) (if (t > word.end) max(0.25f, 1f - (t - word.end) / 900f) else 1f) else 0f
-                  withTransform({
-                    translate(0f, -lift * 1.4f * (if (sung) 1f else 0f) * easeOut(min(1f, (t - word.start) / 220f)))
-                    scale(1f + 0.07f * swell, 1f + 0.07f * swell, r.center)
-                  }) {
-                    clipRect(r.left, r.top - pad, r.right, r.bottom + pad) {
-                      if (!sung) drawText(layout, color = dim, shadow = Shadow.None)
-                      else drawText(layout, brush = sweep(r, p, white, dim, 0.25f), shadow = Shadow(white.copy(alpha = 0.75f * glow), Offset.Zero, 22f * glow))
+              val (sub, at) = words[k]
+              val r = Rect(0f, 0f, sub.size.width.toFloat(), sub.size.height.toFloat())
+              val p = progress(t, word.start, word.end)
+              translate(at.x, at.y) {
+                when (style) {
+                  LyricStyle.Karaoke -> drawText(sub, brush = sweep(r, p, accent, white, em * 0.12f), shadow = Shadow.None)
+                  LyricStyle.Spicy -> {
+                    val sung = p > 0f
+                    val swell = if (t in word.start..word.end) sin(PI * p).toFloat() else 0f
+                    val glow = if (!sung) 0f else if (t > word.end) max(0.2f, 1f - (t - word.end) / 900f) else 1f
+                    withTransform({
+                      translate(0f, -em * 0.08f * easeOut(min(1f, (t - word.start) / 220f)) * (if (sung) 1f else 0f))
+                      scale(1f + 0.07f * swell, 1f + 0.07f * swell, r.center)
+                    }) {
+                      if (!sung) drawText(sub, color = ahead, shadow = Shadow.None)
+                      else drawText(sub, brush = sweep(r, p, white, ahead, em * 0.25f), shadow = Shadow(white.copy(alpha = 0.7f * glow), Offset.Zero, em * 0.6f * glow))
+                    }
+                  }
+                  else -> {
+                    // Apple Music style and Cinema: a soft edge sweeps each word, which rises a touch
+                    // as it's sung; a held word (about a second or more) swells and glows while held.
+                    val emph = if (word.end - word.start >= 900 && t in word.start..word.end) sin(PI * p).toFloat() else 0f
+                    withTransform({
+                      translate(0f, -em * 0.05f * easeOut(p))
+                      if (emph > 0f) scale(1f + 0.04f * emph, 1f + 0.04f * emph, r.center)
+                    }) {
+                      drawText(sub, brush = sweep(r, p, white, ahead, em * 0.4f), shadow = if (emph > 0f) Shadow(white.copy(alpha = 0.55f * emph), Offset.Zero, em * 0.5f * emph) else Shadow.None)
                     }
                   }
                 }
-                else -> // Apple Music style and Cinema: a soft fill, and the word rises a little as it's sung.
-                  withTransform({ translate(0f, -lift * easeOut(p)) }) {
-                    clipRect(r.left, r.top - pad, r.right, r.bottom + pad) { drawText(layout, brush = sweep(r, p, white, dim, 0.45f * em / max(1f, r.width)), shadow = Shadow.None) }
-                  }
               }
             }
         }
@@ -334,24 +359,20 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
   }
 }
 
+/** A word's own layout and where it sits in its line. */
+private data class Placed(val layout: TextLayoutResult, val at: Offset)
+
 private fun easeOut(x: Float): Float = 1f - (1f - x.coerceIn(0f, 1f)).let { it * it * it }
 
-/** Lit up to the edge at [p] of the word's width, unlit after, with a soft edge of [soft] (of the width). */
+/**
+ * Lit up to the edge at [p] across the word's glyphs, unlit after, the edge [soft] px wide: it
+ * enters before the first letter and leaves after the last, so a word ends wholly lit.
+ */
 private fun sweep(r: Rect, p: Float, lit: Color, unlit: Color, soft: Float): Brush {
   if (p <= 0f) return Brush.horizontalGradient(listOf(unlit, unlit))
   if (p >= 1f) return Brush.horizontalGradient(listOf(lit, lit))
-  val s = soft.coerceIn(0.02f, 0.6f) * r.width
-  val e = r.left + p * (r.width + s) - s / 2
-  return Brush.horizontalGradient(0f to lit, 1f to unlit, startX = e - s / 2, endX = e + s / 2, tileMode = TileMode.Clamp)
-}
-
-/** A word's box in the laid-out line (its first line's part, if it wraps). */
-private fun rectOf(l: TextLayoutResult, from: Int, to: Int): Rect {
-  if (to <= from) return Rect.Zero
-  val a = l.getBoundingBox(from)
-  val b = l.getBoundingBox(to - 1)
-  return if (l.getLineForOffset(from) == l.getLineForOffset(to - 1)) Rect(a.left, a.top, b.right, b.bottom)
-  else Rect(a.left, a.top, l.getLineRight(l.getLineForOffset(from)), a.bottom)
+  val e = r.left - soft / 2 + p * (r.width + soft)
+  return Brush.horizontalGradient(0f to lit, 1f to unlit, startX = e - soft / 2, endX = e + soft / 2, tileMode = TileMode.Clamp)
 }
 
 /** A long gap's three dots: they breathe, and fill one by one as the gap runs out. */

@@ -29,10 +29,14 @@ test('every page header takes the playing song’s colour, and fades out under i
 }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto('/library/album/al-harbour');
+  // Before anything plays the header is the neutral fallback; wait for the album's own colour to
+  // arrive (its palette is fetched after Play), or "settled" can pass on the fallback still.
+  const before = await playingColour(page);
   await page
     .locator('.action-bar')
     .getByRole('button', { name: /^Play / })
     .click();
+  await expect.poll(() => playingColour(page), { timeout: 5000 }).not.toBe(before);
   await settled(page);
   const playing = await playingColour(page);
   // Another album's page, while Harbour Lights plays: the same colour, not its own cover's.
