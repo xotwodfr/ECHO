@@ -315,8 +315,35 @@ export function createKaraoke(deps: KaraokeDeps) {
     }
   }
 
+  /**
+   * The songs ready on the user's own Navidrome server, newest first, as Subsonic songs (the
+   * user's Navidrome is asked for each; songs it no longer has are left out).
+   */
+  async function readySongs(userId: number, limit: number) {
+    const scope = deps.scopeFor(userId);
+    const ids = db
+      .prepare(
+        `SELECT track_id FROM stems_jobs WHERE scope = ? AND status = 'ready'
+         ORDER BY updated_at DESC, key LIMIT ?`,
+      )
+      .pluck()
+      .all(scope, limit) as string[];
+    const client = ids.length ? await deps.navidrome(userId).catch(() => null) : null;
+    if (!client) return [];
+    const songs = await Promise.all(
+      ids.map((id) =>
+        client
+          .call('getSong', { id })
+          .then((r) => r.song as Record<string, unknown> | undefined)
+          .catch(() => undefined),
+      ),
+    );
+    return songs.filter((s): s is Record<string, unknown> => !!s);
+  }
+
   return {
     enqueue,
+    readySongs,
     ahead,
     get,
     sweep,
@@ -348,6 +375,13 @@ export function karaokeRoutes(k: Karaoke | null, requireUser: MiddlewareHandler<
       ...k.counts(),
       bytes: disk?.bytes ?? null,
     });
+  });
+
+  /** Songs with a karaoke version ready (Home's Karaoke shelf), newest first. */
+  app.get('/karaoke/ready', requireUser, async (c) => {
+    if (!k) return c.json({ songs: [] });
+    const limit = Math.min(60, Math.max(1, Number(c.req.query('limit')) || 30));
+    return c.json({ songs: await k.readySongs(c.var.user.id, limit) });
   });
 
   /**

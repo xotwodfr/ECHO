@@ -34,6 +34,7 @@ const NO_USER_DATA = [
   // Karaoke: server-wide counts, and a song's state; songs are keyed by the caller's own Navidrome
   // server, so another server's never answer (karaoke.test.ts). The audio is attacked below.
   'GET /karaoke',
+  'GET /karaoke/ready',
   'GET /karaoke/:id',
   'GET /me/account',
   'POST /me/password',

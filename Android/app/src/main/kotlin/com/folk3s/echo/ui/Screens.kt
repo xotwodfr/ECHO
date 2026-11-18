@@ -179,6 +179,7 @@ fun songMenu(app: EchoApp, t: Track, nav: Nav, picker: (Track) -> Unit, extra: L
       "Go to song radio" to { app.scope.launch { runCatching { startRadio(app, t) }.onFailure { app.playback.notify("Couldn't start the radio.") } } },
       "Play next" to { app.playback.playNext(t) },
       "Add to queue" to { app.playback.addToQueue(t) },
+      "Make karaoke version" to { app.karaoke.request(t) },
     ) +
     listOfNotNull(
       t.artists.firstOrNull()?.id?.let { id -> "Go to artist" to { nav.go(Route.Artist(id)) } },
@@ -304,6 +305,7 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
   val (random, _) = load("random") { app.library.albumList(AlbumList.Random, 12) }
   val (mixes, _) = load("mixes") { app.library.mixes() }
   val (contexts, _) = load("contexts") { app.library.playedContexts() }
+  val (karaoke, _) = load("karaoke") { app.library.karaokeSongs() }
   fun albums(l: Load<List<Album>>) = (l as? Load.Ok)?.value ?: emptyList()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item { LargeTitle("Home") { Avatar(onProfile) } }
@@ -323,6 +325,22 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
       if (list.isNotEmpty()) item(title) { Shelf(title) { items(list, key = { it.id }) { a -> Card(a.cover, a.title, a.artist) { nav.go(Route.Album(a.id)) } } } }
     }
     madeForYou(mixes, contexts, nav)
+    // Karaoke: songs whose karaoke version is ready; playing one turns Karaoke mode on.
+    val sing = (karaoke as? Load.Ok)?.value ?: emptyList()
+    if (sing.isNotEmpty())
+      item("karaoke") {
+        Shelf("Karaoke") {
+          items(sing.size, key = { sing[it].key }) { i ->
+            val t = sing[i]
+            Card(t.cover, t.title, t.artist) {
+              // All ready: they play as karaoke from the first note, not after a switch.
+              for (x in sing) app.playback.karaokeReady(x.key, "/api/v1/karaoke/${java.net.URLEncoder.encode(x.id, "UTF-8")}/audio")
+              app.karaoke.setOn(true)
+              app.playback.playList(sing, i, PlayContext("karaoke", title = "Karaoke"))
+            }
+          }
+        }
+      }
     val pl = playlists ?: emptyList()
     if (pl.isNotEmpty()) item("playlists") { Shelf("Your playlists") { items(pl, key = { it.id }) { p -> Card(p.cover, p.name, p.owner ?: "${p.tracks} songs") { nav.go(Route.Playlist(p.id)) } } } }
     for ((title, l) in listOf("Your most played" to frequent, "Something different" to random)) {

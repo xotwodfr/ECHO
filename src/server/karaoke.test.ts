@@ -165,6 +165,9 @@ describe('karaoke', () => {
     expect(res.headers.get('content-range')).toMatch(/^bytes 0-3\//);
     expect(Buffer.from(await res.arrayBuffer()).toString()).toBe('RIFF');
     expect(await s.get('/karaoke')).toMatchObject({ enabled: true, online: true, ready: 1 });
+    // Home's shelf: the ready song, as the user's Navidrome describes it.
+    const ready = (await s.get('/karaoke/ready')) as { songs: { id: string; title: string }[] };
+    expect(ready.songs.map((x) => x.id)).toEqual(['al-1-t1']);
 
     // Gone from the service's disk: asked for again, made again.
     stems.files.delete(key);

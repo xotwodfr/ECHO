@@ -2,6 +2,7 @@ package com.folk3s.echo.playback
 
 import android.os.SystemClock
 import com.folk3s.echo.EchoApp
+import com.folk3s.echo.api.Track
 import java.net.URLEncoder
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -65,6 +66,32 @@ class Karaoke(private val app: EchoApp) {
   }
 
   fun setOn(on: Boolean) = app.prefs.update { it.copy(karaoke = on) }
+
+  /**
+   * A song's menu → Make karaoke version: the server makes it next (ahead of the library), and
+   * says so in a notice.
+   */
+  fun request(t: Track) {
+    if (t.provider != "navidrome") return app.playback.notify("Karaoke works with songs from your library.")
+    app.scope.launch {
+      val o = runCatching { app.api.get("/karaoke/${URLEncoder.encode(t.id, "UTF-8")}").jsonObject }.getOrNull()
+      val st = o?.get("status")?.jsonPrimitive?.contentOrNull
+      val ahead = o?.get("ahead")?.jsonPrimitive?.intOrNull ?: 0
+      if (st == "ready") o?.get("url")?.jsonPrimitive?.contentOrNull?.let { app.playback.karaokeReady(t.key, it) }
+      app.playback.notify(
+        when (st) {
+          "ready" -> "The karaoke version of “${t.title}” is ready."
+          "queued", "working" ->
+            if (ahead == 0) "Making the karaoke version of “${t.title}” now: a few minutes."
+            else "“${t.title}” is next in line for karaoke: $ahead ${if (ahead == 1) "song" else "songs"} before it."
+          "failed" -> "The voice couldn't be taken out of “${t.title}”."
+          "skipped" -> "“${t.title}” is too long for Karaoke."
+          "off" -> "Karaoke isn't set up on your ECHO server yet."
+          else -> "Couldn't reach ECHO. Try again in a moment."
+        },
+      )
+    }
+  }
 
   fun setLevel(level: Float) = app.prefs.update { it.copy(vocalLevel = level.coerceIn(0f, 1f)) }
 

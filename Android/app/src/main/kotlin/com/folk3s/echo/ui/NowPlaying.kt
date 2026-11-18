@@ -88,7 +88,7 @@ import kotlinx.coroutines.launch
 // paused, the song with its heart and menu, the wavy seek bar, the transport with the big play
 // button, Lyrics and Up next, and the lyrics card that opens the lyrics view.
 
-private val FROM = mapOf("album" to "ALBUM", "playlist" to "PLAYLIST", "starred" to "LIKED SONGS", "search" to "SEARCH", "radio" to "RADIO", "artist" to "ARTIST")
+private val FROM = mapOf("album" to "ALBUM", "playlist" to "PLAYLIST", "starred" to "LIKED SONGS", "search" to "SEARCH", "radio" to "RADIO", "artist" to "ARTIST", "karaoke" to "KARAOKE")
 
 /** Spotify's sleep timer: pause after some minutes. One at a time; a new one replaces it. */
 object SleepTimer {
