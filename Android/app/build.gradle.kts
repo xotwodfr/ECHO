@@ -14,8 +14,8 @@ android {
     applicationId = "com.folk3s.echo"
     minSdk = 29
     targetSdk = 36
-    versionCode = 4
-    versionName = "0.3.1"
+    versionCode = 5
+    versionName = "0.3.2"
     // Fixed to the owner's server (2026-10-29). Debug builds may point at a test server instead:
     // ./gradlew assembleDebug -Pecho.devUrl=http://10.0.2.2:18797
     buildConfigField("String", "ECHO_URL", "\"https://echo.folk3s.com\"")
