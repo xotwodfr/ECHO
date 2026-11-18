@@ -1,5 +1,11 @@
 package com.folk3s.echo.stage
 
+import com.folk3s.echo.LyricStyle
+import com.folk3s.echo.ui.AlbumMesh
+import com.folk3s.echo.ui.Sheet
+import com.folk3s.echo.ui.headerTone
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Switch
 import android.app.Activity
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -101,6 +107,10 @@ fun StageScreen(
   val prefs by app.prefs.state.collectAsStateWithLifecycle()
   val palette = stagePalette()
   var view by remember { mutableStateOf(StageViewMode.Lyrics) }
+  var picking by remember { mutableStateOf(false) }
+  val style = prefs.lyricStyle
+  // The visualizer room: ECHO classic always has it; the other styles when the switch is on.
+  val room = style == LyricStyle.Classic || (prefs.lyricVisualizer && style != LyricStyle.ColourBlock)
   val dp = LocalDensity.current.density
   val sp = remember { ctx.getSharedPreferences("echo.stage", 0) }
 
@@ -158,7 +168,7 @@ fun StageScreen(
   }
 
   Box(
-    Modifier.fillMaxSize().background(Color(palette.room.toArgb())).pointerInput(Unit) {
+    Modifier.fillMaxSize().background(if (style == LyricStyle.ColourBlock) headerTone(palette.accentColor) else Color(palette.room.toArgb())).pointerInput(Unit) {
       awaitPointerEventScope {
         while (true) {
           awaitPointerEvent(PointerEventPass.Initial)
@@ -167,15 +177,18 @@ fun StageScreen(
       }
     },
   ) {
-    AndroidView(
-      factory = { c ->
-        StageView(c, startTier, manual).also { v ->
-          v.onTier = { t -> if (!manual) sp.edit().putString(LAST_TIER, t.name).apply() }
-          stage = v
-        }
-      },
-      modifier = Modifier.fillMaxSize(),
-    )
+    if (room)
+      AndroidView(
+        factory = { c ->
+          StageView(c, startTier, manual).also { v ->
+            v.onTier = { t -> if (!manual) sp.edit().putString(LAST_TIER, t.name).apply() }
+            stage = v
+          }
+        },
+        onRelease = { stage = null },
+        modifier = Modifier.fillMaxSize(),
+      )
+    else if (style != LyricStyle.ColourBlock) AlbumMesh(reduced)
     val t = p.track
     when {
       t == null ->
@@ -197,6 +210,7 @@ fun StageScreen(
         // The song as a header, the lyric column under it (the phone layout of the reference).
         Column(Modifier.fillMaxSize()) {
           Spacer(Modifier.windowInsetsPadding(WindowInsets.statusBars).height(72.dp))
+          if (style != LyricStyle.Cinema && style != LyricStyle.Kinetic)
           Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.CenterVertically) {
             Artwork(t.cover, t.album.title, 48.dp, radius = 6.dp)
             Column(Modifier.padding(start = 12.dp)) {
@@ -204,18 +218,58 @@ fun StageScreen(
               Text(t.artist, color = Chamber.muted, style = androidx.compose.material3.MaterialTheme.typography.bodyMedium, maxLines = 1)
             }
           }
-          Box(Modifier.weight(1f).fillMaxWidth()) { LyricsView(s, dockPx, chrome) }
+          Box(Modifier.weight(1f).fillMaxWidth()) { LyricsView(s, dockPx, chrome, style) }
         }
     }
-    TopChrome(chrome, onClose, dp)
+    TopChrome(chrome, onClose, dp) { picking = true }
     Box(Modifier.align(Alignment.BottomCenter).onGloballyPositioned { dockPx = it.size.height.toFloat() }) { dock() }
     // Hidden chrome takes no input: a blind tap brings it back and never hits a control (§6.1).
     if (!chrome.visible) Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { touchedAt = System.currentTimeMillis() } })
+    if (picking) StylePicker { picking = false }
+  }
+}
+
+/** The lyric style and the visualizer switch, from the lyrics view itself. */
+@Composable
+private fun StylePicker(onClose: () -> Unit) {
+  val app = LocalContext.current.echo
+  val prefs by app.prefs.state.collectAsStateWithLifecycle()
+  Sheet(onClose, fit = true) {
+    Column(Modifier.padding(bottom = 24.dp)) {
+      Text("Lyrics style", style = androidx.compose.material3.MaterialTheme.typography.titleLarge, modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+      for (st in LyricStyle.entries) {
+        val on = prefs.lyricStyle == st
+        Row(
+          Modifier.fillMaxWidth().clickable { app.prefs.update { it.copy(lyricStyle = st) } }.padding(horizontal = 24.dp, vertical = 10.dp),
+          verticalAlignment = Alignment.CenterVertically,
+        ) {
+          RadioButton(selected = on, onClick = null)
+          Column(Modifier.padding(start = 14.dp)) {
+            Text(st.label, style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+            Text(st.blurb, color = Chamber.muted, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
+          }
+        }
+      }
+      Row(
+        Modifier.fillMaxWidth().clickable { app.prefs.update { it.copy(lyricVisualizer = !it.lyricVisualizer) } }.padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+      ) {
+        Column(Modifier.weight(1f)) {
+          Text("Visualizer behind the lyrics", style = androidx.compose.material3.MaterialTheme.typography.titleMedium)
+          Text(
+            if (prefs.lyricStyle == LyricStyle.Classic) "ECHO classic always has it." else if (prefs.lyricStyle == LyricStyle.ColourBlock) "Colour block keeps its solid colour." else "Off: the album's colours drift slowly.",
+            color = Chamber.muted,
+            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+          )
+        }
+        Switch(checked = prefs.lyricVisualizer, onCheckedChange = null)
+      }
+    }
   }
 }
 
 @Composable
-private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float) {
+private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float, onStyle: () -> Unit) {
   val alpha by animateFloatAsState(if (chrome.visible) 1f else 0f, tween(if (chrome.visible) 160 else 640), label = "chrome")
   val app = LocalContext.current.echo
   val ctx by app.playback.context.collectAsStateWithLifecycle()
@@ -230,7 +284,7 @@ private fun TopChrome(chrome: StageChrome, onClose: () -> Unit, density: Float) 
         Text(it.title, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleSmall, maxLines = 1)
       }
     }
-    Spacer(Modifier.size(48.dp))
+    StageButton(EchoIcons.textStyle, "Lyrics style", false, chrome.visible, Modifier, onStyle)
   }
 }
 
@@ -254,7 +308,7 @@ private fun StageButton(icon: ImageVector, label: String, pressed: Boolean, enab
 
 /** The Lyrics view (§9.4): the field, or a note where the column would be; the credit above the dock. */
 @Composable
-private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome) {
+private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome, style: LyricStyle) {
   val app = LocalContext.current.echo
   val ls by app.lyrics.state.collectAsStateWithLifecycle()
   val prefs by app.prefs.state.collectAsStateWithLifecycle()
@@ -275,7 +329,15 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome) {
           item { Text("Lyrics aren’t time-synced for this track", color = Chamber.faint, modifier = Modifier.padding(bottom = 24.dp)) }
           items(doc.lines.size) { i -> Text(doc.lines[i].text, color = Chamber.text, style = androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(fontFamily = com.folk3s.echo.ui.Figtree), modifier = Modifier.padding(vertical = 6.dp)) }
         }
-    else -> com.folk3s.echo.stage.lyrics.LyricsField(stage, dockPx)
+    style == LyricStyle.Classic -> com.folk3s.echo.stage.lyrics.LyricsField(stage, dockPx)
+    else -> {
+      val reduced = app.prefs.reducedMotion(prefs)
+      val offset = ls.offsetMs + prefs.lyricOffsetMs
+      com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, Color(0xFF4FD8FF).takeIf { style == LyricStyle.Karaoke } ?: Color(stagePalette().highlight.toArgb()), dockPx) { ms ->
+        app.playback.seek(ms + offset)
+        if (!app.playback.state.value.playing) app.playback.toggle()
+      }
+    }
   }
   // The credit stays with the chrome (LYRICS_INTEGRATION.md §8: removing it is a defect).
   if (doc != null) {

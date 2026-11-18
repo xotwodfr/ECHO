@@ -1,6 +1,6 @@
 # ECHO — Android client
 
-Status: **v0.1 built** (2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
+Status: **v0.3 built** (2026-11-18: themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
 
 The other native apps (2026-11-04: `Linux/`, `Windows/`, `macOS/`, `iOS/`) are baselines on the
 same API; this one is the full app. Each folder's README says what it has
@@ -44,6 +44,78 @@ way) take `-Pecho.devUrl=http://10.0.2.2:<port>` and allow plain HTTP; release n
 throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port>`, user
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
+
+## v0.3: themes, lyric styles, motion (2026-11-18)
+
+Owner decisions (2026-11-17): the UI should feel less bland (springy motion, depth and glass,
+richer colour, haptics); full-look themes; the lyric styles researched and offered as options
+(Apple Music style the default), the visualizer optional with drifting album colours instead.
+
+- **Themes** (`ui/Theme.kt`, `ThemePreset`, Settings → Appearance): ECHO, Apple Music style,
+  Spotify style, SoundCloud style, Deezer style, Qobuz style, Tidal style, YouTube Music style,
+  Material You (wallpaper, Android 12+) and Monochrome. Each sets an accent (exact, on its own
+  ground), a light/dark default (`Prefs.darkMode` can override), a face (Figtree, or Inter
+  subset to Latin, Greek and Cyrillic, OFL) and title weight, and shapes (`Look`: art, row art,
+  featured card, buttons, mini player, circle art, the tab pill). The names are labels only.
+- **Motion** (`ui/Motion.kt`): `Modifier.bouncy` (a spring squish and a haptic on press), covers
+  that fly from the tapped card to the page (`SharedTransitionLayout` in the Shell; only the
+  tapped card takes part, by a saved token), pages that spring in from the side they come from.
+  All of it is off under reduced motion.
+- **Glass**: the mini player and the tab bar blur the page behind them (Haze 1.7; a translucent
+  tint before Android 12).
+- **Colour**: album, playlist and mix pages washed in the cover's colour (`AlbumWash`); on the
+  ECHO theme their accent is the album's (`AlbumAccent`, MaterialKolor's content scheme).
+- **Haptics** (`Haptics`, Settings → Appearance): play/pause, likes, tabs, seeking, game answers.
+- **Lyric styles** (`stage/lyrics/Styled.kt`, the **Aa** button on the lyrics view and Settings →
+  Lyrics): Apple Music style, Spicy Lyrics style, Cinema, Colour block, Kinetic, Karaoke, and
+  ECHO classic (`LyricsField.kt`, unchanged). The column styles draw each line from the clock
+  while drawing (no recomposition per frame), glide to keep the active line at the style's anchor
+  with a per-line stagger, blur by distance on Android 12+, show breathing dots in gaps of 5 s or
+  more, take a tap to play from a line and a drag to look ahead. Kinetic shows one line, its
+  words popping in. The visualizer room (`StageView`) runs only for ECHO classic or with
+  **Visualizer behind the lyrics** on; otherwise the album's colours drift (`AlbumMesh`).
+
+## v0.2: the redesign (2026-11-17)
+
+Owner decisions (2026-11-17): a modern look in the spirit of Apple Music, built with Material 3
+components; light or dark **with the system**; the accent **from the playing album**; four tabs.
+
+- **Frame**: Home, Mixes, Library, Search in an M3 navigation bar; a floating rounded mini player
+  (play/pause, next, a hairline of progress in the accent) above it. The window theme and system
+  bars follow light/dark; Now Playing and the lyrics view are always dark, with light bar icons.
+- **Type**: large bold titles (Figtree 800, `displaySmall` 34 sp) on each tab, bold headings.
+- **Home**: a featured card (today's first mix, or a recent album) with its own play button, then
+  shelves of rounded (16 dp) covers.
+- **Mixes** (new tab): today's mixes and this year's Wrapped as a two-column grid, Jump back in.
+- **Library**: Playlists, Artists, Albums and Liked Songs as a list (`Route.LibraryList`), then
+  Recently added as a grid; Albums keeps the four sorts as chips.
+- **Pages** (album, playlist, Liked Songs, mix): a centred 260 dp cover with a soft shadow, the
+  title, the artist or owner in the accent, facts in small caps, Play and Shuffle as pill buttons;
+  albums list numbered tracks with hairlines and the total running time.
+- **Search**: a rounded filled field, "Browse by genre" as rounded gradient cards.
+- **Now Playing**: the album's colours drifting behind a big 24 dp-rounded cover that sits back
+  (84%) while paused; the song with heart and menu in translucent circles; a wavy seek bar while
+  playing (flat when paused or under reduced motion) with the time left counting down; a play
+  button that morphs from circle to rounded square; Lyrics and Up next pills; the lyrics card.
+
+- **Games** (new tab, `games/Games.kt`, `ui/Games.kt`): Song Guesser (a 2 s clip, longer clips
+  of 5 and 10 s cost a quarter of the points each), Finish the Lyric (a synced line cut before its
+  last 2–3 words, the clip stopping where they start), Cover Reveal (the cover from 16 px blocks to
+  sharp, a step every 2.5 s), Timeline (which of two albums came out first). Ten questions a round,
+  15 s each, 50 points for a right answer plus up to 50 for speed. Clips play on the games' own
+  ExoPlayer, which takes audio focus. Each game's record (best round, best streak, rounds) is kept
+  on the account in `/me/settings` → `games`, cached on the phone, and uploaded by the next sync
+  when the server is older than that section.
+- **Tabs**: reorder them in Settings → Tabs (`Prefs.tabs`); the first opens at start.
+
+## Releases
+
+Pushing a tag `vX.Y.Z` runs `.github/workflows/android-release.yml`: it builds the APK, runs the
+unit tests and publishes a GitHub release with `ECHO-vX.Y.Z.apk`, its SHA-256 and the notes in
+`.github/release-notes/vX.Y.Z.md`. With the secrets `ECHO_KEYSTORE_B64` (the keystore, base64),
+`ECHO_KEYSTORE_PASSWORD`, `ECHO_KEY_ALIAS` and `ECHO_KEY_PASSWORD` set, it signs with that key, so
+every release installs over the last; without them it uses the runner's debug key (a fresh one each
+run: uninstall before updating).
 
 ## As built (v0.1)
 

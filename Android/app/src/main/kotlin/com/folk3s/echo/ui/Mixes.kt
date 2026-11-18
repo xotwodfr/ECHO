@@ -68,13 +68,14 @@ private val GREY = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation
 fun MixArt(title: String, cover: String?, colour: Color, size: Dp? = null) {
   val api = LocalContext.current.echo.api
   BoxWithConstraints(
-    (if (size != null) Modifier.size(size) else Modifier.fillMaxWidth().aspectRatio(1f)).clip(RoundedCornerShape(6.dp)).background(colour),
+    (if (size != null) Modifier.size(size) else Modifier.fillMaxWidth().aspectRatio(1f)).clip(RoundedCornerShape(if (size != null && size > 100.dp) look.page else look.art))
+      .background(Brush.linearGradient(listOf(colour, colour.copy(alpha = 0.65f).compositeOver(Color.Black)))),
   ) {
     if (cover != null)
-      AsyncImage(api.url(cover), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = 0.55f, colorFilter = GREY)
+      AsyncImage(api.url(cover), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = 0.45f, colorFilter = GREY)
     Text(
       title,
-      color = Chamber.text,
+      color = Color.White,
       fontFamily = Figtree,
       fontWeight = FontWeight.ExtraBold,
       fontSize = (maxWidth.value * 0.14f).sp,
@@ -149,17 +150,11 @@ fun MixScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
       val ctx = PlayContext("mix", id, mix.title)
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
-          TintedHeader(mixColour(id)) {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { MixArt(mix, 240.dp) }
-            Spacer(Modifier.height(16.dp))
-            Text(mix.title, style = MaterialTheme.typography.headlineMedium)
-            Text("${mix.subtitle} • ${tracks.size} songs", color = Chamber.muted, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top = 6.dp))
+          AlbumWash(mixColour(id)) {
+          PageBar(nav)
+          PageHeader(art = { MixArt(mix, 260.dp) }, title = mix.title, subtitle = null, meta = "${mix.subtitle} · ${tracks.size} songs")
           }
-          Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.weight(1f))
-            IconBtn(EchoIcons.shuffle, "Shuffle ${mix.title}") { app.playback.playList(tracks.shuffled(), 0, ctx) }
-            PlayFab(mix.title, live, playing, { app.playback.playList(tracks, 0, ctx) })
-          }
+          PlayShuffle(mix.title, live, playing, { app.playback.playList(tracks, 0, ctx) }, { app.playback.playList(tracks.shuffled(), 0, ctx) })
         }
         itemsIndexed(tracks, key = { n, t -> "$n:${t.key}" }) { n, t -> SongRow(t, t.key == now, { app.playback.playList(tracks, n, ctx) }, true, songMenu(app, t, nav, picker)) }
       }
@@ -268,5 +263,45 @@ private fun Ranked(i: Int, title: String, sub: String, cover: String?, onClick: 
       Text(title, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
       Text(sub, color = Chamber.text.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+  }
+}
+
+/** The Mixes tab: today's mixes as a grid of big covers, this year's Wrapped, then Jump back in. */
+@Composable
+fun MixesScreen(nav: Nav) {
+  val app = LocalContext.current.echo
+  val (mixes, retry) = load("mixes") { app.library.mixes() }
+  val (contexts, _) = load("contexts") { app.library.playedContexts() }
+  val year = Calendar.getInstance().get(Calendar.YEAR)
+  LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
+    item { LargeTitle("Mixes") { Avatar { nav.go(Route.Settings) } } }
+    item {
+      Text(
+        "Made from what you play. New every day.",
+        color = Chamber.muted,
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 8.dp),
+      )
+    }
+    when (mixes) {
+      Load.Loading -> item { Loading() }
+      Load.Failed -> item { BlockError("Couldn't load your mixes.", retry) }
+      is Load.Ok -> {
+        val cards: List<Pair<String, @Composable () -> Unit>> =
+          mixes.value.map { m ->
+            m.id to @Composable { Card(null, m.title, m.subtitle, width = null, art = { MixArt(m) }) { nav.go(Route.Mix(m.id)) } }
+          } + ("wrapped" to @Composable {
+            Card(null, "Your $year Wrapped", "Your year in music", width = null, art = { MixArt("Wrapped $year", null, Color(GENRE_COLOURS[8])) }) { nav.go(Route.Wrapped(year)) }
+          })
+        if (mixes.value.isEmpty()) item { Empty("Play some music and your mixes will appear here.") }
+        items(cards.chunked(2), key = { row -> "m:" + row.joinToString { it.first } }) { row ->
+          Row(Modifier.padding(horizontal = 20.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            for ((_, card) in row) Box(Modifier.weight(1f)) { card() }
+            if (row.size == 1) Spacer(Modifier.weight(1f))
+          }
+        }
+      }
+    }
+    madeForYou(Load.Ok(emptyList()), contexts, nav)
   }
 }

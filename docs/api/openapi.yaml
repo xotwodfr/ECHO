@@ -622,6 +622,7 @@ paths:
               additionalProperties: false
               properties:
                 lyrics: { type: object, additionalProperties: false, properties: { disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off } } }
+                games: { type: object, additionalProperties: false, properties: { songGuesser: { $ref: '#/components/schemas/GameRecord' }, finishLyric: { $ref: '#/components/schemas/GameRecord' }, coverReveal: { $ref: '#/components/schemas/GameRecord' }, timeline: { $ref: '#/components/schemas/GameRecord' } } }
       responses:
         '200': { description: Saved, content: { application/json: { schema: { $ref: '#/components/schemas/UserSettings' } } } }
         '400': { description: An unknown key or a wrong type }
@@ -1042,6 +1043,15 @@ components:
       properties:
         version: { const: 2 }
         lyrics: { type: object, properties: { disabledSources: { type: array, uniqueItems: true, items: { enum: [navidrome, spicy, netease, lrclib, navidrome-plain] }, description: Lyric sources the user turned off, default: [] } } }
+        games: { type: object, description: Each Android game's record, following the account, properties: { songGuesser: { $ref: '#/components/schemas/GameRecord' }, finishLyric: { $ref: '#/components/schemas/GameRecord' }, coverReveal: { $ref: '#/components/schemas/GameRecord' }, timeline: { $ref: '#/components/schemas/GameRecord' } } }
+    GameRecord:
+      type: object
+      additionalProperties: false
+      required: [best, streak, rounds]
+      properties:
+        best: { type: integer, minimum: 0, maximum: 100000, description: The best 10-question round score }
+        streak: { type: integer, minimum: 0, maximum: 100000, description: The most right answers in a row }
+        rounds: { type: integer, minimum: 0, maximum: 10000000, description: Rounds played }
     WantedItem:
       type: object
       properties:

@@ -1,0 +1,51 @@
+# Android release (docs/ANDROID_CLIENT.md "Releases"): pushing a tag vX.Y.Z builds the APK and
+# publishes it as a GitHub release with the notes in .github/release-notes/vX.Y.Z.md. Signed with
+# the ECHO_KEYSTORE_* secrets when they are set (every release then installs over the last), else
+# with the runner's debug key.
+name: android-release
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Android SDK platform 37.2 and build tools 37
+        run: |
+          sdk="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdk" --licenses > /dev/null
+          "$sdk" "platforms;android-37.2" "build-tools;37.0.0" > /dev/null
+      - name: Release key (when the secrets are set)
+        env:
+          KEYSTORE_B64: ${{ secrets.ECHO_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/echo-release.jks"
+            echo "ECHO_KEYSTORE=$RUNNER_TEMP/echo-release.jks" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No ECHO_KEYSTORE_B64 secret: signing with the runner's debug key."
+          fi
+      - name: Build the APK
+        working-directory: Android
+        env:
+          ECHO_KEYSTORE_PASSWORD: ${{ secrets.ECHO_KEYSTORE_PASSWORD }}
+          ECHO_KEY_ALIAS: ${{ secrets.ECHO_KEY_ALIAS }}
+          ECHO_KEY_PASSWORD: ${{ secrets.ECHO_KEY_PASSWORD }}
+        run: |
+          export JAVA_HOME="$JAVA_HOME_21_X64"
+          ./gradlew assembleRelease testDebugUnitTest --no-daemon
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          apk="ECHO-${GITHUB_REF_NAME}.apk"
+          cp Android/app/build/outputs/apk/release/app-release.apk "$apk"
+          sha256sum "$apk" > "$apk.sha256"
+          notes=".github/release-notes/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || echo "ECHO ${GITHUB_REF_NAME} for Android." > "$notes"
+          gh release create "$GITHUB_REF_NAME" "$apk" "$apk.sha256" --title "ECHO ${GITHUB_REF_NAME}" --notes-file "$notes" --target "$GITHUB_SHA"

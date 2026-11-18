@@ -27,6 +27,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   val palette by lazy { AlbumPalette(this) }
   val prefs by lazy { PrefsStore(this) }
   val lyrics by lazy { com.folk3s.echo.stage.lyrics.Lyrics(this) }
+  val games by lazy { com.folk3s.echo.games.GameScores(this) }
 
   override fun onCreate() {
     super.onCreate()
@@ -38,7 +39,10 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
         library.clear()
         if (t != null) library.reload()
         // Signed out: the next account must not get this queue or this music (REL-05).
-        else if (signedIn) playback.reset()
+        else if (signedIn) {
+          playback.reset()
+          games.clear()
+        }
         signedIn = t != null
       }
     }
