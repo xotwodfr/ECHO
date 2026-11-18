@@ -1,6 +1,6 @@
 # ECHO — Android client
 
-Status: **v0.3 built** (2026-11-18: themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
+Status: **v0.4 built** (2026-11-18: Clay and Yarn; v0.3 themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
 
 The other native apps (2026-11-04: `Linux/`, `Windows/`, `macOS/`, `iOS/`) are baselines on the
 same API; this one is the full app. Each folder's README says what it has
@@ -44,6 +44,35 @@ way) take `-Pecho.devUrl=http://10.0.2.2:<port>` and allow plain HTTP; release n
 throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port>`, user
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
+
+## v0.4: Clay and Yarn (2026-11-18)
+
+Owner decisions (2026-11-18): a Clay theme (pastel plasticine, handmade realism, everything in
+clay, light with a dark option whose colour follows the album or is picked from eight), a Yarn
+theme (knitted, cosy autumn colours), lyrics to match (Clay; Embroidered), both themes as 3D as
+possible, and sounds on presses in each.
+
+- **Materials** (`ui/Matter.kt`): `Modifier.matter(colour, radius, pressed, seed, depth, rib,
+  seam)` draws a surface in the theme's material; `matterGround` the page under it. Clay: a
+  hand-made outline (`HandShape`: corners and edges varied by a seed), a tinted drop shadow, a
+  top-left light and bottom-right shade, a gloss spot, a rim light, a multiplied grain texture
+  (generated), and on bigger pieces sometimes a fingerprint; pressed, the light reverses and the
+  shadow goes. Yarn: a generated knit tile (each loop lit and shaded, with its twist), a cushion
+  puff, a rolled edge, fuzz along the outline (fibres placed along a `PathMeasure`), ribbing on
+  bars, dashed stitched seams. Flat themes get a plain rounded surface.
+- **Palettes** (`matterColors`): light Clay pastels; dark Clay from `Prefs.clayDark` (`album`, or
+  one of `CLAY_DARK`'s eight); Yarn light and dark. Each has a ground, a paper, six accents, an
+  ink and a strong colour for Play and the playing track.
+- **Where**: page grounds, the tab bar (ribbed in Yarn), the mini player, Play and Shuffle, track
+  rows, cover frames (cards, page headers, Now Playing), Home's featured card, the search field,
+  the back and avatar buttons, Games (stats, today's pick, tiles, answers), Now Playing's buttons.
+- **Lyrics** (`Styled.kt`): Clay (sung words extruded in four layers with a lit face and a soft
+  shadow, held words swell and tilt; the rest stamped) on a clay slab; Embroidered (satin-stitch
+  thread, a needle at the stitching edge, sung lines in green, the rest traced) on a hoop
+  (`Modifier.hoop`) over green knit. Choosing the theme switches the style; both are in the list.
+- **Sounds** (`ui/Sounds.kt`, `res/raw/*.wav`, synthesized for ECHO): Clay squish, pop, and a
+  squish-pop for a right answer; Yarn thump, needle tick, and two ticks. Played through
+  `Haptics` with a little pitch variation, as UI sounds; `Prefs.themeSounds` turns them off.
 
 ## v0.3: themes, lyric styles, motion (2026-11-18)
 

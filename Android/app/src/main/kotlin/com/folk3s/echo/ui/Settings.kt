@@ -1,5 +1,6 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -116,9 +117,23 @@ fun SettingsScreen() {
 
     Section("Appearance")
     Text("Theme", style = MaterialTheme.typography.titleSmall)
-    ThemePicker(p.theme) { id -> set { it.copy(theme = id) } }
+    // Clay and Yarn bring their own lyrics; the style can still be changed after.
+    ThemePicker(p.theme) { id ->
+      set {
+        it.copy(
+          theme = id,
+          lyricStyle = when (id) {
+            "clay" -> LyricStyle.Clay
+            "yarn" -> LyricStyle.Embroidered
+            else -> it.lyricStyle
+          },
+        )
+      }
+    }
     Choice("Light or dark", "Theme default: each theme's own (Spotify style is dark, Apple Music style light, ECHO follows the system).", DarkMode.entries.map { it to (if (it == DarkMode.Theme) "Theme" else it.label) }, p.darkMode) { v -> set { it.copy(darkMode = v) } }
+    if (p.theme == "clay") ClayDarkPicker(p.clayDark) { v -> set { it.copy(clayDark = v) } }
     Toggle("Haptics (light taps on presses, likes and answers)", p.haptics) { v -> set { it.copy(haptics = v) } }
+    if (p.theme == "clay" || p.theme == "yarn") Toggle(if (p.theme == "clay") "Clay sounds (squishes and pops on presses)" else "Yarn sounds (soft thumps and needle clicks)", p.themeSounds) { v -> set { it.copy(themeSounds = v) } }
 
     Section("Tabs")
     Text("The order of the tabs at the bottom. The first one opens when ECHO starts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -227,5 +242,32 @@ private fun ThemePicker(current: String, onPick: (String) -> Unit) {
         Text(t.label, style = MaterialTheme.typography.labelMedium, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
       }
     }
+  }
+}
+
+/** Clay in the dark: a deep shade of the album that's playing, or one fixed colour. */
+@Composable
+private fun ClayDarkPicker(value: String, onPick: (String) -> Unit) {
+  Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Text("Clay in the dark", style = MaterialTheme.typography.titleSmall)
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+      SegmentedButton(selected = value == "album", onClick = { onPick("album") }, shape = SegmentedButtonDefaults.itemShape(0, 2), label = { Text("From the album") })
+      SegmentedButton(selected = value != "album", onClick = { if (value == "album") onPick(com.folk3s.echo.CLAY_DARK.first().first) }, shape = SegmentedButtonDefaults.itemShape(1, 2), label = { Text("Pick a colour") })
+    }
+    if (value == "album")
+      Text("A deep shade of what's playing, changing with each song.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    else
+      Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        for ((id, name, argb) in com.folk3s.echo.CLAY_DARK) {
+          val on = id == value
+          Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp).bouncy(label = name) { onPick(id) }.semantics { selected = on }) {
+            Box(
+              Modifier.size(48.dp).border(if (on) 3.dp else 0.dp, if (on) MaterialTheme.colorScheme.primary else Color.Transparent, androidx.compose.foundation.shape.CircleShape).padding(4.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape).background(Brush.radialGradient(listOf(Color(argb).copy(alpha = 1f).let { androidx.compose.ui.graphics.lerp(it, Color.White, 0.3f) }, Color(argb), androidx.compose.ui.graphics.lerp(Color(argb), Color.Black, 0.35f)), androidx.compose.ui.geometry.Offset(30f, 26f), 90f)),
+            )
+            Text(name, style = MaterialTheme.typography.labelSmall, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+          }
+        }
+      }
   }
 }

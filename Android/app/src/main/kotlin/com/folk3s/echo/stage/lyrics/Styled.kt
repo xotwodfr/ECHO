@@ -1,5 +1,11 @@
 package com.folk3s.echo.stage.lyrics
 
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.drawscope.rotate
+import com.folk3s.echo.ui.MatterColors
 import android.os.Build
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
@@ -179,6 +185,8 @@ private fun rulesOf(s: LyricStyle) =
     LyricStyle.Cinema -> Rules(36f, 800, true, 0.42f, true, 0.4f, 35, 1, false)
     LyricStyle.ColourBlock -> Rules(26f, 800, false, 0.28f, false, 1f, 0, 0, false)
     LyricStyle.Karaoke -> Rules(28f, 800, true, 0.42f, false, 0.6f, 0, 1, true)
+    LyricStyle.Clay -> Rules(31f, 900, false, 0.3f, false, 1f, 40, 0, false)
+    LyricStyle.Embroidered -> Rules(28f, 800, false, 0.3f, false, 1f, 35, 0, true)
     else -> Rules(30f, 800, false, 0.3f, true, 0.35f, 45, 0, false)
   }
 
@@ -188,7 +196,7 @@ private fun rulesOf(s: LyricStyle) =
  * line plays from there.
  */
 @Composable
-fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, reduced: Boolean, accent: Color, bottomPad: Float, onSeek: (Long) -> Unit) {
+fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, reduced: Boolean, accent: Color, bottomPad: Float, mat: MatterColors? = null, onSeek: (Long) -> Unit) {
   if (style == LyricStyle.Kinetic) return KineticLyrics(doc, offset, scale, reduced, accent)
   val rules = rulesOf(style)
   val slots = remember(doc) { slotsOf(doc) }
@@ -262,12 +270,12 @@ fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, 
               .padding(vertical = if (style == LyricStyle.ColourBlock) 7.dp else 12.dp),
           ) {
             when (slot) {
-              is Slot.Dots -> Dots(slot, time, rules.center, active == i, with(density) { (rules.size * scale * 0.5f).sp.toPx() })
+              is Slot.Dots -> Dots(slot, time, rules.center, active == i, with(density) { (rules.size * scale * 0.5f).sp.toPx() }, style, mat)
               is Slot.Line -> {
                 Column {
-                  LineCanvas(slot.line, style, rules, text, time, dist == 0, dist < 0, accent)
+                  LineCanvas(slot.line, style, rules, text, time, dist == 0, dist < 0, accent, mat)
                   slot.line.bg?.let { bg ->
-                    LineCanvas(bg, style, rules, text.copy(fontSize = text.fontSize * 0.62f, lineHeight = text.lineHeight * 0.62f, fontWeight = FontWeight(700)), time, dist == 0, dist < 0, accent)
+                    LineCanvas(bg, style, rules, text.copy(fontSize = text.fontSize * 0.62f, lineHeight = text.lineHeight * 0.62f, fontWeight = FontWeight(700)), time, dist == 0, dist < 0, accent, mat)
                   }
                 }
               }
@@ -281,7 +289,7 @@ fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, 
 
 /** One line, drawn from the clock: dim, lit, or word by word with the style's touch. */
 @Composable
-private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextStyle, time: State<Long>, active: Boolean, past: Boolean, accent: Color) {
+private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextStyle, time: State<Long>, active: Boolean, past: Boolean, accent: Color, mat: MatterColors?) {
   val tm = rememberTextMeasurer()
   val density = LocalDensity.current
   val align = if (line.right && !rules.center) TextAlign.End else text.textAlign
@@ -311,13 +319,22 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
       val t = time.value
       translate(0f, pad) {
         when {
-          style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f), shadow = Shadow.None)
-          !active -> drawText(layout, color = dim, shadow = Shadow.None)
+          style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f), shadow = Shadow.None, drawStyle = Fill)
+          // Clay: lines not being sung are stamped into the slab.
+          style == LyricStyle.Clay && !active -> stamped(layout, slabOf(mat), em)
+          // Embroidered: sung lines stay stitched (in green), coming ones are a pencil tracing.
+          style == LyricStyle.Embroidered && !active -> if (past) stitched(layout, threadOf(mat, true), em) else traced(layout, em)
+          style == LyricStyle.Clay && words == null -> puffy(layout, clayOf(mat), em, 1f)
+          style == LyricStyle.Embroidered && words == null -> {
+            val whole = Rect(0f, 0f, layout.size.width.toFloat(), layout.size.height.toFloat())
+            stitchUpTo(layout, whole, progress(t, line.start, line.end), threadOf(mat, false), em, needle = true)
+          }
+          !active -> drawText(layout, color = dim, shadow = Shadow.None, drawStyle = Fill)
           words == null -> {
             // A line without word timing: it lights in a quarter of a second (Karaoke sweeps it).
             val whole = Rect(0f, 0f, layout.size.width.toFloat(), layout.size.height.toFloat())
-            if (rules.sweep) drawText(layout, brush = sweep(whole, progress(t, line.start, line.end), accent, white, em * 0.3f), shadow = Shadow.None)
-            else drawText(layout, color = lerp(ahead, white, progress(t, line.start, line.start + 250)), shadow = Shadow.None)
+            if (rules.sweep) drawText(layout, brush = sweep(whole, progress(t, line.start, line.end), accent, white, em * 0.3f), shadow = Shadow.None, drawStyle = Fill)
+            else drawText(layout, color = lerp(ahead, white, progress(t, line.start, line.start + 250)), shadow = Shadow.None, drawStyle = Fill)
           }
           else ->
             line.words.forEachIndexed { k, word ->
@@ -326,7 +343,20 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
               val p = progress(t, word.start, word.end)
               translate(at.x, at.y) {
                 when (style) {
-                  LyricStyle.Karaoke -> drawText(sub, brush = sweep(r, p, accent, white, em * 0.12f), shadow = Shadow.None)
+                  LyricStyle.Karaoke -> drawText(sub, brush = sweep(r, p, accent, white, em * 0.12f), shadow = Shadow.None, drawStyle = Fill)
+                  LyricStyle.Clay -> {
+                    // Sung: the word puffs up out of the slab (a held one swells and tilts); to come: stamped in.
+                    val held = word.end - word.start >= 900 && t in word.start..word.end
+                    val swell = if (held) sin(PI * p).toFloat() else 0f
+                    val rise = easeOut(min(1f, (t - word.start).coerceAtLeast(0L) / 260f))
+                    if (p <= 0f) stamped(sub, slabOf(mat), em)
+                    else
+                      withTransform({
+                        scale(1f + 0.08f * swell, 1f + 0.08f * swell, r.center)
+                        rotate(-3f * swell, r.center)
+                      }) { puffy(sub, clayOf(mat), em, rise) }
+                  }
+                  LyricStyle.Embroidered -> stitchUpTo(sub, r, p, threadOf(mat, false), em, needle = t in word.start..word.end)
                   LyricStyle.Spicy -> {
                     val sung = p > 0f
                     val swell = if (t in word.start..word.end) sin(PI * p).toFloat() else 0f
@@ -335,8 +365,8 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
                       translate(0f, -em * 0.08f * easeOut(min(1f, (t - word.start) / 220f)) * (if (sung) 1f else 0f))
                       scale(1f + 0.07f * swell, 1f + 0.07f * swell, r.center)
                     }) {
-                      if (!sung) drawText(sub, color = ahead, shadow = Shadow.None)
-                      else drawText(sub, brush = sweep(r, p, white, ahead, em * 0.25f), shadow = Shadow(white.copy(alpha = 0.7f * glow), Offset.Zero, em * 0.6f * glow))
+                      if (!sung) drawText(sub, color = ahead, shadow = Shadow.None, drawStyle = Fill)
+                      else drawText(sub, brush = sweep(r, p, white, ahead, em * 0.25f), shadow = Shadow(white.copy(alpha = 0.7f * glow), Offset.Zero, em * 0.6f * glow), drawStyle = Fill)
                     }
                   }
                   else -> {
@@ -347,7 +377,7 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
                       translate(0f, -em * 0.05f * easeOut(p))
                       if (emph > 0f) scale(1f + 0.04f * emph, 1f + 0.04f * emph, r.center)
                     }) {
-                      drawText(sub, brush = sweep(r, p, white, ahead, em * 0.4f), shadow = if (emph > 0f) Shadow(white.copy(alpha = 0.55f * emph), Offset.Zero, em * 0.5f * emph) else Shadow.None)
+                      drawText(sub, brush = sweep(r, p, white, ahead, em * 0.4f), shadow = if (emph > 0f) Shadow(white.copy(alpha = 0.55f * emph), Offset.Zero, em * 0.5f * emph) else Shadow.None, drawStyle = Fill)
                     }
                   }
                 }
@@ -377,7 +407,7 @@ private fun sweep(r: Rect, p: Float, lit: Color, unlit: Color, soft: Float): Bru
 
 /** A long gap's three dots: they breathe, and fill one by one as the gap runs out. */
 @Composable
-private fun Dots(slot: Slot.Dots, time: State<Long>, center: Boolean, active: Boolean, size: Float) {
+private fun Dots(slot: Slot.Dots, time: State<Long>, center: Boolean, active: Boolean, size: Float, style: LyricStyle = LyricStyle.Apple, mat: MatterColors? = null) {
   val shown by animateFloatAsState(if (active) 1f else 0f, spring(dampingRatio = 0.8f, stiffness = 300f), label = "dots")
   val d = with(LocalDensity.current) { (size * 1.6f * shown).toDp() }
   Canvas(Modifier.fillMaxWidth().height(d)) {
@@ -390,8 +420,90 @@ private fun Dots(slot: Slot.Dots, time: State<Long>, center: Boolean, active: Bo
     val x0 = if (center) this.size.width / 2 - gap else r
     for (k in 0..2) {
       val lit = ((p * 3) - k).coerceIn(0f, 1f)
-      drawCircle(Color.White.copy(alpha = 0.3f + 0.7f * lit), r, Offset(x0 + k * gap, this.size.height / 2))
+      val at = Offset(x0 + k * gap, this.size.height / 2)
+      when (style) {
+        // Clay beads: puffy when filled, a dent in the slab before.
+        LyricStyle.Clay -> {
+          val c = clayOf(mat)
+          if (lit > 0.5f) {
+            drawCircle(Color.Black.copy(alpha = 0.3f), r * 1.05f, at + Offset(0f, r * 0.35f))
+            drawCircle(Brush.radialGradient(listOf(c.lighter(0.45f), c, c.darker(0.3f)), at - Offset(r * 0.35f, r * 0.4f), r * 1.4f), r, at)
+          } else {
+            drawCircle(Color.Black.copy(alpha = 0.3f), r, at - Offset(r * 0.08f, r * 0.08f))
+            drawCircle(slabOf(mat).darker(0.1f), r * 0.9f, at)
+          }
+        }
+        // French knots, sewn one by one; before, a dashed ring where each will go.
+        LyricStyle.Embroidered -> {
+          val c = threadOf(mat, false)
+          if (lit > 0.5f) {
+            drawCircle(Color.Black.copy(alpha = 0.35f), r, at + Offset(0f, r * 0.25f))
+            drawCircle(Brush.radialGradient(listOf(c.lighter(0.35f), c, c.darker(0.35f)), at - Offset(r * 0.3f, r * 0.3f), r * 1.3f), r, at)
+            for (a in 0 until 5) drawArc(c.darker(0.4f).copy(alpha = 0.6f), a * 72f, 50f, false, topLeft = at - Offset(r * 0.6f, r * 0.6f), size = androidx.compose.ui.geometry.Size(r * 1.2f, r * 1.2f), style = Stroke(r * 0.12f))
+          } else drawCircle(Color(0xFF6E5A4B).copy(alpha = 0.5f), r, at, style = Stroke(r * 0.15f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(r * 0.35f, r * 0.25f))))
+        }
+        else -> drawCircle(Color.White.copy(alpha = 0.3f + 0.7f * lit), r, at)
+      }
     }
+  }
+}
+
+// ---- Clay and embroidery ----
+
+private fun Color.darker(k: Float) = lerp(this, Color.Black, k)
+
+private fun Color.lighter(k: Float) = lerp(this, Color.White, k)
+
+/** The clay the sung words are made of, and the slab under them. */
+private fun clayOf(m: MatterColors?) = lerp(m?.accent(4) ?: Color(0xFFFF9D7E), Color(0xFFFFAE90), 0.65f)
+
+fun slabOf(m: MatterColors?) = m?.let { lerp(it.ground, it.accent(1), 0.3f) } ?: Color(0xFF4A3554)
+
+/** The thread: rust for the line being sung, forest green once a line is done. */
+private fun threadOf(m: MatterColors?, done: Boolean) = if (done) (m?.accent(2) ?: Color(0xFF3F6B4A)).lighter(0.12f) else m?.accent(0) ?: Color(0xFFB8562F)
+
+/** Letters stamped into a clay slab: a dark lip on top, a lit lip below, the face a touch deeper than the slab. */
+private fun DrawScope.stamped(l: TextLayoutResult, slab: Color, em: Float) {
+  val px = em * 0.04f
+  drawText(l, color = Color.White.copy(alpha = 0.32f), topLeft = Offset(px * 0.6f, px * 1.3f), shadow = Shadow.None, drawStyle = Fill)
+  drawText(l, color = Color.Black.copy(alpha = 0.6f), topLeft = Offset(-px * 0.5f, -px * 0.9f), shadow = Shadow.None, drawStyle = Fill)
+  drawText(l, color = slab.lighter(0.1f), shadow = Shadow.None, drawStyle = Fill)
+}
+
+/**
+ * Letters of clay standing out of the slab, [rise] of the way up: a soft shadow, four layers of
+ * deepening clay for the sides, and a face lit from above.
+ */
+private fun DrawScope.puffy(l: TextLayoutResult, clay: Color, em: Float, rise: Float) {
+  val px = em * 0.042f * rise
+  drawText(l, color = Color.Black.copy(alpha = 0.35f * rise), topLeft = Offset(px * 0.5f, px * 5f), shadow = Shadow(Color.Black.copy(alpha = 0.4f * rise), Offset(0f, px * 2f), em * 0.28f), drawStyle = Fill)
+  for (d in 4 downTo 1) drawText(l, color = clay.darker(0.1f + 0.07f * d), topLeft = Offset(0f, px * d), shadow = Shadow.None, drawStyle = Fill)
+  drawText(l, brush = Brush.verticalGradient(listOf(clay.lighter(0.4f), clay, clay.darker(0.05f)), 0f, l.size.height.toFloat()), topLeft = Offset(0f, -px * 0.4f), shadow = Shadow.None, drawStyle = Fill)
+}
+
+/** A pencil tracing on the linen. */
+private fun DrawScope.traced(l: TextLayoutResult, em: Float) =
+  drawText(l, color = Color(0xFF6E5A4B).copy(alpha = 0.55f), drawStyle = Stroke(width = em * 0.03f), shadow = Shadow.None)
+
+/** Satin stitches: diagonal threads in three shades of [c], raised a little off the linen. */
+private fun satin(c: Color, em: Float): Brush {
+  val w = em * 0.12f
+  return Brush.linearGradient(0f to c.darker(0.25f), 0.2f to c.lighter(0.2f), 0.55f to c, 1f to c.darker(0.3f), start = Offset.Zero, end = Offset(w, w * 0.6f), tileMode = TileMode.Repeated)
+}
+
+private fun DrawScope.stitched(l: TextLayoutResult, c: Color, em: Float) =
+  drawText(l, brush = satin(c, em), shadow = Shadow(Color(0xFF2A1A10).copy(alpha = 0.55f), Offset(0f, em * 0.05f), em * 0.06f), drawStyle = Fill)
+
+/** Stitched up to [p] of [r], traced after; while stitching, the needle and its thread at the edge. */
+private fun DrawScope.stitchUpTo(l: TextLayoutResult, r: Rect, p: Float, c: Color, em: Float, needle: Boolean) {
+  val x = r.left + r.width * p
+  clipRect(left = x, top = -em, right = r.right + em, bottom = r.bottom + em) { traced(l, em) }
+  if (p > 0f) clipRect(left = r.left - em, top = -em, right = x, bottom = r.bottom + em) { stitched(l, c, em) }
+  if (needle && p in 0.01f..0.99f) {
+    val top = Offset(x + em * 0.22f, r.top - em * 0.65f)
+    val tip = Offset(x - em * 0.05f, r.top + em * 0.35f)
+    drawLine(c, Offset(x, r.top + r.height * 0.5f), top + Offset(0f, em * 0.08f), em * 0.035f)
+    drawLine(Brush.linearGradient(listOf(Color(0xFFF2F2F2), Color(0xFF8C8C8C)), top, tip), top, tip, em * 0.07f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
   }
 }
 

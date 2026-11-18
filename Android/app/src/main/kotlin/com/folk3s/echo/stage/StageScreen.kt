@@ -2,6 +2,9 @@ package com.folk3s.echo.stage
 
 import com.folk3s.echo.LyricStyle
 import com.folk3s.echo.ui.AlbumMesh
+import com.folk3s.echo.ui.Material
+import com.folk3s.echo.ui.matterGround
+import com.folk3s.echo.ui.hoop
 import com.folk3s.echo.ui.Sheet
 import com.folk3s.echo.ui.headerTone
 import androidx.compose.material3.RadioButton
@@ -188,6 +191,8 @@ fun StageScreen(
         onRelease = { stage = null },
         modifier = Modifier.fillMaxSize(),
       )
+    else if (style == LyricStyle.Clay) Box(Modifier.fillMaxSize().matterGround(com.folk3s.echo.stage.lyrics.slabOf(materialFor(style)), Material.Clay))
+    else if (style == LyricStyle.Embroidered) Box(Modifier.fillMaxSize().matterGround(materialFor(style).accent(2).copy(alpha = 1f), Material.Yarn))
     else if (style != LyricStyle.ColourBlock) AlbumMesh(reduced)
     val t = p.track
     when {
@@ -336,10 +341,18 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome, st
     else -> {
       val reduced = app.prefs.reducedMotion(prefs)
       val offset = ls.offsetMs + prefs.lyricOffsetMs
-      com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, Color(0xFF4FD8FF).takeIf { style == LyricStyle.Karaoke } ?: Color(stagePalette().highlight.toArgb()), dockPx) { ms ->
+      val mat = if (style == LyricStyle.Clay || style == LyricStyle.Embroidered) materialFor(style) else null
+      val seek = { ms: Long ->
         app.playback.seek(ms + offset)
         if (!app.playback.state.value.playing) app.playback.toggle()
       }
+      val accent = Color(0xFF4FD8FF).takeIf { style == LyricStyle.Karaoke } ?: Color(stagePalette().highlight.toArgb())
+      if (style == LyricStyle.Embroidered)
+        // The words on an embroidery hoop, set on the knitted ground.
+        Box(Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = with(LocalDensity.current) { dockPx.toDp() } + 10.dp).hoop().padding(vertical = 12.dp)) {
+          com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, accent, 0f, mat, seek)
+        }
+      else com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, accent, dockPx, mat, seek)
     }
   }
   // The credit stays with the chrome (LYRICS_INTEGRATION.md §8: removing it is a defect).
@@ -348,4 +361,11 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome, st
       Text(doc.attribution.text, color = Chamber.faint, style = androidx.compose.material3.MaterialTheme.typography.bodySmall)
     }
   }
+}
+
+/** The palette a material lyric style draws with: Clay's for the dark (as the user set it), or Yarn's. */
+@Composable
+private fun materialFor(style: LyricStyle): com.folk3s.echo.ui.MatterColors {
+  val prefs = LocalContext.current.echo.prefs.state.value
+  return com.folk3s.echo.ui.matterColors(if (style == LyricStyle.Clay) com.folk3s.echo.ui.ThemePreset.Clay else com.folk3s.echo.ui.ThemePreset.Yarn, true, prefs.clayDark, stagePalette().accentColor)
 }

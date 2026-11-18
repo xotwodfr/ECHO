@@ -122,7 +122,7 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
   // The cover sits back a little while paused, and springs forward on play.
   val scale by animateFloatAsState(if (p.playing || still) 1f else 0.84f, spring(dampingRatio = 0.62f, stiffness = 260f), label = "cover")
   Box(Modifier.fillMaxSize()) {
-    AlbumMesh(still)
+    if (look.material != Material.Flat) Box(Modifier.fillMaxSize().matterGround(lerp(matter.ground, matter.accent(0), 0.22f))) else AlbumMesh(still)
     Column(
       Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).verticalScroll(rememberScrollState()),
     ) {
@@ -146,6 +146,15 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           .swipes(left = app.playback::next, right = app.playback::previous, down = { nav.back() }),
         contentAlignment = Alignment.Center,
       ) {
+        if (look.material != Material.Flat)
+          Box(
+            Modifier.fillMaxSize().graphicsLayer {
+              scaleX = scale
+              scaleY = scale
+              rotationZ = -0.8f
+            }.matter(matter.paper, look.page + 12.dp, seed = 50, depth = 1.6f, seam = true).padding(16.dp),
+          ) { Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = look.page) }
+        else
         Box(
           Modifier.fillMaxSize().graphicsLayer {
             scaleX = scale
@@ -158,9 +167,9 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           Text(t.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable { t.album.id?.let { nav.go(Route.Album(it)) } })
           Text(t.artist, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable { t.artists.firstOrNull()?.id?.let { nav.go(Route.Artist(it)) } })
         }
-        Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) { Heart(t, 22) }
+        Box(Modifier.size(40.dp).then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 20.dp, seed = 51) else Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.14f))), contentAlignment = Alignment.Center) { Heart(t, 22) }
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 20.dp, seed = 52) else Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.14f))), contentAlignment = Alignment.Center) {
           MoreMenu(
             "More for ${t.title}",
             songMenu(app, t, nav, picker) +
@@ -192,7 +201,8 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
 @Composable
 private fun Pill(icon: ImageVector, label: String, onClick: () -> Unit) {
   Row(
-    Modifier.height(40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 16.dp),
+    Modifier.height(if (look.material != Material.Flat) 44.dp else 40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick)
+      .then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 22.dp, seed = label.length) else Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.14f))).padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))

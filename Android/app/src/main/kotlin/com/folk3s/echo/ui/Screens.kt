@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
 import coil3.compose.AsyncImage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -235,9 +236,15 @@ fun Card(
       onClick()
     },
   ) {
-    Box(Modifier.fillMaxWidth().aspectRatio(1f).coverFrom(token).clip(RoundedCornerShape(r))) {
-      if (art != null) art() else Artwork(cover, title, null, radius = r)
-    }
+    if (look.material != Material.Flat && !round)
+      // A cover in a frame of the material, each a hair off-straight.
+      Box(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { rotationZ = ((token.hashCode() % 5) - 2) * 0.4f }.matter(matter.paper, look.art, seed = token.hashCode(), depth = 0.9f).padding(7.dp).coverFrom(token).clip(RoundedCornerShape(look.rowArt))) {
+        if (art != null) art() else Artwork(cover, title, null, radius = look.rowArt)
+      }
+    else
+      Box(Modifier.fillMaxWidth().aspectRatio(1f).coverFrom(token).clip(RoundedCornerShape(r))) {
+        if (art != null) art() else Artwork(cover, title, null, radius = r)
+      }
     Spacer(Modifier.height(8.dp))
     Text(title, color = Chamber.text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
     Text(subtitle, color = Chamber.muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -329,6 +336,7 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
 /** Home's featured card: the cover filling it under the colour, the kind, the title, a play button. */
 @Composable
 private fun HeroCard(kind: String, title: String, sub: String, cover: String?, colour: Color, onOpen: () -> Unit, onPlay: () -> Unit) {
+  if (look.material != Material.Flat) return MadeHero(kind, title, sub, onOpen, onPlay)
   val api = LocalContext.current.echo.api
   Box(
     Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth().height(220.dp).bouncy(scale = 0.97f, label = title, onClick = onOpen).clip(RoundedCornerShape(look.hero)).background(colour),
@@ -382,7 +390,8 @@ fun SearchScreen(nav: Nav, picker: (Track) -> Unit) {
     LargeTitle("Search")
     // A rounded, filled search field.
     Row(
-      Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp),
+      Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(52.dp)
+        .then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 26.dp, pressed = true, seed = 60) else Modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)).padding(horizontal = 16.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Icon(EchoIcons.search, null, tint = Chamber.muted, modifier = Modifier.size(22.dp))
@@ -838,4 +847,29 @@ fun PlaylistPicker(tracks: List<Track>, onClose: () -> Unit) {
     confirmButton = { TextButton(onClick = onClose) { Text("Cancel", color = Chamber.text) } },
     containerColor = Chamber.surface3,
   )
+}
+
+/** Home's featured card in clay or yarn: a slab of the material, a label, the title, a play button. */
+@Composable
+private fun MadeHero(kind: String, title: String, sub: String, onOpen: () -> Unit, onPlay: () -> Unit) {
+  val fill = matter.accent(0)
+  val ink = inkOn(fill, matter.ink)
+  val (source, down) = rememberPress()
+  Box(Modifier.padding(horizontal = 20.dp, vertical = 10.dp).fillMaxWidth().height(184.dp).graphicsLayer { rotationZ = -0.6f }.bouncy(scale = 0.98f, source = source, label = title, onClick = onOpen).matter(fill, look.hero, pressed = down, seed = 3, depth = 1.3f)) {
+    Text(
+      kind.uppercase(),
+      color = inkOn(matter.paper, matter.ink),
+      style = MaterialTheme.typography.labelSmall,
+      modifier = Modifier.padding(18.dp).matter(matter.paper, 12.dp, seed = 5, depth = 0.5f).padding(horizontal = 10.dp, vertical = 5.dp),
+    )
+    Column(Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 86.dp, bottom = 20.dp)) {
+      Text(title, color = ink, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+      Text(sub, color = ink.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+    val (ps, pd) = rememberPress()
+    Box(
+      Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).bouncy(scale = 0.9f, source = ps, label = "Play $title", onClick = onPlay).matter(matter.paper, 22.dp, pressed = pd, seed = 6),
+      contentAlignment = Alignment.Center,
+    ) { Icon(EchoIcons.play, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
+  }
 }
