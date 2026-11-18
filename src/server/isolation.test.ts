@@ -31,6 +31,10 @@ const NO_USER_DATA = [
   'POST /invite',
   'POST /invite/totp',
   'GET /me',
+  // Karaoke: server-wide counts, and a song's state; songs are keyed by the caller's own Navidrome
+  // server, so another server's never answer (karaoke.test.ts). The audio is attacked below.
+  'GET /karaoke',
+  'GET /karaoke/:id',
   'GET /me/account',
   'POST /me/password',
   'POST /me/totp/start',
@@ -238,6 +242,7 @@ describe('SEC-11: isolation between users', () => {
       `/api/v1/navidrome/stream/${track}`,
       `/api/v1/navidrome/stream-url/${track}`,
       `/api/v1/navidrome/cover/${track}`,
+      `/api/v1/karaoke/${track}/audio`,
       '/api/v1/navidrome/rest/getAlbumList2?type=newest',
     ])
       expect((await as(B, 'GET', p)).status, p).toBeGreaterThanOrEqual(400);

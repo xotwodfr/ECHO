@@ -20,6 +20,7 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'server_settings',
       'sessions',
       'spotify_matches',
+      'stems_jobs',
       'track_overrides',
       'user_settings',
       'users',

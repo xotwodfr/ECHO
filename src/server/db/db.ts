@@ -177,6 +177,25 @@ const MIGRATIONS: string[] = [
     updated_at INTEGER NOT NULL
   );
   `,
+  // Karaoke mode (karaoke.ts): one row per song the stem service has made, is making or is to make.
+  // `key` is the service's name for it (scope and song id hashed); `user_id` the account whose
+  // Navidrome it is fetched through; higher `priority` first; a failed try waits until `next_at`.
+  `
+  CREATE TABLE stems_jobs (
+    key TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    track_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK (status IN ('queued', 'working', 'ready', 'failed', 'skipped')),
+    priority INTEGER NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    error TEXT,
+    next_at INTEGER NOT NULL DEFAULT 0,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX stems_jobs_next ON stems_jobs(status, priority DESC, created_at);
+  `,
 ];
 
 export function openDb(path: string): Db {

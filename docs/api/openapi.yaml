@@ -832,6 +832,55 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: object, properties: { version: { type: [string, 'null'] }, updatedAt: { type: [integer, 'null'] }, lastError: { type: [string, 'null'] } } } } } }
         '403': { description: Not an admin }
+  /karaoke:
+    get:
+      summary: Karaoke mode's progress (docs/KARAOKE.md); `enabled` false when no stem service is configured (ECHO_STEMS_URL)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled: { type: boolean }
+                  online: { type: boolean, description: The stem service answered }
+                  ready: { type: integer }
+                  queued: { type: integer }
+                  failed: { type: integer }
+                  skipped: { type: integer, description: Longer than ECHO_STEMS_MAX_MINUTES }
+                  bytes: { type: [integer, 'null'], description: On the stem service's disk }
+  /karaoke/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: A Navidrome song id }
+      - { name: soon, in: query, schema: { type: string, enum: ['1'] }, description: A song coming up in the queue, not playing now (waits behind those that are) }
+    get:
+      summary: The song's karaoke version; asking queues it (or moves it up), on the caller's own Navidrome server
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: ['off', queued, working, ready, failed, skipped] }
+                  ahead: { type: integer, description: Songs before it (queued or working) }
+                  url: { type: string, description: When ready, the audio }
+        '400': { description: bad_track_id }
+  /karaoke/{id}/audio:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: The karaoke version, AAC 5.1 in MP4 (instrumental front left/right, vocals rear left/right); Range works
+      responses:
+        '200': { description: The file, content: { audio/mp4: {} } }
+        '206': { description: Part of it }
+        '404': { description: Karaoke mode is off }
+        '409': { description: 'not_ready: queued, working, failed or skipped' }
+        '502': { description: stems_offline }
   /youtube/home:
     get:
       summary: YouTube Music's Home (personal when signed in, general when not)
