@@ -64,7 +64,9 @@ fun SignInScreen() {
           e.code == "totp_required" -> needsCode = true
           e.code == "bad_code" -> error = "That code did not work. Try the current one."
           e.status == 429 -> error = "Too many attempts. Wait a minute and try again."
-          else -> error = "Username or password is incorrect."
+          e.status == 401 -> error = "Username or password is incorrect."
+          // Not about the password: the server (or the proxy in front of it) refused the request.
+          else -> error = "ECHO refused the sign-in (${e.code ?: "HTTP ${e.status}"}). Its proxy setup may need a look; your password wasn't checked."
         }
       } catch (e: java.io.IOException) {
         error = "ECHO didn't answer. Check the connection and try again."
