@@ -1,5 +1,15 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import com.materialkolor.PaletteStyle
+import com.materialkolor.dynamiccolor.ColorSpec
+import com.materialkolor.rememberDynamicColorScheme
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -93,7 +103,7 @@ fun PageBar(nav: Nav, trailing: @Composable () -> Unit = {}) {
 @Composable
 fun PageHeader(art: @Composable () -> Unit, title: String, subtitle: String?, meta: String?, onSubtitle: (() -> Unit)? = null) {
   Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-    Box(Modifier.padding(top = 4.dp).size(260.dp).shadow(24.dp, RoundedCornerShape(20.dp), clip = false, ambientColor = MaterialTheme.colorScheme.scrim, spotColor = MaterialTheme.colorScheme.scrim)) {
+    Box(Modifier.padding(top = 4.dp).size(260.dp).coverTo().shadow(28.dp, RoundedCornerShape(look.page), clip = false, ambientColor = MaterialTheme.colorScheme.scrim, spotColor = MaterialTheme.colorScheme.scrim)) {
       art()
     }
     Spacer(Modifier.height(18.dp))
@@ -117,19 +127,26 @@ fun PageHeader(art: @Composable () -> Unit, title: String, subtitle: String?, me
 fun PlayShuffle(label: String, live: Boolean, playing: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit) {
   val app = LocalContext.current.echo
   Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    val haptics = rememberHaptics()
     Button(
-      onClick = { if (live) app.playback.toggle() else onPlay() },
+      onClick = {
+        haptics.toggle(!playing)
+        if (live) app.playback.toggle() else onPlay()
+      },
       modifier = Modifier.weight(1f).height(52.dp).semantics { contentDescription = if (playing) "Pause $label" else "Play $label" },
-      shape = RoundedCornerShape(26.dp),
+      shape = RoundedCornerShape(look.button.coerceAtMost(26.dp)),
     ) {
       Icon(if (playing) EchoIcons.pause else EchoIcons.play, null, modifier = Modifier.size(20.dp))
       Spacer(Modifier.width(8.dp))
       Text(if (playing) "Pause" else "Play", style = MaterialTheme.typography.titleMedium)
     }
     FilledTonalButton(
-      onClick = onShuffle,
+      onClick = {
+        haptics.tap()
+        onShuffle()
+      },
       modifier = Modifier.weight(1f).height(52.dp).semantics { contentDescription = "Shuffle $label" },
-      shape = RoundedCornerShape(26.dp),
+      shape = RoundedCornerShape(look.button.coerceAtMost(26.dp)),
       colors = ButtonDefaults.filledTonalButtonColors(contentColor = MaterialTheme.colorScheme.primary),
     ) {
       Icon(EchoIcons.shuffle, null, modifier = Modifier.size(20.dp))
@@ -173,4 +190,47 @@ fun CategoryRow(icon: ImageVector, label: String, onClick: () -> Unit) {
     }
     HorizontalDivider(Modifier.padding(start = 40.dp), color = Chamber.line.copy(alpha = 0.5f))
   }
+}
+
+// ---- Album colour on pages ----
+
+/** An album's accent from its palette, once known (null while loading or without one). */
+@Composable
+fun rememberAlbumAccent(albumKey: String?): Color? {
+  val app = LocalContext.current.echo
+  val accent by produceState<Color?>(null, albumKey) { value = albumKey?.let { app.palette.forAlbum(it) }?.accentColor }
+  return accent
+}
+
+/**
+ * A page in its album's colour: on the ECHO theme the page's accent (buttons, the artist) is the
+ * album's own; on the others the theme's accent stays.
+ */
+@Composable
+fun AlbumAccent(accent: Color?, content: @Composable () -> Unit) {
+  val app = LocalContext.current.echo
+  if (accent == null || ThemePreset.of(app.prefs.state.value.theme) != ThemePreset.Echo) return content()
+  val cs = MaterialTheme.colorScheme
+  val dark = cs.surface.luminance() < 0.5f
+  val s = rememberDynamicColorScheme(seedColor = accent, isDark = dark, style = PaletteStyle.Content, specVersion = ColorSpec.SpecVersion.SPEC_2025)
+  MaterialTheme(
+    cs.copy(
+      primary = s.primary,
+      onPrimary = s.onPrimary,
+      primaryContainer = s.primaryContainer,
+      onPrimaryContainer = s.onPrimaryContainer,
+      secondaryContainer = s.secondaryContainer,
+      onSecondaryContainer = s.onSecondaryContainer,
+    ),
+    typography = MaterialTheme.typography,
+    content = content,
+  )
+}
+
+/** The top of a page washed in the album's colour, fading into the page as it scrolls away. */
+@Composable
+fun AlbumWash(accent: Color?, content: @Composable () -> Unit) {
+  val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+  val wash by animateColorAsState(accent?.let { headerTone(it).copy(alpha = if (dark) 0.7f else 0.32f) } ?: Color.Transparent, tween(600), label = "wash")
+  Column(Modifier.fillMaxWidth().background(Brush.verticalGradient(0f to wash, 0.75f to wash.copy(alpha = wash.alpha * 0.35f), 1f to Color.Transparent))) { content() }
 }

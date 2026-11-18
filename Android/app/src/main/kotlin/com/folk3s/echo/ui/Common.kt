@@ -62,7 +62,7 @@ fun duration(ms: Long): String {
  * tiles. Missing or broken art: the title in the ECHO face on a plain square, no placeholder icon.
  */
 @Composable
-fun Artwork(path: String?, title: String, size: Dp?, modifier: Modifier = Modifier, radius: Dp = if ((size ?: 999.dp) <= 64.dp) 4.dp else 12.dp) {
+fun Artwork(path: String?, title: String, size: Dp?, modifier: Modifier = Modifier, radius: Dp = if ((size ?: 999.dp) <= 64.dp) look.rowArt else look.art) {
   val api = LocalContext.current.echo.api
   val shape = RoundedCornerShape(radius)
   val box = (if (size != null) modifier.size(size) else modifier.fillMaxWidth().aspectRatio(1f)).clip(shape)

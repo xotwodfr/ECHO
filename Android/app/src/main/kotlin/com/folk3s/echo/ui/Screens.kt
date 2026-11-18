@@ -155,8 +155,10 @@ fun Heart(t: Track, size: Int = 24) {
   val starred by app.library.starredFlow.collectAsStateWithLifecycle()
   val on = starred?.tracks?.any { it.id == t.id } == true
   val scope = rememberCoroutineScope()
+  val haptics = rememberHaptics()
   Box(
     Modifier.size(40.dp).clip(CircleShape).clickable {
+      haptics.toggle(!on)
       scope.launch {
         runCatching { app.library.setStar(StarKind.Track, t.id, !on, track = t) }
           .onSuccess { app.playback.notify(if (on) "Removed from Liked Songs" else "Added to Liked Songs") }
@@ -225,9 +227,16 @@ fun Card(
   art: (@Composable () -> Unit)? = null,
   onClick: () -> Unit,
 ) {
-  Column((if (width != null) Modifier.width(width.dp) else Modifier).clip(RoundedCornerShape(16.dp)).clickable(onClick = onClick)) {
-    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(if (round) CircleShape else RoundedCornerShape(16.dp))) {
-      if (art != null) art() else Artwork(cover, title, null, radius = if (round) 999.dp else 16.dp)
+  val token = rememberCoverToken()
+  val r = if (round) 999.dp else look.art
+  Column(
+    (if (width != null) Modifier.width(width.dp) else Modifier).bouncy(label = title) {
+      CoverFlight.token = token
+      onClick()
+    },
+  ) {
+    Box(Modifier.fillMaxWidth().aspectRatio(1f).coverFrom(token).clip(RoundedCornerShape(r))) {
+      if (art != null) art() else Artwork(cover, title, null, radius = r)
     }
     Spacer(Modifier.height(8.dp))
     Text(title, color = Chamber.text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -239,7 +248,7 @@ fun Card(
 @Composable
 fun LikedArt(size: Int) {
   Box(
-    Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.2f).dp)).background(Brush.linearGradient(listOf(Chamber.likedFrom, Chamber.likedTo))),
+    Modifier.size(size.dp).clip(RoundedCornerShape(if (size > 100) look.page else look.rowArt)).background(Brush.linearGradient(listOf(Chamber.likedFrom, Chamber.likedTo))),
     contentAlignment = Alignment.Center,
   ) { Icon(EchoIcons.heartFilled, null, tint = Chamber.text, modifier = Modifier.size((size * 0.4f).dp)) }
 }
@@ -322,7 +331,7 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
 private fun HeroCard(kind: String, title: String, sub: String, cover: String?, colour: Color, onOpen: () -> Unit, onPlay: () -> Unit) {
   val api = LocalContext.current.echo.api
   Box(
-    Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth().height(220.dp).clip(RoundedCornerShape(28.dp)).background(colour).clickable(onClick = onOpen),
+    Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth().height(220.dp).bouncy(scale = 0.97f, label = title, onClick = onOpen).clip(RoundedCornerShape(look.hero)).background(colour),
   ) {
     if (cover != null) AsyncImage(api.url(cover.replace("size=300", "size=600")), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(0f to Color.Transparent, 0.35f to colour.copy(alpha = 0.25f), 1f to colour.copy(alpha = 0.95f).compositeOver(Color.Black))))
@@ -332,7 +341,7 @@ private fun HeroCard(kind: String, title: String, sub: String, cover: String?, c
       Text(sub, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
     Box(
-      Modifier.align(Alignment.BottomEnd).padding(16.dp).size(52.dp).clip(RoundedCornerShape(18.dp)).background(Color.White).clickable(onClick = onPlay)
+      Modifier.align(Alignment.BottomEnd).padding(16.dp).size(52.dp).bouncy(scale = 0.88f, onClick = onPlay).clip(RoundedCornerShape(look.button.coerceAtMost(26.dp))).background(Color.White)
         .semantics { contentDescription = "Play $title" },
       contentAlignment = Alignment.Center,
     ) { Icon(EchoIcons.play, null, tint = colour.compositeOver(Color.Black), modifier = Modifier.size(24.dp)) }
@@ -414,7 +423,7 @@ fun SearchScreen(nav: Nav, picker: (Track) -> Unit) {
 
 @Composable
 private fun GenreCard(g: Genre, onClick: () -> Unit) {
-  Box(Modifier.fillMaxWidth().height(110.dp).clip(RoundedCornerShape(20.dp)).background(Brush.linearGradient(listOf(genreColour(g.name), genreColour(g.name).copy(alpha = 0.7f).compositeOver(Color.Black)))).clickable(onClick = onClick).padding(14.dp)) {
+  Box(Modifier.fillMaxWidth().height(110.dp).bouncy(label = g.name, onClick = onClick).clip(RoundedCornerShape(look.panel)).background(Brush.linearGradient(listOf(genreColour(g.name), genreColour(g.name).copy(alpha = 0.7f).compositeOver(Color.Black)))).padding(14.dp)) {
     Text(g.name, color = Color.White, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis)
     Text("${g.albums} album${if (g.albums == 1) "" else "s"}", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.align(Alignment.BottomStart))
   }
@@ -504,7 +513,7 @@ fun LibraryListScreen(kind: String, nav: Nav) {
       "playlists" -> {
         item("liked") { LibRow({ LikedArt(56) }, "Liked Songs", "${starred?.tracks?.size ?: 0} songs") { nav.go(Route.Liked) } }
         items(playlists ?: emptyList(), key = { "p:${it.id}" }) { p ->
-          LibRow({ if (p.cover != null) Artwork(p.cover, p.name, 56.dp, radius = 12.dp) else EmptyArt(56) }, p.name, p.owner ?: "${p.tracks} songs") { nav.go(Route.Playlist(p.id)) }
+          LibRow({ if (p.cover != null) Artwork(p.cover, p.name, 56.dp) else EmptyArt(56) }, p.name, p.owner ?: "${p.tracks} songs") { nav.go(Route.Playlist(p.id)) }
         }
       }
       "artists" -> {
@@ -535,7 +544,7 @@ fun LibraryListScreen(kind: String, nav: Nav) {
 
 @Composable
 private fun EmptyArt(size: Int) {
-  Box(Modifier.size(size.dp).clip(RoundedCornerShape((size * 0.2f).dp)).background(Chamber.surface3), contentAlignment = Alignment.Center) {
+  Box(Modifier.size(size.dp).clip(RoundedCornerShape(if (size > 100) look.page else look.rowArt)).background(Chamber.surface3), contentAlignment = Alignment.Center) {
     Icon(EchoIcons.music, null, tint = Chamber.muted, modifier = Modifier.size((size * 0.45f).dp))
   }
 }
@@ -570,8 +579,11 @@ fun AlbumScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
       val ctx = PlayContext("album", a.id, a.title)
       val saved = starred?.albums?.any { it.id == a.id } == true
       val tracksMs = a.tracks.sumOf { it.durationMs }
+      val accent = rememberAlbumAccent(a.key)
+      AlbumAccent(accent) {
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
+          AlbumWash(accent) {
           PageBar(nav) {
             Box(
               Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable {
@@ -585,12 +597,13 @@ fun AlbumScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
             }
           }
           PageHeader(
-            art = { Artwork(a.cover?.replace("size=300", "size=600"), a.title, null, Modifier.fillMaxSize(), radius = 20.dp) },
+            art = { Artwork(a.cover?.replace("size=300", "size=600"), a.title, null, Modifier.fillMaxSize(), radius = look.page) },
             title = a.title,
             subtitle = a.artist,
             meta = listOfNotNull("Album", a.year?.toString()).joinToString(" · "),
             onSubtitle = a.artistId?.let { { nav.go(Route.Artist(it)) } },
           )
+          }
           PlayShuffle(a.title, live, playing, { app.playback.playList(a.tracks, 0, ctx) }, { app.playback.playList(a.tracks.shuffled(), 0, ctx) })
         }
         itemsIndexed(a.tracks, key = { i, t -> "$i:${t.key}" }) { i, t ->
@@ -604,6 +617,7 @@ fun AlbumScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
             modifier = Modifier.padding(start = 20.dp, top = 16.dp),
           )
         }
+      }
       }
     }
   }
@@ -636,6 +650,7 @@ fun ArtistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
       val i = (info as? Load.Ok<ArtistInfo>)?.value
       val popular = (top as? Load.Ok<List<Track>>)?.value ?: emptyList()
       val ctx = PlayContext("artist", id, a.name)
+      AlbumAccent(rememberAlbumAccent(a.albums.firstOrNull()?.key)) {
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
           Box(Modifier.fillMaxWidth().height(300.dp)) {
@@ -674,6 +689,7 @@ fun ArtistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
           }
         }
       }
+      }
     }
   }
 }
@@ -694,8 +710,11 @@ fun PlaylistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
     is Load.Ok -> {
       val p = state.value ?: return Empty("This playlist does not exist.")
       val ctx = PlayContext("playlist", id, p.playlist.name)
+      val accent = rememberAlbumAccent(p.entries.firstOrNull()?.album?.key)
+      AlbumAccent(accent) {
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
+          AlbumWash(accent) {
           PageBar(nav) {
             Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
               MoreMenu("More for ${p.playlist.name}", listOf("Smart Shuffle" to { smartShuffle(app, scope, p.entries, ctx) }, "Edit details" to { editing = true }, "Delete" to { deleting = true }))
@@ -704,16 +723,17 @@ fun PlaylistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
           PageHeader(
             art = {
               if (p.covers.size >= 4)
-                Column(Modifier.fillMaxSize().clip(RoundedCornerShape(20.dp))) {
+                Column(Modifier.fillMaxSize().clip(RoundedCornerShape(look.page))) {
                   for (row in p.covers.take(4).chunked(2)) Row(Modifier.weight(1f)) { for (c in row) Box(Modifier.weight(1f)) { Artwork(c, p.playlist.name, null, Modifier.fillMaxSize(), radius = 0.dp) } }
                 }
-              else if (p.covers.isNotEmpty()) Artwork(p.covers.first(), p.playlist.name, null, Modifier.fillMaxSize(), radius = 20.dp)
+              else if (p.covers.isNotEmpty()) Artwork(p.covers.first(), p.playlist.name, null, Modifier.fillMaxSize(), radius = look.page)
               else EmptyArt(260)
             },
             title = p.playlist.name,
             subtitle = p.playlist.owner,
             meta = "${p.entries.size} songs · ${duration(p.durationMs)}",
           )
+          }
           p.comment?.let { Text(it, color = Chamber.muted, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) }
           if (p.entries.isNotEmpty()) PlayShuffle(p.playlist.name, live, playing, { app.playback.playList(p.entries, 0, ctx) }, { app.playback.playList(p.entries.shuffled(), 0, ctx) })
         }
@@ -723,6 +743,7 @@ fun PlaylistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
             scope.launch { runCatching { app.library.updatePlaylist(id, remove = listOf(n)) }.onSuccess { version++ } }
           })))
         }
+      }
       }
       if (editing) {
         var name by remember { mutableStateOf(p.playlist.name) }

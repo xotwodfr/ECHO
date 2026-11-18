@@ -17,6 +17,20 @@ enum class Motion(val label: String) { System("System"), Full("Full"), Reduced("
 
 enum class Quality(val label: String) { Auto("Auto"), High("High"), Balanced("Balanced"), Low("Low"), Minimal("Minimal") }
 
+/** Light or dark: the theme's own default, the system's, or fixed. */
+enum class DarkMode(val label: String) { Theme("Theme default"), System("System"), Light("Light"), Dark("Dark") }
+
+/** How the lyrics look (v0.3; the styles are drawn in stage/lyrics/Styled.kt and LyricsField.kt). */
+enum class LyricStyle(val label: String, val blurb: String) {
+  Apple("Apple Music style", "Big bold lines that fill word by word; the rest dim and blur."),
+  Spicy("Spicy Lyrics style", "Sung words glow and lift; the word being sung swells."),
+  Cinema("Cinema", "Centred and full screen, three lines at a time."),
+  ColourBlock("Colour block", "A solid album-coloured card, line by line, no blur."),
+  Kinetic("Kinetic", "One huge line at a time; words pop in as they're sung."),
+  Karaoke("Karaoke", "Two centred lines; the sung part changes colour."),
+  Classic("ECHO classic", "ECHO's own: glow, depth and duets over the visualizer."),
+}
+
 /** The bottom tabs, in their default order; the user can reorder them in Settings. */
 val DEFAULT_TABS = listOf("home", "mixes", "games", "library", "search")
 
@@ -32,6 +46,11 @@ data class Prefs(
   val showUnsynced: Boolean = true,
   val scrobble: Boolean = true,
   val tabs: List<String> = DEFAULT_TABS,
+  val theme: String = "echo",
+  val darkMode: DarkMode = DarkMode.Theme,
+  val lyricStyle: LyricStyle = LyricStyle.Apple,
+  val lyricVisualizer: Boolean = false,
+  val haptics: Boolean = true,
 ) {
   /** The tabs in the user's order: every known tab once, whatever an older save holds. */
   val tabOrder: List<String> get() = (tabs.filter { it in DEFAULT_TABS } + DEFAULT_TABS).distinct()

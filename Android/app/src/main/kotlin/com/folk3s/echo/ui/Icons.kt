@@ -46,6 +46,7 @@ object EchoIcons {
   val check = icon("check", P("m5 12.5 4.5 4.5L19 7.5"))
   val chevronDown = icon("chevronDown", P("m6 9 6 6 6-6"))
   val chevronLeft = icon("chevronLeft", P("m15 6-6 6 6 6"))
+  val textStyle = icon("textStyle", P("M3.5 18 8.5 6l5 12"), P("M5.3 13.8h6.4"), P("M15 18v-5.2a2.6 2.6 0 0 1 5.2 0V18"), P("M15 14.8h5.2"))
   val clock = icon("clock", P(circle(12f, 12f, 8.5f)), P("M12 7.5V12l3 2"))
   val chevronUp = icon("chevronUp", P("m6 15 6-6 6 6"))
   val gamepad = icon("gamepad", P("M7 8h10a4 4 0 0 1 4 4v1.5a3.5 3.5 0 0 1-6.3 2.1L13.5 14h-3l-1.2 1.6A3.5 3.5 0 0 1 3 13.5V12a4 4 0 0 1 4-4z"), P("M7.5 10.5v3M6 12h3"), P(circle(15.5f, 11f, 0.6f)), P(circle(17.5f, 13f, 0.6f)))

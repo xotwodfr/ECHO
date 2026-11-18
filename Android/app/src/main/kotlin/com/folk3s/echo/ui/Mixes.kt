@@ -68,7 +68,7 @@ private val GREY = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation
 fun MixArt(title: String, cover: String?, colour: Color, size: Dp? = null) {
   val api = LocalContext.current.echo.api
   BoxWithConstraints(
-    (if (size != null) Modifier.size(size) else Modifier.fillMaxWidth().aspectRatio(1f)).clip(RoundedCornerShape(16.dp))
+    (if (size != null) Modifier.size(size) else Modifier.fillMaxWidth().aspectRatio(1f)).clip(RoundedCornerShape(if (size != null && size > 100.dp) look.page else look.art))
       .background(Brush.linearGradient(listOf(colour, colour.copy(alpha = 0.65f).compositeOver(Color.Black)))),
   ) {
     if (cover != null)
@@ -150,8 +150,10 @@ fun MixScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
       val ctx = PlayContext("mix", id, mix.title)
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
+          AlbumWash(mixColour(id)) {
           PageBar(nav)
           PageHeader(art = { MixArt(mix, 260.dp) }, title = mix.title, subtitle = null, meta = "${mix.subtitle} · ${tracks.size} songs")
+          }
           PlayShuffle(mix.title, live, playing, { app.playback.playList(tracks, 0, ctx) }, { app.playback.playList(tracks.shuffled(), 0, ctx) })
         }
         itemsIndexed(tracks, key = { n, t -> "$n:${t.key}" }) { n, t -> SongRow(t, t.key == now, { app.playback.playList(tracks, n, ctx) }, true, songMenu(app, t, nav, picker)) }

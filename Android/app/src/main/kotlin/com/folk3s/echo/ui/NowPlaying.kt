@@ -150,8 +150,8 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           Modifier.fillMaxSize().graphicsLayer {
             scaleX = scale
             scaleY = scale
-          }.shadow(32.dp, RoundedCornerShape(24.dp), clip = false, ambientColor = Color.Black, spotColor = Color.Black),
-        ) { Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = 24.dp) }
+          }.shadow(32.dp, RoundedCornerShape(look.page), clip = false, ambientColor = Color.Black, spotColor = Color.Black),
+        ) { Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = look.page) }
       }
       Row(Modifier.fillMaxWidth().padding(start = 28.dp, end = 20.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -192,7 +192,7 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
 @Composable
 private fun Pill(icon: ImageVector, label: String, onClick: () -> Unit) {
   Row(
-    Modifier.height(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)).clickable(onClick = onClick).padding(horizontal = 16.dp),
+    Modifier.height(40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
@@ -203,7 +203,7 @@ private fun Pill(icon: ImageVector, label: String, onClick: () -> Unit) {
 
 /** Now Playing's ground: soft blobs of the album's colours drifting over its darkest tone. */
 @Composable
-private fun AlbumMesh(still: Boolean) {
+fun AlbumMesh(still: Boolean) {
   val pal = stagePalette()
   val accent by animateColorAsState(headerTone(pal.accentColor), tween(1200), label = "a")
   val second by animateColorAsState(headerTone(Color(pal.highlight.toArgb())).copy(alpha = 1f), tween(1200), label = "b")
@@ -247,6 +247,7 @@ private fun SeekBar(p: PlayerState, still: Boolean) {
   val phase = rememberInfiniteTransition(label = "wave")
   val shift by phase.animateFloat(0f, 1f, infiniteRepeatable(tween(1400, easing = LinearEasing)), label = "shift")
   val thick by animateFloatAsState(if (dragging) 8f else 5f, tween(150), label = "thick")
+  val haptics = rememberHaptics()
   Column(Modifier.padding(horizontal = 28.dp, vertical = 14.dp)) {
     Box(
       Modifier.fillMaxWidth().height(28.dp)
@@ -255,10 +256,12 @@ private fun SeekBar(p: PlayerState, still: Boolean) {
         .pointerInput(d) {
           detectHorizontalDragGestures(
             onDragStart = { o ->
+              haptics.tick()
               dragging = true
               dragValue = (o.x / size.width).coerceIn(0f, 1f)
             },
             onDragEnd = {
+              haptics.tick()
               app.playback.seek((dragValue * d).toLong())
               dragging = false
             },

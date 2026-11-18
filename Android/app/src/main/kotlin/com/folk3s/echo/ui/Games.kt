@@ -117,8 +117,8 @@ fun GamesScreen(nav: Nav) {
 @Composable
 private fun GameCard(kind: GameKind, record: GameRecord?, onClick: () -> Unit) {
   Box(
-    Modifier.padding(horizontal = 20.dp, vertical = 7.dp).fillMaxWidth().height(150.dp).clip(RoundedCornerShape(28.dp))
-      .background(Brush.linearGradient(kind.colours())).clickable(onClick = onClick).semantics { contentDescription = "Play ${kind.title}" },
+    Modifier.padding(horizontal = 20.dp, vertical = 7.dp).fillMaxWidth().height(150.dp).bouncy(scale = 0.97f, onClick = onClick).clip(RoundedCornerShape(look.panel))
+      .background(Brush.linearGradient(kind.colours())).semantics { contentDescription = "Play ${kind.title}" },
   ) {
     Icon(kind.icon(), null, tint = Color.White.copy(alpha = 0.18f), modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp).size(120.dp))
     Column(Modifier.align(Alignment.BottomStart).padding(20.dp).padding(end = 80.dp)) {
@@ -203,6 +203,7 @@ private fun Round(kind: GameKind, qs: List<Question>, clips: ClipPlayer, onAgain
   var gained by remember { mutableIntStateOf(0) }
   var result by remember { mutableStateOf<Pair<GameRecord, GameRecord>?>(null) }
   val playing by clips.playing.collectAsStateWithLifecycle()
+  val haptics = rememberHaptics()
 
   result?.let { (before, after) ->
     Results(kind, score, marks.count { it == Mark.Right }, qs.size, bestStreak, before, after, onAgain, onExit)
@@ -220,7 +221,9 @@ private fun Round(kind: GameKind, qs: List<Question>, clips: ClipPlayer, onAgain
       streak++
       bestStreak = max(bestStreak, streak)
       marks += Mark.Right
+      haptics.confirm()
     } else {
+      haptics.reject()
       gained = 0
       streak = 0
       marks += if (i < 0) Mark.Missed else Mark.Wrong
@@ -361,8 +364,8 @@ private fun ChoiceButton(text: String, state: ChoiceState, onClick: () -> Unit) 
   )
   val fg = if (state == ChoiceState.Right || state == ChoiceState.Wrong) Color.White else Chamber.text
   Box(
-    Modifier.fillMaxWidth().heightIn(min = 60.dp).alpha(if (state == ChoiceState.Dim) 0.45f else 1f).clip(RoundedCornerShape(20.dp)).background(bg)
-      .clickable(enabled = state == ChoiceState.Open, onClick = onClick).padding(horizontal = 20.dp, vertical = 14.dp),
+    Modifier.fillMaxWidth().heightIn(min = 60.dp).alpha(if (state == ChoiceState.Dim) 0.45f else 1f).bouncy(enabled = state == ChoiceState.Open, scale = 0.97f, onClick = onClick)
+      .clip(RoundedCornerShape(look.button.coerceAtMost(20.dp))).background(bg).padding(horizontal = 20.dp, vertical = 14.dp),
     contentAlignment = Alignment.CenterStart,
   ) { Text(text, color = fg, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis) }
 }

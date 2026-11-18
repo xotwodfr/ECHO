@@ -1,6 +1,19 @@
 package com.folk3s.echo.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.unit.IntOffset
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
+import dev.chrisbanes.haze.hazeSource
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.animation.AnimatedVisibility
@@ -103,16 +116,23 @@ class Nav(first: Route = Route.Home) {
   val stack = mutableStateListOf(first)
   val top: Route get() = stack.last()
 
+  /** The last move, for the page transition: in, back, or across the tabs (0). */
+  var direction by mutableStateOf(0)
+    private set
+
   fun go(r: Route) {
+    direction = 1
     stack += r
   }
 
   fun root(r: Route) {
+    direction = 0
     stack.clear()
     stack += r
   }
 
   fun back() {
+    direction = -1
     if (stack.size > 1) stack.removeAt(stack.lastIndex)
   }
 }
@@ -153,6 +173,8 @@ private fun Shell() {
   var picking by remember { mutableStateOf<List<Track>?>(null) }
   val chrome = remember { StageChrome() }
   val prefs by app.prefs.state.collectAsStateWithLifecycle()
+  // The page behind the bars, for their frosted glass.
+  val glass = remember { HazeState() }
   BackHandler(enabled = nav.stack.size > 1) { nav.back() }
   val picker = { t: Track -> picking = listOf(t) }
 
@@ -164,7 +186,7 @@ private fun Shell() {
       val still = app.prefs.reducedMotion(prefs)
       if (nav.top == Route.Listen)
         // The lyrics view: the room and the lyrics, the transport floating over it, always dark.
-        EchoTheme(dark = true) {
+        EchoTheme(forceDark = true) {
         LightBarIcons()
         StageScreen(
           chrome,
@@ -179,16 +201,26 @@ private fun Shell() {
       else {
         // The page. A new one fades and rises in (the web's View Transition), the old one fades out
         // quickly.
-        Box(Modifier.fillMaxSize().background(Chamber.ground).windowInsetsPadding(WindowInsets.statusBars)) {
+        Box(Modifier.fillMaxSize().background(Chamber.ground).hazeSource(glass).windowInsetsPadding(WindowInsets.statusBars)) {
+          SharedTransitionLayout {
+          val shared = this
           AnimatedContent(
             page,
             transitionSpec = {
-              if (still) EnterTransition.None togetherWith ExitTransition.None
-              else (fadeIn(tween(240, delayMillis = 60)) + slideInVertically(tween(280)) { it / 40 }) togetherWith fadeOut(tween(100))
+              // A page springs in from the side it comes from; the tabs cross-fade with a breath of scale.
+              val move = spring<IntOffset>(dampingRatio = 0.86f, stiffness = 380f)
+              val fade = spring<Float>(stiffness = 500f)
+              when {
+                still -> EnterTransition.None togetherWith ExitTransition.None
+                nav.direction == 0 -> (fadeIn(fade) + scaleIn(spring(dampingRatio = 0.8f, stiffness = 420f), initialScale = 0.97f)) togetherWith fadeOut(tween(90))
+                nav.direction > 0 -> (slideInHorizontally(move) { it / 5 } + fadeIn(fade)) togetherWith (slideOutHorizontally(move) { -it / 12 } + fadeOut(tween(160)))
+                else -> (slideInHorizontally(move) { -it / 12 } + fadeIn(fade)) togetherWith (slideOutHorizontally(move) { it / 5 } + fadeOut(tween(160)))
+              }.using(SizeTransform(clip = false))
             },
             label = "page",
           ) { r ->
             // Each page keeps its scroll position (and other saved state) for Back.
+            CompositionLocalProvider(LocalFlight provides Flight(shared, this)) {
             pages.SaveableStateProvider(r.toString()) {
             when (r) {
               Route.Home -> HomeScreen(nav, onProfile = { nav.go(Route.Settings) })
@@ -209,11 +241,13 @@ private fun Shell() {
               else -> {}
             }
             }
+            }
+          }
           }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
-          if (player.track != null && nav.top !is Route.Game) Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) { MiniPlayer(player) { nav.go(Route.NowPlaying) } }
-          TabBar(nav, prefs.tabOrder)
+          if (player.track != null && nav.top !is Route.Game) Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) { MiniPlayer(player, glass) { nav.go(Route.NowPlaying) } }
+          TabBar(nav, prefs.tabOrder, glass)
         }
       }
       // Now Playing rises from the mini player over the page, and sinks back (Spotify's).
@@ -222,7 +256,7 @@ private fun Shell() {
         enter = if (still) EnterTransition.None else slideInVertically(spring(dampingRatio = 0.9f, stiffness = 420f)) { it } + fadeIn(tween(160)),
         exit = if (still) ExitTransition.None else slideOutVertically(tween(260)) { it } + fadeOut(tween(260)),
       ) {
-        EchoTheme(dark = true) { LightBarIcons(); NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker) }
+        EchoTheme(forceDark = true) { LightBarIcons(); NowPlayingScreen(player, nav, onQueue = { queueOpen = true }, picker = picker) }
       }
       player.notice?.let { msg ->
         LaunchedEffect(msg) {
@@ -264,15 +298,24 @@ fun tabRoute(id: String): Route =
 
 /** The tabs, in the user's order, as an M3 navigation bar: a pill behind the current one's icon. */
 @Composable
-private fun TabBar(nav: Nav, order: List<String>) {
+private fun TabBar(nav: Nav, order: List<String>, glass: HazeState) {
   val tabs = order.map { id -> tabInfo(id).let { (label, icon) -> Triple(label, tabRoute(id), icon) } }
   val root = nav.stack.first()
-  NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+  val haptics = rememberHaptics()
+  val bar = MaterialTheme.colorScheme.surfaceContainer
+  NavigationBar(
+    containerColor = Color.Transparent,
+    modifier = Modifier.hazeEffect(glass, HazeStyle(backgroundColor = bar, tints = listOf(HazeTint(bar.copy(alpha = 0.72f))), blurRadius = 28.dp, noiseFactor = 0.03f)),
+  ) {
     for ((label, route, icon) in tabs) {
       val on = root == route
       NavigationBarItem(
         selected = on,
-        onClick = { nav.root(route) },
+        onClick = {
+          haptics.tick()
+          nav.root(route)
+        },
+        colors = if (look.navPill) NavigationBarItemDefaults.colors() else NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
         icon = { Icon(if (on && route == Route.Home) EchoIcons.homeFilled else icon, null, modifier = Modifier.size(24.dp)) },
         label = { Text(label, style = MaterialTheme.typography.labelMedium) },
         modifier = Modifier.semantics { contentDescription = label },
@@ -283,10 +326,19 @@ private fun TabBar(nav: Nav, order: List<String>) {
 
 /** The mini player: a floating rounded bar over the page, play/pause and next, a hairline of progress. */
 @Composable
-private fun MiniPlayer(p: PlayerState, onOpen: () -> Unit) {
+private fun MiniPlayer(p: PlayerState, glass: HazeState, onOpen: () -> Unit) {
   val app = LocalContext.current.echo
   val t = p.track ?: return
-  Surface(Modifier.fillMaxWidth().height(64.dp), RoundedCornerShape(22.dp), MaterialTheme.colorScheme.surfaceContainerHighest, Chamber.text, shadowElevation = 8.dp, tonalElevation = 2.dp) {
+  val haptics = rememberHaptics()
+  val shape = RoundedCornerShape(look.mini)
+  val tint = MaterialTheme.colorScheme.surfaceContainerHighest
+  Surface(
+    Modifier.fillMaxWidth().height(64.dp).shadow(10.dp, shape).clip(shape)
+      .hazeEffect(glass, HazeStyle(backgroundColor = tint, tints = listOf(HazeTint(tint.copy(alpha = 0.68f))), blurRadius = 24.dp, noiseFactor = 0.03f)),
+    shape,
+    Color.Transparent,
+    Chamber.text,
+  ) {
     Box(Modifier.fillMaxSize()) {
       // Swipe sideways for the next or previous song, up for Now Playing (Spotify's mini player).
       Row(
@@ -294,17 +346,23 @@ private fun MiniPlayer(p: PlayerState, onOpen: () -> Unit) {
           .padding(start = 8.dp, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
       ) {
-        Artwork(t.cover, t.album.title, 48.dp, radius = 12.dp)
+        Artwork(t.cover, t.album.title, 48.dp, radius = minOf(look.rowArt + 2.dp, 24.dp))
         Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
           Text(t.title, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
           Text(t.artist, color = Chamber.muted, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Box(
-          Modifier.size(44.dp).clip(CircleShape).clickable(onClick = app.playback::toggle).semantics { contentDescription = if (p.playing) "Pause" else "Play" },
+          Modifier.size(44.dp).clip(CircleShape).clickable {
+            haptics.toggle(!p.playing)
+            app.playback.toggle()
+          }.semantics { contentDescription = if (p.playing) "Pause" else "Play" },
           contentAlignment = Alignment.Center,
         ) { Icon(if (p.playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.text, modifier = Modifier.size(26.dp)) }
         Box(
-          Modifier.size(44.dp).clip(CircleShape).clickable(onClick = app.playback::next).semantics { contentDescription = "Next" },
+          Modifier.size(44.dp).clip(CircleShape).clickable {
+            haptics.tap()
+            app.playback.next()
+          }.semantics { contentDescription = "Next" },
           contentAlignment = Alignment.Center,
         ) { Icon(EchoIcons.next, null, tint = Chamber.text, modifier = Modifier.size(24.dp)) }
       }
@@ -353,8 +411,10 @@ private fun StageDock(p: PlayerState, chrome: StageChrome, onQueue: () -> Unit) 
 @Composable
 fun PlayButton(playing: Boolean, enabled: Boolean, onClick: () -> Unit, size: Int = 48) {
   val corner by animateFloatAsState(if (playing) 0.34f else 0.5f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "shape")
+  val haptics = rememberHaptics()
+  val press = { haptics.toggle(!playing); onClick() }
   Box(
-    Modifier.size(size.dp).clip(RoundedCornerShape((size * corner).dp)).background(if (enabled) Chamber.text else Chamber.surface3).clickable(enabled = enabled, onClick = onClick)
+    Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.9f, onClick = press).clip(RoundedCornerShape((size * corner).dp)).background(if (enabled) Chamber.text else Chamber.surface3)
       .semantics { contentDescription = if (playing) "Pause" else "Play" },
     contentAlignment = Alignment.Center,
   ) {

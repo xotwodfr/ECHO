@@ -1,5 +1,15 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.selected
+import com.folk3s.echo.DarkMode
+import com.folk3s.echo.LyricStyle
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -104,6 +114,12 @@ fun SettingsScreen() {
   Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
     Text("Settings", style = MaterialTheme.typography.headlineMedium)
 
+    Section("Appearance")
+    Text("Theme", style = MaterialTheme.typography.titleSmall)
+    ThemePicker(p.theme) { id -> set { it.copy(theme = id) } }
+    Choice("Light or dark", "Theme default: each theme's own (Spotify style is dark, Apple Music style light, ECHO follows the system).", DarkMode.entries.map { it to (if (it == DarkMode.Theme) "Theme" else it.label) }, p.darkMode) { v -> set { it.copy(darkMode = v) } }
+    Toggle("Haptics (light taps on presses, likes and answers)", p.haptics) { v -> set { it.copy(haptics = v) } }
+
     Section("Tabs")
     Text("The order of the tabs at the bottom. The first one opens when ECHO starts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     val order = p.tabOrder
@@ -132,6 +148,19 @@ fun SettingsScreen() {
     }
 
     Section("Lyrics")
+    Text("Style", style = MaterialTheme.typography.titleSmall)
+    Column(Modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer)) {
+      for (st in LyricStyle.entries)
+        Row(Modifier.fillMaxWidth().clickable { set { it.copy(lyricStyle = st) } }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+          RadioButton(selected = p.lyricStyle == st, onClick = null)
+          Column(Modifier.padding(start = 12.dp)) {
+            Text(st.label, style = MaterialTheme.typography.bodyLarge)
+            Text(st.blurb, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+          }
+        }
+    }
+    Toggle("Visualizer behind the lyrics", p.lyricVisualizer) { v -> set { it.copy(lyricVisualizer = v) } }
+    Text("Off: the album's colours drift slowly behind the lyrics, easier on the battery. ECHO classic always has the visualizer.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
     Choice("Lyric size", null, SIZES, p.lyricScale) { v -> set { it.copy(lyricScale = v) } }
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
       Text("Timing offset for all tracks", style = MaterialTheme.typography.titleSmall)
@@ -160,5 +189,43 @@ fun SettingsScreen() {
       style = MaterialTheme.typography.bodySmall,
     )
     Spacer(Modifier.height(160.dp))
+  }
+}
+
+/** The themes as swatch cards: each one's ground, accent and art shape. */
+@Composable
+private fun ThemePicker(current: String, onPick: (String) -> Unit) {
+  val systemDark = androidx.compose.foundation.isSystemInDarkTheme()
+  Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    for (t in ThemePreset.entries) {
+      val on = t.id == current
+      val dark = t.dark ?: systemDark
+      val ground = (if (dark) t.darkGround else t.lightGround) ?: if (dark) Color(0xFF16141A) else Color(0xFFF6F4F8)
+      val ink = if (dark) Color.White else Color(0xFF16141A)
+      val accent = t.accent ?: when (t) {
+        ThemePreset.Monochrome -> ink
+        ThemePreset.MaterialYou -> MaterialTheme.colorScheme.primary
+        else -> albumAccent()
+      }
+      Column(
+        Modifier.width(112.dp).bouncy(label = t.label) { onPick(t.id) }.semantics { selected = on },
+        horizontalAlignment = Alignment.CenterHorizontally,
+      ) {
+        Box(
+          Modifier.size(112.dp, 140.dp).clip(RoundedCornerShape(18.dp)).background(ground)
+            .border(if (on) 3.dp else 1.dp, if (on) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(18.dp))
+            .padding(12.dp),
+        ) {
+          Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Aa", color = ink, style = MaterialTheme.typography.titleLarge.copy(fontFamily = t.look.font, fontWeight = androidx.compose.ui.text.font.FontWeight(t.titleWeight)))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+              for (c in listOf(Color(0xFFFF6B6B), Color(0xFF6B8CFF))) Box(Modifier.size(34.dp).clip(RoundedCornerShape(if (t.look.circleArt) 17.dp else t.look.rowArt.coerceAtMost(12.dp))).background(c))
+            }
+            Box(Modifier.size(56.dp, 20.dp).clip(RoundedCornerShape(t.look.button.coerceAtMost(10.dp))).background(accent))
+          }
+        }
+        Text(t.label, style = MaterialTheme.typography.labelMedium, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
+      }
+    }
   }
 }
