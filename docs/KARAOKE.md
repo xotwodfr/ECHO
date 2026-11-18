@@ -40,6 +40,11 @@ sudo mkdir -p /Media/Media/Instrumentals && sudo chown 1000:1000 /Media/Media/In
 docker compose up -d --build
 ```
 
+Add `stems` to ECHO's networks, and leave its other networks as they are. Don't add the
+`default` network or move ECHO onto another one: that can change the address Caddy's requests come
+from. ECHO then no longer trusts them (`ECHO_TRUSTED_PROXY`) and refuses everything but the health
+check, and the app reports every sign-in as a wrong password.
+
 The first build downloads the model (67 MB, checked against its SHA-256).
 
 | Variable (ECHO)          | Default | Meaning                                              |
