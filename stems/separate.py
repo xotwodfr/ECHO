@@ -17,6 +17,9 @@ class Separator:
         opts = ort.SessionOptions()
         opts.intra_op_num_threads = threads
         opts.inter_op_num_threads = 1
+        # No arena: ONNX Runtime would otherwise keep ~2.5 GB pooled between chunks.
+        opts.enable_cpu_mem_arena = False
+        opts.enable_mem_pattern = False
         self.session = ort.InferenceSession(model_path, opts, providers=["CPUExecutionProvider"])
         shape = self.session.get_inputs()[0].shape  # [batch, 4, dim_f, dim_t]
         self.dim_f, self.dim_t = int(shape[2]), int(shape[3])
@@ -63,27 +66,38 @@ class Separator:
         return self._istft(out, self.chunk)
 
     def instrumental(self, mix, progress=None, overlap=0.25):
-        """mix: float32 [2, n] at 44.1 kHz -> the instrumental, [2, n].
+        """mix: float32 frames [n, 2] (a memmap is fine) or [2, n], at 44.1 kHz -> the instrumental, [2, n].
 
         Chunks overlap by [overlap] and are blended with a Hann window, as the reference
-        implementation (audio-separator) does: no seams where one chunk meets the next.
+        implementation (audio-separator) does: no seams where one chunk meets the next. The mix is
+        read a chunk at a time, so beside it only the result is held: about 1.5x the song.
         """
-        n = mix.shape[1]
-        peak = float(np.abs(mix).max())
+        frames = mix if mix.shape[1] == 2 else mix.T  # [n, 2] views either way
+        n = frames.shape[0]
+        peak = 0.0
+        for b in range(0, n, 1 << 20):
+            peak = max(peak, float(np.abs(frames[b : b + (1 << 20)]).max()))
         scale = 0.9 / peak if peak > 0.9 else 1.0  # the model expects a mix that doesn't clip
-        mix = mix * scale
         step = int((1 - overlap) * self.chunk)
         total = n + 2 * self.trim
         pad = (step - (total - self.chunk) % step) % step if total > self.chunk else self.chunk - total
-        padded = np.concatenate([np.zeros((2, self.trim), np.float32), mix, np.zeros((2, self.trim + pad), np.float32)], axis=1)
-        out = np.zeros_like(padded)
-        weight = np.zeros(padded.shape[1], np.float32)
+        length = total + pad
+        out = np.zeros((2, length), np.float32)
+        weight = np.zeros(length, np.float32)
         window = np.hanning(self.chunk).astype(np.float32) + 1e-3
-        starts = list(range(0, padded.shape[1] - self.chunk + 1, step))
+        starts = list(range(0, length - self.chunk + 1, step))
         for k, i in enumerate(starts):
-            out[:, i : i + self.chunk] += self._run(padded[:, i : i + self.chunk]) * window
+            # The chunk in padded time [i, i + chunk) is the mix's [i - trim, ...), zeros outside it.
+            part = np.zeros((2, self.chunk), np.float32)
+            a, b = max(0, i - self.trim), min(n, i - self.trim + self.chunk)
+            if b > a:
+                part[:, a - (i - self.trim) : b - (i - self.trim)] = frames[a:b].T * scale
+            out[:, i : i + self.chunk] += self._run(part) * window
             weight[i : i + self.chunk] += window
             if progress:
                 progress((k + 1) / len(starts))
         out /= np.maximum(weight, 1e-6)
-        return (out[:, self.trim : self.trim + n] * (self.compensate / scale)).astype(np.float32)
+        del weight
+        inst = out[:, self.trim : self.trim + n]
+        inst *= self.compensate / scale
+        return inst

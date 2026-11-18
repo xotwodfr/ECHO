@@ -63,5 +63,13 @@ The first build downloads the model (67 MB, checked against its SHA-256).
   played always jump ahead.
 - **Disk:** about 1/4 of the FLAC size at 224 kbps. 700 GB of FLAC needs about 170 GB, or about
   120 GB at `160k`.
+- **New music:** once Navidrome has scanned a new song, ECHO's daily sweep queues it, starting
+  five minutes after ECHO starts and then every 24 hours. A song someone plays with Karaoke on
+  is asked for at once.
+- **Memory:** the service reads the song from disk a chunk at a time. The model costs about
+  1.3 GB, and a 12-minute song peaked at 1.9 GB in all (measured), so the 3 GB limit in the
+  compose example covers the 20-minute maximum.
+- **Failures:** a song that fails is tried three times. Failed songs are tried again when ECHO
+  restarts and a week later, in case the service was fixed in between.
 - **Progress:** `GET /api/v1/karaoke` reports ready, queued, failed and skipped songs and the bytes
   on disk. The app shows this in Settings → Karaoke.

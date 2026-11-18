@@ -18,6 +18,7 @@ const MAX_ATTEMPTS = 3;
 const RETRY_MS = 10 * 60_000;
 const OFFLINE_MS = 60_000; // the stem service is down (restarting, not deployed yet): wait and ask again
 const PAGE = 500;
+const RETRY_FAILED_MS = 7 * 86_400_000; // a failed song is tried again a week later
 
 export interface KaraokeDeps {
   db: Db;
@@ -92,6 +93,20 @@ export function createKaraoke(deps: KaraokeDeps) {
 
   // A job left "working" by a restart is simply queued again.
   db.prepare("UPDATE stems_jobs SET status = 'queued' WHERE status = 'working'").run();
+  retryFailed(0);
+
+  /**
+   * Failed songs older than [age] ms get three more tries: the stem service may have been fixed
+   * or given more memory since (a song it died on reads "socket hang up").
+   */
+  function retryFailed(age: number) {
+    return db
+      .prepare(
+        `UPDATE stems_jobs SET status = 'queued', attempts = 0, error = NULL, next_at = 0
+         WHERE status = 'failed' AND updated_at <= ?`,
+      )
+      .run(now() - age).changes;
+  }
 
   const get = (key: string) =>
     db.prepare('SELECT * FROM stems_jobs WHERE key = ?').get(key) as Job | undefined;
@@ -224,7 +239,12 @@ export function createKaraoke(deps: KaraokeDeps) {
 
   /** Every song of every library, queued at the lowest priority (songs already known are kept). */
   async function sweep() {
-    if (!deps.library) return 0;
+    const retried = retryFailed(RETRY_FAILED_MS);
+    if (retried) log('info', 'karaoke: failed songs tried again', { songs: retried });
+    if (!deps.library) {
+      kick();
+      return 0;
+    }
     let added = 0;
     for (const lib of await deps.libraries().catch(() => [])) {
       const insert = db.prepare(

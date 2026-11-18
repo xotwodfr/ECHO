@@ -41,28 +41,51 @@ def path_of(key):
     return os.path.join(OUT, key[:2], key + ".m4a")
 
 
-def decode(src):
-    """Any audio file -> float32 [2, n] at 44.1 kHz."""
-    raw = subprocess.run(
-        ["ffmpeg", "-v", "error", "-i", src, "-ac", "2", "-ar", str(SR), "-f", "f32le", "-"],
-        check=True, capture_output=True,
-    ).stdout
-    return np.frombuffer(raw, dtype=np.float32).reshape(-1, 2).T.copy()
+def decode(src, dest):
+    """Any audio file -> float32 stereo frames at 44.1 kHz in [dest] on disk, mapped as [n, 2].
 
-
-def encode(inst, vocals, dest):
-    """Instrumental and vocals -> one AAC 5.1 file (FL FR = instrumental, BL BR = vocals)."""
-    n = inst.shape[1]
-    six = np.zeros((n, 6), dtype=np.float32)  # FL FR FC LFE BL BR
-    six[:, 0], six[:, 1] = inst[0], inst[1]
-    six[:, 4], six[:, 5] = vocals[0], vocals[1]
-    np.clip(six, -1, 1, out=six)
-    tmp = dest + ".part.m4a"
+    The song stays on disk (paged in as it's read), not in memory: an hour-long track costs no
+    more RAM than a short one here.
+    """
     subprocess.run(
+        ["ffmpeg", "-v", "error", "-y", "-i", src, "-ac", "2", "-ar", str(SR), "-f", "f32le", dest],
+        check=True, capture_output=True,
+    )
+    size = os.path.getsize(dest)
+    if size < 8:
+        raise ValueError("no audio")
+    return np.memmap(dest, dtype=np.float32, mode="r", shape=(size // 8, 2))
+
+
+BLOCK = 1 << 18  # frames per write to the encoder (~6 s)
+
+
+def encode(inst, mix, dest):
+    """Instrumental ([2, n]) and the mix ([n, 2]) -> one AAC 5.1 file: FL FR = instrumental,
+    BL BR = vocals (the mix less the instrumental). Written to the encoder a block at a time."""
+    n = inst.shape[1]
+    tmp = dest + ".part.m4a"
+    p = subprocess.Popen(
         ["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", "6", "-channel_layout", "5.1",
          "-i", "-", "-c:a", "aac", "-b:a", BITRATE, "-movflags", "+faststart", tmp],
-        input=six.tobytes(), check=True, capture_output=True,
+        stdin=subprocess.PIPE, stderr=subprocess.PIPE,
     )
+    try:
+        for a in range(0, n, BLOCK):
+            b = min(n, a + BLOCK)
+            six = np.zeros((b - a, 6), dtype=np.float32)  # FL FR FC LFE BL BR
+            six[:, 0:2] = inst[:, a:b].T
+            six[:, 4:6] = mix[a:b] - six[:, 0:2]
+            np.clip(six, -1, 1, out=six)
+            p.stdin.write(six.tobytes())
+        p.stdin.close()
+        err = p.stderr.read()
+        if p.wait() != 0:
+            raise RuntimeError(f"ffmpeg: {err.decode(errors='replace')[:300]}")
+    except BaseException:
+        p.kill()
+        p.wait()
+        raise
     os.replace(tmp, dest)
 
 
@@ -70,18 +93,22 @@ def separate(key, body_path):
     global separator, working
     with lock:
         working = key
+        pcm = body_path + ".f32"
         try:
             if separator is None:
                 separator = Separator(MODEL, threads=THREADS)
             t = time.time()
-            mix = decode(body_path)
+            mix = decode(body_path, pcm)
             inst = separator.instrumental(mix)
             dest = path_of(key)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
-            encode(inst, mix - inst, dest)
+            encode(inst, mix, dest)
+            del mix, inst
             return os.path.getsize(dest), time.time() - t
         finally:
             working = None
+            if os.path.exists(pcm):
+                os.unlink(pcm)
 
 
 def stats():
@@ -223,8 +250,20 @@ class Handler(BaseHTTPRequestHandler):
         self._json(404, {"error": "not_found"})
 
 
+def tidy():
+    """What a crash left half-done: uploads, decoded audio and unfinished files."""
+    for root, _, files in os.walk(OUT):
+        for f in files:
+            if f.endswith((".src", ".f32", ".part.m4a")):
+                try:
+                    os.unlink(os.path.join(root, f))
+                except OSError:
+                    pass
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
+    tidy()
     port = int(os.environ.get("ECHO_STEMS_PORT", "8090"))
     print(f"echo-stems on :{port}, {THREADS} threads, writing to {OUT}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()

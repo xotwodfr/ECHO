@@ -231,6 +231,11 @@ describe('karaoke', () => {
     s.karaoke.kick();
     await until(() => s.status('al-3-t1') === 'failed');
     expect(await s.get('/karaoke/al-3-t1')).toEqual({ status: 'failed' });
+    // A week on (or after a restart), a failed song is tried again: the service may be fixed by then.
+    s.clock.t += 7 * 86_400_000;
+    stems.state.fail.set(key, 0);
+    await s.karaoke.sweep();
+    await until(() => s.status('al-3-t1') === 'ready');
     s.karaoke.stop();
   });
 
