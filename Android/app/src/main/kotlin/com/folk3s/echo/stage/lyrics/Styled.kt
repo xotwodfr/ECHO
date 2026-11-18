@@ -227,7 +227,7 @@ fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, 
       val target = anchor - tops[a] - (if (rules.center) heights[a] / 2 else 0f)
       for (i in slots.indices) {
         launch {
-          if (reduced) return@launch ys[i].snapTo(target)
+          if (reduced || abs(i - a) > 12) return@launch ys[i].snapTo(target)
           val wait = if (i > a) min(i - a, 8) * rules.stagger else 0L
           delay(wait)
           ys[i].animateTo(target, spring(dampingRatio = 0.85f, stiffness = 140f))
@@ -250,7 +250,7 @@ fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, 
           val near = rules.onlyNear == 0 || dist in (if (style == LyricStyle.Karaoke) 0..1 else -rules.onlyNear..rules.onlyNear)
           val alpha by animateFloatAsState(if (near) 1f else 0f, tween(260), label = "a")
           // Apple's depth: a little blur per line away from the one being sung, never smearing.
-          val blurDp by animateFloatAsState(if (rules.blur && dist != 0) min(abs(dist) * 0.8f, 3f) else 0f, tween(500), label = "b")
+          val blurDp by animateFloatAsState(if (rules.blur && dist != 0 && abs(dist) <= 4) min(abs(dist) * 0.8f, 3f) else 0f, tween(500), label = "b")
           val scale by animateFloatAsState(if (dist == 0 || style == LyricStyle.ColourBlock) 1f else 0.96f, spring(dampingRatio = 0.8f, stiffness = 200f), label = "s")
           Box(
             Modifier.fillMaxWidth()
@@ -316,7 +316,8 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
     // The unsung part of the line being sung: a little brighter than the lines around it.
     val ahead = white.copy(alpha = min(1f, rules.dim + 0.12f))
     Canvas(Modifier.fillMaxWidth().height(heightDp)) {
-      val t = time.value
+      // Only the line being sung reads the clock, so only it redraws every frame.
+      val t = if (active) time.value else 0L
       translate(0f, pad) {
         when {
           style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f), shadow = Shadow.None, drawStyle = Fill)

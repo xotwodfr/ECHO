@@ -350,7 +350,10 @@ class Playback(private val app: EchoApp) {
       val s = _state.value
       val t = s.track ?: continue
       if (!s.playing) continue
-      publish()
+      // Screens extrapolate the position between updates; publish (and rebuild the queue) only
+      // when that estimate has drifted, not every second, so the app doesn't redraw each tick.
+      val real = c?.currentPosition
+      if (real == null || kotlin.math.abs(real - s.positionNow()) > 250) publish()
       scrobble(t, _state.value.positionNow())
       record(t, _state.value.positionNow())
       sinceSave += 1000
