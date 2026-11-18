@@ -62,6 +62,8 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.longOrNull
 
 // Settings (S7; SETTINGS_AND_SECURITY.md §7.1): the web's preferences that matter on a phone, kept
 // on this device, the account, and signing this device out. The rest (connections, two-factor,
@@ -192,6 +194,15 @@ fun SettingsScreen() {
     Section("Playback")
     Toggle("Scrobble plays to Navidrome", p.scrobble) { v -> set { it.copy(scrobble = v) } }
 
+    Section("Karaoke")
+    Toggle("Karaoke mode", p.karaoke) { v -> set { it.copy(karaoke = v) } }
+    Text(
+      "Turns the singer down with the Vocals slider on Now Playing and in the lyrics. Your ECHO server separates each song once; until a song is ready, it plays as usual and switches over by itself.",
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+    KaraokeProgress()
+
     Section("Account")
     Text(who ?: app.api.base.substringAfter("://"), color = MaterialTheme.colorScheme.onSurfaceVariant)
     Text("Connections, two-factor sign-in and devices are managed on the web.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -270,4 +281,30 @@ private fun ClayDarkPicker(value: String, onPick: (String) -> Unit) {
         }
       }
   }
+}
+
+/** The server's progress through the library, asked for when Settings opens. */
+@Composable
+private fun KaraokeProgress() {
+  val app = LocalContext.current.echo
+  var line by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(Unit) {
+    line =
+      runCatching {
+          val o = app.api.get("/karaoke").jsonObject
+          fun n(k: String) = o[k]?.jsonPrimitive?.longOrNull ?: 0L
+          when {
+            o["enabled"]?.jsonPrimitive?.booleanOrNull != true -> "Not set up on your server yet: it needs the stem service (docs/KARAOKE.md)."
+            o["online"]?.jsonPrimitive?.booleanOrNull != true -> "The server's stem service isn't answering right now."
+            else -> {
+              val ready = n("ready")
+              val total = ready + n("queued") + n("failed") + n("skipped")
+              val gb = n("bytes") / 1e9
+              "$ready of $total songs ready · ${"%.1f".format(gb)} GB" + if (n("failed") > 0) " · ${n("failed")} couldn't be separated" else ""
+            }
+          }
+        }
+        .getOrNull()
+  }
+  line?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
 }

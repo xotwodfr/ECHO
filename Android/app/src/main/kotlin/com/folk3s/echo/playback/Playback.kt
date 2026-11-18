@@ -85,6 +85,10 @@ class Playback(private val app: EchoApp) {
   private var c: MediaController? = null
   private val pending = mutableListOf<(MediaController) -> Unit>()
   private val tracks = HashMap<String, Track>()
+  /** Karaoke versions the server has ready, by track key (their audio path). */
+  private val karaokeAudio = HashMap<String, String>()
+  /** The URI each item was given, by track key (a controller's items don't carry it back). */
+  private val uris = HashMap<String, String>()
   private var nextUp = 0 // items right after the current one that the user added
   private val _context = MutableStateFlow<PlayContext?>(null)
   /** Where the music plays from (an album, a playlist, Liked Songs, a radio): pages mark it. */
@@ -125,12 +129,24 @@ class Playback(private val app: EchoApp) {
     if (mc != null) block(mc) else pending += block
   }
 
+  private fun uriOf(t: Track): String {
+    val karaoke = karaokeAudio[t.key]?.takeIf { app.prefs.state.value.karaoke }
+    return app.api.url(karaoke ?: "/api/v1/navidrome/stream/${URLEncoder.encode(t.id, "UTF-8")}?format=raw")
+  }
+
+  /** Whether the item now playing is a karaoke version. */
+  fun playingKaraoke(): Boolean {
+    val key = _state.value.track?.key ?: return false
+    return uris[key]?.contains("/api/v1/karaoke/") == true
+  }
+
   private fun item(t: Track): MediaItem {
     tracks[t.key] = t
-    val id = URLEncoder.encode(t.id, "UTF-8")
+    val uri = uriOf(t)
+    uris[t.key] = uri
     return MediaItem.Builder()
       .setMediaId(t.key)
-      .setUri(app.api.url("/api/v1/navidrome/stream/$id?format=raw"))
+      .setUri(uri)
       .setMediaMetadata(
         MediaMetadata.Builder()
           .setTitle(t.title)
@@ -141,6 +157,35 @@ class Playback(private val app: EchoApp) {
           .build(),
       )
       .build()
+  }
+
+  // ---- Karaoke mode ----
+
+  /** The server has the song's karaoke version: used now if Karaoke mode is on. */
+  fun karaokeReady(key: String, audioPath: String) {
+    if (karaokeAudio[key] == audioPath) return
+    karaokeAudio[key] = audioPath
+    refreshSources()
+  }
+
+  /**
+   * Every queued item gets the source it should have now: the karaoke version while Karaoke mode
+   * is on and the server has one, the song otherwise. The item playing is swapped at the same
+   * position, so the music goes on where it was.
+   */
+  fun refreshSources() = run { mc ->
+    for (i in 0 until mc.mediaItemCount) {
+      val key = mc.getMediaItemAt(i).mediaId
+      val t = tracks[key] ?: continue
+      if (uris[key] == uriOf(t)) continue
+      val next = item(t)
+      if (i == mc.currentMediaItemIndex) {
+        val at = mc.currentPosition
+        mc.replaceMediaItem(i, next)
+        mc.seekTo(i, at)
+      } else mc.replaceMediaItem(i, next)
+    }
+    KaraokeMix.active = playingKaraoke()
   }
 
   // ---- commands ----
@@ -233,6 +278,8 @@ class Playback(private val app: EchoApp) {
     mc.stop()
     mc.clearMediaItems()
     tracks.clear()
+    karaokeAudio.clear()
+    uris.clear()
     nextUp = 0
     source = null
     queueBase = 0
@@ -290,6 +337,7 @@ class Playback(private val app: EchoApp) {
     lastIndex = index
     val up = upcomingIndices(mc).mapNotNull { trackAt(mc, it) }
     val now = if (mc.mediaItemCount > 0 && index != C.INDEX_UNSET) trackAt(mc, index) else null
+    KaraokeMix.active = now != null && uris[now.key]?.contains("/api/v1/karaoke/") == true
     _state.value =
       _state.value.copy(
         connected = true,

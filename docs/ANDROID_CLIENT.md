@@ -45,6 +45,29 @@ throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
 
+## v0.5: Karaoke mode (2026-11-18)
+
+Owner decisions (2026-11-18): a karaoke toggle like Apple Music's, with a vocals slider; the
+voice removed by a model on the server (no GPU), for the whole library and on demand, stored
+at /Media/Media/Instrumentals, gently (two cores, lowest priority). Server side: docs/KARAOKE.md.
+
+- **The file**: the server's karaoke version is AAC 5.1, with the instrumental on front L/R and
+  the vocals on rear L/R. `VocalMixProcessor` (`playback/VocalMix.kt`) comes first in the audio
+  sink. It mixes the file back to stereo as `instrumental + level × vocals`, with the level
+  gliding over each buffer, so the slider acts at once without clicks. Any other 5.1 song gets
+  an ordinary downmix. The Stage's tap sees the stereo result.
+- **Swapping** (`Playback.refreshSources`): with Karaoke mode on, each queued item gets the
+  karaoke URI once the server has it. The song playing is replaced at its position. Turning the
+  mode off swaps back to the original.
+- **Asking** (`playback/Karaoke.kt`): while on, the song playing is asked for every 5 s until
+  ready (`GET /karaoke/{id}`, made first), and the next two once a minute (`?soon=1`). Settled
+  answers (ready, failed, too long) are kept for the session.
+- **Downmix check**: if a karaoke file still arrives as 2 channels after 2 s (the phone's AAC
+  decoder downmixed it), the app says so once, because the voice can't be removed on that phone.
+- **UI** (`ui/Karaoke.kt`): a Karaoke pill on Now Playing with the Vocals slider and a status
+  line under it, a mic button on the lyrics dock with the slider over it, and Settings →
+  Karaoke with the server's progress. `Prefs.karaoke` and `Prefs.vocalLevel` (default 0 %).
+
 ## v0.4: Clay and Yarn (2026-11-18)
 
 Owner decisions (2026-11-18): a Clay theme (pastel plasticine, handmade realism, everything in

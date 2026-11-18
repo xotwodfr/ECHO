@@ -69,6 +69,10 @@ data class Prefs(
   val clayDark: String = "album",
   /** Squishes and needle clicks on presses in the Clay and Yarn themes. */
   val themeSounds: Boolean = true,
+  /** Karaoke mode (docs/KARAOKE.md): the server's karaoke version of each song, when it has one. */
+  val karaoke: Boolean = false,
+  /** How much of the voice Karaoke mode leaves, 0 to 1. */
+  val vocalLevel: Float = 0f,
 ) {
   /** The tabs in the user's order: every known tab once, whatever an older save holds. */
   val tabOrder: List<String> get() = (tabs.filter { it in DEFAULT_TABS } + DEFAULT_TABS).distinct()

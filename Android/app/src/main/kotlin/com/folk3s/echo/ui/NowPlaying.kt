@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -188,9 +189,11 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
       }
       Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
         Pill(EchoIcons.lyrics, "Lyrics") { nav.go(Route.Listen) }
-        Pill(EchoIcons.queue, "Up next", onQueue)
+        Pill(EchoIcons.queue, "Up next", onClick = onQueue)
+        Pill(EchoIcons.mic, "Karaoke", on = prefs.karaoke) { app.karaoke.setOn(!prefs.karaoke) }
         if (SleepTimer.minutes != null) Pill(EchoIcons.moon, "${SleepTimer.minutes} min") { SleepTimer.set(app, null) }
       }
+      VocalsSlider(Color.White, Modifier.padding(start = 28.dp, end = 28.dp, bottom = 12.dp))
       LyricsCard(p) { nav.go(Route.Listen) }
       Spacer(Modifier.height(32.dp))
     }
@@ -199,15 +202,20 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
 
 /** A translucent pill over the album's colours. */
 @Composable
-private fun Pill(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun Pill(icon: ImageVector, label: String, on: Boolean = false, onClick: () -> Unit) {
+  val made = look.material != Material.Flat
+  // On (Karaoke): a filled pill, the glyph and label cut out of it.
+  val fill = if (made) (if (on) matter.accent(0) else matter.paper) else Color.White.copy(alpha = if (on) 0.92f else 0.14f)
+  val ink = if (made) (if (on) inkOn(fill, matter.ink) else Color.White) else if (on) Color.Black.copy(alpha = 0.85f) else Color.White
   Row(
-    Modifier.height(if (look.material != Material.Flat) 44.dp else 40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick)
-      .then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 22.dp, seed = label.length) else Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.14f))).padding(horizontal = 16.dp),
+    Modifier.height(if (made) 44.dp else 40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick)
+      .semantics { if (on) stateDescription = "On" }
+      .then(if (made) Modifier.matter(fill, 22.dp, seed = label.length) else Modifier.clip(CircleShape).background(fill)).padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
+    Icon(icon, null, tint = ink, modifier = Modifier.size(18.dp))
     Spacer(Modifier.width(8.dp))
-    Text(label, color = Color.White, style = MaterialTheme.typography.labelLarge)
+    Text(label, color = ink, style = MaterialTheme.typography.labelLarge, maxLines = 1)
   }
 }
 

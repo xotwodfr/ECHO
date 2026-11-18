@@ -403,16 +403,25 @@ private fun StageDock(p: PlayerState, chrome: StageChrome, onQueue: () -> Unit) 
   val app = LocalContext.current.echo
   val shown = chrome.visible
   val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 640), label = "dock")
-  Row(
-    Modifier.fillMaxWidth().height(64.dp).alpha(alpha).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer)
-      .padding(horizontal = 12.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    IconBtn(EchoIcons.previous, "Previous", Chamber.text, 24) { app.playback.previous() }
-    PlayButton(p.playing, enabled = p.track != null, onClick = app.playback::toggle, size = 44)
-    IconBtn(EchoIcons.next, "Next", Chamber.text, 24) { app.playback.next() }
-    Box(Modifier.weight(1f).padding(horizontal = 8.dp)) { Progress(p, height = 3) }
-    IconBtn(EchoIcons.queue, "Queue", Chamber.text, 22, onQueue)
+  val prefs by app.prefs.state.collectAsStateWithLifecycle()
+  Column(Modifier.fillMaxWidth().alpha(alpha)) {
+    // Karaoke on: the vocals slider sits over the dock, so the level is a reach away while singing.
+    if (prefs.karaoke)
+      Box(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 16.dp, vertical = 6.dp)) {
+        VocalsSlider(Chamber.text)
+      }
+    Row(
+      Modifier.fillMaxWidth().height(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer)
+        .padding(horizontal = 12.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      IconBtn(EchoIcons.previous, "Previous", Chamber.text, 24) { app.playback.previous() }
+      PlayButton(p.playing, enabled = p.track != null, onClick = app.playback::toggle, size = 44)
+      IconBtn(EchoIcons.next, "Next", Chamber.text, 24) { app.playback.next() }
+      Box(Modifier.weight(1f).padding(horizontal = 8.dp)) { Progress(p, height = 3) }
+      IconBtn(EchoIcons.mic, if (prefs.karaoke) "Karaoke on" else "Karaoke off", if (prefs.karaoke) Chamber.text else Chamber.text.copy(alpha = 0.5f), 22) { app.karaoke.setOn(!prefs.karaoke) }
+      IconBtn(EchoIcons.queue, "Queue", Chamber.text, 22, onQueue)
+    }
   }
 }
 

@@ -29,6 +29,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   val lyrics by lazy { com.folk3s.echo.stage.lyrics.Lyrics(this) }
   val games by lazy { com.folk3s.echo.games.GameScores(this) }
   val sounds by lazy { com.folk3s.echo.ui.ThemeSounds(this) }
+  val karaoke by lazy { com.folk3s.echo.playback.Karaoke(this) }
 
   override fun onCreate() {
     super.onCreate()
@@ -43,6 +44,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
         else if (signedIn) {
           playback.reset()
           games.clear()
+          karaoke.clear()
         }
         signedIn = t != null
       }
