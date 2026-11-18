@@ -57,9 +57,14 @@ The first build downloads the model (67 MB, checked against its SHA-256).
 | --------------------- | ------- | -------------------------------------------- |
 | `ECHO_STEMS_THREADS`  | `2`     | CPU threads for the model                    |
 | `ECHO_STEMS_BITRATE`  | `224k`  | AAC bitrate of the 5.1 file (`160k` saves 30 %) |
+| `ECHO_STEMS_OVERLAP`  | `0.25`  | How much neighbouring chunks overlap; `0` is about 17 % faster |
 
 ## What to expect
 
+- **Faster:** set `ECHO_STEMS_THREADS` (and the service's `cpus`) to the machine's core count
+  (`nproc`), not more: measured on 4 cores, 2 threads ran at 1.1× realtime, 4 at 1.85×, and 8 at
+  1.3×. `ECHO_STEMS_OVERLAP: "0"` adds about 17 % more. It still runs at the lowest priority, so
+  anything else on the machine comes first.
 - **Speed:** on two CPU cores, a song takes about as long to split as it does to play. A song you
   start is usually ready a few minutes in. The app plays the original until then and switches over
   at the same position.

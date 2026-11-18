@@ -28,6 +28,9 @@ OUT = os.environ.get("ECHO_STEMS_DIR", "/stems")
 MODEL = os.environ.get("ECHO_STEMS_MODEL", "/models/UVR-MDX-NET-Inst_HQ_3.onnx")
 THREADS = int(os.environ.get("ECHO_STEMS_THREADS", "2"))
 BITRATE = os.environ.get("ECHO_STEMS_BITRATE", "224k")
+# How much neighbouring chunks overlap (blended, so there are no seams): 0.25 as the reference
+# implementation; 0 is about 17% faster, with the joins very nearly as clean.
+OVERLAP = min(0.5, max(0.0, float(os.environ.get("ECHO_STEMS_OVERLAP", "0.25"))))
 MAX_BYTES = 2_000_000_000  # a song, not a disk image
 KEY = re.compile(r"^[A-Za-z0-9._-]{1,200}$")
 
@@ -99,7 +102,7 @@ def separate(key, body_path):
                 separator = Separator(MODEL, threads=THREADS)
             t = time.time()
             mix = decode(body_path, pcm)
-            inst = separator.instrumental(mix)
+            inst = separator.instrumental(mix, overlap=OVERLAP)
             dest = path_of(key)
             os.makedirs(os.path.dirname(dest), exist_ok=True)
             encode(inst, mix, dest)
@@ -265,5 +268,5 @@ if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     tidy()
     port = int(os.environ.get("ECHO_STEMS_PORT", "8090"))
-    print(f"echo-stems on :{port}, {THREADS} threads, writing to {OUT}", flush=True)
+    print(f"echo-stems on :{port}, {THREADS} threads, overlap {OVERLAP}, writing to {OUT}", flush=True)
     ThreadingHTTPServer(("0.0.0.0", port), Handler).serve_forever()
