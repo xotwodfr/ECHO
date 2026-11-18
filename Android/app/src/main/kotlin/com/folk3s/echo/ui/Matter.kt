@@ -48,8 +48,11 @@ import kotlin.random.Random
 // little uneven); pressed, it sinks in. Yarn: knitted fabric (every stitch lit and shaded), puffed
 // like a cushion, with fuzz along its edges, ribbing on bars and stitched seams; pressed, it gives.
 // "Flat" is every other theme: a plain rounded surface.
+// v0.6: Liquid glass (frosted panes, light bending and catching at the edges, a reflection across
+// them), Paper (thick card with layered cut-paper shadows, creases and dog-eared corners) and
+// Retro hi-fi (brushed aluminium with a bevel and corner screws, on a wood-veneer cabinet).
 
-enum class Material { Flat, Clay, Yarn }
+enum class Material { Flat, Clay, Yarn, Glass, Paper, HiFi }
 
 /** The material's colours: the ground pages sit on, the paper for frames and bars, the accents. */
 @Immutable
@@ -97,6 +100,90 @@ private object Textures {
     }
     Bitmap.createBitmap(px, n, n, Bitmap.Config.ARGB_8888).asImageBitmap()
   }
+
+  /** Paper's fibres: a pale ground with short dark and light fibres, to multiply over the card. */
+  val fibre: ImageBitmap by lazy {
+    val n = 192
+    val rnd = Random(23)
+    val bmp = Bitmap.createBitmap(n, n, Bitmap.Config.ARGB_8888)
+    val c = android.graphics.Canvas(bmp)
+    c.drawColor(0xFFF4F2EE.toInt())
+    val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+    p.strokeCap = android.graphics.Paint.Cap.ROUND
+    repeat(900) {
+      val x = rnd.nextFloat() * n
+      val y = rnd.nextFloat() * n
+      val a = rnd.nextFloat() * Math.PI.toFloat()
+      val l = 2f + rnd.nextFloat() * 7f
+      p.strokeWidth = 0.5f + rnd.nextFloat() * 0.7f
+      p.color = if (rnd.nextFloat() < 0.6f) android.graphics.Color.argb(26 + rnd.nextInt(30), 90, 70, 50) else android.graphics.Color.argb(60, 255, 255, 255)
+      for (dx in intArrayOf(-n, 0, n)) for (dy in intArrayOf(-n, 0, n)) c.drawLine(x + dx, y + dy, x + dx + cos(a) * l, y + dy + sin(a) * l, p)
+    }
+    bmp.asImageBitmap()
+  }
+
+  /** Brushed aluminium: fine horizontal streaks, each row its own brightness. */
+  val brushed: ImageBitmap by lazy {
+    val w = 256
+    val h = 128
+    val rnd = Random(5)
+    val px = IntArray(w * h)
+    for (y in 0 until h) {
+      val row = 0.82f + 0.18f * rnd.nextFloat()
+      for (x in 0 until w) {
+        val v = (row + 0.06f * (rnd.nextFloat() - 0.5f) + 0.05f * sin((x + y * 7) * 0.05f)).coerceIn(0f, 1f)
+        val c = (v * 255).toInt()
+        px[y * w + x] = (0xFF shl 24) or (c shl 16) or (c shl 8) or c
+      }
+    }
+    Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888).asImageBitmap()
+  }
+
+  private val woods = HashMap<Int, ImageBitmap>()
+
+  /** Wood veneer: vertical grain in a few browns, with darker pores, a tile [unit] px tall. */
+  fun wood(unit: Int): ImageBitmap =
+    woods.getOrPut(unit) {
+      val w = 240
+      val h = unit * 8
+      val rnd = Random(41)
+      val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+      val c = android.graphics.Canvas(bmp)
+      val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG)
+      val browns = intArrayOf(0xFF6B3F22.toInt(), 0xFF7A4A29.toInt(), 0xFF5E361C.toInt(), 0xFF7D4D2B.toInt(), 0xFF6F4224.toInt())
+      var x = 0f
+      while (x < w) {
+        val sw = 2f + rnd.nextFloat() * 6f
+        p.color = browns[rnd.nextInt(browns.size)]
+        c.drawRect(x, 0f, x + sw + 0.6f, h.toFloat(), p)
+        x += sw
+      }
+      // Grain lines that wander a little down the board, and pores.
+      p.style = android.graphics.Paint.Style.STROKE
+      repeat(28) {
+        val gx = rnd.nextFloat() * w
+        val path = android.graphics.Path()
+        path.moveTo(gx, 0f)
+        var y = 0f
+        var cx = gx
+        while (y < h) {
+          y += h / 6f
+          cx += (rnd.nextFloat() - 0.5f) * 3f
+          path.lineTo(cx, y)
+        }
+        p.strokeWidth = 0.6f + rnd.nextFloat()
+        p.color = if (rnd.nextBoolean()) 0x30000000 else 0x18FFE0C0
+        c.drawPath(path, p)
+      }
+      p.style = android.graphics.Paint.Style.FILL
+      p.color = 0x28000000
+      repeat(500) {
+        val px0 = rnd.nextFloat() * w
+        val py0 = rnd.nextFloat() * h
+        c.drawRect(px0, py0, px0 + 0.8f, py0 + 2.5f, p)
+      }
+      bmp.asImageBitmap()
+    }
 
   private val knits = HashMap<Int, ImageBitmap>()
   private val ribs = HashMap<Int, ImageBitmap>()
@@ -212,8 +299,148 @@ fun Modifier.matter(color: Color, radius: Dp, pressed: Boolean = false, seed: In
       val shade = color.darker(0.6f)
       this.shadow(if (pressed) 1.dp else 9.dp * depth, shape, clip = false, ambientColor = shade, spotColor = shade).then(yarnBody(color, shape, pressed, seed, rib, seam, density))
     }
+    Material.Glass -> {
+      val shape = androidx.compose.foundation.shape.RoundedCornerShape(radius)
+      val shade = Color(0xFF14002A)
+      this.shadow(if (pressed) 2.dp else 10.dp * depth, shape, clip = false, ambientColor = shade, spotColor = shade).then(glassBody(color, shape, pressed, density))
+    }
+    Material.Paper -> {
+      val big = seed % 3 == 0
+      this.then(paperBody(color, radius.coerceAtMost(4.dp), pressed, seed, big, depth, density))
+    }
+    Material.HiFi -> {
+      val shape = androidx.compose.foundation.shape.RoundedCornerShape(radius.coerceAtMost(10.dp))
+      this.shadow(if (pressed) 1.dp else 8.dp * depth, shape, clip = false, ambientColor = Color.Black, spotColor = Color.Black).then(hifiBody(color, shape, pressed, density))
+    }
   }
 }
+
+/**
+ * Liquid glass: the colour as a tint in a frosted pane, lighter at the top; light catching the
+ * top-left edge and fading round to the bottom right; a reflection slanting across. Pressed, the
+ * pane brightens and the reflection goes.
+ */
+private fun glassBody(color: Color, shape: Shape, pressed: Boolean, density: Density) =
+  Modifier.drawWithCache {
+    val path = shape.createOutline(size, layoutDirection, this).path()
+    val w = size.width
+    val h = size.height
+    val tint = color.copy(alpha = (if (color.luminance() > 0.8f) 0.16f else 0.3f) + if (pressed) 0.12f else 0f)
+    val frost = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.2f), 0.45f to Color.White.copy(alpha = 0.04f), 1f to Color.White.copy(alpha = 0.1f))
+    val edge = with(density) { 1.4.dp.toPx() }
+    val rim = Brush.linearGradient(0f to Color.White.copy(alpha = 0.85f), 0.35f to Color.White.copy(alpha = 0.25f), 0.7f to Color.White.copy(alpha = 0.08f), 1f to Color.White.copy(alpha = 0.3f), start = Offset.Zero, end = Offset(w * 0.6f, h))
+    // The reflection: a soft slanted band across the left part of the pane.
+    val sheen = Brush.linearGradient(0.42f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.22f), 0.58f to Color.Transparent, start = Offset(-w * 0.3f, 0f), end = Offset(w * 0.5f, h * 0.9f))
+    // Light bending at the bottom edge: a thin bright caustic.
+    val caustic = Brush.horizontalGradient(listOf(Color.Transparent, Color.White.copy(alpha = 0.35f), Color.Transparent))
+    onDrawBehind {
+      clipPath(path) {
+        drawRect(tint)
+        drawRect(frost)
+        if (!pressed) drawRect(sheen)
+        drawRect(caustic, topLeft = Offset(w * 0.15f, h - edge * 1.5f), size = Size(w * 0.7f, edge))
+        drawPath(path, rim, style = Stroke(width = edge * 2))
+      }
+    }
+  }
+
+/** A card with a dog-eared top-right corner when [dog]; the corner's size in px. */
+private class PaperShape(private val radius: Dp, private val dog: Float) : Shape {
+  override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
+    val r = with(density) { radius.toPx() }.coerceAtMost(min(size.width, size.height) / 2)
+    val p = Path()
+    p.addRoundRect(RoundRect(0f, 0f, size.width, size.height, androidx.compose.ui.geometry.CornerRadius(r)))
+    if (dog <= 0f) return Outline.Generic(p)
+    val corner = Path().apply {
+      moveTo(size.width - dog, 0f)
+      lineTo(size.width + 1, 0f)
+      lineTo(size.width + 1, dog)
+      close()
+    }
+    return Outline.Generic(Path().apply { op(p, corner, androidx.compose.ui.graphics.PathOperation.Difference) })
+  }
+}
+
+/**
+ * Paper: thick card with its fibres, two layered cut-paper shadows (a crisp one and a soft one),
+ * on bigger pieces a crease catching the light and now and then a dog-eared corner. Pressed, it
+ * lies flat.
+ */
+private fun paperBody(color: Color, radius: Dp, pressed: Boolean, seed: Int, mayFold: Boolean, depth: Float, density: Density) =
+  Modifier.drawWithCache {
+    val w = size.width
+    val h = size.height
+    val m = min(w, h)
+    val big = m > with(density) { 72.dp.toPx() }
+    val dog = if (big && mayFold) with(density) { 22.dp.toPx() } else 0f
+    val path = PaperShape(radius, dog).createOutline(size, layoutDirection, this).path()
+    val fibre = ShaderBrush(ImageShader(Textures.fibre, TileMode.Repeated, TileMode.Repeated))
+    val near = with(density) { (if (pressed) 0.5.dp else 1.5.dp).toPx() } * depth
+    val far = with(density) { (if (pressed) 1.dp else 4.dp).toPx() } * depth
+    val rnd = Random(seed * 13 + 5)
+    val crease = big && seed % 2 == 0
+    val cx = w * (0.3f + 0.4f * rnd.nextFloat())
+    val tilt = h * (0.35f + 0.3f * rnd.nextFloat())
+    val line = with(density) { 1.dp.toPx() }
+    onDrawBehind {
+      // The shadows: a soft one far off, a crisp one close, as cut paper layered on a page.
+      translate(far * 0.6f, far) { drawPath(path, Color(0xFF46321E).copy(alpha = 0.10f)) }
+      translate(far * 0.3f, far * 0.55f) { drawPath(path, Color(0xFF46321E).copy(alpha = 0.08f)) }
+      translate(near * 0.5f, near) { drawPath(path, Color.Black.copy(alpha = 0.12f)) }
+      clipPath(path) {
+        drawRect(color)
+        drawRect(fibre, blendMode = BlendMode.Multiply)
+        if (crease) {
+          // A fold that was opened again: a shaded side and a lit side either side of the line.
+          drawLine(Color.Black.copy(alpha = 0.07f), Offset(cx - tilt * 0.45f, 0f), Offset(cx + tilt * 0.45f, h), line * 2)
+          drawLine(Color.White.copy(alpha = 0.5f), Offset(cx - tilt * 0.45f + line * 1.5f, 0f), Offset(cx + tilt * 0.45f + line * 1.5f, h), line)
+        }
+        if (pressed) drawRect(Color.Black.copy(alpha = 0.04f))
+      }
+      if (dog > 0f) {
+        // The folded-down corner: the back of the card, lit, with a shadow on the face under it.
+        val flap = Path().apply {
+          moveTo(w - dog, 0f)
+          lineTo(w - dog, dog)
+          lineTo(w, dog)
+          close()
+        }
+        translate(-line, line * 1.5f) { drawPath(flap, Color.Black.copy(alpha = 0.12f)) }
+        drawPath(flap, Brush.linearGradient(listOf(color.lighter(0.5f), color.darker(0.06f)), start = Offset(w - dog, dog), end = Offset(w - dog * 0.5f, dog * 0.5f)))
+      }
+    }
+  }
+
+/** Retro hi-fi: brushed aluminium in the colour, a bevel (lit top edge, dark bottom), screws in the corners of panels. */
+private fun hifiBody(color: Color, shape: Shape, pressed: Boolean, density: Density) =
+  Modifier.drawWithCache {
+    val path = shape.createOutline(size, layoutDirection, this).path()
+    val w = size.width
+    val h = size.height
+    val brushed = ShaderBrush(ImageShader(Textures.brushed, TileMode.Repeated, TileMode.Repeated))
+    val bevel = with(density) { 1.2.dp.toPx() }
+    val face =
+      if (!pressed) Brush.verticalGradient(0f to Color.White.copy(alpha = 0.16f), 0.5f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.16f))
+      else Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.22f), 1f to Color.White.copy(alpha = 0.06f))
+    val panel = w > with(density) { 150.dp.toPx() } && h > with(density) { 56.dp.toPx() }
+    val sr = with(density) { 3.2.dp.toPx() }
+    val inset = with(density) { 8.dp.toPx() }
+    onDrawBehind {
+      clipPath(path) {
+        drawRect(color)
+        drawRect(brushed, blendMode = BlendMode.Multiply)
+        drawRect(face)
+        drawLine(Color.White.copy(alpha = if (pressed) 0.1f else 0.55f), Offset(0f, bevel / 2), Offset(w, bevel / 2), bevel)
+        drawLine(Color.Black.copy(alpha = if (pressed) 0.2f else 0.45f), Offset(0f, h - bevel / 2), Offset(w, h - bevel / 2), bevel)
+      }
+      if (panel)
+        for ((x, y) in listOf(inset to inset, w - inset to inset, inset to h - inset, w - inset to h - inset)) {
+          drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFF8A8A8A)), Offset(x - sr * 0.3f, y - sr * 0.3f), sr * 1.4f), sr, Offset(x, y))
+          drawCircle(Color.Black.copy(alpha = 0.35f), sr, Offset(x, y), style = Stroke(bevel * 0.6f))
+          drawLine(Color.Black.copy(alpha = 0.5f), Offset(x - sr * 0.6f, y + sr * 0.3f), Offset(x + sr * 0.6f, y - sr * 0.3f), bevel * 0.8f)
+        }
+    }
+  }
 
 private fun clayBody(color: Color, shape: Shape, pressed: Boolean, seed: Int, density: Density) =
   Modifier.drawWithCache {
@@ -344,11 +571,63 @@ fun Modifier.matterGround(color: Color, material: Material = look.material): Mod
           }
         },
       )
+    Material.Glass -> {
+      val glowColors = matter.accents
+      this.then(
+        Modifier.drawWithCache {
+          // The album's colours as soft light behind the glass: three glows on a deep ground.
+          val w = size.width
+          val h = size.height
+          val glows = listOf(Triple(0.2f, 0.12f, 0), Triple(0.92f, 0.45f, 1), Triple(0.25f, 0.95f, 2))
+          onDrawBehind {
+            drawRect(color)
+            for ((x, y, i) in glows) {
+              val c = glowColors[i % glowColors.size]
+              drawRect(Brush.radialGradient(listOf(c.copy(alpha = 0.85f), c.copy(alpha = 0f)), Offset(w * x, h * y), maxOf(w, h) * 0.55f))
+            }
+          }
+        },
+      )
+    }
+    Material.Paper ->
+      this.then(
+        Modifier.drawWithCache {
+          val fibre = ShaderBrush(ImageShader(Textures.fibre, TileMode.Repeated, TileMode.Repeated))
+          val vignette = Brush.radialGradient(listOf(Color.Transparent, Color(0xFF46321E).copy(alpha = 0.12f)), Offset(size.width * 0.5f, size.height * 0.4f), maxOf(size.width, size.height))
+          onDrawBehind {
+            drawRect(color)
+            drawRect(fibre, blendMode = BlendMode.Multiply)
+            drawRect(vignette)
+          }
+        },
+      )
+    Material.HiFi ->
+      this.then(
+        Modifier.drawWithCache {
+          val unit = with(density) { 8.dp.toPx() }.toInt().coerceAtLeast(6)
+          val wood = ShaderBrush(ImageShader(Textures.wood(unit), TileMode.Repeated, TileMode.Repeated))
+          val shade = Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.12f), Color.Black.copy(alpha = 0.38f)))
+          onDrawBehind {
+            drawRect(wood)
+            // The finish: the veneer tinted toward the theme's wood, darker toward the bottom.
+            drawRect(color, alpha = 0.25f, blendMode = BlendMode.Color)
+            drawRect(shade)
+          }
+        },
+      )
   }
 }
 
 /** Ink that reads on [bg]: the material's ink on light colours, white on deep ones. */
-fun inkOn(bg: Color, ink: Color): Color = if (bg.luminance() > 0.42f) ink else Color.White
+fun inkOn(bg: Color, ink: Color): Color =
+  when {
+    bg.alpha < 1f -> ink // see-through (Liquid glass): what shows is the ground, so the material's ink
+    bg.luminance() > 0.42f -> if (ink.luminance() < 0.3f) ink else Color(0xFF1E1E20)
+    else -> Color.White
+  }
+
+/** Liquid glass's colours are tints of a see-through pane: a hair under opaque marks them so. */
+const val SEE_THROUGH = 0.995f
 
 /** An embroidery hoop: linen with its weave, held in a wooden ring. */
 fun Modifier.hoop(): Modifier =

@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -147,15 +148,31 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           .swipes(left = app.playback::next, right = app.playback::previous, down = { nav.back() }),
         contentAlignment = Alignment.Center,
       ) {
-        if (look.material != Material.Flat)
+        if (look.material == Material.HiFi)
+          // Retro hi-fi: the cover is the label of the record turning under the tonearm.
+          Vinyl(t.cover?.replace("size=600", "size=900"), t.album.title, p.playing, still, Modifier.fillMaxSize())
+        else if (look.material == Material.Paper)
+          // Paper: the cover as a polaroid, taped down a little crooked.
+          Box(Modifier.fillMaxSize().padding(10.dp).graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            rotationZ = -2.5f
+          }) {
+            Box(Modifier.fillMaxSize().matter(Color(0xFFFFFDF8), 2.dp, seed = 50, depth = 1.6f).padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 46.dp)) {
+              Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = 0.dp)
+            }
+            Tape(Modifier.align(Alignment.TopCenter).offset(y = (-10).dp), tilt = 3f)
+          }
+        else if (look.material != Material.Flat) {
+          val tilt = if (look.material == Material.Glass) 0f else -0.8f
           Box(
             Modifier.fillMaxSize().graphicsLayer {
               scaleX = scale
               scaleY = scale
-              rotationZ = -0.8f
+              rotationZ = tilt
             }.matter(matter.paper, look.page + 12.dp, seed = 50, depth = 1.6f, seam = true).padding(16.dp),
           ) { Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = look.page) }
-        else
+        } else
         Box(
           Modifier.fillMaxSize().graphicsLayer {
             scaleX = scale
@@ -183,7 +200,8 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
       Row(Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         IconBtn(EchoIcons.shuffle, if (p.shuffle) "Shuffle on" else "Shuffle off", if (p.shuffle) Color.White else Color.White.copy(alpha = 0.55f), 24) { app.playback.toggleShuffle() }
         IconBtn(EchoIcons.previous, "Previous", Color.White, 38) { app.playback.previous() }
-        PlayButton(p.playing, enabled = true, onClick = app.playback::toggle, size = 84)
+        if (look.material == Material.Paper) OrigamiPlay(p.playing, 84, matter.strong, app.playback::toggle)
+        else PlayButton(p.playing, enabled = true, onClick = app.playback::toggle, size = 84)
         IconBtn(EchoIcons.next, "Next", Color.White, 38) { app.playback.next() }
         IconBtn(if (p.repeat == Repeat.One) EchoIcons.repeatOne else EchoIcons.repeat, "Repeat", if (p.repeat != Repeat.Off) Color.White else Color.White.copy(alpha = 0.55f), 24) { app.playback.cycleRepeat() }
       }

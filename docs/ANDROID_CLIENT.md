@@ -45,6 +45,40 @@ throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
 
+## v0.6: Liquid glass, Paper & origami, Retro hi-fi (2026-11-18)
+
+Owner decision (2026-11-18): build the three themes from the mockups (themes3), each with its own
+lyrics and sounds like Clay and Yarn, and the Karaoke controls in each.
+
+- **Materials** (`ui/Matter.kt`), with new `Material` values:
+  - `Glass`: a tinted frosted pane, a top-left rim of light, a slanted reflection and a caustic
+    along the bottom. Its colours are a hair under opaque (`SEE_THROUGH`), so `inkOn` keeps the
+    material's ink on them. The ground is three glows from the album's colour on a deep ground.
+  - `Paper`: card with generated fibres, a crisp and a soft cut-paper shadow, a crease on some
+    bigger pieces and a dog-eared corner (`PaperShape`) on others. The ground is fibred paper.
+  - `HiFi`: generated brushed aluminium with a bevel and corner screws on panels, on a generated
+    wood-veneer cabinet.
+- **Palettes** (`matterColors`): Glass from the album (dark, and a light variant); Paper light
+  (pastel papers) and dark (kraft); Hi-fi dark (walnut, gunmetal panels, silver and champagne
+  buttons, amber for the playing track) and light (oak, silver panels).
+- **Pieces** (`ui/Made.kt`):
+  - Hi-fi: the cover as the label of a record turning at 33⅓ rpm under a tonearm that sets down
+    while playing; VU and PEAK meters from `AudioTap` on Home's featured panel; a knurled VOCALS
+    knob (drag, with detent clicks) instead of the slider.
+  - Paper: the Now Playing cover as a taped polaroid, tape on the featured card, and an origami
+    pentagon play button.
+  - Glass: round play button.
+- **Lyrics** (`Styled.kt`):
+  - Glass: the line being sung inside a glass lens that fades in as the line starts; the rest are
+    blurred.
+  - Cut-out: on a notebook page with blue rules and a red margin. Sung words are cut from coloured
+    paper and land on the line a little crooked; words to come are pencil.
+  - Display: a teal VFD in the cabinet. Capitals in a monospaced face, lit letter by letter with a
+    glow; the rest are unlit segments.
+  - Picking a theme picks its style.
+- **Sounds** (`scripts/android-sounds.py`): glass tink and chimes, paper rustle and fold, hi-fi
+  switch thunk and knob detent.
+
 ## v0.5: Karaoke mode (2026-11-18)
 
 Owner decisions (2026-11-18): a karaoke toggle like Apple Music's, with a vocals slider; the

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -851,7 +852,7 @@ fun PlaylistPicker(tracks: List<Track>, onClose: () -> Unit) {
 
 /** Home's featured card in clay or yarn: a slab of the material, a label, the title, a play button. */
 @Composable
-private fun MadeHero(kind: String, title: String, sub: String, onOpen: () -> Unit, onPlay: () -> Unit) {
+internal fun MadeHero(kind: String, title: String, sub: String, onOpen: () -> Unit, onPlay: () -> Unit) {
   val fill = matter.accent(0)
   val ink = inkOn(fill, matter.ink)
   val (source, down) = rememberPress()
@@ -862,6 +863,9 @@ private fun MadeHero(kind: String, title: String, sub: String, onOpen: () -> Uni
       style = MaterialTheme.typography.labelSmall,
       modifier = Modifier.padding(18.dp).matter(matter.paper, 12.dp, seed = 5, depth = 0.5f).padding(horizontal = 10.dp, vertical = 5.dp),
     )
+    // Retro hi-fi: the panel's meters move with what's playing. Paper: the card is taped down.
+    if (look.material == Material.HiFi) VuMeters(Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 18.dp).width(136.dp))
+    if (look.material == Material.Paper) Tape(Modifier.align(Alignment.TopCenter).offset(y = (-9).dp))
     Column(Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 86.dp, bottom = 20.dp)) {
       Text(title, color = ink, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
       Text(sub, color = ink.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

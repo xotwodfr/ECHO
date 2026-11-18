@@ -55,6 +55,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -193,6 +195,15 @@ fun StageScreen(
       )
     else if (style == LyricStyle.Clay) Box(Modifier.fillMaxSize().matterGround(com.folk3s.echo.stage.lyrics.slabOf(materialFor(style)), Material.Clay))
     else if (style == LyricStyle.Embroidered) Box(Modifier.fillMaxSize().matterGround(materialFor(style).accent(2).copy(alpha = 1f), Material.Yarn))
+    else if (style == LyricStyle.Glass || style == LyricStyle.CutOut || style == LyricStyle.Display) {
+      val mat = materialFor(style)
+      val material = when (style) {
+        LyricStyle.Glass -> Material.Glass
+        LyricStyle.CutOut -> Material.Paper
+        else -> Material.HiFi
+      }
+      androidx.compose.runtime.CompositionLocalProvider(com.folk3s.echo.ui.LocalMatter provides mat) { Box(Modifier.fillMaxSize().matterGround(mat.ground, material)) }
+    }
     else if (style != LyricStyle.ColourBlock) AlbumMesh(reduced)
     val t = p.track
     when {
@@ -341,7 +352,7 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome, st
     else -> {
       val reduced = app.prefs.reducedMotion(prefs)
       val offset = ls.offsetMs + prefs.lyricOffsetMs
-      val mat = if (style == LyricStyle.Clay || style == LyricStyle.Embroidered) materialFor(style) else null
+      val mat = if (style == LyricStyle.Clay || style == LyricStyle.Embroidered || style == LyricStyle.Glass) materialFor(style) else null
       val seek = { ms: Long ->
         app.playback.seek(ms + offset)
         if (!app.playback.state.value.playing) app.playback.toggle()
@@ -350,6 +361,15 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome, st
       if (style == LyricStyle.Embroidered)
         // The words on an embroidery hoop, set on the knitted ground.
         Box(Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = with(LocalDensity.current) { dockPx.toDp() } + 10.dp).hoop().padding(vertical = 12.dp)) {
+          com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, accent, 0f, mat, seek)
+        }
+      else if (style == LyricStyle.CutOut || style == LyricStyle.Display)
+        // A notebook page on the paper ground; or the cabinet's glowing display.
+        Box(
+          Modifier.fillMaxSize().padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = with(LocalDensity.current) { dockPx.toDp() } + 10.dp)
+            .then(if (style == LyricStyle.CutOut) Modifier.notebook() else Modifier.vfdPanel())
+            .padding(vertical = 12.dp),
+        ) {
           com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, accent, 0f, mat, seek)
         }
       else com.folk3s.echo.stage.lyrics.StyledLyrics(doc, style, offset, prefs.lyricScale, reduced, accent, dockPx, mat, seek)
@@ -363,9 +383,54 @@ private fun LyricsView(stage: StageView?, dockPx: Float, chrome: StageChrome, st
   }
 }
 
-/** The palette a material lyric style draws with: Clay's for the dark (as the user set it), or Yarn's. */
+/** The palette a material lyric style draws with: Clay's for the dark (as the user set it), Yarn's, Glass's, Paper's or Hi-fi's. */
 @Composable
-private fun materialFor(style: LyricStyle): com.folk3s.echo.ui.MatterColors {
+internal fun materialFor(style: LyricStyle): com.folk3s.echo.ui.MatterColors {
   val prefs = LocalContext.current.echo.prefs.state.value
-  return com.folk3s.echo.ui.matterColors(if (style == LyricStyle.Clay) com.folk3s.echo.ui.ThemePreset.Clay else com.folk3s.echo.ui.ThemePreset.Yarn, true, prefs.clayDark, stagePalette().accentColor)
+  val preset =
+    when (style) {
+      LyricStyle.Clay -> com.folk3s.echo.ui.ThemePreset.Clay
+      LyricStyle.Glass -> com.folk3s.echo.ui.ThemePreset.Glass
+      LyricStyle.CutOut -> com.folk3s.echo.ui.ThemePreset.Paper
+      LyricStyle.Display -> com.folk3s.echo.ui.ThemePreset.HiFi
+      else -> com.folk3s.echo.ui.ThemePreset.Yarn
+    }
+  // The notebook sits on light paper; the others are dark.
+  return com.folk3s.echo.ui.matterColors(preset, style != LyricStyle.CutOut, prefs.clayDark, stagePalette().accentColor)
 }
+
+/** A notebook page: off-white with its fibres, a red margin line, lying on the paper ground with a shadow. */
+internal fun Modifier.notebook(): Modifier =
+  this.drawWithCache {
+    val r = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx())
+    val margin = 14.dp.toPx()
+    onDrawBehind {
+      drawRoundRect(Color(0xFF46321E).copy(alpha = 0.18f), topLeft = Offset(3.dp.toPx(), 6.dp.toPx()), size = size, cornerRadius = r)
+      drawRoundRect(Color(0xFFFBF8F2), cornerRadius = r)
+      drawLine(Color(0xFFE8A3A3), Offset(margin, 0f), Offset(margin, size.height), 1.5.dp.toPx())
+    }
+  }
+
+/** The hi-fi's display window: a deep green-black glass with its dot grid, set into the cabinet. */
+internal fun Modifier.vfdPanel(): Modifier =
+  this.drawWithCache {
+    val r = androidx.compose.ui.geometry.CornerRadius(10.dp.toPx())
+    val dot = 4.dp.toPx()
+    val glare = androidx.compose.ui.graphics.Brush.linearGradient(0.3f to Color.Transparent, 0.38f to Color.White.copy(alpha = 0.05f), 0.5f to Color.Transparent, start = Offset.Zero, end = Offset(size.width, size.height))
+    onDrawBehind {
+      drawRoundRect(Color.Black.copy(alpha = 0.5f), topLeft = Offset(0f, 6.dp.toPx()), size = size, cornerRadius = r)
+      drawRoundRect(Color(0xFF0B1512), cornerRadius = r)
+      var y = dot / 2
+      while (y < size.height) {
+        var x = dot / 2
+        while (x < size.width) {
+          drawCircle(Color(0xFF50FFDC).copy(alpha = 0.05f), 0.6.dp.toPx(), Offset(x, y))
+          x += dot
+        }
+        y += dot
+      }
+      drawRoundRect(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)), Offset(size.width / 2, size.height / 2), maxOf(size.width, size.height) * 0.7f), cornerRadius = r)
+      drawRoundRect(glare, cornerRadius = r)
+      drawRoundRect(Color(0xFF222222), cornerRadius = r, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx()))
+    }
+  }

@@ -33,4 +33,24 @@ class MatterTest {
     assertEquals(matterColors(ThemePreset.Clay, false, "navy", album), matterColors(ThemePreset.Clay, false, "album", Color.Red))
     assertEquals(Color(0xFF8E2F4F), matterColors(ThemePreset.Yarn, false, "album", album).strong)
   }
+
+  @Test
+  fun glassGlowsFollowTheAlbumAndItsPanesAreSeeThrough() {
+    val red = matterColors(ThemePreset.Glass, true, "album", Color(0xFFD03050))
+    val blue = matterColors(ThemePreset.Glass, true, "album", Color(0xFF3050D0))
+    assert(red.accent(0) != blue.accent(0))
+    // Text on a pane is the material's ink (white in the dark), whatever the tint's brightness.
+    assertEquals(Color.White, com.folk3s.echo.ui.inkOn(red.accent(0), red.ink))
+    assertEquals(Color.White, com.folk3s.echo.ui.inkOn(red.paper, red.ink))
+  }
+
+  @Test
+  fun paperAndHiFiInkReadsOnTheirPanels() {
+    val hifi = matterColors(ThemePreset.HiFi, true, "album", album)
+    // Light ink on the wood; on a brushed-silver button, dark ink.
+    assertEquals(Color(0xFF1E1E20), com.folk3s.echo.ui.inkOn(hifi.accent(0), hifi.ink))
+    assertEquals(Color.White, com.folk3s.echo.ui.inkOn(hifi.paper, hifi.ink))
+    val paper = matterColors(ThemePreset.Paper, false, "album", album)
+    assertEquals(paper.ink, com.folk3s.echo.ui.inkOn(paper.paper, paper.ink))
+  }
 }

@@ -435,7 +435,7 @@ fun PlayButton(playing: Boolean, enabled: Boolean, onClick: () -> Unit, size: In
   val (source, down) = rememberPress()
   val fill = if (made) matter.accent(0) else if (enabled) Chamber.text else Chamber.surface3
   Box(
-    (if (made) Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.94f, source = source, onClick = press).matter(fill, (size * 0.38f).dp, pressed = down, seed = size, depth = 1.3f)
+    (if (made) Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.94f, source = source, onClick = press).matter(fill, if (look.material == Material.Glass) (size / 2).dp else (size * 0.38f).dp, pressed = down, seed = size, depth = 1.3f)
     else Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.9f, onClick = press).clip(RoundedCornerShape((size * corner).dp)).background(fill))
       .semantics { contentDescription = if (playing) "Pause" else "Play" },
     contentAlignment = Alignment.Center,

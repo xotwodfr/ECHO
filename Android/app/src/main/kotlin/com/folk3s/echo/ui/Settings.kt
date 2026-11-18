@@ -119,7 +119,7 @@ fun SettingsScreen() {
 
     Section("Appearance")
     Text("Theme", style = MaterialTheme.typography.titleSmall)
-    // Clay and Yarn bring their own lyrics; the style can still be changed after.
+    // The made themes bring their own lyrics; the style can still be changed after.
     ThemePicker(p.theme) { id ->
       set {
         it.copy(
@@ -127,6 +127,9 @@ fun SettingsScreen() {
           lyricStyle = when (id) {
             "clay" -> LyricStyle.Clay
             "yarn" -> LyricStyle.Embroidered
+            "glass" -> LyricStyle.Glass
+            "paper" -> LyricStyle.CutOut
+            "hifi" -> LyricStyle.Display
             else -> it.lyricStyle
           },
         )
@@ -135,7 +138,16 @@ fun SettingsScreen() {
     Choice("Light or dark", "Theme default: each theme's own (Spotify style is dark, Apple Music style light, ECHO follows the system).", DarkMode.entries.map { it to (if (it == DarkMode.Theme) "Theme" else it.label) }, p.darkMode) { v -> set { it.copy(darkMode = v) } }
     if (p.theme == "clay") ClayDarkPicker(p.clayDark) { v -> set { it.copy(clayDark = v) } }
     Toggle("Haptics (light taps on presses, likes and answers)", p.haptics) { v -> set { it.copy(haptics = v) } }
-    if (p.theme == "clay" || p.theme == "yarn") Toggle(if (p.theme == "clay") "Clay sounds (squishes and pops on presses)" else "Yarn sounds (soft thumps and needle clicks)", p.themeSounds) { v -> set { it.copy(themeSounds = v) } }
+    val soundsLabel =
+      when (p.theme) {
+        "clay" -> "Clay sounds (squishes and pops on presses)"
+        "yarn" -> "Yarn sounds (soft thumps and needle clicks)"
+        "glass" -> "Glass sounds (taps and chimes)"
+        "paper" -> "Paper sounds (rustles and folds)"
+        "hifi" -> "Hi-fi sounds (switch thunks and knob clicks)"
+        else -> null
+      }
+    if (soundsLabel != null) Toggle(soundsLabel, p.themeSounds) { v -> set { it.copy(themeSounds = v) } }
 
     Section("Tabs")
     Text("The order of the tabs at the bottom. The first one opens when ECHO starts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -226,9 +238,10 @@ private fun ThemePicker(current: String, onPick: (String) -> Unit) {
     for (t in ThemePreset.entries) {
       val on = t.id == current
       val dark = t.dark ?: systemDark
-      val ground = (if (dark) t.darkGround else t.lightGround) ?: if (dark) Color(0xFF16141A) else Color(0xFFF6F4F8)
-      val ink = if (dark) Color.White else Color(0xFF16141A)
-      val accent = t.accent ?: when (t) {
+      val made = if (t.look.material != Material.Flat) matterColors(t, dark, "album", albumAccent()) else null
+      val ground = made?.ground ?: (if (dark) t.darkGround else t.lightGround) ?: if (dark) Color(0xFF16141A) else Color(0xFFF6F4F8)
+      val ink = made?.ink ?: if (dark) Color.White else Color(0xFF16141A)
+      val accent = made?.strong ?: t.accent ?: when (t) {
         ThemePreset.Monochrome -> ink
         ThemePreset.MaterialYou -> MaterialTheme.colorScheme.primary
         else -> albumAccent()

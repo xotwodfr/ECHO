@@ -29,6 +29,9 @@ enum class LyricStyle(val label: String, val blurb: String) {
   Kinetic("Kinetic", "One huge line at a time; words pop in as they're sung."),
   Clay("Clay", "Sung words puff up out of the clay; the rest are stamped into it."),
   Embroidered("Embroidered", "Words traced on a hoop, stitched in thread as they're sung."),
+  Glass("Glass", "The line being sung in a moving glass lens; the rest frosted behind."),
+  CutOut("Cut-out", "A notebook page; sung words cut out of coloured paper and stuck on, crooked."),
+  Display("Display", "A glowing teal hi-fi display; sung letters light up."),
   Karaoke("Karaoke", "Two centred lines; the sung part changes colour."),
   Classic("ECHO classic", "ECHO's own: glow, depth and duets over the visualizer."),
 }

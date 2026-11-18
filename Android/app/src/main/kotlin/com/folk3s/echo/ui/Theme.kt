@@ -127,6 +127,9 @@ enum class ThemePreset(
   YouTubeMusic("youtube", "YouTube Music style", "Red, dark, round art", Color(0xFFFF0033), dark = true, titleWeight = 700, look = Look(art = 999.dp, rowArt = 999.dp, hero = 16.dp, button = 999.dp, mini = 12.dp, circleArt = true), darkGround = Color(0xFF030303), lightGround = Color(0xFFFFFFFF)),
   Clay("clay", "Clay", "Pastel plasticine, shaped by hand", Color(0xFFC4607A), dark = false, titleWeight = 900, look = Look(art = 22.dp, rowArt = 14.dp, hero = 30.dp, button = 24.dp, mini = 26.dp, navPill = true, material = Material.Clay)),
   Yarn("yarn", "Yarn", "Knitted in cosy autumn colours", Color(0xFF8E2F4F), dark = false, titleWeight = 900, look = Look(art = 18.dp, rowArt = 12.dp, hero = 26.dp, button = 999.dp, mini = 24.dp, navPill = true, material = Material.Yarn)),
+  Glass("glass", "Liquid glass", "Frosted panes over the album's colours", null, dark = true, titleWeight = 900, look = Look(art = 20.dp, rowArt = 12.dp, hero = 28.dp, button = 999.dp, mini = 24.dp, navPill = true, material = Material.Glass)),
+  Paper("paper", "Paper & origami", "Folded card, polaroids and tape", Color(0xFFE07E5C), dark = false, titleWeight = 900, look = Look(art = 2.dp, rowArt = 2.dp, hero = 3.dp, button = 3.dp, mini = 4.dp, navPill = true, material = Material.Paper)),
+  HiFi("hifi", "Retro hi-fi", "Wood veneer, brushed aluminium, a teal glow", Color(0xFFFFB547), dark = true, titleWeight = 900, look = Look(art = 3.dp, rowArt = 2.dp, hero = 8.dp, button = 6.dp, mini = 8.dp, navPill = true, material = Material.HiFi)),
   MaterialYou("materialyou", "Material You", "Colours from your wallpaper", null, dark = null, titleWeight = 700),
   Monochrome("mono", "Monochrome", "Greys only: the art is the colour", null, dark = null, style = PaletteStyle.Monochrome);
 
@@ -215,11 +218,16 @@ fun EchoTheme(forceDark: Boolean = false, content: @Composable () -> Unit) {
     if (preset.look.material != Material.Flat) {
       val mc = matterColors(preset, dark, prefs.clayDark, stagePalette().accentColor)
       val base = MaterialTheme.colorScheme
-      val strong = if (preset == ThemePreset.Clay) (if (dark) mc.accent(0).lighter(0.25f) else Color(0xFFB04F6C)) else if (dark) Color(0xFFE0AE4A) else Color(0xFF8E2F4F)
+      val strong =
+        when (preset) {
+          ThemePreset.Clay -> if (dark) mc.accent(0).lighter(0.25f) else Color(0xFFB04F6C)
+          ThemePreset.Yarn -> if (dark) Color(0xFFE0AE4A) else Color(0xFF8E2F4F)
+          else -> mc.strong
+        }
       val scheme =
         base.copy(
           primary = strong,
-          onPrimary = if (strong.luminance() > 0.5f) mc.ink else Color.White,
+          onPrimary = if (strong.luminance() > 0.5f) (if (mc.ink.luminance() < 0.3f) mc.ink else Color(0xFF1E1E20)) else Color.White,
           primaryContainer = mc.accent(0),
           onPrimaryContainer = inkOn(mc.accent(0), mc.ink),
           secondaryContainer = mc.paper,
@@ -314,9 +322,63 @@ private fun Color.asClay(): Color {
   return hsvColor(h, if (sat < 0.08f) 0.06f else 0.48f, 0.74f)
 }
 
-/** The Clay and Yarn palettes, light and dark (Clay's dark from the album or the chosen colour). */
+/** A colour as Liquid glass's glow: its hue, vivid and bright. */
+private fun Color.asGlow(): Color {
+  val (h, sat, _) = hsv()
+  return hsvColor(h, if (sat < 0.08f) 0.1f else sat.coerceIn(0.55f, 0.8f), 1f)
+}
+
+/**
+ * The material palettes, light and dark: Clay (its dark from the album or the chosen colour), Yarn,
+ * Liquid glass (its glows from the album), Paper and Retro hi-fi.
+ */
 fun matterColors(preset: ThemePreset, dark: Boolean, clayDark: String, album: Color): MatterColors =
   when {
+    preset == ThemePreset.Glass -> {
+      val g = album.asGlow()
+      val glows = listOf(g, g.hue(-80f), g.hue(55f))
+      val pane = Color.White.copy(alpha = SEE_THROUGH)
+      if (dark)
+        MatterColors(ground = hsvColor(g.hsv()[0], 0.62f, 0.22f), paper = pane, accents = glows.map { it.copy(alpha = SEE_THROUGH) }, ink = Color.White, onAccent = Color.White, strong = pane)
+      else
+        MatterColors(ground = hsvColor(g.hsv()[0], 0.12f, 0.96f), paper = pane, accents = glows.map { it.lighter(0.35f).copy(alpha = SEE_THROUGH) }, ink = Color(0xFF1C1530), onAccent = Color(0xFF1C1530), strong = Color(0xFF1C1530).copy(alpha = SEE_THROUGH))
+    }
+    preset == ThemePreset.Paper && !dark ->
+      MatterColors(
+        ground = Color(0xFFEFE8DC),
+        paper = Color(0xFFFBF8F2),
+        accents = listOf(Color(0xFFF6C9B4), Color(0xFFCFE3C8), Color(0xFFCBD9F2), Color(0xFFF4E3A1), Color(0xFFE8C6E0), Color(0xFFF2A385)),
+        ink = Color(0xFF2F2A24),
+        onAccent = Color(0xFF2F2A24),
+        strong = Color(0xFFE07E5C),
+      )
+    preset == ThemePreset.Paper ->
+      MatterColors(
+        ground = Color(0xFF24211D),
+        paper = Color(0xFF38332C),
+        accents = listOf(Color(0xFFB9785E), Color(0xFF7E9A74), Color(0xFF7389B3), Color(0xFFBFA458), Color(0xFF9C7393), Color(0xFFD98B6C)),
+        ink = Color(0xFFF1EADF),
+        onAccent = Color.White,
+        strong = Color(0xFFE07E5C),
+      )
+    preset == ThemePreset.HiFi && dark ->
+      MatterColors(
+        ground = Color(0xFF6B3F22),
+        paper = Color(0xFF3C3D41),
+        accents = listOf(Color(0xFFCFD0D3), Color(0xFFD8C9A3), Color(0xFF4A4B50), Color(0xFFB9BABD), Color(0xFF8A8B90), Color(0xFFE2D6B4)),
+        ink = Color(0xFFF2E9DC),
+        onAccent = Color(0xFF1E1E20),
+        strong = Color(0xFFFFB547),
+      )
+    preset == ThemePreset.HiFi ->
+      MatterColors(
+        ground = Color(0xFFB98A5C),
+        paper = Color(0xFFD6D7DA),
+        accents = listOf(Color(0xFFE4E5E8), Color(0xFFE6D9B6), Color(0xFFC4C5C9), Color(0xFFCFD0D3), Color(0xFFB0B1B5), Color(0xFFEDE3C7)),
+        ink = Color(0xFF1F1F21),
+        onAccent = Color(0xFF1F1F21),
+        strong = Color(0xFF2A2A2C),
+      )
     preset == ThemePreset.Clay && !dark ->
       MatterColors(
         ground = Color(0xFFF3ECE6),

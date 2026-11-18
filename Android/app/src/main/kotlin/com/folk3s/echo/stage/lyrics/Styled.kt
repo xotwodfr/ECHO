@@ -187,6 +187,9 @@ private fun rulesOf(s: LyricStyle) =
     LyricStyle.Karaoke -> Rules(28f, 800, true, 0.42f, false, 0.6f, 0, 1, true)
     LyricStyle.Clay -> Rules(31f, 900, false, 0.3f, false, 1f, 40, 0, false)
     LyricStyle.Embroidered -> Rules(28f, 800, false, 0.3f, false, 1f, 35, 0, true)
+    LyricStyle.Glass -> Rules(29f, 850, false, 0.3f, true, 0.4f, 45, 0, false)
+    LyricStyle.CutOut -> Rules(25f, 800, false, 0.28f, false, 1f, 35, 0, false)
+    LyricStyle.Display -> Rules(21f, 700, false, 0.3f, false, 1f, 30, 0, true)
     else -> Rules(30f, 800, false, 0.3f, true, 0.35f, 45, 0, false)
   }
 
@@ -236,11 +239,12 @@ fun StyledLyrics(doc: LyricsDoc, style: LyricStyle, offset: Long, scale: Float, 
     }
     val text =
       TextStyle(
-        fontFamily = font,
+        // The display's segments: a monospaced face, spaced out like a tape deck's readout.
+        fontFamily = if (style == LyricStyle.Display) androidx.compose.ui.text.font.FontFamily.Monospace else font,
         fontWeight = FontWeight(rules.weight),
         fontSize = (rules.size * scale).sp,
-        lineHeight = (rules.size * 1.18f * scale).sp,
-        letterSpacing = (-0.3).sp,
+        lineHeight = (rules.size * (if (style == LyricStyle.CutOut) 1.55f else 1.18f) * scale).sp,
+        letterSpacing = if (style == LyricStyle.Display) 1.sp else (-0.3).sp,
         textAlign = if (rules.center) TextAlign.Center else TextAlign.Start,
       )
     Column(Modifier.fillMaxWidth().wrapContentHeight(Alignment.Top, unbounded = true).padding(horizontal = 28.dp)) {
@@ -295,7 +299,9 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
   val align = if (line.right && !rules.center) TextAlign.End else text.textAlign
   BoxWithConstraints(Modifier.fillMaxWidth()) {
     val w = constraints.maxWidth
-    val layout = remember(line.text, text, w, align) { tm.measure(AnnotatedString(line.text), text.copy(textAlign = align), constraints = Constraints(maxWidth = w)) }
+    // The display shows capitals only; one character for one, so the words' places hold.
+    val shown = remember(line.text, style) { if (style == LyricStyle.Display) String(CharArray(line.text.length) { line.text[it].uppercaseChar() }) else line.text }
+    val layout = remember(shown, text, w, align) { tm.measure(AnnotatedString(shown), text.copy(textAlign = align), constraints = Constraints(maxWidth = w)) }
     // On the line being sung, each word is its own small layout set on the line's baseline at its
     // place: a word can rise, swell and glow without clipping, and never doubles a neighbour.
     val words =
@@ -303,7 +309,7 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
         if (!active || !line.wordTimed) null
         else
           line.words.map { wd ->
-            val sub = tm.measure(AnnotatedString(line.text.substring(wd.from, wd.to)), text.copy(textAlign = TextAlign.Start), softWrap = false)
+            val sub = tm.measure(AnnotatedString(shown.substring(wd.from, wd.to)), text.copy(textAlign = TextAlign.Start), softWrap = false)
             val row = layout.getLineForOffset(wd.from)
             Placed(sub, Offset(layout.getHorizontalPosition(wd.from, true).let { if (layout.getParagraphDirection(wd.from) == androidx.compose.ui.text.style.ResolvedTextDirection.Rtl) it - sub.size.width else it }, layout.getLineBaseline(row) - sub.firstBaseline))
           }
@@ -319,7 +325,26 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
       // Only the line being sung reads the clock, so only it redraws every frame.
       val t = if (active) time.value else 0L
       translate(0f, pad) {
+        // The notebook's ruled lines, under every row of the page's text.
+        if (style == LyricStyle.CutOut) ruled(layout, em)
+        // Glass: the line being sung sits in a lens of glass, which clears as the line begins.
+        if (style == LyricStyle.Glass && active) lens(layout, progress(t, line.start - 200, line.start + 150), em)
         when {
+          style == LyricStyle.CutOut && !active -> drawText(layout, color = PENCIL.copy(alpha = if (past) 0.62f else 0.42f), shadow = Shadow.None, drawStyle = Fill)
+          style == LyricStyle.Display && !active -> drawText(layout, color = VFD.copy(alpha = 0.16f), shadow = Shadow.None, drawStyle = Fill)
+          style == LyricStyle.CutOut && words == null -> {
+            // No word timing: each row of the line is cut out as one strip, a word's beat apart.
+            for (row in 0 until layout.lineCount) {
+              val r = Rect(layout.getLineLeft(row), layout.getLineTop(row), layout.getLineRight(row), layout.getLineBottom(row))
+              val stuck = easeOut(((t - line.start - row * 120L).coerceAtLeast(0L)) / 180f)
+              if (stuck <= 0f) clipRect(r.left, r.top, r.right, r.bottom) { drawText(layout, color = PENCIL.copy(alpha = 0.42f), shadow = Shadow.None, drawStyle = Fill) }
+              else cutOut(r, row + line.start.toInt(), stuck, em) { clipRect(r.left - em, r.top, r.right + em, r.bottom) { drawText(layout, color = INK, shadow = Shadow.None, drawStyle = Fill) } }
+            }
+          }
+          style == LyricStyle.Display && words == null -> {
+            val whole = Rect(0f, 0f, layout.size.width.toFloat(), layout.size.height.toFloat())
+            vfd(layout, whole, progress(t, line.start, line.end), em)
+          }
           style == LyricStyle.ColourBlock -> drawText(layout, color = if (active || past) white else Color.Black.copy(alpha = 0.62f), shadow = Shadow.None, drawStyle = Fill)
           // Clay: lines not being sung are stamped into the slab.
           style == LyricStyle.Clay && !active -> stamped(layout, slabOf(mat), em)
@@ -358,6 +383,14 @@ private fun LineCanvas(line: SLine, style: LyricStyle, rules: Rules, text: TextS
                       }) { puffy(sub, clayOf(mat), em, rise) }
                   }
                   LyricStyle.Embroidered -> stitchUpTo(sub, r, p, threadOf(mat, false), em, needle = t in word.start..word.end)
+                  LyricStyle.CutOut -> {
+                    // Sung: cut out of coloured paper and stuck on, a little crooked (it lands
+                    // from a touch bigger); to come: pencil on the page.
+                    val stuck = easeOut(((t - word.start).coerceAtLeast(0L)) / 180f)
+                    if (t < word.start) drawText(sub, color = PENCIL.copy(alpha = 0.42f), shadow = Shadow.None, drawStyle = Fill)
+                    else cutOut(r, k + line.start.toInt(), stuck, em) { drawText(sub, color = INK, shadow = Shadow.None, drawStyle = Fill) }
+                  }
+                  LyricStyle.Display -> vfd(sub, r, p, em)
                   LyricStyle.Spicy -> {
                     val sung = p > 0f
                     val swell = if (t in word.start..word.end) sin(PI * p).toFloat() else 0f
@@ -443,6 +476,11 @@ private fun Dots(slot: Slot.Dots, time: State<Long>, center: Boolean, active: Bo
             for (a in 0 until 5) drawArc(c.darker(0.4f).copy(alpha = 0.6f), a * 72f, 50f, false, topLeft = at - Offset(r * 0.6f, r * 0.6f), size = androidx.compose.ui.geometry.Size(r * 1.2f, r * 1.2f), style = Stroke(r * 0.12f))
           } else drawCircle(Color(0xFF6E5A4B).copy(alpha = 0.5f), r, at, style = Stroke(r * 0.15f, pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(r * 0.35f, r * 0.25f))))
         }
+        LyricStyle.CutOut -> drawCircle(PENCIL.copy(alpha = 0.3f + 0.6f * lit), r, at)
+        LyricStyle.Display -> {
+          if (lit > 0.5f) drawCircle(VFD.copy(alpha = 0.35f), r * 1.8f, at)
+          drawCircle(VFD.copy(alpha = 0.16f + 0.84f * lit), r, at)
+        }
         else -> drawCircle(Color.White.copy(alpha = 0.3f + 0.7f * lit), r, at)
       }
     }
@@ -506,6 +544,77 @@ private fun DrawScope.stitchUpTo(l: TextLayoutResult, r: Rect, p: Float, c: Colo
     drawLine(c, Offset(x, r.top + r.height * 0.5f), top + Offset(0f, em * 0.08f), em * 0.035f)
     drawLine(Brush.linearGradient(listOf(Color(0xFFF2F2F2), Color(0xFF8C8C8C)), top, tip), top, tip, em * 0.07f, cap = androidx.compose.ui.graphics.StrokeCap.Round)
   }
+}
+
+// ---- Glass, cut paper and the display ----
+
+/** Paper's ink, pencil, and the coloured papers words are cut from. */
+private val INK = Color(0xFF2F2A24)
+private val PENCIL = Color(0xFF3C3228)
+private val PAPERS = listOf(Color(0xFFF6C9B4), Color(0xFFCFE3C8), Color(0xFFCBD9F2), Color(0xFFF4E3A1), Color(0xFFE8C6E0), Color(0xFFFFFDF8))
+
+/** The display's teal phosphor. */
+val VFD = Color(0xFF7DFFE4)
+
+/** A notebook's blue rules, one under each row of text. */
+private fun DrawScope.ruled(l: TextLayoutResult, em: Float) {
+  for (row in 0 until l.lineCount) {
+    val y = l.getLineBottom(row) - em * 0.12f
+    drawLine(Color(0xFF9DB4D3).copy(alpha = 0.7f), Offset(-size.width, y), Offset(size.width * 2, y), em * 0.045f)
+  }
+}
+
+/**
+ * A word cut out of coloured paper and stuck on the page: its strip of paper a little crooked
+ * (each word its own tilt and colour, from [seed]), a crisp shadow and a soft one under it, landing
+ * from a touch bigger as [stuck] goes 0 → 1; [text] draws the word on it.
+ */
+private fun DrawScope.cutOut(r: Rect, seed: Int, stuck: Float, em: Float, text: DrawScope.() -> Unit) {
+  val rnd = kotlin.random.Random(seed * 7919 + 13)
+  val tilt = (rnd.nextFloat() * 2 - 1) * 3f
+  val paper = PAPERS[rnd.nextInt(PAPERS.size)]
+  val padX = em * 0.18f
+  val strip = Rect(r.left - padX, r.top + em * 0.06f, r.right + padX, r.bottom - em * 0.02f)
+  val k = 1f + 0.25f * (1f - stuck)
+  withTransform({
+    scale(k, k, strip.center)
+    rotate(tilt * (0.4f + 0.6f * stuck), strip.center)
+  }) {
+    val lift = em * 0.05f * (1f + 2f * (1f - stuck))
+    drawRect(Color.Black.copy(alpha = 0.12f * stuck), topLeft = strip.topLeft + Offset(lift * 1.2f, lift * 2.2f), size = strip.size)
+    drawRect(Color.Black.copy(alpha = 0.14f * stuck), topLeft = strip.topLeft + Offset(lift * 0.5f, lift), size = strip.size)
+    drawRect(paper, topLeft = strip.topLeft, size = strip.size, alpha = 0.4f + 0.6f * stuck)
+    // The cut edge: a hair of white where the scissors went.
+    drawRect(Color.White.copy(alpha = 0.6f * stuck), topLeft = strip.topLeft, size = strip.size, style = Stroke(em * 0.025f))
+    text()
+  }
+}
+
+/** Lit letters on the display up to [p] across [r] (a hard edge, letter by letter), glowing; the rest unlit segments. */
+private fun DrawScope.vfd(l: TextLayoutResult, r: Rect, p: Float, em: Float) {
+  val x = r.left + r.width * p
+  clipRect(left = x, top = -em, right = r.right + em * 2, bottom = r.bottom + em) { drawText(l, color = VFD.copy(alpha = 0.22f), shadow = Shadow.None, drawStyle = Fill) }
+  if (p > 0f)
+    clipRect(left = r.left - em * 2, top = -em, right = x, bottom = r.bottom + em) {
+      drawText(l, color = Color(0xFF3FFFD2).copy(alpha = 0.7f), shadow = Shadow(Color(0xFF3FFFD2), Offset.Zero, em * 0.6f), drawStyle = Fill)
+      drawText(l, color = VFD, shadow = Shadow(Color(0xFF3FFFD2).copy(alpha = 0.9f), Offset.Zero, em * 0.18f), drawStyle = Fill)
+    }
+}
+
+/** The lens: a pane of glass round the line being sung, frosted, its edges catching the light; [shown] fades it in. */
+private fun DrawScope.lens(l: TextLayoutResult, shown: Float, em: Float) {
+  if (shown <= 0f) return
+  val padX = em * 0.5f
+  val padY = em * 0.32f
+  val box = Rect(-padX, -padY, l.size.width.toFloat() + padX, l.size.height.toFloat() + padY)
+  val cr = androidx.compose.ui.geometry.CornerRadius(em * 0.8f)
+  drawRoundRect(Color(0xFF14002A).copy(alpha = 0.25f * shown), topLeft = box.topLeft + Offset(0f, em * 0.25f), size = box.size, cornerRadius = cr)
+  drawRoundRect(Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.26f * shown), Color.White.copy(alpha = 0.07f * shown), Color.White.copy(alpha = 0.14f * shown)), box.top, box.bottom), topLeft = box.topLeft, size = box.size, cornerRadius = cr)
+  // The reflection, and the rim lit from the top left.
+  clipRect(box.left, box.top, box.right, box.bottom) {
+    drawRect(Brush.linearGradient(0.42f to Color.Transparent, 0.5f to Color.White.copy(alpha = 0.18f * shown), 0.58f to Color.Transparent, start = Offset(box.left - box.width * 0.2f, box.top), end = Offset(box.left + box.width * 0.4f, box.bottom)))
+  }
+  drawRoundRect(Brush.linearGradient(listOf(Color.White.copy(alpha = 0.85f * shown), Color.White.copy(alpha = 0.12f * shown), Color.White.copy(alpha = 0.35f * shown)), box.topLeft, box.bottomRight), topLeft = box.topLeft, size = box.size, cornerRadius = cr, style = Stroke(em * 0.06f))
 }
 
 // ---- Kinetic ----

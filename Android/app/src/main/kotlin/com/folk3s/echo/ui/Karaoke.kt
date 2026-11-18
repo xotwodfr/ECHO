@@ -56,6 +56,18 @@ fun VocalsSlider(tint: Color, modifier: Modifier = Modifier, showNote: Boolean =
   val state by app.karaoke.state.collectAsStateWithLifecycle()
   if (!prefs.karaoke) return
   Column(modifier.fillMaxWidth()) {
+    if (look.material == Material.HiFi)
+      // Retro hi-fi: a VOCALS knob on an aluminium strip; it clicks through its detents.
+      Row(Modifier.fillMaxWidth().matter(matter.paper, 8.dp, seed = 71, depth = 0.8f).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        val ink = inkOn(matter.paper, matter.ink)
+        Text("VOCALS", color = ink, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = androidx.compose.ui.unit.TextUnit(1.5f, androidx.compose.ui.unit.TextUnitType.Sp)))
+        Spacer(Modifier.width(12.dp))
+        Knob(prefs.vocalLevel, app.karaoke::setLevel, "Vocals", 40.dp) { if (prefs.themeSounds) app.sounds.play(Material.HiFi, Sound.Toggle) }
+        Spacer(Modifier.width(12.dp))
+        Text("turn down to sing", color = ink.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+        Text("${(prefs.vocalLevel * 100).toInt()}%", color = ink.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+      }
+    else
     Row(verticalAlignment = Alignment.CenterVertically) {
       Icon(EchoIcons.mic, null, tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
       Spacer(Modifier.width(10.dp))
