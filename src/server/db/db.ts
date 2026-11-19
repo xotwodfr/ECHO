@@ -219,6 +219,47 @@ const MIGRATIONS: string[] = [
     created_at INTEGER NOT NULL
   );
   `,
+  // Animated lock-screen covers (motion.ts, docs/MOTION.md). `motion_uploads`: the video an admin
+  // uploaded for an album on a Navidrome server (`scope`), kept as `file` in /data/motion.
+  // `motion_jobs`: one row per cover the motion service has made, is making or is to make: per
+  // album and loop length (`variant` g5, g8, g12, g15) when generated from the still cover, or 'u'
+  // for the upload's transcode. `key` is the service's name for its files; `user_id` the account
+  // whose Navidrome the cover is fetched through; `used_at` when it was last asked for (the size
+  // cap lets the oldest go first); `took_ms` how long the service took.
+  `
+  CREATE TABLE motion_uploads (
+    scope TEXT NOT NULL,
+    album_id TEXT NOT NULL,
+    id TEXT NOT NULL UNIQUE,
+    file TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('mp4', 'mov', 'm4v')),
+    bytes INTEGER NOT NULL,
+    uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    uploaded_at INTEGER NOT NULL,
+    PRIMARY KEY (scope, album_id)
+  );
+  CREATE TABLE motion_jobs (
+    key TEXT PRIMARY KEY,
+    scope TEXT NOT NULL,
+    album_id TEXT NOT NULL,
+    variant TEXT NOT NULL,
+    user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    status TEXT NOT NULL CHECK (status IN ('queued', 'working', 'ready', 'failed')),
+    priority INTEGER NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    error TEXT,
+    style TEXT,
+    bytes INTEGER NOT NULL DEFAULT 0,
+    seconds REAL,
+    took_ms INTEGER,
+    next_at INTEGER NOT NULL DEFAULT 0,
+    used_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX motion_jobs_next ON motion_jobs(status, priority DESC, created_at);
+  CREATE INDEX motion_jobs_album ON motion_jobs(scope, album_id);
+  `,
 ];
 
 export function openDb(path: string): Db {

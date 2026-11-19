@@ -15,6 +15,8 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
       'guest_codes',
       'guests',
       'invites',
+      'motion_jobs',
+      'motion_uploads',
       'plays',
       'queue_state',
       'queue_state_youtube',

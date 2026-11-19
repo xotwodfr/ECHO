@@ -35,6 +35,16 @@ const NO_USER_DATA = [
   // server, so another server's never answer (karaoke.test.ts). The audio is attacked below.
   'GET /karaoke',
   'GET /karaoke/ready',
+  // Motion covers: shared by design per Navidrome server and album (docs/MOTION.md), keyed by the
+  // caller's own server, so another server's never answer; uploads and removals are admins' only
+  // (motion.test.ts).
+  'GET /motion',
+  'GET /motion/:albumId',
+  'GET /motion/:albumId/video',
+  'GET /motion/:albumId/still',
+  'GET /motion/:albumId/upload',
+  'PUT /motion/:albumId/upload',
+  'DELETE /motion/:albumId/upload',
   // Guests: codes are the caller's own; another user's guests are refused (guests.test.ts).
   // Sign in with your phone: a request is the browser's own; approving it signs that browser in
   // as the approver (qrlogin.test.ts).

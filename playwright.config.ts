@@ -95,6 +95,7 @@ export default defineConfig({
         ECHO_NETEASE_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_LISTENBRAINZ_URL: `http://127.0.0.1:${mockPort}`,
         ECHO_MUSICBRAINZ_URL: `http://127.0.0.1:${mockPort}`,
+        ECHO_MOTION_URL: `http://127.0.0.1:${mockPort}/motion-service`, // its stand-in (docs/MOTION.md)
         ECHO_CSP_REPORT_FILE: CSP_REPORTS,
       },
       url: `http://127.0.0.1:${port}/api/v1/health`,

@@ -290,6 +290,25 @@ export const strings = {
     shuffleName: (t: string) => `Shuffle ${t}`,
     more: (t: string) => `More options for ${t}`,
   },
+  /** The album's animated lock-screen cover (admins, the album page's menu; docs/MOTION.md). */
+  motion: {
+    upload: 'Upload motion cover…',
+    replace: 'Replace motion cover…',
+    remove: 'Remove motion cover',
+    uploading: 'Uploading the motion cover…',
+    uploaded: 'Motion cover uploaded. ECHO is preparing it for the lock screen.',
+    ready: 'The motion cover is ready.',
+    convertFailed: (why: string) =>
+      `The motion cover couldn’t be converted${why ? ` (${why})` : ''}. Try another video.`,
+    tooLarge: 'That video is over 50 MB.',
+    notVideo: 'That isn’t an MP4, M4V or QuickTime video.',
+    failed: 'Couldn’t change the motion cover. Try again.',
+    removed: 'Motion cover removed.',
+    removeTitle: 'Remove the motion cover?',
+    removeConsequence: (album: string) =>
+      `The video you uploaded for ${album} is deleted. The iPhone’s lock screen gets a cover ECHO makes from the album art instead.`,
+    removeConfirm: 'Remove',
+  },
   wanted: {
     title: 'Wanted',
     intro:

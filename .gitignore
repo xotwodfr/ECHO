@@ -34,3 +34,6 @@ macOS/*.xcodeproj/
 macOS/Info.plist
 xcuserdata/
 .DS_Store
+
+# Python bytecode (stems/, motion/)
+__pycache__/

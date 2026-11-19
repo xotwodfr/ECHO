@@ -21,6 +21,8 @@ export interface Config {
   stemsUrl: string | null; // Karaoke mode's stem service (stems/, docs/KARAOKE.md); off when unset
   stemsLibrary: boolean; // the whole library, not only songs asked for
   stemsMaxMinutes: number;
+  motionUrl: string | null; // animated lock-screen covers' service (motion/, docs/MOTION.md); off when unset
+  motionCacheMb: number; // what generated covers may take on its disk
   ytdlp: string; // the pinned yt-dlp binary in the image; copied to <dataDir>/bin to update itself
 }
 
@@ -62,6 +64,8 @@ export function loadConfig(env: Env = process.env): Config {
     stemsLibrary: env.ECHO_STEMS_LIBRARY !== '0',
     stemsMaxMinutes:
       Number(env.ECHO_STEMS_MAX_MINUTES) > 0 ? Number(env.ECHO_STEMS_MAX_MINUTES) : 20,
+    motionUrl: env.ECHO_MOTION_URL ? env.ECHO_MOTION_URL.replace(/\/+$/, '') : null,
+    motionCacheMb: Number(env.ECHO_MOTION_CACHE_MB) > 0 ? Number(env.ECHO_MOTION_CACHE_MB) : 2048,
     ytdlp: env.ECHO_YTDLP || '/app/bin/yt-dlp',
   };
 }

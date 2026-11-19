@@ -298,6 +298,23 @@ through the album; sign out ending the device's session on the server.
 | NAT-04 | macOS (`macOS/`, SwiftUI): the baseline, the token in the Keychain | I (parses, Swift 6.2) + M (`Api.swift` on Linux against a test server) | open: needs a Mac |
 | NAT-05 | iOS (`iOS/`, SwiftUI): the baseline, the token in the Keychain (this device only), playing on with the screen off | as NAT-04 | open: needs a Mac |
 
+## 10f. Animated lock-screen covers (server, 2026-11-19)
+
+The server side of the iPhone's animated lock-screen covers (`docs/MOTION.md`); the app's side is
+the Apple plan's task 5. Tests use a stand-in motion service (`src/server/motion-fake.ts`) in Vitest
+and E2E, and the real renderer in `motion/test_motion.py`.
+
+| ID | Criterion | Method | Added |
+|---|---|---|---|
+| MOT-01 | An album's motion cover is made on its first request from its still cover, for the caller's own Navidrome server: 202 with `Retry-After` and the covers ahead until ready (the app keeps the still cover), then the tall (1080 × 1440) or square (1080 × 1080) MP4 and its first frame as a JPEG, for a session or a device token; failed or off leaves the still cover | U (`motion.test.ts`) + U (`test_motion.py`: shapes, the still is the first frame) | 2026-11-19 |
+| MOT-02 | One cover at a time: uploads first, then in the order asked for; a passing failure is tried again after 10 and 20 minutes, one the service refuses fails at once; an offline service is waited for; one user has at most 20 waiting | U (`motion.test.ts`) | 2026-11-19 |
+| MOT-03 | Served with Range, `Cache-Control: private, max-age=86400` and an ETag (304 on `If-None-Match`), sandboxed, outside the API budget; a cover gone from the service's disk is made again; generated covers over `ECHO_MOTION_CACHE_MB` go, the one asked for longest ago first, uploads never | U (`motion.test.ts`) | 2026-11-19 |
+| MOT-04 | Only an admin uploads or removes a video (album menu in the web app): MP4, M4V or QuickTime by type and by first bytes, at most 50 MB (Content-Length or counted as it arrives; the only route past the 64 KB limit), Origin-checked; kept in `/data/motion`, recorded, audited (`admin.motion_uploaded`, `admin.motion_removed`), converted first and served in place of the generated cover to everyone on that Navidrome server; a video the service refuses (ffprobe: over 60 s, unreadable) is shown to the admin and leaves a generated cover meanwhile | U (`motion.test.ts`) + E (`motion-cover.spec.ts`) | 2026-11-19 |
+| MOT-05 | Depth for photographs, Living light for flat or text-heavy art, by the rule in `motion.py` (even areas, tonal range, hard edges, depth spread), on synthetic posters, type, text pages and photographs in colour and black and white | U (`test_motion.py`) | 2026-11-19 |
+| MOT-06 | A loop has no seam: the frame after the last is the first, and in the encoded video the last frame leads into the first as any frame into the next; loop lengths 5, 8, 12 and 15 s only; HEVC tagged `hvc1` | U (`test_motion.py`) | 2026-11-19 |
+| MOT-07 | The motion service is hardened like the stem service (non-root, read-only, no capabilities, internal network only), its model pinned by revision and SHA-256, its Python dependencies exact; the cost per album measured on four cores (`docs/MOTION.md`) | I (`compose.test.ts`) + P | 2026-11-19; on the OptiPlex: open |
+| MOT-08 | `docs/api/openapi.yaml` documents the motion routes, off and on (contract test) | U (`contract.test.ts`) | 2026-11-19 |
+
 ## 11. Reliability
 
 | ID | Criterion | Method | MS |

@@ -14,7 +14,10 @@ export interface HttpConfig {
 
 export type Vars = { ip: string };
 
-/** §5.6: request bodies ≤ 64 KB (no uploads); applied with hono/body-limit in index.ts. */
+/**
+ * §5.6: request bodies ≤ 64 KB (hono/body-limit in index.ts). The one upload, an admin's
+ * motion-cover video, reads its own up to its own limit (motion.ts).
+ */
 export const BODY_LIMIT = 64 * 1024;
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
 /** Sign-ins a native app makes with nothing ambient: the device token, and a guest code. */

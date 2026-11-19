@@ -130,10 +130,12 @@ const totpForAll = (db: Db) => {
 };
 
 /**
- * Media, outside the API budget: a page shows dozens of covers or YouTube thumbnails at once.
+ * Media, outside the API budget: a page shows dozens of covers or YouTube thumbnails at once (and
+ * a motion cover's video is read in Range requests).
  * YouTube audio stays inside it: each new song is a yt-dlp run, which the budget keeps bounded.
  */
-const UNMETERED = /^\/api\/v1\/(navidrome\/(stream|cover)\/|youtube\/image$)/;
+const UNMETERED =
+  /^\/api\/v1\/(navidrome\/(stream|cover)\/|youtube\/image$|motion\/[^/]+\/(video|still)$)/;
 
 /** The signed-in user (cookie or bearer device token), or 401. */
 

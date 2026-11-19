@@ -52,7 +52,8 @@ interface Job {
 export const stemKey = (scope: string, trackId: string) =>
   createHash('sha256').update(`${scope}|${trackId}`).digest('hex').slice(0, 40);
 
-function send(
+/** A request to a sidecar service on ECHO's internal network (the stem and motion services). */
+export function send(
   url: string,
   method: string,
   headers: Record<string, string> = {},
@@ -70,7 +71,7 @@ function send(
   });
 }
 
-async function readJson(res: IncomingMessage) {
+export async function readJson(res: IncomingMessage) {
   const chunks: Buffer[] = [];
   for await (const c of res) chunks.push(c as Buffer);
   try {

@@ -30,6 +30,7 @@ import {
   spicySource,
 } from './lyrics/sources.ts';
 import { createSpotifyMatcher } from './lyrics/spotifyMatch.ts';
+import { createMotion, type Motion, motionRoutes, tidyUploads } from './motion.ts';
 import {
   type NavidromeDeps,
   navidromeClientFor,
@@ -52,6 +53,7 @@ import { createRun, createYtdlpResolver, ensureBinary, updateYtdlp } from './you
 
 // Album keys are opaque, but never paths or markup: letters, digits and `:_.-`.
 const ALBUM_KEY = /^[\w:.-]{1,200}$/;
+const MOTION_UPLOAD = /^\/api\/v1\/motion\/[^/]+\/upload$/;
 
 export interface AppDeps {
   palette: PaletteService;
@@ -61,6 +63,8 @@ export interface AppDeps {
   youtube: YoutubeDeps;
   /** Karaoke mode's queue; off (every song "off") when no stem service is configured. */
   karaoke?: Karaoke | null;
+  /** Animated lock-screen covers' queue (motion.ts); off when no motion service is configured. */
+  motion?: Motion | null;
   /** Listen together's sessions (together.ts); made here when absent. */
   together?: Together;
   http: HttpConfig;
@@ -93,9 +97,14 @@ export function createApp(deps: AppDeps) {
     log('error', 'unhandled', { route: c.req.routePath, error: err });
     return c.json({ error: 'internal' }, 500);
   });
-  app.use(
-    '/api/*',
-    bodyLimit({ maxSize: BODY_LIMIT, onError: (c) => c.json({ error: 'too_large' }, 413) }),
+  // Bodies are small JSON, except an admin's motion-cover video, which motion.ts reads itself (once
+  // the admin is known) up to its own limit.
+  const small = bodyLimit({
+    maxSize: BODY_LIMIT,
+    onError: (c) => c.json({ error: 'too_large' }, 413),
+  });
+  app.use('/api/*', (c, next) =>
+    c.req.method === 'PUT' && MOTION_UPLOAD.test(c.req.path) ? next() : small(c, next),
   );
 
   // Liveness only: unauthenticated and minimal (docs/TECHNICAL_ARCHITECTURE.md §6.2).
@@ -186,6 +195,7 @@ export function createApp(deps: AppDeps) {
   );
   app.route('/api/v1', youtubeRoutes(deps.youtube, requireUser(deps.auth)));
   app.route('/api/v1', karaokeRoutes(deps.karaoke ?? null, requireUser(deps.auth)));
+  app.route('/api/v1', motionRoutes(deps.motion ?? null, requireUser(deps.auth), deps.auth));
   app.route(
     '/api/v1',
     qrLoginRoutes({ ...deps.auth, publicOrigin: deps.http.publicOrigin }, requireUser(deps.auth)),
@@ -447,6 +457,26 @@ if (import.meta.main) {
     setInterval(() => karaoke.kick(), 60_000).unref(); // retries and an offline service
     karaoke.kick();
   }
+  // Animated lock-screen covers: uploads kept in /data/motion, covers made one at a time by the
+  // motion service on first request; what a restart left half-uploaded goes.
+  const motionDir = join(config.dataDir, 'motion');
+  const motion = config.motionUrl
+    ? createMotion({
+        db: auth.db,
+        now: Date.now,
+        log,
+        motionUrl: config.motionUrl,
+        dir: motionDir,
+        cacheBytes: config.motionCacheMb * 1024 * 1024,
+        scopeFor: (id) => navidromeUrlOf(auth.db, id),
+        navidrome: (id) => navidromeClientFor(navidrome, id),
+      })
+    : null;
+  if (motion) {
+    void tidyUploads(motionDir);
+    setInterval(() => motion.kick(), 60_000).unref(); // retries and an offline service
+    motion.kick();
+  }
   const app = createApp({
     palette,
     auth,
@@ -454,6 +484,7 @@ if (import.meta.main) {
     lyrics,
     youtube,
     karaoke,
+    motion,
     devFixtures: config.devFixtures,
     log,
     ...(process.env.ECHO_CSP_REPORT_FILE && { cspReportFile: process.env.ECHO_CSP_REPORT_FILE }),

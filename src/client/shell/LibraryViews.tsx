@@ -39,6 +39,7 @@ import { dragTracks } from './drag.ts';
 import { useFresh } from './fresh.ts';
 import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
+import { useMotionCover } from './MotionCover.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
 import { startRadio, startSmartShuffle } from './radio.ts';
 import { searchRowId, searchSongs, showSearchSongs } from './searchKeys.ts';
@@ -492,6 +493,7 @@ export function AlbumView({ id }: { id: string }) {
   useEffect(fetchAlbum, [fetchAlbum]);
   const s = strings.album;
   const { live, playing } = useContextPlaying((x) => x?.kind === 'album' && x.id === id);
+  const motion = useMotionCover(a);
   if (!a && load === 'loading') return <PageLoading kind={s.title} />;
   // Its tracks could not be fetched: an error with Retry, never "0 tracks" or "not in your library".
   if (load === 'error' && !a?.tracks.length)
@@ -559,8 +561,10 @@ export function AlbumView({ id }: { id: string }) {
                     },
                   ]
                 : []),
+              ...motion.items,
             ]}
           />
+          {motion.ui}
         </div>
         {load === 'loading' && !a.tracks.length ? (
           <RowsLoading label={a.title} />

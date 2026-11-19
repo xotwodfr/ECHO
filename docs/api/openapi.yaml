@@ -8,7 +8,7 @@ info:
     or a `Bearer echo_dt_…` device token (native clients). Cookie-authenticated unsafe methods need
     `Origin` equal to ECHO's public origin (docs/SETTINGS_AND_SECURITY.md §5.3). Everything not in the
     unauthenticated list of §5.5 answers 401 without a session. On every route: 413 `too_large` for a
-    body over 64 KB; 403 `totp_enrolment_required` while "require TOTP for all" is on and the user has
+    body over 64 KB (an admin's motion-cover video, PUT /motion/{albumId}/upload, may be 50 MB); 403 `totp_enrolment_required` while "require TOTP for all" is on and the user has
     no TOTP yet (only the Account routes answer); 400 for a body that is not a JSON object where one is
     read. A test (src/server/openapi.test.ts) keeps this file and the server's routes in step.
 servers:
@@ -888,6 +888,160 @@ paths:
         '404': { description: Karaoke mode is off }
         '409': { description: 'not_ready: queued, working, failed or skipped' }
         '502': { description: stems_offline }
+  /motion:
+    get:
+      summary: Animated lock-screen covers' progress (docs/MOTION.md); `enabled` false when no motion service is configured (ECHO_MOTION_URL)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled: { type: boolean }
+                  online: { type: boolean, description: The motion service answered }
+                  ready: { type: integer }
+                  queued: { type: integer }
+                  failed: { type: integer }
+                  uploads: { type: integer, description: Albums with an admin's uploaded video }
+                  bytes: { type: integer, description: What the ready covers take on the motion service's disk }
+                  cacheBytes: { type: integer, description: 'The cap on generated covers (ECHO_MOTION_CACHE_MB); the longest unasked-for go first' }
+                  loops: { type: array, items: { type: integer }, description: 'The loop lengths the apps may ask for, in seconds' }
+  /motion/{albumId}:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string }, description: A Navidrome album id on the caller's own Navidrome server }
+      - { name: shape, in: query, schema: { type: string, enum: [tall, square], default: tall }, description: 'tall: 3:4, 1080 × 1440, the lock screen''s full-screen artwork; square: 1080 × 1080' }
+      - { name: loop, in: query, schema: { type: integer, enum: [5, 8, 12, 15], default: 8 }, description: "The loop's length in seconds (the apps' speed setting); an uploaded video keeps its own" }
+    get:
+      summary: "The album's motion cover: the admin's uploaded video, else one generated from the still cover; asking queues it (one cover at a time, uploads first)"
+      responses:
+        '200':
+          description: Ready (with its video and still), failed, or off; failed and off mean the still cover stays
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ready, failed, 'off'] }
+                  source: { type: string, enum: [upload, generated] }
+                  style: { type: string, enum: [depth, light, video], description: 'depth: photographs; light: "Living light", flat or text-heavy art; video: an upload' }
+                  shape: { type: string, enum: [tall, square] }
+                  seconds: { type: number, description: "The loop's length (an upload: its duration)" }
+                  version: { type: string, description: Changes when the cover is made again or replaced (a client keeps its downloaded copy until then) }
+                  video: { type: string, description: The MP4 }
+                  still: { type: string, description: Its first frame (JPEG) }
+        '202':
+          description: 'Queued or being made: show the still cover meanwhile and ask again after Retry-After (seconds, also in the body)'
+          headers: { Retry-After: { schema: { type: integer } } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, ahead, retryAfter]
+                properties:
+                  status: { type: string, enum: [queued, working] }
+                  ahead: { type: integer, description: Covers before it (queued or being made) }
+                  retryAfter: { type: integer }
+        '400': { description: 'bad_album_id, or bad_params (a shape or loop length not listed)' }
+        '409': { description: 'navidrome.not_connected' }
+        '429': { description: 'busy: 20 of the caller''s covers are already waiting; ask again after Retry-After', headers: { Retry-After: { schema: { type: integer } } } }
+  /motion/{albumId}/video:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string } }
+      - { name: shape, in: query, schema: { type: string, enum: [tall, square], default: tall } }
+      - { name: loop, in: query, schema: { type: integer, enum: [5, 8, 12, 15], default: 8 } }
+    get:
+      summary: "The motion cover's video: MP4 (HEVC, or H.264 with ECHO_MOTION_CODEC=h264), no sound, looping seamlessly; Range works. Cache-Control private, max-age=86400, with an ETag (If-None-Match answers 304). Outside the per-user API budget, like covers."
+      responses:
+        '200': { description: The file, content: { video/mp4: {} } }
+        '206': { description: 'Part of it' }
+        '202': { description: 'Not ready yet (asking queued it); as GET /motion/{albumId}, with Retry-After' }
+        '304': { description: 'Not modified' }
+        '400': { description: 'bad_album_id or bad_params' }
+        '404': { description: '`off` (no motion service) or `failed`: keep the still cover' }
+        '409': { description: 'navidrome.not_connected' }
+        '429': { description: 'busy' }
+        '502': { description: 'motion_offline' }
+  /motion/{albumId}/still:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string } }
+      - { name: shape, in: query, schema: { type: string, enum: [tall, square], default: tall } }
+      - { name: loop, in: query, schema: { type: integer, enum: [5, 8, 12, 15], default: 8 } }
+    get:
+      summary: "The motion cover's first frame as a JPEG (the lock screen shows it until the video plays); caching and answers as the video's"
+      responses:
+        '200': { description: The JPEG, content: { image/jpeg: {} } }
+        '206': { description: 'Part of it' }
+        '202': { description: 'Not ready yet, with Retry-After' }
+        '304': { description: 'Not modified' }
+        '400': { description: 'bad_album_id or bad_params' }
+        '404': { description: 'off or failed' }
+        '409': { description: 'navidrome.not_connected' }
+        '429': { description: 'busy' }
+        '502': { description: 'motion_offline' }
+  /motion/{albumId}/upload:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string }, description: A Navidrome album id on the admin's own Navidrome server }
+    get:
+      summary: The album's uploaded video, if any, and how its conversion went (admins only)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, upload]
+                properties:
+                  enabled: { type: boolean, description: A motion service is configured }
+                  upload:
+                    type: [object, 'null']
+                    properties:
+                      type: { type: string, enum: [mp4, mov, m4v] }
+                      bytes: { type: integer }
+                      uploadedAt: { type: integer }
+                      status: { type: string, enum: [queued, working, ready, failed] }
+                      error: { type: string, description: 'Why it failed, e.g. "longer than 60 s"' }
+        '400': { description: 'bad_album_id' }
+        '403': { description: 'Not an admin' }
+        '409': { description: 'navidrome.not_connected' }
+    put:
+      summary: >
+        An admin uploads a video as the album's motion cover (audited as admin.motion_uploaded). The body
+        is the file itself, at most 50 MB (this route alone is past the 64 KB body limit), MP4, M4V or
+        QuickTime by its Content-Type and by its first bytes; it is kept in /data/motion, replaces the
+        album's earlier upload and generated covers, and is converted first (filled to 3:4 and square,
+        no sound, at most 30 fps; at most 60 s long)
+      requestBody:
+        required: true
+        content: { video/mp4: {}, video/quicktime: {}, video/x-m4v: {} }
+      responses:
+        '201':
+          description: Kept, and queued for conversion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [queued, working] }
+                  type: { type: string, enum: [mp4, mov, m4v] }
+                  bytes: { type: integer }
+        '400': { description: 'bad_album_id' }
+        '403': { description: 'Not an admin' }
+        '409': { description: 'motion_off (no motion service), or navidrome.not_connected' }
+        '413': { description: 'too_large (over 50 MB)' }
+        '415': { description: 'unsupported_type (not one of the three), or not_a_video (its first bytes are not a video container)' }
+    delete:
+      summary: The album's uploaded video goes (file, record and conversion; audited as admin.motion_removed); a generated cover follows when asked for
+      responses:
+        '200': { description: 'Removed' }
+        '400': { description: 'bad_album_id' }
+        '403': { description: 'Not an admin' }
+        '404': { description: 'The album has no upload' }
+        '409': { description: 'motion_off, or navidrome.not_connected' }
   /auth/qr:
     post:
       summary: 'Sign in with your phone: the sign-in page asks for a request; its id goes in a QR code (<origin>/link#<id>), the poll secret stays with the page. Two minutes, once.'

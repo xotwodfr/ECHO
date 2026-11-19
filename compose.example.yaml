@@ -21,9 +21,13 @@ services:
       ECHO_TRUSTED_PROXY: ""
       # Karaoke mode (docs/KARAOKE.md): the stem service below. Remove to turn it off.
       ECHO_STEMS_URL: http://echo-stems:8090
+      # The iPhone's animated lock-screen covers (docs/MOTION.md): the motion service below, and
+      # what the covers it makes may take on its disk. Remove to turn them off.
+      ECHO_MOTION_URL: http://echo-motion:8091
+      ECHO_MOTION_CACHE_MB: "2048"
     secrets: [echo_master_key]
     volumes: [echo-data:/data]
-    networks: [web, music, stems]              # no "ports:", reachable only via Caddy
+    networks: [web, music, stems, motion]      # no "ports:", reachable only via Caddy
     # Caddy on the host instead of in Docker? Drop the "web" network and publish on loopback
     # only, then point Caddy at 127.0.0.1:<port>. Pick a free host port:
     # ports: ["127.0.0.1:8085:8080"]
@@ -61,12 +65,34 @@ services:
     logging:
       options: { max-size: 10m, max-file: "3" }
 
+  # The animated lock-screen covers' motion service (motion/, docs/MOTION.md): makes a looping cover
+  # from an album's still the first time it is asked for (Depth Anything V2 Small, ffmpeg), one at a
+  # time at the lowest CPU priority, and converts the videos admins upload. Only ECHO talks to it.
+  # About 20-25 s and 0.8 MB per album (8 s loop, both shapes) at these two CPUs.
+  echo-motion:
+    build: ./motion
+    image: echo-motion:local
+    restart: unless-stopped
+    volumes: [echo-motion:/motion]             # the covers; ECHO keeps them under ECHO_MOTION_CACHE_MB
+    networks: [motion]
+    read_only: true
+    tmpfs: [/tmp]
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 2g                              # the depth model and two encoders: ~0.5 GB measured
+    pids_limit: 64
+    cpus: 2
+    logging:
+      options: { max-size: 10m, max-file: "3" }
+
 secrets:
   echo_master_key:
     file: ./secrets/echo_master_key            # chmod 600, never in git
 
 volumes:
   echo-data: {}
+  echo-motion: {}
 
 networks:
   web:                                         # shared with the Caddy container
@@ -74,4 +100,6 @@ networks:
   music:                                       # shared with the existing Navidrome service
     external: true
   stems:                                       # ECHO and its stem service only
+    internal: true
+  motion:                                      # ECHO and its motion service only
     internal: true

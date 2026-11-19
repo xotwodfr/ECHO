@@ -8,7 +8,11 @@ import { parse } from 'yaml';
 
 describe('SEC-09: container hardening as shipped', () => {
   const compose = parse(readFileSync('compose.example.yaml', 'utf8')) as {
-    services: { echo: Record<string, unknown>; 'echo-stems': Record<string, unknown> };
+    services: {
+      echo: Record<string, unknown>;
+      'echo-stems': Record<string, unknown>;
+      'echo-motion': Record<string, unknown>;
+    };
     networks: Record<string, { internal?: boolean; external?: boolean }>;
     secrets: Record<string, { file?: string }>;
   };
@@ -68,5 +72,34 @@ describe('SEC-09: container hardening as shipped', () => {
         .filter((l) => l.startsWith('USER '))
         .at(-1),
     ).toBe('USER 1000:1000');
+  });
+
+  it('the motion service (animated covers): hardened the same, internal, its model pinned', () => {
+    const motion = compose.services['echo-motion'];
+    expect(motion.user).toBe('1000:1000');
+    expect(motion.read_only).toBe(true);
+    expect(motion.cap_drop).toEqual(['ALL']);
+    expect(motion.security_opt).toContain('no-new-privileges:true');
+    expect(motion).not.toHaveProperty('ports');
+    expect(motion.cpus).toBeLessThanOrEqual(2);
+    expect(motion.mem_limit).toBeTruthy();
+    expect(motion.networks).toEqual(['motion']);
+    expect(compose.networks.motion?.internal).toBe(true);
+    expect(echo.networks).toContain('motion');
+    expect(echo.environment).toHaveProperty('ECHO_MOTION_URL', 'http://echo-motion:8091');
+    const df = readFileSync('motion/Dockerfile', 'utf8');
+    for (const l of df.split('\n').filter((x) => x.startsWith('FROM ')))
+      expect(l).toMatch(/@sha256:[0-9a-f]{64}/);
+    expect(df).toMatch(/MODEL_REVISION=[0-9a-f]{40}/); // the model by revision...
+    expect(df).toMatch(/sha256sum -c/); // ...and by hash
+    expect(
+      df
+        .split('\n')
+        .filter((l) => l.startsWith('USER '))
+        .at(-1),
+    ).toBe('USER 1000:1000');
+    // Python dependencies pinned exactly.
+    for (const l of readFileSync('motion/requirements.txt', 'utf8').trim().split('\n'))
+      expect(l).toMatch(/^[\w.-]+==[\d.]+$/);
   });
 });

@@ -25,6 +25,11 @@ lyric field in an audio-reactive room lit by the album cover.
   with your cookie) and streams it like a Navidrome song; the songs on the page you open are
   looked up ahead and start at once, any other in about 2.5 s. That breaks YouTube's terms; an admin
   can turn the mode off for everyone. yt-dlp updates itself daily in the data volume.
+- **Animated lock-screen covers (iPhone):** a short looping video of each album's cover for the
+  iPhone's lock screen, tall (3:4) and square: a video an admin uploads from the album's menu in
+  the web app, or one the server makes from the cover on the album's first play (**Depth** for
+  photographs, **Living light** for flat or text-heavy art), by the `echo-motion` service
+  (`motion/`, [docs/MOTION.md](docs/MOTION.md)); about 20 s and 0.8 MB per album.
 - **Colour:** the palette is extracted on the server from each cover and drives the Stage, the
   web client's Fluent 2 accent and its Mica glow (the Android app keeps Material 3); a contrast
   solver keeps every lyric line readable.
@@ -148,6 +153,7 @@ pnpm check                 # typecheck (TS 7) + Biome + Vitest + production buil
 pnpm test:e2e              # Playwright: Chromium, Firefox, then the isolated project (first run: pnpm exec playwright install chromium firefox)
 scripts/e2e-container.sh   # the same suite as CI runs it: Playwright's Ubuntu image under Xvfb (Docker)
 pnpm audit --prod
+python -m pytest motion    # the motion service (pip install -r motion/requirements-dev.txt; ffmpeg)
 git config core.hooksPath .githooks          # gitleaks on every commit
 ```
 
@@ -158,4 +164,4 @@ Firefox has WebGL 2 only with a display, so on a machine without one its Stage t
 container script (and CI) run them under Xvfb.
 
 CI (`.github/workflows/ci.yml`) runs all of the above, plus gitleaks over history and a Trivy scan of
-the image (high/critical findings fail the build).
+the image (high/critical findings fail the build), and the motion service's tests.
