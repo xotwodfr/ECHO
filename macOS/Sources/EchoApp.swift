@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// ECHO for the Mac: the shared app (Apple/Shared) in a window of a laptop's size; `-ECHODemo
-/// <screen>` shows the Liquid Glass preview with built-in albums instead (Apple/Shared/Preview).
+/// <screen>` shows the app with built-in albums instead (Apple/Shared/Preview).
 @main
 struct EchoApp: App {
     var body: some Scene {
@@ -10,7 +10,7 @@ struct EchoApp: App {
                 DemoRoot(screen: screen)
                     .frame(minWidth: 1100, minHeight: 720)
             } else {
-                RootView(session: Live.session)
+                RootView(session: Live.session, library: Live.library, player: Live.player)
                     .frame(minWidth: 760, minHeight: 520)
             }
         }

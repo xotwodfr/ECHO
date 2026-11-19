@@ -1,28 +1,34 @@
 import SwiftUI
 
-/// What `-ECHODemo <screen>` shows: the approved preview's screens with built-in albums
-/// (PhoneDemo, MacDemo), or the real app's own screens around a session that never calls the
-/// server: `signin`, the sign-in page; `shell`, the signed-in app with its placeholder pages (on the
-/// iPhone with the banner shown while ECHO is not answering).
+/// What `-ECHODemo <screen>` shows: the real app around a session and a library that never call the
+/// server (DemoLibrary), opened on a page: `home`, `album`, `artist`, `playlist`, `library`,
+/// `albums`, `artists`, `liked`, `wanted`, `search`; `signin`, the sign-in page; `shell`, the app
+/// while ECHO is not answering (the banner and the error states). `nowplaying` and `lyrics` are the
+/// approved preview's (PhoneDemo, MacDemo) until the playback and lyrics tasks build them.
 struct DemoRoot: View {
     let screen: String
+    @State private var session: Session
+    @State private var library: Library
+    @State private var player: Player
+
+    init(screen: String) {
+        self.screen = screen
+        let session = Session.demo(server: Config.server, signedIn: screen != "signin", serverAway: screen == "shell")
+        _session = State(initialValue: session)
+        _library = State(initialValue: DemoLibrary.library(failing: screen == "shell"))
+        _player = State(initialValue: Player(client: session.client))
+    }
 
     var body: some View {
         switch screen {
-        case "signin":
-            RootView(session: .demo(server: Config.server, signedIn: false))
-        case "shell":
-            #if os(iOS)
-            RootView(session: .demo(server: Config.server, signedIn: true, serverAway: true))
-            #else
-            RootView(session: .demo(server: Config.server, signedIn: true))
-            #endif
-        default:
+        case "nowplaying", "lyrics":
             #if os(iOS)
             PhoneDemo(screen: screen)
             #else
             MacDemo(screen: screen)
             #endif
+        default:
+            RootView(session: session, library: library, player: player, start: DemoLibrary.start(screen))
         }
     }
 }

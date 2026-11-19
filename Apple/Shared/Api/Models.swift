@@ -241,3 +241,49 @@ enum AlbumSort: String, CaseIterable, Identifiable, Sendable {
         }
     }
 }
+
+/// Where a queue was started from (`PlayContext` in src/shared/types.ts): an album, a playlist, an
+/// artist, a search, Liked Songs, a mix, the Karaoke shelf.
+struct PlayContext: Codable, Hashable, Sendable {
+    var kind: String
+    var id: String?
+    var title: String
+}
+
+/// One of the Made For You mixes the server makes from the user's plays (`GET /me/mixes`): Daily
+/// Mixes, Discover Weekly, On Repeat, Repeat Rewind and the daylist.
+struct Mix: Identifiable, Hashable, Sendable {
+    var id: String
+    /// daily, discover, onRepeat, rewind or daylist.
+    var kind: String
+    var title: String
+    var subtitle: String
+    var tracks: [Track]
+
+    /// The first of its songs' covers.
+    var cover: String? { tracks.lazy.compactMap(\.cover).first }
+}
+
+/// An item on the Wanted list (`/wanted`): one list for everyone on the server, of music that is not
+/// in Navidrome yet; ECHO marks it found once an album, else a song, has all of its words.
+struct WantedItem: Identifiable, Hashable, Sendable {
+    var id: Int
+    var text: String
+    /// The username; nil once that user is deleted.
+    var addedBy: String?
+    var addedAt: Date
+    var found: Found?
+
+    struct Found: Hashable, Sendable {
+        /// "album" or "song".
+        var kind: String
+        var id: String
+        var title: String
+        var artist: String
+        /// A song's album.
+        var albumId: String?
+
+        /// The album that has it: the album itself, or the song's.
+        var album: String? { kind == "album" ? id : albumId }
+    }
+}

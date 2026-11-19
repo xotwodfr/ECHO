@@ -25,11 +25,14 @@ enum Config {
     }
 }
 
-/// The app's one session, made when the real app first needs it (never in the preview).
+/// The app's one session, library and player, made when the real app first needs them (never in
+/// the preview, which has its own: Preview/DemoLibrary.swift).
 @MainActor
 enum Live {
     static let session = Session(
         server: Config.server,
         tokens: KeychainTokenStore(account: Config.server.absoluteString),
         deviceName: { Config.deviceName })
+    static let library = Library(source: session.client, images: .live(session.client))
+    static let player = Player(client: session.client)
 }

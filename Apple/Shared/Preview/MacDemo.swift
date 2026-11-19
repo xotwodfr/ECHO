@@ -1,82 +1,16 @@
 #if os(macOS)
 import SwiftUI
 
-// The Mac preview in macOS 26's Liquid Glass (Demo.swift): the system's floating glass sidebar,
-// glass toolbar controls, the album grid, a glass player bar over the page, and the lyrics window
-// lit by the album. `-ECHODemo library|lyrics`.
+// The approved preview's lyrics window lit by the album, and its glass player bar for the bottom of
+// the page, in macOS 26's Liquid Glass (Demo.swift), until the playback and lyrics tasks build the
+// real ones (the sidebar and its pages are the real app's: DemoRoot). `-ECHODemo lyrics`.
 
 struct MacDemo: View {
     let screen: String
 
     var body: some View {
-        Group {
-            if screen == "lyrics" {
-                MacLyrics()
-            } else {
-                MacLibrary()
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-}
-
-struct MacLibrary: View {
-    enum Item: Hashable { case home, search, albums, artists, liked, wanted, playlist(String) }
-
-    @State private var selection: Item? = .albums
-    @State private var sort = "Recently added"
-    @State private var query = ""
-
-    var body: some View {
-        NavigationSplitView {
-            List(selection: $selection) {
-                Label("Home", systemImage: "house").tag(Item.home)
-                Label("Search", systemImage: "magnifyingglass").tag(Item.search)
-                Section("Library") {
-                    Label("Albums", systemImage: "square.stack").tag(Item.albums)
-                    Label("Artists", systemImage: "music.microphone").tag(Item.artists)
-                    Label("Liked Songs", systemImage: "heart").tag(Item.liked)
-                    Label("Wanted", systemImage: "music.note.list").tag(Item.wanted)
-                }
-                Section("Playlists") {
-                    Label("Late Ferries", systemImage: "music.note.list").tag(Item.playlist("ferries"))
-                    Label("Rain on Glass", systemImage: "music.note.list").tag(Item.playlist("rain"))
-                }
-            }
-            .navigationSplitViewColumnWidth(min: 200, ideal: 220)
-        } detail: {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 22)], spacing: 22) {
-                    ForEach(Demo.albums) { album in
-                        VStack(alignment: .leading, spacing: 6) {
-                            CoverArt(cover: album.cover, corner: 10)
-                            Text(album.title).font(.callout.weight(.semibold)).lineLimit(1)
-                            Text(album.artist).font(.footnote).foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .padding(.horizontal, 28)
-                .padding(.top, 12)
-                .padding(.bottom, 120)
-            }
-            .background(alignment: .top) {
-                AlbumLight(strength: 0.5).frame(height: 560).mask(
-                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
-                    .ignoresSafeArea()
-            }
-            .background(Color(hex: 0x101319))
-            .overlay(alignment: .bottom) { MacPlayerBar().padding(16) }
-            .navigationTitle("Albums")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Picker("Sort", selection: $sort) {
-                        ForEach(["Recently added", "A–Z", "Year", "Most played"], id: \.self) { Text($0) }
-                    }
-                    .pickerStyle(.segmented)
-                }
-            }
-            .searchable(text: $query, placement: .toolbar, prompt: "Search")
-        }
+        MacLyrics()
+            .preferredColorScheme(.dark)
     }
 }
 

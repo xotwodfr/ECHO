@@ -24,9 +24,17 @@ extension Color {
     static let echoWarning = Color(hex: 0xFFB4A4)
 }
 
-/// The room lit by the playing album (ECHO's Stage): its colours as a slow mesh of light.
+extension Color {
+    init(_ rgb: RGB) {
+        self.init(red: rgb.r, green: rgb.g, blue: rgb.b)
+    }
+}
+
+/// The room lit by an album (ECHO's Stage): its colours as a slow mesh of light. Without a palette,
+/// the approved preview's Harbour Lights; with one, the same light from that album's cover.
 struct AlbumLight: View {
     var strength: Double = 1
+    var palette: AlbumPalette? = nil
 
     var body: some View {
         MeshGradient(
@@ -36,27 +44,55 @@ struct AlbumLight: View {
                 [0, 0.5], [0.42, 0.55], [1, 0.45],
                 [0, 1], [0.5, 1], [1, 1],
             ],
-            colors: [
+            colors: colors
+        )
+        .opacity(strength)
+        .background(palette.map { Color($0.mesh[7]) } ?? Color.harbourNavy)
+        .animation(.smooth(duration: 0.8), value: palette)
+        .ignoresSafeArea()
+    }
+
+    private var colors: [Color] {
+        guard let palette else {
+            return [
                 Color(hex: 0x1C4F7A), Color(hex: 0x173450), Color(hex: 0x2A5D8C),
                 Color(hex: 0x6B5322), Color(hex: 0xC4964A).opacity(0.9), Color(hex: 0x163A5A),
                 Color(hex: 0x081620), Color(hex: 0x0B1B2B), Color(hex: 0x081620),
             ]
-        )
-        .opacity(strength)
-        .background(Color.harbourNavy)
-        .ignoresSafeArea()
+        }
+        return palette.mesh.enumerated().map { i, rgb in i == 4 ? Color(rgb).opacity(0.9) : Color(rgb) }
     }
 }
 
 extension View {
     /// A page in the room: the album's light at the top, fading into the floor, under the bars.
-    func echoRoom(strength: Double = 0.55, height: CGFloat = 560) -> some View {
+    /// `held` keeps the light for longer before it fades (an album's page, as the preview's).
+    func echoRoom(strength: Double = 0.55, height: CGFloat = 560, palette: AlbumPalette? = nil, held: Bool = false) -> some View {
         background(alignment: .top) {
-            AlbumLight(strength: strength).frame(height: height).mask(
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+            AlbumLight(strength: strength, palette: palette).frame(height: height).mask(
+                LinearGradient(colors: held ? [.black, .black, .clear] : [.black, .clear], startPoint: .top, endPoint: .bottom))
                 .ignoresSafeArea()
         }
-        .background(Color.echoFloor)
+        .background(palette.map { Color($0.floor) } ?? Color.echoFloor)
+        .animation(.smooth(duration: 0.8), value: palette)
+    }
+
+    /// No bar backgrounds: the room runs under the status bar and the floating glass.
+    func clearBars() -> some View {
+        #if os(iOS)
+        return toolbarBackgroundVisibility(.hidden, for: .navigationBar)
+        #else
+        return self
+        #endif
+    }
+
+    /// A pushed page's title sits small in the bar (the page shows it large itself).
+    func inlineTitle() -> some View {
+        #if os(iOS)
+        return navigationBarTitleDisplayMode(.inline)
+        #else
+        return self
+        #endif
     }
 }
 
@@ -120,8 +156,8 @@ struct ConnectionBanner: View {
     }
 }
 
-/// Where a later part of the app goes: a glass card saying what will be here.
-struct ComingSoon: View {
+/// A glass card that says something about a page: nothing here yet, or what goes here.
+struct NoteCard: View {
     let icon: String
     let title: String
     let text: String

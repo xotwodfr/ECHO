@@ -170,6 +170,27 @@ final class EchoClient: Sendable {
         }
     }
 
+    /// The bytes at one of ECHO's own URLs, a server path as the models keep covers
+    /// ("/api/v1/navidrome/cover/al-1?size=300"), with the bearer header: an image loader's request.
+    /// A cover that does not come says nothing about ECHO, so nothing is reported to the session.
+    func fetch(_ path: String) async throws -> Data {
+        guard let url = url(path) else { throw ApiError.badResponse }
+        var req = authorized(url)
+        req.timeoutInterval = 30
+        let answer: (Data, URLResponse)
+        do {
+            answer = try await http.data(for: req)
+        } catch let error as URLError {
+            if error.code == .cancelled { throw CancellationError() }
+            throw ApiError(transport: error)
+        }
+        guard let res = answer.1 as? HTTPURLResponse else { throw ApiError.badResponse }
+        guard (200..<300).contains(res.statusCode) else {
+            throw ApiError(status: res.statusCode, code: nil, message: nil, signingIn: false)
+        }
+        return answer.0
+    }
+
     /// A GET whose JSON answer decodes as `T`.
     func get<T: Decodable>(_ path: String, query: [(String, String)] = [], as type: T.Type = T.self) async throws -> T {
         let raw = try await data("GET", path, query: query)

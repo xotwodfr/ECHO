@@ -10,7 +10,9 @@ import { join } from 'node:path';
 import { startSetup } from '../src/server/auth/routes.ts';
 import { fromBase32, hotp, STEP_S, stepAt } from '../src/server/auth/totp.ts';
 import { createApp } from '../src/server/index.ts';
+import { createKaraoke, stemKey } from '../src/server/karaoke.ts';
 import { startMockSubsonic } from '../src/server/navidrome/mock.ts';
+import { navidromeClientFor, navidromeUrlOf } from '../src/server/navidrome/routes.ts';
 import { call, testDeps } from '../src/server/testing.ts';
 
 const OUT = process.argv[2] ?? 'Apple/Tests/Fixtures';
@@ -22,7 +24,19 @@ mkdirSync(OUT, { recursive: true });
 const mock = await startMockSubsonic({});
 const t = testDeps();
 t.deps.navidrome.defaultUrl = mock.url;
-const app = createApp(t.deps);
+const db = t.deps.auth.db;
+// Karaoke with a stem service that is never asked: Home's shelf lists the jobs marked ready below.
+const karaoke = createKaraoke({
+  db,
+  now: t.deps.auth.now,
+  stemsUrl: 'http://127.0.0.1:9',
+  maxSeconds: 1200,
+  library: false,
+  scopeFor: (id) => navidromeUrlOf(db, id),
+  navidrome: (id) => navidromeClientFor(t.deps.navidrome, id),
+  libraries: async () => [],
+});
+const app = createApp({ ...t.deps, karaoke });
 
 // The admin, with two-factor on (the one-time setup).
 const setupToken = startSetup(t.deps.auth) as string;
@@ -116,6 +130,57 @@ await save('getSong', await rest('getSong', 'id=al-1-t1'));
 await save('getGenres', await rest('getGenres'));
 await save('star', await bearer('/navidrome/rest/star?id=al-1-t1', 'POST', {}));
 await save('stream-url', await bearer('/navidrome/stream-url/al-1-t1'));
+
+// Made For You: a few plays of Lowfield and Mira Sole, then the mixes made from them.
+t.clock.t += 10_000;
+const songOf = (album: string, n: number, title: string, artist: string, artistId: string) => ({
+  key: `navidrome:${album}-t${n}`,
+  provider: 'navidrome',
+  id: `${album}-t${n}`,
+  title: `${title} ${n}`,
+  artists: [{ id: artistId, name: artist }],
+  album: { id: album, title, key: `navidrome:${album}` },
+  durationMs: (15 + n * 5) * 1000,
+  artwork: [{ url: `/api/v1/navidrome/cover/${album}?size=600` }],
+});
+const played = [
+  songOf('al-1', 1, 'Harbour Lights', 'Lowfield', 'ar-1'),
+  songOf('al-1', 2, 'Harbour Lights', 'Lowfield', 'ar-1'),
+  songOf('al-3', 1, 'Glass Weather', 'Mira Sole', 'ar-2'),
+];
+for (let i = 0; i < 6; i++) {
+  t.clock.t += 3 * 60_000;
+  await bearer('/me/plays', 'POST', {
+    track: played[i % played.length],
+    context: { kind: 'album', id: 'al-1', title: 'Harbour Lights' },
+  });
+}
+await save('me-mixes', await bearer('/me/mixes?tz=-60'));
+
+// The Wanted list: found in the library, still missing, the same words again, removed.
+const added = await save(
+  'wanted-added',
+  await bearer('/wanted', 'POST', { text: 'Lowfield Harbour Lights' }),
+);
+await save(
+  'wanted-added-missing',
+  await bearer('/wanted', 'POST', { text: 'The Quiet Hours – Paper Satellites' }),
+);
+await save('wanted-known', await bearer('/wanted', 'POST', { text: 'lowfield, harbour lights!' }));
+await save('wanted-bad', await bearer('/wanted', 'POST', { text: '!!!' }));
+await save('wanted', await bearer('/wanted'));
+await save('wanted-removed', await bearer(`/wanted/${added.id}`, 'DELETE'));
+await save('wanted-not-found', await bearer(`/wanted/${added.id}`, 'DELETE'));
+
+// Home's Karaoke shelf: two songs whose karaoke versions are ready, newest first.
+const scope = navidromeUrlOf(db, 1);
+for (const [i, id] of ['al-3-t2', 'al-1-t3'].entries()) {
+  db.prepare(
+    `INSERT INTO stems_jobs (key, scope, track_id, user_id, status, priority, created_at, updated_at)
+     VALUES (?, ?, ?, 1, 'ready', 0, ?, ?)`,
+  ).run(stemKey(scope, id), scope, id, t.clock.t + i, t.clock.t + i);
+}
+await save('karaoke-ready', await bearer('/karaoke/ready?limit=30'));
 await save('method-not-allowed', await rest('getUsers'));
 mock.faults.down = true;
 await save('navidrome-unreachable', await rest('getAlbumList2', 'type=newest&size=500&offset=0'));

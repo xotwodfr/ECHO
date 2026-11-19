@@ -29,14 +29,16 @@ targets:
         SWIFT_VERSION: "5.0"
         # The Icon Composer icon in Apple/Shared (Liquid Glass layers), compiled by actool.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-  # The Swift tests (Swift Testing, Apple/Tests): the API client, models and sign-in against the
-  # server's recorded answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its
-  # own with the API code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
+  # The Swift tests (Swift Testing, Apple/Tests): the API client, models, sign-in and the library
+  # (hearts, the sorts, Wanted's Undo, the cover cache) against the server's recorded answers
+  # (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own with the API and library
+  # code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
   ECHOTests:
     type: bundle.unit-test
     platform: macOS
     sources:
       - path: ../Apple/Shared/Api
+      - path: ../Apple/Shared/Library
       - path: ../Apple/Tests
     settings:
       base:
