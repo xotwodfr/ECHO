@@ -5,6 +5,8 @@ import './tokens.css';
 import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
+import './themes.css';
+import { applyAppearance } from './appearance.ts';
 import { createNavidromeLibrary } from './library-navidrome.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
@@ -59,6 +61,15 @@ const markMotion = () => (document.documentElement.dataset.motion = level());
 markMotion();
 prefsStore.subscribe((s, prev) => s.visuals !== prev.visuals && markMotion());
 reducedQuery.addEventListener('change', markMotion);
+
+// The theme (Settings → Preferences → Appearance) as <html data-theme>, data-scheme and
+// data-material (appearance.ts): this browser's copy at once, the server's when it answers.
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const markAppearance = () =>
+  applyAppearance(document.documentElement, prefsStore.getState().appearance, darkQuery.matches);
+markAppearance();
+prefsStore.subscribe((s, prev) => s.appearance !== prev.appearance && markAppearance());
+darkQuery.addEventListener('change', markAppearance);
 
 const store = createViewStore(window, pageTransition);
 
