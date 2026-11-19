@@ -1,6 +1,6 @@
 # ECHO — Android client
 
-Status: **v0.3 built** (2026-11-18: themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
+Status: **v0.4 built** (2026-11-18: Clay and Yarn; v0.3 themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
 
 The other native apps (2026-11-04: `Linux/`, `Windows/`, `macOS/`, `iOS/`) are baselines on the
 same API; this one is the full app. Each folder's README says what it has
@@ -44,6 +44,116 @@ way) take `-Pecho.devUrl=http://10.0.2.2:<port>` and allow plain HTTP; release n
 throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port>`, user
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
+
+## v0.7: sign-in and guest accounts (2026-11-19)
+
+Owner decisions (2026-11-19): a more beautiful, smoother sign-in screen (an album art wall,
+chosen from mockups); guest accounts from a QR code. Any user can invite and picks 1 hour, 1 day
+or 1 week. Guests listen only, with a "Keep account" request the inviter approves. The web app
+invites too.
+
+- **Sign in** (`ui/SignIn.kt`): `CoverWall` keeps up to 24 small covers from the last signed-in
+  session, refreshed daily and never on a guest's phone; coloured tiles stand in before that. Six
+  tilted columns drift (still with reduced motion) under a darkening gradient. The wordmark has a
+  gradient brush and rises in with a spring. The card is a translucent panel with a lit edge,
+  fields glow amber when focused, and a refused sign-in shakes. Two-factor works as before.
+- **Scanning** (`ui/GuestScan.kt`): ZXing's `BarcodeView` (QR only, continuous, following the
+  lifecycle) with ECHO's own viewfinder and scan line. `guestCodeOf` accepts only
+  `<this server>/guest#<code>`. `peek` shows whose pass it is, and `redeem` stores the guest's
+  device token in the usual token store.
+- **Guests** (`ui/Guests.kt`, `api/Guests.kt`): `GuestState` holds the guest's `/guests/me` and
+  the inviter's pending keep requests. Home shows the guest's countdown banner (with "Keep
+  account") or, for an inviter, the request card. Settings → Guests has the invite sheet (a ZXing
+  QR code with error correction H and the ECHO mark in its centre, 1 hour / 1 day / 1 week, a
+  countdown, and it notices a join by polling `/guests`), plus the list with Approve and End now.
+  Guests get no heart and no "Add to playlist".
+- Server: `src/server/guests.ts`; the rules are in `GUEST_DENY` (auth/routes.ts).
+
+## v0.6: Liquid glass, Paper & origami, Retro hi-fi (2026-11-18)
+
+Owner decision (2026-11-18): build the three themes from the mockups (themes3), each with its own
+lyrics and sounds like Clay and Yarn, and the Karaoke controls in each.
+
+- **Materials** (`ui/Matter.kt`), with new `Material` values:
+  - `Glass`: a tinted frosted pane, a top-left rim of light, a slanted reflection and a caustic
+    along the bottom. Its colours are a hair under opaque (`SEE_THROUGH`), so `inkOn` keeps the
+    material's ink on them. The ground is three glows from the album's colour on a deep ground.
+  - `Paper`: card with generated fibres, a crisp and a soft cut-paper shadow, a crease on some
+    bigger pieces and a dog-eared corner (`PaperShape`) on others. The ground is fibred paper.
+  - `HiFi`: generated brushed aluminium with a bevel and corner screws on panels, on a generated
+    wood-veneer cabinet.
+- **Palettes** (`matterColors`): Glass from the album (dark, and a light variant); Paper light
+  (pastel papers) and dark (kraft); Hi-fi dark (walnut, gunmetal panels, silver and champagne
+  buttons, amber for the playing track) and light (oak, silver panels).
+- **Pieces** (`ui/Made.kt`):
+  - Hi-fi: the cover as the label of a record turning at 33⅓ rpm under a tonearm that sets down
+    while playing; VU and PEAK meters from `AudioTap` on Home's featured panel; a knurled VOCALS
+    knob (drag, with detent clicks) instead of the slider.
+  - Paper: the Now Playing cover as a taped polaroid, tape on the featured card, and an origami
+    pentagon play button.
+  - Glass: round play button.
+- **Lyrics** (`Styled.kt`):
+  - Glass: the line being sung inside a glass lens that fades in as the line starts; the rest are
+    blurred.
+  - Cut-out: on a notebook page with blue rules and a red margin. Sung words are cut from coloured
+    paper and land on the line a little crooked; words to come are pencil.
+  - Display: a teal VFD in the cabinet. Capitals in a monospaced face, lit letter by letter with a
+    glow; the rest are unlit segments.
+  - Picking a theme picks its style.
+- **Sounds** (`scripts/android-sounds.py`): glass tink and chimes, paper rustle and fold, hi-fi
+  switch thunk and knob detent.
+
+## v0.5: Karaoke mode (2026-11-18)
+
+Owner decisions (2026-11-18): a karaoke toggle like Apple Music's, with a vocals slider; the
+voice removed by a model on the server (no GPU), for the whole library and on demand, stored
+at /Media/Media/Instrumentals, gently (two cores, lowest priority). Server side: docs/KARAOKE.md.
+
+- **The file**: the server's karaoke version is AAC 5.1, with the instrumental on front L/R and
+  the vocals on rear L/R. `VocalMixProcessor` (`playback/VocalMix.kt`) comes first in the audio
+  sink. It mixes the file back to stereo as `instrumental + level × vocals`, with the level
+  gliding over each buffer, so the slider acts at once without clicks. Any other 5.1 song gets
+  an ordinary downmix. The Stage's tap sees the stereo result.
+- **Swapping** (`Playback.refreshSources`): with Karaoke mode on, each queued item gets the
+  karaoke URI once the server has it. The song playing is replaced at its position. Turning the
+  mode off swaps back to the original.
+- **Asking** (`playback/Karaoke.kt`): while on, the song playing is asked for every 5 s until
+  ready (`GET /karaoke/{id}`, made first), and the next two once a minute (`?soon=1`). Settled
+  answers (ready, failed, too long) are kept for the session.
+- **Downmix check**: if a karaoke file still arrives as 2 channels after 2 s (the phone's AAC
+  decoder downmixed it), the app says so once, because the voice can't be removed on that phone.
+- **UI** (`ui/Karaoke.kt`): a Karaoke pill on Now Playing with the Vocals slider and a status
+  line under it, a mic button on the lyrics dock with the slider over it, and Settings →
+  Karaoke with the server's progress. `Prefs.karaoke` and `Prefs.vocalLevel` (default 0 %).
+
+## v0.4: Clay and Yarn (2026-11-18)
+
+Owner decisions (2026-11-18): a Clay theme (pastel plasticine, handmade realism, everything in
+clay, light with a dark option whose colour follows the album or is picked from eight), a Yarn
+theme (knitted, cosy autumn colours), lyrics to match (Clay; Embroidered), both themes as 3D as
+possible, and sounds on presses in each.
+
+- **Materials** (`ui/Matter.kt`): `Modifier.matter(colour, radius, pressed, seed, depth, rib,
+  seam)` draws a surface in the theme's material; `matterGround` the page under it. Clay: a
+  hand-made outline (`HandShape`: corners and edges varied by a seed), a tinted drop shadow, a
+  top-left light and bottom-right shade, a gloss spot, a rim light, a multiplied grain texture
+  (generated), and on bigger pieces sometimes a fingerprint; pressed, the light reverses and the
+  shadow goes. Yarn: a generated knit tile (each loop lit and shaded, with its twist), a cushion
+  puff, a rolled edge, fuzz along the outline (fibres placed along a `PathMeasure`), ribbing on
+  bars, dashed stitched seams. Flat themes get a plain rounded surface.
+- **Palettes** (`matterColors`): light Clay pastels; dark Clay from `Prefs.clayDark` (`album`, or
+  one of `CLAY_DARK`'s eight); Yarn light and dark. Each has a ground, a paper, six accents, an
+  ink and a strong colour for Play and the playing track.
+- **Where**: page grounds, the tab bar (ribbed in Yarn), the mini player, Play and Shuffle, track
+  rows, cover frames (cards, page headers, Now Playing), Home's featured card, the search field,
+  the back and avatar buttons, Games (stats, today's pick, tiles, answers), Now Playing's buttons.
+- **Lyrics** (`Styled.kt`): Clay (sung words extruded in four layers with a lit face and a soft
+  shadow, held words swell and tilt; the rest stamped) on a clay slab; Embroidered (satin-stitch
+  thread, a needle at the stitching edge, sung lines in green, the rest traced) on a hoop
+  (`Modifier.hoop`) over green knit. Choosing the theme switches the style; both are in the list.
+- **Sounds** (`ui/Sounds.kt`, `res/raw/*.wav`, synthesized for ECHO): Clay squish, pop, and a
+  squish-pop for a right answer; Yarn thump, needle tick, and two ticks. Played through
+  `Haptics` with a little pitch variation, as UI sounds; `Prefs.themeSounds` turns them off.
 
 ## v0.3: themes, lyric styles, motion (2026-11-18)
 

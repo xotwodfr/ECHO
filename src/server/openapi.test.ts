@@ -51,6 +51,8 @@ describe('the unauthenticated surface (SEC-02, SETTINGS_AND_SECURITY.md §5.5)',
     'POST /auth/login',
     'POST /auth/totp',
     'POST /auth/device',
+    'POST /guests/peek', // the code is the secret
+    'POST /guests/redeem',
     'POST /csp-report',
     'GET /invite',
     'POST /invite',

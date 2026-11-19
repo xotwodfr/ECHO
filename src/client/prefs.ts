@@ -15,6 +15,9 @@ export interface Prefs {
     autoplay: boolean;
     quality: 'auto' | 'raw' | '320' | '192' | '128'; // per device
     volume: number; // 0..1, per device (its own speakers)
+    /** Karaoke mode (docs/KARAOKE.md), per device; and how much of the voice it leaves, 0..1. */
+    karaoke: boolean;
+    vocalLevel: number;
   };
   lyrics: {
     sizeScale: 0.85 | 1 | 1.15 | 1.3;
@@ -44,6 +47,8 @@ export const DEFAULT_PREFS: Prefs = {
     autoplay: true,
     quality: 'auto',
     volume: 1,
+    karaoke: false,
+    vocalLevel: 0,
   },
   lyrics: {
     sizeScale: 1,
@@ -80,7 +85,7 @@ export function effectiveVisuals(v: Prefs['visuals']): Prefs['visuals'] {
 type Section = keyof Prefs;
 /** Keys kept per device, in localStorage, never sent to the server. */
 const DEVICE: { [S in Section]?: (keyof Prefs[S])[] } = {
-  playback: ['quality', 'volume', 'autoplay'],
+  playback: ['quality', 'volume', 'autoplay', 'karaoke', 'vocalLevel'],
   visuals: ['quality', 'backdrop', 'performance'],
 };
 const isDevice = (s: Section, k: string) => (DEVICE[s] as string[] | undefined)?.includes(k);

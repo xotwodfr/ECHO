@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStore } from 'zustand';
 import { logout, sessionStore } from '../session.ts';
 import { strings } from '../strings.ts';
@@ -5,6 +6,7 @@ import { Icon } from '../ui/icons.tsx';
 import { Menu } from '../ui/overlays.tsx';
 import { switchMode } from '../youtube/mode.ts';
 import { useCompact } from './compact.ts';
+import { InviteGuestSheet } from './Guests.tsx';
 import { useView } from './link.tsx';
 
 /** The account menu: Account, Settings, Admin and Sign out. */
@@ -26,40 +28,47 @@ export function AccountMenu() {
           },
         ]
       : [];
+  const [inviting, setInviting] = useState(false);
   return (
-    <Menu
-      label={strings.nav.profile}
-      trigger={{
-        className: 'avatar-btn',
-        content: initial ? <span className="avatar">{initial}</span> : <Icon name="user" />,
-      }}
-      items={[
-        ...modes,
-        {
-          label: strings.nav.account,
-          onSelect: () => navigate({ view: 'settings', section: 'account' }),
-        },
-        {
-          label: strings.nav.settings,
-          onSelect: () => navigate({ view: 'settings', section: 'preferences' }),
-        },
-        ...(admin
-          ? [
-              {
-                label: strings.nav.admin,
-                onSelect: () => navigate({ view: 'settings', section: 'admin' }),
-              },
-            ]
-          : []),
-        ...(signedIn
-          ? [
-              {
-                label: strings.nav.signOut,
-                onSelect: () => void logout().finally(() => window.location.assign('/login')),
-              },
-            ]
-          : []),
-      ]}
-    />
+    <>
+      <Menu
+        label={strings.nav.profile}
+        trigger={{
+          className: 'avatar-btn',
+          content: initial ? <span className="avatar">{initial}</span> : <Icon name="user" />,
+        }}
+        items={[
+          ...modes,
+          {
+            label: strings.nav.account,
+            onSelect: () => navigate({ view: 'settings', section: 'account' }),
+          },
+          {
+            label: strings.nav.settings,
+            onSelect: () => navigate({ view: 'settings', section: 'preferences' }),
+          },
+          ...(signedIn && !session.guest
+            ? [{ label: strings.nav.inviteGuest, onSelect: () => setInviting(true) }]
+            : []),
+          ...(admin
+            ? [
+                {
+                  label: strings.nav.admin,
+                  onSelect: () => navigate({ view: 'settings', section: 'admin' }),
+                },
+              ]
+            : []),
+          ...(signedIn
+            ? [
+                {
+                  label: strings.nav.signOut,
+                  onSelect: () => void logout().finally(() => window.location.assign('/login')),
+                },
+              ]
+            : []),
+        ]}
+      />
+      <InviteGuestSheet open={inviting} onClose={() => setInviting(false)} />
+    </>
   );
 }

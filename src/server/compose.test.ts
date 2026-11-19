@@ -8,7 +8,8 @@ import { parse } from 'yaml';
 
 describe('SEC-09: container hardening as shipped', () => {
   const compose = parse(readFileSync('compose.example.yaml', 'utf8')) as {
-    services: { echo: Record<string, unknown> };
+    services: { echo: Record<string, unknown>; 'echo-stems': Record<string, unknown> };
+    networks: Record<string, { internal?: boolean; external?: boolean }>;
     secrets: Record<string, { file?: string }>;
   };
   const echo = compose.services.echo;
@@ -44,5 +45,28 @@ describe('SEC-09: container hardening as shipped', () => {
       .at(-1);
     expect(lastUser).toBe('USER 1000:1000');
     expect(df).not.toMatch(/ENV .*(KEY|SECRET|PASSWORD|TOKEN)=/i);
+  });
+
+  it('the stem service (Karaoke): hardened the same, on an internal network with ECHO only', () => {
+    const stems = compose.services['echo-stems'];
+    expect(stems.user).toBe('1000:1000');
+    expect(stems.read_only).toBe(true);
+    expect(stems.cap_drop).toEqual(['ALL']);
+    expect(stems.security_opt).toContain('no-new-privileges:true');
+    expect(stems).not.toHaveProperty('ports');
+    expect(stems.cpus).toBeLessThanOrEqual(2);
+    expect(stems.mem_limit).toBeTruthy();
+    expect(stems.networks).toEqual(['stems']);
+    expect(compose.networks.stems?.internal).toBe(true);
+    const df = readFileSync('stems/Dockerfile', 'utf8');
+    for (const l of df.split('\n').filter((x) => x.startsWith('FROM ')))
+      expect(l).toMatch(/@sha256:[0-9a-f]{64}/);
+    expect(df).toMatch(/sha256sum -c/); // the model is checked against its pinned hash
+    expect(
+      df
+        .split('\n')
+        .filter((l) => l.startsWith('USER '))
+        .at(-1),
+    ).toBe('USER 1000:1000');
   });
 });

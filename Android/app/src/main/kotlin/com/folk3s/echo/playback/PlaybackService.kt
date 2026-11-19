@@ -28,12 +28,14 @@ class PlaybackService : MediaSessionService() {
 
   override fun onCreate() {
     super.onCreate()
+    KaraokeMix.level = echo.prefs.state.value.vocalLevel // before the app's UI (Karaoke) is up
     val http = OkHttpDataSource.Factory(echo.api.http)
-    // Decoded PCM is copied to the Stage's feature analyser before it reaches the speaker.
+    // Karaoke files (5.1) are mixed back to stereo at the vocals level; then decoded PCM is copied
+    // to the Stage's feature analyser before it reaches the speaker.
     val renderers =
       object : DefaultRenderersFactory(this) {
         override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
-          DefaultAudioSink.Builder(context).setAudioProcessors(arrayOf(TeeAudioProcessor(AudioTap))).build()
+          DefaultAudioSink.Builder(context).setAudioProcessors(arrayOf(VocalMixProcessor(), TeeAudioProcessor(AudioTap))).build()
       }
     val player =
       ExoPlayer.Builder(this, renderers)

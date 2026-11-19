@@ -88,6 +88,16 @@ function trackOf(s: SubSong, a: SubAlbum): NavidromeTrack {
   };
 }
 
+/** A Subsonic song on its own (getSong; the Karaoke shelf), its album from its own fields. */
+export function songTrack(s: Record<string, unknown>): NavidromeTrack {
+  const song = s as unknown as SubSong;
+  return trackOf(song, {
+    id: song.albumId ?? '',
+    name: song.album ?? '',
+    coverArt: song.coverArt,
+  } as SubAlbum);
+}
+
 const artistOf = (a: SubArtist): ArtistRef => ({
   id: a.id,
   name: a.name,

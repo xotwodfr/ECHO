@@ -81,8 +81,10 @@ fun Artwork(path: String?, title: String, size: Dp?, modifier: Modifier = Modifi
       }
     }
   if (path == null) return fallback()
+  // Small art (rows, the mini player) needs a small cover: a quarter of the pixels to fetch and decode.
+  val sized = if (size != null && size <= 64.dp) path.replace(Regex("size=\\d+"), "size=160") else path
   SubcomposeAsyncImage(
-    model = api.url(path),
+    model = api.url(sized),
     contentDescription = null,
     contentScale = ContentScale.Fit,
     modifier = box,

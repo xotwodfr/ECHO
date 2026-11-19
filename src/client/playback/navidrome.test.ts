@@ -55,7 +55,16 @@ class FakeAudio extends EventTarget {
 }
 
 class FakeNode {
-  gain = { value: 1 };
+  gain = {
+    value: 1,
+    setTargetAtTime(v: number) {
+      this.value = v;
+    },
+  };
+  channelInterpretation = 'speakers';
+  channelCount = 2;
+  channelCountMode = 'max';
+  getFloatTimeDomainData() {}
   fftSize = 0;
   smoothingTimeConstant = 0;
   minDecibels = 0;
@@ -103,6 +112,9 @@ describe('NavidromeProvider', () => {
         createAnalyser = () => new FakeNode();
         createGain = () => new FakeNode();
         createMediaElementSource = () => new FakeNode();
+        createChannelSplitter = () => new FakeNode();
+        createChannelMerger = () => new FakeNode();
+        currentTime = 0;
         resume = async () => {};
       },
     );
@@ -258,5 +270,57 @@ describe('NavidromeProvider', () => {
     expect(errors.map((e) => e.code)).toEqual(['youtube.bot_check']);
     expect(errors[0]?.userMessage).toMatch(/bot/);
     expect(urls.some((u) => u.includes('navidrome'))).toBe(false);
+  });
+});
+
+describe('Karaoke mode (docs/KARAOKE.md)', () => {
+  it('a karaoke file keeps its vocals at the slider level; anything else plays whole', async () => {
+    const { vocalGains } = await import('./audio.ts');
+    // A karaoke file: no centre (it is silent), the rear vocals at the level.
+    expect(vocalGains(true, 0)).toEqual({ centre: 0, rear: 0 });
+    expect(vocalGains(true, 0.3)).toEqual({ centre: 0, rear: 0.3 });
+    expect(vocalGains(true, 7)).toEqual({ centre: 0, rear: 1 });
+    // Not a karaoke file: a mono song's centre whole, a 5.1 song's rears as a downmix.
+    expect(vocalGains(false, 0)).toEqual({ centre: 1, rear: Math.SQRT1_2 });
+  });
+
+  it('a browser that downmixed the 5.1 shows as empty rears while the fronts play', async () => {
+    const { looksDownmixed } = await import('./audio.ts');
+    const front = new Float32Array([0, 0.2, -0.3]);
+    expect(looksDownmixed(front, new Float32Array(3))).toBe(true);
+    // A faint residue (an instrumental passage) is not a downmix; nor is silence all round.
+    expect(looksDownmixed(front, new Float32Array([0, 1e-6, 0]))).toBe(false);
+    expect(looksDownmixed(new Float32Array(3), new Float32Array(3))).toBe(false);
+  });
+
+  it('plays the karaoke file instead of the song while Karaoke is on and it is ready', async () => {
+    vi.stubGlobal('fetch', async () => new Response('{}', { status: 200 }));
+    const el = new FakeAudio();
+    const els = [el, new FakeAudio()] as unknown as [HTMLAudioElement, HTMLAudioElement];
+    let karaoke: string | null = null;
+    const p = new NavidromeProvider(els, {
+      transcodeOffset: true,
+      scrobble: false,
+      karaokeSrc: () => karaoke,
+    });
+    const loaded = async (run: Promise<void>) => {
+      await flush();
+      el.dispatchEvent(new Event('loadedmetadata'));
+      await run;
+    };
+    await loaded(p.load(track(1), { autoplay: false }));
+    expect(el.src).toContain('/api/v1/navidrome/stream/t1');
+    expect(p.playingKaraoke).toBe(false);
+    // Ready: the same song switches to its karaoke file, at the same place.
+    karaoke = '/api/v1/karaoke/t1/audio';
+    el.currentTime = 42;
+    await loaded(p.refreshSource());
+    expect(el.src).toBe('/api/v1/karaoke/t1/audio');
+    expect(p.playingKaraoke).toBe(true);
+    expect(el.currentTime).toBe(42);
+    // Off again: back to the song.
+    karaoke = null;
+    await loaded(p.refreshSource());
+    expect(el.src).toContain('/api/v1/navidrome/stream/t1');
   });
 });

@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -33,6 +34,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
 import coil3.compose.AsyncImage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -152,6 +154,8 @@ fun contextLive(kind: String, id: String?): Pair<Boolean, Boolean> {
 @Composable
 fun Heart(t: Track, size: Int = 24) {
   val app = LocalContext.current.echo
+  val guest by app.guests.me.collectAsStateWithLifecycle()
+  if (guest != null) return // a guest's likes would land in the host's Navidrome
   val starred by app.library.starredFlow.collectAsStateWithLifecycle()
   val on = starred?.tracks?.any { it.id == t.id } == true
   val scope = rememberCoroutineScope()
@@ -171,12 +175,14 @@ fun Heart(t: Track, size: Int = 24) {
 
 /** A song's menu: Add to playlist, song radio, the queue, where it came from. */
 fun songMenu(app: EchoApp, t: Track, nav: Nav, picker: (Track) -> Unit, extra: List<Pair<String, () -> Unit>> = emptyList()): List<Pair<String, () -> Unit>> =
-  listOf<Pair<String, () -> Unit>>("Add to playlist" to { picker(t) }) +
+  // A guest listens only: no playlists of the host's to change (guests.ts).
+  (if (app.guests.isGuest) emptyList() else listOf<Pair<String, () -> Unit>>("Add to playlist" to { picker(t) })) +
     extra +
     listOf<Pair<String, () -> Unit>>(
       "Go to song radio" to { app.scope.launch { runCatching { startRadio(app, t) }.onFailure { app.playback.notify("Couldn't start the radio.") } } },
       "Play next" to { app.playback.playNext(t) },
       "Add to queue" to { app.playback.addToQueue(t) },
+      "Make karaoke version" to { app.karaoke.request(t) },
     ) +
     listOfNotNull(
       t.artists.firstOrNull()?.id?.let { id -> "Go to artist" to { nav.go(Route.Artist(id)) } },
@@ -235,9 +241,15 @@ fun Card(
       onClick()
     },
   ) {
-    Box(Modifier.fillMaxWidth().aspectRatio(1f).coverFrom(token).clip(RoundedCornerShape(r))) {
-      if (art != null) art() else Artwork(cover, title, null, radius = r)
-    }
+    if (look.material != Material.Flat && !round)
+      // A cover in a frame of the material, each a hair off-straight.
+      Box(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { rotationZ = ((token.hashCode() % 5) - 2) * 0.4f }.matter(matter.paper, look.art, seed = token.hashCode(), depth = 0.9f).padding(7.dp).coverFrom(token).clip(RoundedCornerShape(look.rowArt))) {
+        if (art != null) art() else Artwork(cover, title, null, radius = look.rowArt)
+      }
+    else
+      Box(Modifier.fillMaxWidth().aspectRatio(1f).coverFrom(token).clip(RoundedCornerShape(r))) {
+        if (art != null) art() else Artwork(cover, title, null, radius = r)
+      }
     Spacer(Modifier.height(8.dp))
     Text(title, color = Chamber.text, style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold), maxLines = 1, overflow = TextOverflow.Ellipsis)
     Text(subtitle, color = Chamber.muted, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -296,9 +308,15 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
   val (random, _) = load("random") { app.library.albumList(AlbumList.Random, 12) }
   val (mixes, _) = load("mixes") { app.library.mixes() }
   val (contexts, _) = load("contexts") { app.library.playedContexts() }
+  val (karaoke, _) = load("karaoke") { app.library.karaokeSongs() }
   fun albums(l: Load<List<Album>>) = (l as? Load.Ok)?.value ?: emptyList()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item { LargeTitle("Home") { Avatar(onProfile) } }
+    // Guests: their time left and "Keep account"; for an inviter, a guest asking to stay.
+    item("guest") {
+      GuestBanner()
+      KeepRequestsCard()
+    }
     // The featured card: today's first mix, or else an album from the library.
     item("hero") {
       val mix = (mixes as? Load.Ok)?.value?.firstOrNull()
@@ -315,6 +333,22 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
       if (list.isNotEmpty()) item(title) { Shelf(title) { items(list, key = { it.id }) { a -> Card(a.cover, a.title, a.artist) { nav.go(Route.Album(a.id)) } } } }
     }
     madeForYou(mixes, contexts, nav)
+    // Karaoke: songs whose karaoke version is ready; playing one turns Karaoke mode on.
+    val sing = (karaoke as? Load.Ok)?.value ?: emptyList()
+    if (sing.isNotEmpty())
+      item("karaoke") {
+        Shelf("Karaoke") {
+          items(sing.size, key = { sing[it].key }) { i ->
+            val t = sing[i]
+            Card(t.cover, t.title, t.artist) {
+              // All ready: they play as karaoke from the first note, not after a switch.
+              for (x in sing) app.playback.karaokeReady(x.key, "/api/v1/karaoke/${java.net.URLEncoder.encode(x.id, "UTF-8")}/audio")
+              app.karaoke.setOn(true)
+              app.playback.playList(sing, i, PlayContext("karaoke", title = "Karaoke"))
+            }
+          }
+        }
+      }
     val pl = playlists ?: emptyList()
     if (pl.isNotEmpty()) item("playlists") { Shelf("Your playlists") { items(pl, key = { it.id }) { p -> Card(p.cover, p.name, p.owner ?: "${p.tracks} songs") { nav.go(Route.Playlist(p.id)) } } } }
     for ((title, l) in listOf("Your most played" to frequent, "Something different" to random)) {
@@ -329,6 +363,7 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
 /** Home's featured card: the cover filling it under the colour, the kind, the title, a play button. */
 @Composable
 private fun HeroCard(kind: String, title: String, sub: String, cover: String?, colour: Color, onOpen: () -> Unit, onPlay: () -> Unit) {
+  if (look.material != Material.Flat) return MadeHero(kind, title, sub, onOpen, onPlay)
   val api = LocalContext.current.echo.api
   Box(
     Modifier.padding(horizontal = 20.dp, vertical = 8.dp).fillMaxWidth().height(220.dp).bouncy(scale = 0.97f, label = title, onClick = onOpen).clip(RoundedCornerShape(look.hero)).background(colour),
@@ -382,7 +417,8 @@ fun SearchScreen(nav: Nav, picker: (Track) -> Unit) {
     LargeTitle("Search")
     // A rounded, filled search field.
     Row(
-      Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(52.dp).clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(horizontal = 16.dp),
+      Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(52.dp)
+        .then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 26.dp, pressed = true, seed = 60) else Modifier.clip(RoundedCornerShape(26.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)).padding(horizontal = 16.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
       Icon(EchoIcons.search, null, tint = Chamber.muted, modifier = Modifier.size(22.dp))
@@ -838,4 +874,32 @@ fun PlaylistPicker(tracks: List<Track>, onClose: () -> Unit) {
     confirmButton = { TextButton(onClick = onClose) { Text("Cancel", color = Chamber.text) } },
     containerColor = Chamber.surface3,
   )
+}
+
+/** Home's featured card in clay or yarn: a slab of the material, a label, the title, a play button. */
+@Composable
+internal fun MadeHero(kind: String, title: String, sub: String, onOpen: () -> Unit, onPlay: () -> Unit) {
+  val fill = matter.accent(0)
+  val ink = inkOn(fill, matter.ink)
+  val (source, down) = rememberPress()
+  Box(Modifier.padding(horizontal = 20.dp, vertical = 10.dp).fillMaxWidth().height(184.dp).graphicsLayer { rotationZ = -0.6f }.bouncy(scale = 0.98f, source = source, label = title, onClick = onOpen).matter(fill, look.hero, pressed = down, seed = 3, depth = 1.3f)) {
+    Text(
+      kind.uppercase(),
+      color = inkOn(matter.paper, matter.ink),
+      style = MaterialTheme.typography.labelSmall,
+      modifier = Modifier.padding(18.dp).matter(matter.paper, 12.dp, seed = 5, depth = 0.5f).padding(horizontal = 10.dp, vertical = 5.dp),
+    )
+    // Retro hi-fi: the panel's meters move with what's playing. Paper: the card is taped down.
+    if (look.material == Material.HiFi) VuMeters(Modifier.align(Alignment.TopEnd).padding(top = 16.dp, end = 18.dp).width(136.dp))
+    if (look.material == Material.Paper) Tape(Modifier.align(Alignment.TopCenter).offset(y = (-9).dp))
+    Column(Modifier.align(Alignment.BottomStart).padding(start = 20.dp, end = 86.dp, bottom = 20.dp)) {
+      Text(title, color = ink, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+      Text(sub, color = ink.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+    }
+    val (ps, pd) = rememberPress()
+    Box(
+      Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).bouncy(scale = 0.9f, source = ps, label = "Play $title", onClick = onPlay).matter(matter.paper, 22.dp, pressed = pd, seed = 6),
+      contentAlignment = Alignment.Center,
+    ) { Icon(EchoIcons.play, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(24.dp)) }
+  }
 }

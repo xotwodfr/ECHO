@@ -45,10 +45,19 @@ export class NavidromeProvider implements PlaybackProvider {
   private readonly voices: {
     el: HTMLAudioElement;
     setReplayGain(db?: number, peak?: number): void;
+    setKaraoke(on: boolean): void;
+    downmixed(): boolean;
   }[];
   private cur = 0;
   /** The track buffering in the other voice, if any. */
-  private next: { track: NavidromeTrack; src: string; transcode: boolean } | null = null;
+  private next: {
+    track: NavidromeTrack;
+    src: string;
+    transcode: boolean;
+    karaoke: boolean;
+  } | null = null;
+  /** Whether the playing voice plays a karaoke file. */
+  private karaoke = false;
   private endedAt = 0;
   /** Live features from the analyser tap (VISUALIZER_SPEC.md §3), aligned to what is audible. */
   private readonly live: AnalyserFeatures;
@@ -76,6 +85,8 @@ export class NavidromeProvider implements PlaybackProvider {
     scrobble: boolean;
     /** Settings → Playback → Quality (per device): `auto` and `raw` play the file when possible. */
     quality?: 'auto' | 'raw' | '320' | '192' | '128';
+    /** Karaoke mode: the karaoke file to play instead of the song, while it's on and ready. */
+    karaokeSrc?: (t: Track) => string | null;
   };
 
   constructor(
@@ -206,9 +217,16 @@ export class NavidromeProvider implements PlaybackProvider {
 
   /** The stream URL, and whether it is a transcode (which cannot seek). */
   private srcFor(track: NavidromeTrack, offsetS: number) {
+    // Karaoke mode: the server's 5.1 karaoke file (AAC in MP4, Range answered, seeks natively).
+    const karaoke = this.opts.karaokeSrc?.(track);
+    if (karaoke) return { src: karaoke, transcode: false, karaoke: true };
     // The proxy answers Range itself, so YouTube audio always plays raw and seeks natively.
     if (track.provider === 'youtube')
-      return { src: `/api/v1/youtube/stream/${encodeURIComponent(track.id)}`, transcode: false };
+      return {
+        src: `/api/v1/youtube/stream/${encodeURIComponent(track.id)}`,
+        transcode: false,
+        karaoke: false,
+      };
     const quality = this.opts.quality ?? 'auto';
     const playable = !!track.contentType && this.el.canPlayType(track.contentType) !== '';
     const raw = playable && (quality === 'auto' || quality === 'raw');
@@ -220,6 +238,7 @@ export class NavidromeProvider implements PlaybackProvider {
     return {
       src: `/api/v1/navidrome/stream/${encodeURIComponent(track.id)}?${q}`,
       transcode: !raw,
+      karaoke: false,
     };
   }
 
@@ -267,6 +286,8 @@ export class NavidromeProvider implements PlaybackProvider {
       this.cur = 1 - this.cur;
       old.pause();
       this.transcode = this.next.transcode;
+      this.karaoke = this.next.karaoke;
+      (this.voices[this.cur] as (typeof this.voices)[number]).setKaraoke(this.karaoke);
       this.next = null;
       this.track = t;
       this.loading = false;
@@ -294,8 +315,10 @@ export class NavidromeProvider implements PlaybackProvider {
     }
     this.applyGain(t, this.gainMode);
     const load = ++this.loads;
-    const { src, transcode } = this.srcFor(t, this.startMs / 1000);
+    const { src, transcode, karaoke } = this.srcFor(t, this.startMs / 1000);
     this.transcode = transcode;
+    this.karaoke = karaoke;
+    (this.voices[this.cur] as (typeof this.voices)[number]).setKaraoke(karaoke);
     this.offsetS = transcode ? Math.floor(this.startMs / 1000) : 0;
     el.src = src;
     this.emitState();
@@ -383,11 +406,56 @@ export class NavidromeProvider implements PlaybackProvider {
   async preload(next: Track) {
     const t = next as NavidromeTrack;
     if (t.key === this.track?.key || t.key === this.next?.track.key) return;
-    const { src, transcode } = this.srcFor(t, 0);
-    const other = (this.voices[1 - this.cur] as (typeof this.voices)[number]).el;
-    other.src = src;
-    other.load();
-    this.next = { track: t, src, transcode };
+    const { src, transcode, karaoke } = this.srcFor(t, 0);
+    const voice = this.voices[1 - this.cur] as (typeof this.voices)[number];
+    voice.el.src = src;
+    voice.el.load();
+    voice.setKaraoke(karaoke);
+    this.next = { track: t, src, transcode, karaoke };
+  }
+
+  /**
+   * Karaoke mode turned on or off, or a karaoke file became ready: the song playing switches to
+   * the source it should have now, at the same position, and the buffered next one too.
+   */
+  async refreshSource() {
+    const t = this.track;
+    if (t && !this.loading) {
+      const want = this.srcFor(t, 0);
+      if (want.karaoke !== this.karaoke) {
+        const at = (this.offsetS + this.el.currentTime) * 1000;
+        await this.load(t, {
+          startMs: at,
+          autoplay: !this.el.paused,
+          retry: true,
+          replayGain: this.gainMode,
+        });
+      }
+    }
+    const n = this.next;
+    if (n && this.srcFor(n.track, 0).karaoke !== n.karaoke) {
+      this.next = null;
+      await this.preload(n.track);
+    }
+  }
+
+  /** Whether the playing voice is a karaoke file. */
+  get playingKaraoke() {
+    return this.karaoke;
+  }
+
+  /** A karaoke file whose rear channels arrive empty: this browser downmixed the 5.1 itself. */
+  karaokeDownmixed() {
+    return (
+      this.karaoke &&
+      !this.el.paused &&
+      (this.voices[this.cur] as (typeof this.voices)[number]).downmixed()
+    );
+  }
+
+  /** Karaoke mode's vocals level, 0..1. */
+  setVocalLevel(level: number) {
+    this.graph.setVocalLevel(level);
   }
 
   on<K extends keyof Events>(event: K, cb: (e: Events[K]) => void): Unsubscribe {
