@@ -90,6 +90,7 @@ struct PhoneHome: View {
         }
         .background(Color(hex: 0x0C0E13))
         .navigationTitle("Good evening")
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Account", systemImage: "person.crop.circle") {}
@@ -198,6 +199,7 @@ struct PhoneAlbum: View {
         }
         .background(Color(hex: 0x0B1520))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Add to Library", systemImage: "plus") {}
@@ -228,6 +230,8 @@ struct PhoneMiniPlayer: View {
             Button("Next", systemImage: "forward.fill") {}.labelStyle(.iconOnly)
         }
         .font(.title3)
+        .foregroundStyle(.white)
+        .tint(.white)
         .padding(.horizontal, 14)
     }
 }
@@ -286,12 +290,15 @@ struct PhoneNowPlaying: View {
                     .font(.caption).foregroundStyle(.secondary).monospacedDigit()
                 }
 
-                GlassEffectContainer(spacing: 18) {
-                    HStack(spacing: 18) {
-                        transport("backward.fill", "Previous", size: 64)
-                        transport("pause.fill", "Pause", size: 84)
-                        transport("forward.fill", "Next", size: 64)
+                GlassEffectContainer {
+                    HStack(spacing: 22) {
+                        transport("backward.fill", "Previous", size: 60)
+                        transport("pause.fill", "Pause", size: 72)
+                        transport("forward.fill", "Next", size: 60)
                     }
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 6)
+                    .glassEffect(.regular.interactive(), in: .capsule)
                 }
 
                 Spacer(minLength: 0)
@@ -315,14 +322,16 @@ struct PhoneNowPlaying: View {
         .preferredColorScheme(.dark)
     }
 
+    /// One control in the transport capsule: at least 44 pt to tap, the capsule is the only glass.
     private func transport(_ icon: String, _ label: String, size: CGFloat) -> some View {
         Button {} label: {
             Image(systemName: icon)
-                .font(.system(size: size * 0.38, weight: .semibold))
+                .font(.system(size: size * 0.5, weight: .semibold))
+                .foregroundStyle(.white)
                 .frame(width: size, height: size)
+                .contentShape(.rect)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
         .accessibilityLabel(label)
     }
 }
@@ -445,6 +454,7 @@ struct PhoneLibrary: View {
         }
         .background(Color(hex: 0x0C0E13))
         .navigationTitle("Library")
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) { Button("Sort", systemImage: "arrow.up.arrow.down") {} }
             ToolbarItem(placement: .topBarTrailing) { Button("New Playlist", systemImage: "plus") {} }
@@ -518,6 +528,7 @@ struct PhoneSearch: View {
         }
         .background(Color(hex: 0x0C0E13))
         .navigationTitle("Search")
+        .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .searchable(text: $query, prompt: "Artists, songs, albums")
     }
 }
