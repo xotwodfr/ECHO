@@ -97,11 +97,11 @@ jobs:
           limit 600 xcrun simctl bootstatus "$dev" -b || echo "bootstatus gave up; going on"
           limit 60 xcrun simctl ui "$dev" appearance dark
           limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
-          limit 300 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
+          limit 480 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
           for s in home album nowplaying lyrics library search; do
-            limit 60 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
+            limit 180 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             sleep 7
-            limit 60 xcrun simctl io "$dev" screenshot "Apple/Screenshots/iphone-$s.png"
+            limit 120 xcrun simctl io "$dev" screenshot "Apple/Screenshots/iphone-$s.png"
           done
           set +x
           sips --resampleWidth 804 Apple/Screenshots/iphone-*.png >/dev/null
@@ -146,7 +146,7 @@ jobs:
           for mode in light dark; do
             limit 60 xcrun simctl ui "$dev" appearance "$mode"
             sleep 8
-            limit 60 xcrun simctl io "$dev" screenshot "Apple/Screenshots/icon/home-$mode.png"
+            limit 120 xcrun simctl io "$dev" screenshot "Apple/Screenshots/icon/home-$mode.png"
             # The first icon at full resolution (3x): the top-left of the grid, with its label.
             cp "Apple/Screenshots/icon/home-$mode.png" "Apple/Screenshots/icon/icon-$mode.png"
             sips --cropToHeightWidth 600 560 --cropOffset 140 0 "Apple/Screenshots/icon/icon-$mode.png" >/dev/null
