@@ -3,8 +3,8 @@ import { startSetup } from './auth/routes.ts';
 import { fromBase32, hotp, stepAt } from './auth/totp.ts';
 import { call, cookieOf, testDeps } from './testing.ts';
 
-// The games section of /me/settings: each game's record follows the account, and only a
-// well-formed record is stored.
+// The games and appearance sections of /me/settings: each game's record, the theme and light or
+// dark follow the account, and only well-formed values are stored.
 
 async function admin() {
   const t = testDeps();
@@ -54,4 +54,34 @@ it('keeps each game record on the account and refuses malformed ones', async () 
   expect(
     (await call(app, 'PUT', '/api/v1/me/settings', { games: { pinball: rec } }, cookie)).status,
   ).toBe(400);
+});
+
+it('keeps the theme and light or dark on the account, and refuses unknown ones', async () => {
+  const { app, cookie } = await admin();
+  const fresh = await (await call(app, 'GET', '/api/v1/me/settings', undefined, cookie)).json();
+  expect(fresh.appearance).toEqual({ theme: 'echo', dark: 'theme' });
+
+  const put = await call(
+    app,
+    'PUT',
+    '/api/v1/me/settings',
+    { appearance: { theme: 'clay', dark: 'dark' } },
+    cookie,
+  );
+  expect(put.status).toBe(200);
+  const after = await (await call(app, 'GET', '/api/v1/me/settings', undefined, cookie)).json();
+  expect(after.appearance).toEqual({ theme: 'clay', dark: 'dark' });
+
+  for (const bad of [
+    { theme: 'winamp' },
+    { theme: 3 },
+    { dark: 'dim' },
+    { dark: true },
+    { accent: 'red' },
+  ])
+    expect(
+      (await call(app, 'PUT', '/api/v1/me/settings', { appearance: bad }, cookie)).status,
+    ).toBe(400);
+  const kept = await (await call(app, 'GET', '/api/v1/me/settings', undefined, cookie)).json();
+  expect(kept.appearance).toEqual({ theme: 'clay', dark: 'dark' });
 });

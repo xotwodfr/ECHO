@@ -331,6 +331,8 @@ redistribution) is shown next to the field.
 | | `visuals.pointerParallax` | bool | true |
 | | `visuals.backdrop` | 0–1, the blurred cover's brightness (the Stage's brightness control, 2026-10-28) | 0.5 (**per device**) |
 | | `visuals.performance` | bool: Performance mode, for a slow computer (2026-11-04) | false (**per device**) |
+| Appearance | `appearance.theme` | one of Android's themes: `echo` \| `apple` \| `spotify` \| `soundcloud` \| `deezer` \| `qobuz` \| `tidal` \| `youtube` \| `clay` \| `yarn` \| `glass` \| `paper` \| `hifi` \| `materialyou` \| `mono` (`src/shared/themes.ts`; the web shows `materialyou` as ECHO) | `echo` |
+| | `appearance.dark` | `theme` (the theme's own) \| `system` \| `light` \| `dark` | `theme` |
 
 `visuals.quality`, `visuals.backdrop`, `visuals.performance`, `playback.quality` and the volume are
 stored in `localStorage` per device. A gaming PC and a laptop need different values, and screens
