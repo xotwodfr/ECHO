@@ -409,10 +409,12 @@ test.describe('the lyrics view', () => {
     await record(page);
     await player(page).getByRole('button', { name: 'Lyrics', exact: true }).click();
     await expect(page.getByRole('button', { name: 'Close Now playing' })).toBeVisible();
-    // The view's clip grows from the cover, a cover flies, the page behind sinks back.
-    expect(await moved(page)).toEqual(
-      expect.arrayContaining(['canvas clipPath', 'motion-fly transform']),
-    );
+    // The view's clip grows from the cover, a cover flies, the page behind sinks back. The motion
+    // starts on the frame after React commits the view (page-transition.ts), which a loaded
+    // Firefox can paint after the close button already shows.
+    await expect
+      .poll(() => moved(page))
+      .toEqual(expect.arrayContaining(['canvas clipPath', 'motion-fly transform']));
     await expect(ghosts(page)).toHaveCount(0, { timeout: 3000 });
 
     await page.mouse.move(600, 300); // the chrome hides while playing: bring it back

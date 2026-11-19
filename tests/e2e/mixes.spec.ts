@@ -60,6 +60,10 @@ test('Made For You: a Daily Mix from what was played, and its page plays it', as
 
   await daily.getByRole('link', { name: 'Daily Mix 1' }).click();
   await expect(page).toHaveURL(/\/mix\/daily-1$/);
+  // The card opens its page through a View Transition (page-transition.ts). While it runs Firefox
+  // hit-tests to the shell, and Playwright's retries scrolled the Play button up under the page's
+  // sticky bar, which took the click: the page is used once it has arrived.
+  await expect(page.locator('html.vt')).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1, name: 'Daily Mix 1' })).toBeVisible();
   await expect(page.getByRole('main').getByText('Harbour Lights 1').first()).toBeVisible();
   await page.locator('.action-bar').getByRole('button', { name: 'Play Daily Mix 1' }).click();

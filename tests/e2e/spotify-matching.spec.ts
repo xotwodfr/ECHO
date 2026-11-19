@@ -8,7 +8,10 @@ import {
 
 // Spotify matching for Navidrome tracks (LYRICS_INTEGRATION.md §4.3) on the mock services, which
 // know no track: a playing track is tried at once, shows up as "not found" for the admin, and is
-// corrected from the Stage's ⓘ menu or from the list.
+// corrected from the Stage's ⓘ menu or from the list. It changes server-wide state (every match,
+// the lyrics cache), so it runs in the isolated projects, one test at a time (playwright.config.ts).
+// Glass Weather 5 is the album's longest song (40 s on the mock): a song that ended under the open
+// ⓘ menu would load the next one's lyrics and close the menu with it.
 
 const LINK = 'https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC?si=abc';
 
@@ -18,7 +21,7 @@ test('an admin fixes the playing track’s match from the Stage, and fixes a mis
   clearLyricsCache();
   clearSpotifyMatches();
   await signedInWithNavidrome(page, 'adm', 'admin');
-  await playAlbum(page, 'al-3'); // Glass Weather: LRCLIB lyrics, so the ⓘ menu is there
+  await playAlbum(page, 'al-3', 4); // Glass Weather: LRCLIB lyrics, so the ⓘ menu is there
   await expect(page.locator('.stage-attribution')).toHaveText(/LRCLIB/);
   await page.locator('.stage-attribution').getByRole('button').click();
   await page.getByRole('menuitem', { name: 'Fix Spotify match…' }).click();
@@ -55,7 +58,7 @@ test('an admin fixes the playing track’s match from the Stage, and fixes a mis
 
 test('a user without admin has no fix in the ⓘ menu', async ({ page }) => {
   await signedInWithNavidrome(page);
-  await playAlbum(page, 'al-3');
+  await playAlbum(page, 'al-3', 4);
   await expect(page.locator('.stage-attribution')).toHaveText(/LRCLIB/);
   await page.locator('.stage-attribution').getByRole('button').click();
   await expect(page.getByRole('menuitem', { name: 'Choose automatically' })).toBeVisible();
