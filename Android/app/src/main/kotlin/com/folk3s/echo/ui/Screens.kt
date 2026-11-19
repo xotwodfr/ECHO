@@ -154,6 +154,8 @@ fun contextLive(kind: String, id: String?): Pair<Boolean, Boolean> {
 @Composable
 fun Heart(t: Track, size: Int = 24) {
   val app = LocalContext.current.echo
+  val guest by app.guests.me.collectAsStateWithLifecycle()
+  if (guest != null) return // a guest's likes would land in the host's Navidrome
   val starred by app.library.starredFlow.collectAsStateWithLifecycle()
   val on = starred?.tracks?.any { it.id == t.id } == true
   val scope = rememberCoroutineScope()
@@ -173,7 +175,8 @@ fun Heart(t: Track, size: Int = 24) {
 
 /** A song's menu: Add to playlist, song radio, the queue, where it came from. */
 fun songMenu(app: EchoApp, t: Track, nav: Nav, picker: (Track) -> Unit, extra: List<Pair<String, () -> Unit>> = emptyList()): List<Pair<String, () -> Unit>> =
-  listOf<Pair<String, () -> Unit>>("Add to playlist" to { picker(t) }) +
+  // A guest listens only: no playlists of the host's to change (guests.ts).
+  (if (app.guests.isGuest) emptyList() else listOf<Pair<String, () -> Unit>>("Add to playlist" to { picker(t) })) +
     extra +
     listOf<Pair<String, () -> Unit>>(
       "Go to song radio" to { app.scope.launch { runCatching { startRadio(app, t) }.onFailure { app.playback.notify("Couldn't start the radio.") } } },
@@ -309,6 +312,11 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
   fun albums(l: Load<List<Album>>) = (l as? Load.Ok)?.value ?: emptyList()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item { LargeTitle("Home") { Avatar(onProfile) } }
+    // Guests: their time left and "Keep account"; for an inviter, a guest asking to stay.
+    item("guest") {
+      GuestBanner()
+      KeepRequestsCard()
+    }
     // The featured card: today's first mix, or else an album from the library.
     item("hero") {
       val mix = (mixes as? Load.Ok)?.value?.firstOrNull()

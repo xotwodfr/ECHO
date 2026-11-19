@@ -215,6 +215,12 @@ fun SettingsScreen() {
     )
     KaraokeProgress()
 
+    val guest by app.guests.me.collectAsStateWithLifecycle()
+    if (guest == null) {
+      Section("Guests")
+      GuestsSection()
+    }
+
     Section("Account")
     Text(who ?: app.api.base.substringAfter("://"), color = MaterialTheme.colorScheme.onSurfaceVariant)
     Text("Connections, two-factor sign-in and devices are managed on the web.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
