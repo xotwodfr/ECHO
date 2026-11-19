@@ -103,3 +103,21 @@ suspend fun Api.approveGuest(id: Long) {
 suspend fun Api.endGuest(id: Long) {
   send("POST", "/guests/$id/end", buildJsonObject {})
 }
+
+// ---- Sign in on a computer (src/server/qrlogin.ts) ----
+
+@Serializable data class LinkPeek(val browser: String, val ip: String, val expiresAt: Long)
+
+/** The request id in a scanned sign-in QR code, if it is for this server (`<origin>/link#<id>`). */
+fun linkCodeOf(scanned: String, base: String): String? {
+  val prefix = "${base.trimEnd('/')}/link#"
+  if (!scanned.startsWith(prefix)) return null
+  return scanned.removePrefix(prefix).takeIf { Regex("^[\\w-]{16,64}$").matches(it) }
+}
+
+suspend fun Api.peekLink(id: String): LinkPeek =
+  EchoJson.decodeFromJsonElement(send("POST", "/auth/qr/peek", buildJsonObject { put("id", id) }))
+
+suspend fun Api.approveLink(id: String) {
+  send("POST", "/auth/qr/approve", buildJsonObject { put("id", id) })
+}

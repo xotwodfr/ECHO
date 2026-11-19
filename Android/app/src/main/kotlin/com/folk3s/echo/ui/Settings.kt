@@ -105,6 +105,8 @@ fun SettingsScreen() {
   val p by app.prefs.state.collectAsStateWithLifecycle()
   fun set(f: (Prefs) -> Prefs) = app.prefs.update(f)
   var who by remember { mutableStateOf<String?>(null) }
+  var linking by remember { mutableStateOf(false) }
+  if (linking) return LinkScanScreen(onClose = { linking = false })
   LaunchedEffect(Unit) {
     who =
       runCatching {
@@ -219,6 +221,9 @@ fun SettingsScreen() {
     if (guest == null) {
       Section("Guests")
       GuestsSection()
+      Section("Sign in on a computer")
+      Text("Open ECHO in a browser, then scan the QR code on its sign-in page: no password to type.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+      OutlinedButton(onClick = { linking = true }) { Text("Scan the sign-in code") }
     }
 
     Section("Account")

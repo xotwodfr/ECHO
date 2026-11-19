@@ -316,6 +316,7 @@ fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
     item("guest") {
       GuestBanner()
       KeepRequestsCard()
+      UpdateCard()
     }
     // The featured card: today's first mix, or else an album from the library.
     item("hero") {
