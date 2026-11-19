@@ -47,8 +47,15 @@ jobs:
       - name: Projects
         run: |
           brew install xcodegen
+          xcodegen --version
           (cd iOS && xcodegen)
           (cd macOS && xcodegen)
+          # The Icon Composer icon is a folder Xcode compiles with actool only as folder.iconcomposer.icon.
+          for p in iOS/ECHO.xcodeproj/project.pbxproj macOS/ECHO.xcodeproj/project.pbxproj; do
+            sed -i '' -E 's/(lastKnownFileType = )[^;]*(; (name = AppIcon\.icon; )?path = [^;]*AppIcon\.icon;)/\1folder.iconcomposer.icon\2/' "$p"
+            sed -i '' -E 's/(isa = PBXFileReference; )((name = AppIcon\.icon; )?path = [^;]*AppIcon\.icon;)/\1lastKnownFileType = folder.iconcomposer.icon; \2/' "$p"
+            grep -n "AppIcon" "$p"
+          done
 
       - name: Build for iPhone (simulator, unsigned)
         run: >
@@ -59,6 +66,17 @@ jobs:
         run: >
           xcodebuild -quiet -project macOS/ECHO.xcodeproj -target ECHO -configuration Debug
           SYMROOT="$PWD/build/mac" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+
+      - name: The icon in the builds
+        run: |
+          for app in build/ios/Debug-iphonesimulator/ECHO.app build/mac/Debug/ECHO.app; do
+            echo "== $app"
+            ls "$app" "$app/Contents/Resources" 2>/dev/null | head -40 || true
+            plist="$app/Info.plist"; [ -f "$plist" ] || plist="$app/Contents/Info.plist"
+            plutil -p "$plist" | grep -i -A6 icon || echo "no icon keys"
+            car=$(find "$app" -name Assets.car | head -1)
+            if [ -n "$car" ]; then xcrun --sdk iphoneos assetutil --info "$car" | grep -E '"(Name|RenditionName|AssetType|Idiom|PixelWidth)"' | sort | uniq -c | head -40; else echo "no Assets.car"; fi
+          done
 
       - name: iPhone screenshots
         run: |
@@ -82,6 +100,50 @@ jobs:
             xcrun simctl io "$dev" screenshot "Apple/Screenshots/iphone-$s.png"
           done
           sips --resampleWidth 804 Apple/Screenshots/iphone-*.png >/dev/null
+          echo "$dev" > /tmp/sim-udid
+
+      - name: Icon on the home screen
+        run: |
+          dev=$(cat /tmp/sim-udid)
+          mkdir -p Apple/Screenshots/icon
+          home=$(xcrun simctl getenv "$dev" HOME)
+          state="$home/Library/SpringBoard/IconState.plist"
+          xcrun simctl terminate "$dev" com.folk3s.echo 2>/dev/null || true
+          # Whether the icon style (default, dark, clear, tinted) is a setting SpringBoard keeps.
+          xcrun simctl spawn "$dev" defaults read com.apple.springboard 2>/dev/null | grep -i -E "icon|tint|appearance|style|clear" | head -40 || true
+          ls "$home/Library/Preferences" | grep -i -E "springboard|homescreen|icon" || true
+          sleep 3
+          xcrun simctl shutdown "$dev"
+          # ECHO first on the first page, so its place is known and it is in every shot.
+          python3 - "$state" <<'PY'
+          import plistlib, sys
+          path = sys.argv[1]
+          try:
+              with open(path, "rb") as f:
+                  state = plistlib.load(f)
+          except FileNotFoundError:
+              print("no IconState.plist"); sys.exit(0)
+          lists = state.get("iconLists", [])
+          for page in lists:
+              while "com.folk3s.echo" in page:
+                  page.remove("com.folk3s.echo")
+          lists[0].insert(0, "com.folk3s.echo")
+          with open(path, "wb") as f:
+              plistlib.dump(state, f, fmt=plistlib.FMT_BINARY)
+          print("first page:", [x if isinstance(x, str) else "(folder/widget)" for x in lists[0]])
+          PY
+          xcrun simctl boot "$dev"
+          xcrun simctl bootstatus "$dev" -b
+          xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          for mode in light dark; do
+            xcrun simctl ui "$dev" appearance "$mode"
+            sleep 6
+            xcrun simctl io "$dev" screenshot "Apple/Screenshots/icon/home-$mode.png"
+            # The first icon at full resolution (3x): the top-left of the grid, with its label.
+            cp "Apple/Screenshots/icon/home-$mode.png" "Apple/Screenshots/icon/icon-$mode.png"
+            sips --cropToHeightWidth 600 560 --cropOffset 140 0 "Apple/Screenshots/icon/icon-$mode.png" >/dev/null
+          done
+          sips -g pixelWidth -g pixelHeight Apple/Screenshots/icon/*.png
 
       - name: Mac screenshots
         run: |

@@ -31,6 +31,8 @@ targets:
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
+        # The Icon Composer icon in Apple/Shared (Liquid Glass layers), compiled by actool.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
         # Your Apple developer team, to run it on a device (Xcode → Signing & Capabilities):
         # DEVELOPMENT_TEAM: XXXXXXXXXX

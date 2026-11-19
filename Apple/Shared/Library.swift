@@ -27,8 +27,9 @@ final class Library {
         // The owner's server (as the Android app's); ECHO_URL (the Xcode scheme) points elsewhere.
         var server = ProcessInfo.processInfo.environment["ECHO_URL"] ?? "https://echo.folk3s.com"
         while server.hasSuffix("/") { server.removeLast() }
-        api = Api(base: server, token: TokenStore.load(server: server))
-        signedIn = api.token != nil
+        let token = TokenStore.load(server: server)
+        api = Api(base: server, token: token)
+        signedIn = token != nil // not api.token: self is not whole yet (@Observable)
         #if os(iOS)
         try? AVAudioSession.sharedInstance().setCategory(.playback) // plays on with the screen off
         #endif
