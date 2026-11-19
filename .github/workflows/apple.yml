@@ -88,23 +88,31 @@ jobs:
           pro = [p for p in phones if "Pro" in p[1]["name"] and "Max" not in p[1]["name"]] or phones
           print(sorted(pro, key=lambda p: (p[0], p[1]["name"]))[-1][1]["udid"])')
           xcrun simctl list devices | grep "$dev"
-          xcrun simctl boot "$dev"
-          xcrun simctl bootstatus "$dev" -b
-          xcrun simctl ui "$dev" appearance dark
-          xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
-          xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
+          # Every simulator command has a time limit, and the log says when each began: a hang
+          # fails here with the culprit named instead of using up the job.
+          limit() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
+          export PS4='+ $(date +%T) '
+          set -x
+          limit 300 xcrun simctl boot "$dev"
+          limit 600 xcrun simctl bootstatus "$dev" -b || echo "bootstatus gave up; going on"
+          limit 60 xcrun simctl ui "$dev" appearance dark
+          limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
+          limit 300 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
           for s in home album nowplaying lyrics library search; do
-            xcrun simctl terminate "$dev" com.folk3s.echo 2>/dev/null || true
-            xcrun simctl launch "$dev" com.folk3s.echo -ECHODemo "$s"
+            limit 60 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             sleep 7
-            xcrun simctl io "$dev" screenshot "Apple/Screenshots/iphone-$s.png"
+            limit 60 xcrun simctl io "$dev" screenshot "Apple/Screenshots/iphone-$s.png"
           done
+          set +x
           sips --resampleWidth 804 Apple/Screenshots/iphone-*.png >/dev/null
           echo "$dev" > /tmp/sim-udid
 
       - name: Icon on the home screen
         run: |
           dev=$(cat /tmp/sim-udid)
+          limit() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
+          export PS4='+ $(date +%T) '
+          set -x
           mkdir -p Apple/Screenshots/icon
           home=$(xcrun simctl getenv "$dev" HOME)
           state="$home/Library/SpringBoard/IconState.plist"
@@ -113,7 +121,7 @@ jobs:
           xcrun simctl spawn "$dev" defaults read com.apple.springboard 2>/dev/null | grep -i -E "icon|tint|appearance|style|clear" | head -40 || true
           ls "$home/Library/Preferences" | grep -i -E "springboard|homescreen|icon" || true
           sleep 3
-          xcrun simctl shutdown "$dev"
+          limit 120 xcrun simctl shutdown "$dev"
           # ECHO first on the first page, so its place is known and it is in every shot.
           python3 - "$state" <<'PY'
           import plistlib, sys
@@ -132,13 +140,13 @@ jobs:
               plistlib.dump(state, f, fmt=plistlib.FMT_BINARY)
           print("first page:", [x if isinstance(x, str) else "(folder/widget)" for x in lists[0]])
           PY
-          xcrun simctl boot "$dev"
-          xcrun simctl bootstatus "$dev" -b
-          xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          limit 300 xcrun simctl boot "$dev"
+          limit 600 xcrun simctl bootstatus "$dev" -b || echo "bootstatus gave up; going on"
+          limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           for mode in light dark; do
-            xcrun simctl ui "$dev" appearance "$mode"
-            sleep 6
-            xcrun simctl io "$dev" screenshot "Apple/Screenshots/icon/home-$mode.png"
+            limit 60 xcrun simctl ui "$dev" appearance "$mode"
+            sleep 8
+            limit 60 xcrun simctl io "$dev" screenshot "Apple/Screenshots/icon/home-$mode.png"
             # The first icon at full resolution (3x): the top-left of the grid, with its label.
             cp "Apple/Screenshots/icon/home-$mode.png" "Apple/Screenshots/icon/icon-$mode.png"
             sips --cropToHeightWidth 600 560 --cropOffset 140 0 "Apple/Screenshots/icon/icon-$mode.png" >/dev/null
