@@ -18,6 +18,9 @@ export interface Config {
   neteaseUrl: string; // S5
   listenbrainzUrl: string; // Spotify-id matching for Spicy Lyrics (§4.3)
   musicbrainzUrl: string;
+  stemsUrl: string | null; // Karaoke mode's stem service (stems/, docs/KARAOKE.md); off when unset
+  stemsLibrary: boolean; // the whole library, not only songs asked for
+  stemsMaxMinutes: number;
   ytdlp: string; // the pinned yt-dlp binary in the image; copied to <dataDir>/bin to update itself
 }
 
@@ -55,6 +58,10 @@ export function loadConfig(env: Env = process.env): Config {
     ),
     musicbrainzUrl: (env.ECHO_MUSICBRAINZ_URL || 'https://musicbrainz.org').replace(/\/+$/, ''),
     spicyUrl: (env.ECHO_SPICY_URL || 'https://api.spicylyrics.org').replace(/\/+$/, ''),
+    stemsUrl: env.ECHO_STEMS_URL ? env.ECHO_STEMS_URL.replace(/\/+$/, '') : null,
+    stemsLibrary: env.ECHO_STEMS_LIBRARY !== '0',
+    stemsMaxMinutes:
+      Number(env.ECHO_STEMS_MAX_MINUTES) > 0 ? Number(env.ECHO_STEMS_MAX_MINUTES) : 20,
     ytdlp: env.ECHO_YTDLP || '/app/bin/yt-dlp',
   };
 }

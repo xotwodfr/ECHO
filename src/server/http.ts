@@ -17,6 +17,8 @@ export type Vars = { ip: string };
 /** §5.6: request bodies ≤ 64 KB (no uploads); applied with hono/body-limit in index.ts. */
 export const BODY_LIMIT = 64 * 1024;
 const SAFE = new Set(['GET', 'HEAD', 'OPTIONS']);
+/** Sign-ins a native app makes with nothing ambient: the device token, and a guest code. */
+const NATIVE_LOGIN = ['/api/v1/auth/device', '/api/v1/guests/peek', '/api/v1/guests/redeem'];
 
 export const SECURITY_HEADERS: Record<string, string> = {
   'Content-Security-Policy': [
@@ -90,8 +92,9 @@ export function hardening(
     // CSRF (§5.3): cookie-authenticated unsafe methods must come from our own origin. Bearer
     // tokens are not sent ambiently, so they are exempt; so is a native client asking for its
     // device token without any cookie and without an Origin (nothing ambient to ride on, API-02).
+    // The same goes for a guest code looked up or redeemed from the app (guests.ts).
     const nativeDeviceLogin =
-      c.req.path === '/api/v1/auth/device' && !c.req.header('cookie') && !c.req.header('origin');
+      NATIVE_LOGIN.includes(c.req.path) && !c.req.header('cookie') && !c.req.header('origin');
     // The browser sends CSP reports itself; they change nothing but a log line.
     const cspReport = c.req.path === '/api/v1/csp-report';
     if (

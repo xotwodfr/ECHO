@@ -14,8 +14,8 @@ android {
     applicationId = "com.folk3s.echo"
     minSdk = 29
     targetSdk = 36
-    versionCode = 6
-    versionName = "0.3.3"
+    versionCode = 11
+    versionName = "0.7.0"
     // Fixed to the owner's server (2026-10-29). Debug builds may point at a test server instead:
     // ./gradlew assembleDebug -Pecho.devUrl=http://10.0.2.2:18797
     buildConfigField("String", "ECHO_URL", "\"https://echo.folk3s.com\"")
@@ -81,5 +81,8 @@ dependencies {
   implementation(libs.serialization.json)
   implementation(libs.materialkolor)
   implementation(libs.haze)
+  // Guest codes: scanning (the camera view) and drawing the QR code.
+  implementation(libs.zxing.embedded) { isTransitive = false }
+  implementation(libs.zxing.core)
   testImplementation(libs.junit)
 }

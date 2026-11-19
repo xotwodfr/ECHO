@@ -19,9 +19,11 @@ services:
       # the "web" network, or that network's gateway when Caddy runs on the host; IPv4 CIDRs work).
       # Left empty, ECHO trusts no X-Forwarded-Proto, sees plain http and answers 403 to everything.
       ECHO_TRUSTED_PROXY: ""
+      # Karaoke mode (docs/KARAOKE.md): the stem service below. Remove to turn it off.
+      ECHO_STEMS_URL: http://echo-stems:8090
     secrets: [echo_master_key]
     volumes: [echo-data:/data]
-    networks: [web, music]                     # no "ports:", reachable only via Caddy
+    networks: [web, music, stems]              # no "ports:", reachable only via Caddy
     # Caddy on the host instead of in Docker? Drop the "web" network and publish on loopback
     # only, then point Caddy at 127.0.0.1:<port>. Pick a free host port:
     # ports: ["127.0.0.1:8085:8080"]
@@ -38,6 +40,27 @@ services:
     logging:                                   # Docker keeps logs forever otherwise
       options: { max-size: 10m, max-file: "3" }
 
+  # Karaoke mode's stem service (stems/, docs/KARAOKE.md): splits each song into instrumental and
+  # vocals, one song at a time at the lowest CPU priority. Only ECHO talks to it. About 6 MB per
+  # 4-minute song; a song takes about as long to split as to play on two cores.
+  echo-stems:
+    build: ./stems
+    image: echo-stems:local
+    restart: unless-stopped
+    volumes:
+      - /Media/Media/Instrumentals:/stems      # chown 1000:1000 first
+    networks: [stems]
+    read_only: true
+    tmpfs: [/tmp]
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 3g                              # a 20-minute song at most (ECHO_STEMS_MAX_MINUTES)
+    pids_limit: 64
+    cpus: 2
+    logging:
+      options: { max-size: 10m, max-file: "3" }
+
 secrets:
   echo_master_key:
     file: ./secrets/echo_master_key            # chmod 600, never in git
@@ -50,3 +73,5 @@ networks:
     external: true
   music:                                       # shared with the existing Navidrome service
     external: true
+  stems:                                       # ECHO and its stem service only
+    internal: true

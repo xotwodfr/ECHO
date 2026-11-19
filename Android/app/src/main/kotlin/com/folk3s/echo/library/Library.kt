@@ -371,6 +371,10 @@ class Library(private val api: Api, private val scope: CoroutineScope) {
     songs(rest("getTopSongs", "artist=${enc(artist)}&count=$count").at("topSongs", "song"))
 
   /** Song radio: Navidrome's similar songs (Last.fm), or random ones without them. */
+  /** Songs with a karaoke version ready on the server, newest first (Home's Karaoke shelf). */
+  suspend fun karaokeSongs(limit: Int = 30): List<Track> =
+    songs((api.get("/karaoke/ready?limit=$limit") as JsonObject).at("songs"))
+
   /** Songs at random from the whole library (the Games' questions). */
   suspend fun randomSongs(count: Int): List<Track> = songs(rest("getRandomSongs", "size=$count").at("randomSongs", "song"))
 

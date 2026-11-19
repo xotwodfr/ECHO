@@ -9,6 +9,7 @@ import {
 } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
+import { requestKaraoke } from '../playback/karaoke.ts';
 import { strings } from '../strings.ts';
 import { Button, buttonClass, Field, IconButton } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
@@ -158,6 +159,14 @@ function useTrackMenu() {
         : []),
       { label: strings.album.playNext, onSelect: () => c.playNext([t], t.title) },
       { label: strings.album.addToQueue, onSelect: () => c.addToQueue([t], t.title) },
+      ...(t.provider === 'navidrome' && library
+        ? [
+            {
+              label: strings.karaoke.make,
+              onSelect: () => void requestKaraoke(t, (m) => toastStore.getState().show(m)),
+            },
+          ]
+        : []),
       ...(t.artists[0]?.id
         ? [
             {

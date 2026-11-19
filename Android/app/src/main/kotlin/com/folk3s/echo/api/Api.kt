@@ -36,7 +36,7 @@ class ApiError(val status: Int, val code: String?) : Exception("HTTP $status${co
  * ECHO's `/api/v1` with the device token as a bearer header (the Origin check exempts it). The
  * server is fixed: echo.folk3s.com (owner, 2026-10-29); debug builds can point elsewhere for testing.
  */
-class Api(private val tokens: TokenStore) {
+class Api(internal val tokens: TokenStore) {
   val base: String = BuildConfig.ECHO_URL.trimEnd('/')
   private val host = base.toHttpUrl().host
 

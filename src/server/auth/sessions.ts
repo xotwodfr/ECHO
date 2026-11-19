@@ -26,6 +26,8 @@ export interface SessionUser {
   sessionHash: string;
   kind: SessionKind;
   totpEnabled: boolean;
+  /** A guest account (guests.ts): when it ends. */
+  guestUntil?: number;
 }
 
 export const hashToken = (token: string) => createHash('sha256').update(token).digest('hex');
@@ -60,8 +62,10 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
   const h = hashToken(token);
   const row = db
     .prepare(
-      `SELECT s.kind, s.last_seen_at, s.expires_at, u.id, u.username, u.role, u.disabled, u.totp_enabled
-       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id_hash = ?`,
+      `SELECT s.kind, s.last_seen_at, s.expires_at, u.id, u.username, u.role, u.disabled, u.totp_enabled,
+         g.expires_at AS guest_until
+       FROM sessions s JOIN users u ON u.id = s.user_id LEFT JOIN guests g ON g.user_id = u.id
+       WHERE s.id_hash = ?`,
     )
     .get(h) as
     | {
@@ -73,9 +77,12 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
         role: 'admin' | 'user';
         disabled: number;
         totp_enabled: number;
+        guest_until: number | null;
       }
     | undefined;
   if (!row) return null;
+  // A guest whose time is up signs in no more, the moment it ends (the hourly sweep deletes it).
+  if (row.guest_until !== null && now >= row.guest_until) return null;
   const life = LIFETIME[row.kind];
   if (row.disabled || now >= row.expires_at || now - row.last_seen_at >= life.idle) {
     db.prepare('DELETE FROM sessions WHERE id_hash = ?').run(h);
@@ -94,6 +101,7 @@ export function resolveSession(db: Db, token: string, now: number): SessionUser 
     sessionHash: h,
     kind: row.kind,
     totpEnabled: !!row.totp_enabled,
+    ...(row.guest_until !== null && { guestUntil: row.guest_until }),
   };
 }
 
