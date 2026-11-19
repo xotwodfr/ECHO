@@ -1,5 +1,6 @@
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
+import { api } from '../api.ts';
 import { type Prefs, prefsStore, setPref } from '../prefs.ts';
 import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
@@ -102,6 +103,17 @@ export function PreferencesSection() {
           disabled
           disabledReason={t.later}
         />
+      </section>
+
+      <section className="pref-group" aria-labelledby="pref-karaoke">
+        <h3 id="pref-karaoke">{strings.karaoke.progress.title}</h3>
+        <Toggle
+          label={strings.karaoke.progress.toggle}
+          checked={p.playback.karaoke}
+          onChange={(v) => save('playback', 'karaoke', v)}
+        />
+        <p className="field-hint">{strings.karaoke.progress.blurb}</p>
+        <KaraokeProgress />
       </section>
 
       <section className="pref-group" aria-labelledby="pref-lyrics">
@@ -250,4 +262,35 @@ export function PreferencesSection() {
       </section>
     </div>
   );
+}
+
+/** The server's progress through the library (docs/KARAOKE.md), asked for when Settings opens. */
+function KaraokeProgress() {
+  const [line, setLine] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    const k = strings.karaoke.progress;
+    api<{
+      enabled: boolean;
+      online?: boolean;
+      ready?: number;
+      queued?: number;
+      failed?: number;
+      skipped?: number;
+      bytes?: number | null;
+    }>('/karaoke')
+      .then((r) => {
+        if (!live) return;
+        if (!r.enabled) return setLine(k.notSetUp);
+        if (!r.online) return setLine(k.offline);
+        const ready = r.ready ?? 0;
+        const total = ready + (r.queued ?? 0) + (r.failed ?? 0) + (r.skipped ?? 0);
+        setLine(k.line(ready, total, ((r.bytes ?? 0) / 1e9).toFixed(1), r.failed ?? 0));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, []);
+  return line ? <p className="pref-label">{line}</p> : null;
 }

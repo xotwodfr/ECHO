@@ -1029,6 +1029,13 @@ a {
 }
 
 /* A narrow pill (a wide panel beside it) keeps the transport and lets the extras go first. */
+@container pill (max-width: 1099.98px) {
+  /* Room for the karaoke mic: the volume slider gives up half its length first. */
+  .volume .slider--volume {
+    width: calc(var(--volume-w) / 2);
+  }
+}
+
 @container pill (max-width: 839.98px) {
   .dock-sleep {
     display: none;
@@ -2787,4 +2794,219 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
+}
+
+/* ---- Karaoke mode (docs/KARAOKE.md): the player bar's mic and Vocals slider, the panel in Now
+   Playing and the lyrics view ---- */
+.dock-karaoke {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* The bar has no room to spare: the Vocals slider floats just above the mic, while Karaoke is on
+   and the mic is hovered or focused (keyboard and dragging keep it open). */
+.dock-karaoke .karaoke-vocals {
+  position: absolute;
+  bottom: calc(100% + var(--sp-3));
+  left: 50%;
+  translate: -50% 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-panel);
+  border: var(--rule) solid var(--fl-stroke);
+  background: var(--fl-flyout);
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-hover) var(--ease-in-out),
+    visibility var(--dur-hover) step-end;
+}
+
+.dock-karaoke[data-on]:is(:hover, :focus-within) .karaoke-vocals {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--dur-hover) var(--ease-in-out),
+    visibility var(--dur-hover) step-start;
+}
+
+/* A bridge over the gap, so moving up from the mic to the slider keeps it open. */
+.dock-karaoke .karaoke-vocals::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: var(--sp-3);
+}
+
+.karaoke-vocals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.karaoke-vocals-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.karaoke-vocals-row .slider {
+  flex: 1;
+  width: auto;
+}
+
+.dock-karaoke .karaoke-vocals-row .slider {
+  flex: none;
+  width: calc(var(--volume-w) * 1.5);
+}
+
+.karaoke-vocals-label,
+.karaoke-vocals-value {
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.karaoke-vocals-value {
+  min-width: var(--hit-lg);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.karaoke-note {
+  margin: 0;
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.karaoke-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-panel);
+  background: var(--raised);
+}
+
+.karaoke-panel > .karaoke-vocals {
+  flex: 1;
+}
+
+.karaoke-panel[data-on] > .icon-btn {
+  color: var(--green);
+}
+
+.karaoke-panel-title {
+  font: var(--fl-type-body-strong) var(--font-ui);
+  color: var(--muted);
+}
+
+/* On the Stage the panel sits under the titles, as wide as the cover. */
+.np-side .karaoke-panel {
+  width: var(--np-art);
+  max-width: 100%;
+}
+
+/* ---- Guests (shell/Guests.tsx): the invite's QR code, the list of guests, the guest link's page ---- */
+.guest-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  text-align: center;
+}
+
+.guest-qr-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(var(--hit-lg) * 5);
+  aspect-ratio: 1;
+  padding: var(--sp-4);
+  border-radius: var(--r-panel);
+  background: var(--qr-paper, white);
+  color: var(--qr-ink, black);
+}
+
+.guest-qr {
+  width: 100%;
+  height: 100%;
+}
+
+.guest-qr path {
+  fill: currentColor;
+}
+
+.guest-qr-mark {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--hit-lg);
+  aspect-ratio: 1;
+  border: var(--sp-1) solid var(--qr-paper, white);
+  border-radius: var(--r-control);
+  background: var(--qr-ink, black);
+  color: var(--qr-paper, white);
+  font: var(--fl-type-caption-strong) var(--font-ui);
+  font-size: var(--fs-micro, 0.6rem);
+  letter-spacing: 0;
+}
+
+.guest-joined {
+  margin: 0;
+  font: var(--fl-type-subtitle2) var(--font-ui);
+}
+
+.guest-durations {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.guest-durations .chip[data-on] {
+  background: var(--green);
+  color: var(--on-green);
+}
+
+.guest-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guest-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.guest-avatar {
+  display: grid;
+  place-items: center;
+  width: var(--hit-lg);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--on-green);
+  font: var(--fl-type-body-strong) var(--font-ui);
+}
+
+.guest-who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.guest-landing {
+  max-width: 40ch;
+  margin: var(--sp-9) auto;
+  padding: 0 var(--gutter);
+  text-align: center;
 }

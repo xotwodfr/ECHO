@@ -13,6 +13,7 @@ class MainActivity : ComponentActivity() {
     // Edge to edge; the bar icons follow the system's light or dark theme (Now Playing and the
     // lyrics view turn them light while they are open).
     enableEdgeToEdge(SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT), SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT))
+    echo.karaoke // Karaoke mode follows the player while the app is open (docs/KARAOKE.md)
     setContent { EchoRoot() }
   }
 }

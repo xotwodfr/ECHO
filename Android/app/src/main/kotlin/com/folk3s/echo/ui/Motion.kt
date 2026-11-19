@@ -29,16 +29,20 @@ import java.util.UUID
 // covers that fly from a list into their page, and the haptics the rest of the app asks for. All of
 // it steps aside under reduced motion (the setting, or the system's Remove animations).
 
-/** Haptics, if the user has them on: a tap, a confirmation, a refusal, a tick. */
-class Haptics(private val on: Boolean, private val fire: (HapticFeedbackType) -> Unit) {
-  fun tap() = go(HapticFeedbackType.ContextClick)
-  fun toggle(on: Boolean) = go(if (on) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
-  fun confirm() = go(HapticFeedbackType.Confirm)
-  fun reject() = go(HapticFeedbackType.Reject)
-  fun tick() = go(HapticFeedbackType.SegmentTick)
+/**
+ * Feedback for a press: a haptic if the user has them on, and in the Clay and Yarn themes the
+ * material's sound (if theme sounds are on).
+ */
+class Haptics(private val on: Boolean, private val fire: (HapticFeedbackType) -> Unit, private val sound: (Sound) -> Unit) {
+  fun tap() = go(HapticFeedbackType.ContextClick, Sound.Tap)
+  fun toggle(on: Boolean) = go(if (on) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff, Sound.Toggle)
+  fun confirm() = go(HapticFeedbackType.Confirm, Sound.Yes)
+  fun reject() = go(HapticFeedbackType.Reject, Sound.No)
+  fun tick() = go(HapticFeedbackType.SegmentTick, Sound.Toggle)
 
-  private fun go(t: HapticFeedbackType) {
+  private fun go(t: HapticFeedbackType, s: Sound) {
     if (on) fire(t)
+    sound(s)
   }
 }
 
@@ -46,8 +50,11 @@ class Haptics(private val on: Boolean, private val fire: (HapticFeedbackType) ->
 fun rememberHaptics(): Haptics {
   val app = LocalContext.current.echo
   val h = LocalHapticFeedback.current
-  val on = app.prefs.state.value.haptics
-  return remember(h, on) { Haptics(on) { h.performHapticFeedback(it) } }
+  val prefs = app.prefs.state.value
+  val material = if (prefs.themeSounds) look.material else Material.Flat
+  return remember(h, prefs.haptics, material) {
+    Haptics(prefs.haptics, { h.performHapticFeedback(it) }) { s -> if (material != Material.Flat) app.sounds.play(material, s) }
+  }
 }
 
 /** Whether motion is reduced right now. */
@@ -62,9 +69,9 @@ fun reducedMotion(): Boolean {
  * haptic tap on the click. A long press, when given, opens a menu (with its own haptic).
  */
 @OptIn(ExperimentalFoundationApi::class)
-fun Modifier.bouncy(enabled: Boolean = true, scale: Float = 0.95f, label: String? = null, onLongClick: (() -> Unit)? = null, onClick: () -> Unit): Modifier =
+fun Modifier.bouncy(enabled: Boolean = true, scale: Float = 0.95f, label: String? = null, source: MutableInteractionSource? = null, onLongClick: (() -> Unit)? = null, onClick: () -> Unit): Modifier =
   composed {
-    val source = remember { MutableInteractionSource() }
+    val source = source ?: remember { MutableInteractionSource() }
     val pressed by source.collectIsPressedAsState()
     val still = reducedMotion()
     val haptics = rememberHaptics()
@@ -117,4 +124,12 @@ fun Modifier.coverTo(): Modifier {
   val f = LocalFlight.current ?: return this
   if (CoverFlight.token == null || reducedMotion()) return this
   return with(f.shared) { this@coverTo.sharedElement(rememberSharedContentState("cover"), f.visibility) }
+}
+
+/** A press source and whether it's held right now: for surfaces that sink in while pressed. */
+@Composable
+fun rememberPress(): Pair<MutableInteractionSource, Boolean> {
+  val source = remember { MutableInteractionSource() }
+  val down by source.collectIsPressedAsState()
+  return source to down
 }

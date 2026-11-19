@@ -832,6 +832,141 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: object, properties: { version: { type: [string, 'null'] }, updatedAt: { type: [integer, 'null'] }, lastError: { type: [string, 'null'] } } } } } }
         '403': { description: Not an admin }
+  /karaoke:
+    get:
+      summary: Karaoke mode's progress (docs/KARAOKE.md); `enabled` false when no stem service is configured (ECHO_STEMS_URL)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled: { type: boolean }
+                  online: { type: boolean, description: The stem service answered }
+                  ready: { type: integer }
+                  queued: { type: integer }
+                  failed: { type: integer }
+                  skipped: { type: integer, description: Longer than ECHO_STEMS_MAX_MINUTES }
+                  bytes: { type: [integer, 'null'], description: On the stem service's disk }
+  /karaoke/ready:
+    get:
+      summary: Songs with a karaoke version ready on the caller's own Navidrome server, newest first (Home's Karaoke shelf)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 60, default: 30 } }
+      responses:
+        '200': { description: 'Subsonic songs (getSong), those the server no longer has left out', content: { application/json: { schema: { type: object, properties: { songs: { type: array, items: { type: object } } } } } } }
+  /karaoke/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: A Navidrome song id }
+      - { name: soon, in: query, schema: { type: string, enum: ['1'] }, description: A song coming up in the queue, not playing now (waits behind those that are) }
+    get:
+      summary: The song's karaoke version; asking queues it (or moves it up), on the caller's own Navidrome server
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: ['off', queued, working, ready, failed, skipped] }
+                  ahead: { type: integer, description: Songs before it (queued or working) }
+                  url: { type: string, description: When ready, the audio }
+        '400': { description: bad_track_id }
+  /karaoke/{id}/audio:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: The karaoke version, AAC 5.1 in MP4 (instrumental front left/right, vocals rear left/right); Range works
+      responses:
+        '200': { description: The file, content: { audio/mp4: {} } }
+        '206': { description: Part of it }
+        '404': { description: Karaoke mode is off }
+        '409': { description: 'not_ready: queued, working, failed or skipped' }
+        '502': { description: stems_offline }
+  /guests/codes:
+    post:
+      summary: A one-time guest code to show as a QR code (any signed-in user but a guest); it can be scanned for 10 minutes, once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [durationMs], properties: { durationMs: { type: integer, enum: [3600000, 86400000, 604800000], description: How long the guest may stay (1 hour, 1 day, 1 week) } } }
+      responses:
+        '201': { description: The code, content: { application/json: { schema: { type: object, properties: { code: { type: string }, url: { type: string, description: 'https://<origin>/guest#<code>, what the QR code holds' }, expiresAt: { type: integer }, durationMs: { type: integer } } } } } }
+        '400': { description: bad_duration }
+        '403': { description: 'guest: a guest cannot invite' }
+        '429': { description: 'too_many_codes: five live codes at most' }
+  /guests/peek:
+    post:
+      summary: Whose guest pass a code is and for how long, before joining (no sign-in; the code is the secret)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { invitedBy: { type: string }, durationMs: { type: integer } } } } } }
+        '404': { description: 'bad_code: unknown, used or expired' }
+        '429': { description: rate_limited }
+  /guests/redeem:
+    post:
+      summary: Join as a guest with a code; returns a device token for this phone, valid until the guest's time is up
+      description: The guest listens to the inviter's library (its Navidrome connection is copied); writes to Navidrome, the Wanted list, credentials, connections and other guests are refused with 403 guest.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string }, name: { type: string, maxLength: 64 } } }
+      responses:
+        '201': { description: Joined, content: { application/json: { schema: { type: object, properties: { token: { type: string }, username: { type: string }, expiresAt: { type: integer }, invitedBy: { type: string } } } } } }
+        '404': { description: 'bad_code: unknown, used or expired' }
+        '429': { description: rate_limited }
+  /guests/me:
+    get:
+      summary: The caller's guest state (null for a normal user)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { guest: { type: [object, 'null'], properties: { expiresAt: { type: integer }, invitedBy: { type: [string, 'null'] }, keep: { type: [object, 'null'], properties: { username: { type: string }, requestedAt: { type: integer } } } } } } } } } }
+  /guests/me/keep:
+    post:
+      summary: A guest asks to keep its account, under a username and password; the inviter or an admin approves
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [username, password], properties: { username: { type: string }, password: { type: string } } }
+      responses:
+        '200': { description: Asked }
+        '400': { description: 'not_a_guest, bad_username, weak_password' }
+        '409': { description: username_taken }
+  /guests:
+    get:
+      summary: The guests the caller invited (every guest for an admin), with any request to stay
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { type: object, properties: { id: { type: integer }, username: { type: string }, invitedBy: { type: [string, 'null'] }, createdAt: { type: integer }, expiresAt: { type: integer }, keep: { type: [object, 'null'] } } } } } } }
+  /guests/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    post:
+      summary: Approve a guest's request to stay; it becomes a normal user (it connects its own Navidrome)
+      responses:
+        '200': { description: Kept }
+        '404': { description: 'Not the caller''s guest (or an admin''s), or its time is up' }
+        '409': { description: 'no_request, username_taken' }
+  /guests/{id}/end:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    post:
+      summary: End a guest's time now (signed out and deleted)
+      responses:
+        '200': { description: Ended }
+        '404': { description: 'Not the caller''s guest (or an admin''s)' }
   /youtube/home:
     get:
       summary: YouTube Music's Home (personal when signed in, general when not)

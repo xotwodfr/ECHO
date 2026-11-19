@@ -9,11 +9,13 @@ import { createNavidromeLibrary } from './library-navidrome.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
+import { karaokeSrc, startKaraoke } from './playback/karaoke.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
 import { effectiveVisuals, loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { startCollections } from './shell/collections.ts';
+import { GuestLanding } from './shell/Guests.tsx';
 import { startHistory } from './shell/mixes.ts';
 import { pageTransition } from './shell/page-transition.ts';
 import { startAutoplay } from './shell/radio.ts';
@@ -32,6 +34,8 @@ import { startYtPrepare } from './youtube/radio.ts';
 // other failure stands: offline, or a navigation cutting the request off (Firefox aborts the old
 // page's imports), where a reload would fight the navigation. The new build is the page's own
 // after one reload, so this cannot loop.
+// A guest link opened in a browser (`/guest#<code>`): the pass is for the app (shell/Guests.tsx).
+const guestLink = window.location.pathname === '/guest';
 const build = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src;
 addEventListener('vite:preloadError', () => {
   if (!build) return;
@@ -123,12 +127,17 @@ const controller = createPlaybackController({
         get quality() {
           return prefs().playback.quality;
         },
+        karaokeSrc,
       })
     : (fixtures?.createFixtureProvider() ?? null),
   replayGain: () => prefs().playback.replayGain,
   notify: (message) => toastStore.getState().show(message),
   features,
 });
+
+// Karaoke mode (docs/KARAOKE.md): follows the player, for a signed-in user's own library.
+if (signedIn && controller.provider instanceof NavidromeProvider)
+  startKaraoke(controller, controller.provider, (m) => toastStore.getState().show(m));
 
 // The volume is this device's, kept between visits (PLAYBACK_ARCHITECTURE.md §3).
 controller.setVolume(prefs().playback.volume);
@@ -186,7 +195,9 @@ const root = document.getElementById('root');
 if (root)
   createRoot(root).render(
     <AppErrorBoundary>
-      {unreachable ? (
+      {guestLink ? (
+        <GuestLanding />
+      ) : unreachable ? (
         <ServerUnreachable />
       ) : (
         <Shell store={store} controller={controller} library={library} />

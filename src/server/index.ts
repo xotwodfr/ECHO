@@ -15,7 +15,9 @@ import { DEVICE_BEARER, pruneSessions, resolveSession, SESSION_COOKIE } from './
 import { loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
+import { guestRoutes, sweepGuests } from './guests.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
+import { createKaraoke, type Karaoke, karaokeRoutes } from './karaoke.ts';
 import { accessLog, createLogger, createSecretSet, type Log } from './log.ts';
 import { createLyricsCache } from './lyrics/cache.ts';
 import { createResolver } from './lyrics/resolve.ts';
@@ -55,6 +57,8 @@ export interface AppDeps {
   navidrome: NavidromeDeps;
   lyrics: LyricsDeps;
   youtube: YoutubeDeps;
+  /** Karaoke mode's queue; off (every song "off") when no stem service is configured. */
+  karaoke?: Karaoke | null;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -177,6 +181,11 @@ export function createApp(deps: AppDeps) {
     ),
   );
   app.route('/api/v1', youtubeRoutes(deps.youtube, requireUser(deps.auth)));
+  app.route('/api/v1', karaokeRoutes(deps.karaoke ?? null, requireUser(deps.auth)));
+  app.route(
+    '/api/v1',
+    guestRoutes({ ...deps.auth, publicOrigin: deps.http.publicOrigin }, requireUser(deps.auth)),
+  );
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory. Hashed
@@ -276,7 +285,8 @@ if (import.meta.main) {
   setInterval(() => {
     const sessions = pruneSessions(auth.db, Date.now());
     const addresses = auth.limiter.sweep(Date.now());
-    if (sessions || addresses) log('info', 'pruned', { sessions, addresses });
+    const guests = sweepGuests(auth.db, Date.now()); // guest accounts whose time is up
+    if (sessions || addresses || guests) log('info', 'pruned', { sessions, addresses, guests });
   }, 3_600_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
   // Each Navidrome server once, through the first user connected to it (admins first).
@@ -297,7 +307,7 @@ if (import.meta.main) {
       const client = await navidromeClientFor(navidrome, id).catch(() => null);
       if (!client) continue;
       seen.add(scope);
-      out.push({ scope, client });
+      out.push({ scope, client, userId: id });
     }
     return out;
   };
@@ -395,12 +405,34 @@ if (import.meta.main) {
       ].filter((s) => !off.includes(s.id)); // Settings → Lyrics → Sources
     },
   };
+  // Karaoke mode: the stem service's queue, worked one song at a time; the library is queued
+  // five minutes after start and again daily (only songs not yet known are added).
+  const karaoke = config.stemsUrl
+    ? createKaraoke({
+        db: auth.db,
+        now: Date.now,
+        log,
+        stemsUrl: config.stemsUrl,
+        maxSeconds: config.stemsMaxMinutes * 60,
+        library: config.stemsLibrary,
+        scopeFor: (id) => navidromeUrlOf(auth.db, id),
+        navidrome: (id) => navidromeClientFor(navidrome, id),
+        libraries,
+      })
+    : null;
+  if (karaoke) {
+    setTimeout(() => void karaoke.sweep(), 300_000).unref();
+    setInterval(() => void karaoke.sweep(), 86_400_000).unref();
+    setInterval(() => karaoke.kick(), 60_000).unref(); // retries and an offline service
+    karaoke.kick();
+  }
   const app = createApp({
     palette,
     auth,
     navidrome,
     lyrics,
     youtube,
+    karaoke,
     devFixtures: config.devFixtures,
     log,
     ...(process.env.ECHO_CSP_REPORT_FILE && { cspReportFile: process.env.ECHO_CSP_REPORT_FILE }),

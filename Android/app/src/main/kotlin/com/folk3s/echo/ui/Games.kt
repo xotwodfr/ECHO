@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -147,9 +148,9 @@ fun GamesScreen(nav: Nav) {
     // Your numbers across the four games.
     item {
       Row(Modifier.padding(horizontal = 20.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Stat("${all.sumOf { it.rounds }}", "Rounds", Modifier.weight(1f))
-        Stat("${all.maxOfOrNull { it.best } ?: 0}", "Best score", Modifier.weight(1f))
-        Stat("${all.maxOfOrNull { it.streak } ?: 0}", "Best streak", Modifier.weight(1f))
+        Stat("${all.sumOf { it.rounds }}", "Rounds", Modifier.weight(1f), 0)
+        Stat("${all.maxOfOrNull { it.best } ?: 0}", "Best score", Modifier.weight(1f), 2)
+        Stat("${all.maxOfOrNull { it.streak } ?: 0}", "Best streak", Modifier.weight(1f), 4)
       }
     }
     item { SectionTitle("Today's pick", Modifier.padding(top = 12.dp)) }
@@ -175,6 +176,7 @@ fun GamesScreen(nav: Nav) {
 /** Today's pick: a tall card with room to breathe, the blurb, and a Play button. */
 @Composable
 private fun Featured(kind: GameKind, record: GameRecord?, onPlay: () -> Unit) {
+  if (look.material != Material.Flat) return MadeGame(kind, record, featured = true, onPlay)
   val shape = RoundedCornerShape(if (look.circleArt) 32.dp else look.hero.coerceAtLeast(look.panel))
   Box(
     Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(280.dp).bouncy(scale = 0.98f, label = "Play ${kind.title}", onClick = onPlay)
@@ -203,6 +205,7 @@ private fun Featured(kind: GameKind, record: GameRecord?, onPlay: () -> Unit) {
 /** A game in the grid: its colours, a frosted glyph, its name and your best. */
 @Composable
 private fun GameTile(kind: GameKind, record: GameRecord?, onClick: () -> Unit) {
+  if (look.material != Material.Flat) return MadeGame(kind, record, featured = false, onClick)
   val shape = RoundedCornerShape(look.panel)
   Box(Modifier.fillMaxWidth().aspectRatio(0.84f).bouncy(scale = 0.96f, label = "Play ${kind.title}", onClick = onClick).clip(shape)) {
     GameGround(kind, 140.dp) {
@@ -452,10 +455,18 @@ private fun ChoiceButton(letter: Char, text: String, state: ChoiceState, onClick
     tween(200),
     label = "choice",
   )
-  val fg = if (state == ChoiceState.Right || state == ChoiceState.Wrong) Color.White else Chamber.text
+  val made = look.material != Material.Flat
+  val madeFill = when (state) {
+    ChoiceState.Right -> matter.accent(2)
+    ChoiceState.Wrong -> matter.accent(0)
+    else -> matter.paper
+  }
+  val fg = if (made) inkOn(madeFill, matter.ink) else if (state == ChoiceState.Right || state == ChoiceState.Wrong) Color.White else Chamber.text
+  val (source, down) = rememberPress()
   Row(
-    Modifier.fillMaxWidth().heightIn(min = 64.dp).alpha(if (state == ChoiceState.Dim) 0.45f else 1f).bouncy(enabled = state == ChoiceState.Open, scale = 0.97f, onClick = onClick)
-      .clip(RoundedCornerShape(look.button.coerceAtMost(22.dp))).background(bg).padding(start = 12.dp, end = 18.dp, top = 12.dp, bottom = 12.dp),
+    Modifier.fillMaxWidth().heightIn(min = 64.dp).alpha(if (state == ChoiceState.Dim) 0.45f else 1f).bouncy(enabled = state == ChoiceState.Open, scale = 0.97f, source = source, onClick = onClick)
+      .then(if (made) Modifier.matter(madeFill, 22.dp, pressed = down || state == ChoiceState.Right || state == ChoiceState.Wrong, seed = letter.code) else Modifier.clip(RoundedCornerShape(look.button.coerceAtMost(22.dp))).background(bg))
+      .padding(start = 12.dp, end = 18.dp, top = 12.dp, bottom = 12.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
     // The letter in a soft disc; once answered, a tick or a cross in its place.
@@ -611,9 +622,56 @@ private fun Results(kind: GameKind, score: Int, right: Int, total: Int, bestStre
 }
 
 @Composable
-private fun Stat(big: String, label: String, modifier: Modifier) {
-  Column(modifier.clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-    Text(big, style = MaterialTheme.typography.headlineSmall)
-    Text(label, color = Chamber.muted, style = MaterialTheme.typography.labelMedium)
+private fun Stat(big: String, label: String, modifier: Modifier, tone: Int = -1) {
+  val made = look.material != Material.Flat
+  val fill = if (!made) MaterialTheme.colorScheme.surfaceContainerHigh else if (tone < 0) matter.paper else matter.accent(tone)
+  val ink = if (made) inkOn(fill, matter.ink) else Chamber.text
+  Column(
+    modifier.then(if (made) Modifier.matter(fill, 22.dp, seed = 70 + tone) else Modifier.clip(RoundedCornerShape(20.dp)).background(fill)).padding(vertical = 14.dp),
+    horizontalAlignment = Alignment.CenterHorizontally,
+  ) {
+    Text(big, color = ink, style = MaterialTheme.typography.headlineSmall)
+    Text(label, color = ink.copy(alpha = 0.72f), style = MaterialTheme.typography.labelMedium)
+  }
+}
+
+/** Each game's colour of clay or yarn. */
+@Composable
+private fun GameKind.tone(): Color =
+  matter.accent(
+    when (this) {
+      GameKind.SongGuesser -> 5
+      GameKind.FinishLyric -> 3
+      GameKind.CoverReveal -> 2
+      GameKind.Timeline -> 1
+    },
+  )
+
+/** A game in clay or yarn: a piece of the material in the game's colour, its glyph on a little disc. */
+@Composable
+private fun MadeGame(kind: GameKind, record: GameRecord?, featured: Boolean, onPlay: () -> Unit) {
+  val fill = kind.tone()
+  val ink = inkOn(fill, matter.ink)
+  val (source, down) = rememberPress()
+  Box(
+    (if (featured) Modifier.padding(horizontal = 20.dp).fillMaxWidth().height(230.dp).graphicsLayer { rotationZ = 0.5f } else Modifier.fillMaxWidth().aspectRatio(0.86f))
+      .bouncy(scale = 0.97f, source = source, label = "Play ${kind.title}", onClick = onPlay)
+      .matter(fill, if (featured) look.hero else look.panel, pressed = down, seed = kind.ordinal * 7 + if (featured) 1 else 0, depth = if (featured) 1.4f else 1f, seam = featured),
+  ) {
+    Icon(kind.icon(), null, tint = ink.copy(alpha = 0.12f), modifier = Modifier.align(Alignment.TopEnd).offset(x = 24.dp, y = (-10).dp).size(if (featured) 190.dp else 120.dp).rotate(-12f))
+    Box(Modifier.padding(16.dp).size(48.dp).matter(matter.paper, 18.dp, seed = kind.ordinal), contentAlignment = Alignment.Center) {
+      Icon(kind.icon(), null, tint = inkOn(matter.paper, matter.ink), modifier = Modifier.size(24.dp))
+    }
+    Column(Modifier.align(Alignment.BottomStart).padding(if (featured) 22.dp else 16.dp)) {
+      Text(kind.title, color = ink, style = if (featured) MaterialTheme.typography.displaySmall else MaterialTheme.typography.titleLarge, maxLines = 2)
+      if (featured) Text(kind.blurb, color = ink.copy(alpha = 0.82f), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = 6.dp, end = 24.dp))
+      Spacer(Modifier.height(10.dp))
+      Text(
+        if (record == null || record.rounds == 0) "New" else "Best ${record.best}",
+        color = inkOn(matter.paper, matter.ink),
+        style = MaterialTheme.typography.labelMedium,
+        modifier = Modifier.matter(matter.paper, 12.dp, seed = 80 + kind.ordinal, depth = 0.5f).padding(horizontal = 12.dp, vertical = 6.dp),
+      )
+    }
   }
 }

@@ -7,6 +7,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.IntOffset
 import dev.chrisbanes.haze.HazeState
@@ -201,7 +202,7 @@ private fun Shell() {
       else {
         // The page. A new one fades and rises in (the web's View Transition), the old one fades out
         // quickly.
-        Box(Modifier.fillMaxSize().background(Chamber.ground).hazeSource(glass).windowInsetsPadding(WindowInsets.statusBars)) {
+        Box(Modifier.fillMaxSize().matterGround(Chamber.ground).hazeSource(glass).windowInsetsPadding(WindowInsets.statusBars)) {
           SharedTransitionLayout {
           val shared = this
           AnimatedContent(
@@ -303,9 +304,13 @@ private fun TabBar(nav: Nav, order: List<String>, glass: HazeState) {
   val root = nav.stack.first()
   val haptics = rememberHaptics()
   val bar = MaterialTheme.colorScheme.surfaceContainer
+  val made = look.material != Material.Flat
   NavigationBar(
     containerColor = Color.Transparent,
-    modifier = Modifier.hazeEffect(glass, HazeStyle(backgroundColor = bar, tints = listOf(HazeTint(bar.copy(alpha = 0.72f))), blurRadius = 28.dp, noiseFactor = 0.03f)),
+    windowInsets = if (made) WindowInsets(0) else NavigationBarDefaults.windowInsets,
+    modifier =
+      if (made) Modifier.windowInsetsPadding(WindowInsets.navigationBars).padding(start = 12.dp, end = 12.dp, bottom = 10.dp).matter(matter.paper, 26.dp, seed = 4, rib = true)
+      else Modifier.hazeEffect(glass, HazeStyle(backgroundColor = bar, tints = listOf(HazeTint(bar.copy(alpha = 0.72f))), blurRadius = 28.dp, noiseFactor = 0.03f)),
   ) {
     for ((label, route, icon) in tabs) {
       val on = root == route
@@ -315,7 +320,7 @@ private fun TabBar(nav: Nav, order: List<String>, glass: HazeState) {
           haptics.tick()
           nav.root(route)
         },
-        colors = if (look.navPill) NavigationBarItemDefaults.colors() else NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
+        colors = if (made) NavigationBarItemDefaults.colors(indicatorColor = matter.accent(1), selectedIconColor = inkOn(matter.accent(1), matter.ink), selectedTextColor = MaterialTheme.colorScheme.primary) else if (look.navPill) NavigationBarItemDefaults.colors() else NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent, selectedIconColor = MaterialTheme.colorScheme.primary, selectedTextColor = MaterialTheme.colorScheme.primary),
         icon = { Icon(if (on && route == Route.Home) EchoIcons.homeFilled else icon, null, modifier = Modifier.size(24.dp)) },
         label = { Text(label, style = MaterialTheme.typography.labelMedium) },
         modifier = Modifier.semantics { contentDescription = label },
@@ -332,12 +337,16 @@ private fun MiniPlayer(p: PlayerState, glass: HazeState, onOpen: () -> Unit) {
   val haptics = rememberHaptics()
   val shape = RoundedCornerShape(look.mini)
   val tint = MaterialTheme.colorScheme.surfaceContainerHighest
+  val made = look.material != Material.Flat
+  val miniColour = matter.strong
   Surface(
-    Modifier.fillMaxWidth().height(64.dp).shadow(10.dp, shape).clip(shape)
-      .hazeEffect(glass, HazeStyle(backgroundColor = tint, tints = listOf(HazeTint(tint.copy(alpha = 0.68f))), blurRadius = 24.dp, noiseFactor = 0.03f)),
+    if (made) Modifier.fillMaxWidth().height(66.dp).matter(miniColour, look.mini, seed = 9)
+    else
+      Modifier.fillMaxWidth().height(64.dp).shadow(10.dp, shape).clip(shape)
+        .hazeEffect(glass, HazeStyle(backgroundColor = tint, tints = listOf(HazeTint(tint.copy(alpha = 0.68f))), blurRadius = 24.dp, noiseFactor = 0.03f)),
     shape,
     Color.Transparent,
-    Chamber.text,
+    if (made) inkOn(miniColour, matter.ink) else Chamber.text,
   ) {
     Box(Modifier.fillMaxSize()) {
       // Swipe sideways for the next or previous song, up for Now Playing (Spotify's mini player).
@@ -394,16 +403,25 @@ private fun StageDock(p: PlayerState, chrome: StageChrome, onQueue: () -> Unit) 
   val app = LocalContext.current.echo
   val shown = chrome.visible
   val alpha by animateFloatAsState(if (shown) 1f else 0f, tween(if (shown) 160 else 640), label = "dock")
-  Row(
-    Modifier.fillMaxWidth().height(64.dp).alpha(alpha).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer)
-      .padding(horizontal = 12.dp),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    IconBtn(EchoIcons.previous, "Previous", Chamber.text, 24) { app.playback.previous() }
-    PlayButton(p.playing, enabled = p.track != null, onClick = app.playback::toggle, size = 44)
-    IconBtn(EchoIcons.next, "Next", Chamber.text, 24) { app.playback.next() }
-    Box(Modifier.weight(1f).padding(horizontal = 8.dp)) { Progress(p, height = 3) }
-    IconBtn(EchoIcons.queue, "Queue", Chamber.text, 22, onQueue)
+  val prefs by app.prefs.state.collectAsStateWithLifecycle()
+  Column(Modifier.fillMaxWidth().alpha(alpha)) {
+    // Karaoke on: the vocals slider sits over the dock, so the level is a reach away while singing.
+    if (prefs.karaoke)
+      Box(Modifier.fillMaxWidth().padding(bottom = 8.dp).clip(RoundedCornerShape(24.dp)).background(MaterialTheme.colorScheme.surfaceContainer).padding(horizontal = 16.dp, vertical = 6.dp)) {
+        VocalsSlider(Chamber.text)
+      }
+    Row(
+      Modifier.fillMaxWidth().height(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainer)
+        .padding(horizontal = 12.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      IconBtn(EchoIcons.previous, "Previous", Chamber.text, 24) { app.playback.previous() }
+      PlayButton(p.playing, enabled = p.track != null, onClick = app.playback::toggle, size = 44)
+      IconBtn(EchoIcons.next, "Next", Chamber.text, 24) { app.playback.next() }
+      Box(Modifier.weight(1f).padding(horizontal = 8.dp)) { Progress(p, height = 3) }
+      IconBtn(EchoIcons.mic, if (prefs.karaoke) "Karaoke on" else "Karaoke off", if (prefs.karaoke) Chamber.text else Chamber.text.copy(alpha = 0.5f), 22) { app.karaoke.setOn(!prefs.karaoke) }
+      IconBtn(EchoIcons.queue, "Queue", Chamber.text, 22, onQueue)
+    }
   }
 }
 
@@ -413,11 +431,15 @@ fun PlayButton(playing: Boolean, enabled: Boolean, onClick: () -> Unit, size: In
   val corner by animateFloatAsState(if (playing) 0.34f else 0.5f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "shape")
   val haptics = rememberHaptics()
   val press = { haptics.toggle(!playing); onClick() }
+  val made = look.material != Material.Flat
+  val (source, down) = rememberPress()
+  val fill = if (made) matter.accent(0) else if (enabled) Chamber.text else Chamber.surface3
   Box(
-    Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.9f, onClick = press).clip(RoundedCornerShape((size * corner).dp)).background(if (enabled) Chamber.text else Chamber.surface3)
+    (if (made) Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.94f, source = source, onClick = press).matter(fill, if (look.material == Material.Glass) (size / 2).dp else (size * 0.38f).dp, pressed = down, seed = size, depth = 1.3f)
+    else Modifier.size(size.dp).bouncy(enabled = enabled, scale = 0.9f, onClick = press).clip(RoundedCornerShape((size * corner).dp)).background(fill))
       .semantics { contentDescription = if (playing) "Pause" else "Play" },
     contentAlignment = Alignment.Center,
   ) {
-    Icon(if (playing) EchoIcons.pause else EchoIcons.play, null, tint = Chamber.ground, modifier = Modifier.size((size * 0.45f).dp))
+    Icon(if (playing) EchoIcons.pause else EchoIcons.play, null, tint = if (made) inkOn(fill, matter.ink) else Chamber.ground, modifier = Modifier.size((size * 0.45f).dp))
   }
 }
