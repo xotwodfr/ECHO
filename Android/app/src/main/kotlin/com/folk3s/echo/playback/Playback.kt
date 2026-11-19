@@ -23,6 +23,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import com.folk3s.echo.offline.chooseSource
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
@@ -122,6 +126,10 @@ class Playback(private val app: EchoApp) {
       ContextCompat.getMainExecutor(app),
     )
     app.scope.launch { ticker() }
+    // v0.8: queued songs move to their downloaded files as they finish (or back to the stream when
+    // removed); offline or online again, karaoke versions step aside or come back.
+    app.scope.launch { app.downloads.index.map { it.files.keys }.distinctUntilChanged().drop(1).collect { refreshSources(includeCurrent = false) } }
+    app.scope.launch { app.network.online.drop(1).collect { refreshSources() } }
   }
 
   private fun run(block: (MediaController) -> Unit) {
@@ -129,10 +137,18 @@ class Playback(private val app: EchoApp) {
     if (mc != null) block(mc) else pending += block
   }
 
-  private fun uriOf(t: Track): String {
-    val karaoke = karaokeAudio[t.key]?.takeIf { app.prefs.state.value.karaoke }
-    return app.api.url(karaoke ?: "/api/v1/navidrome/stream/${URLEncoder.encode(t.id, "UTF-8")}?format=raw")
-  }
+  /**
+   * Where a track plays from (chooseSource): the karaoke version while Karaoke mode is on, it is
+   * ready and ECHO can be reached; else the downloaded file (v0.8); else the stream.
+   */
+  private fun uriOf(t: Track): String =
+    chooseSource(
+      stream = app.api.url("/api/v1/navidrome/stream/${URLEncoder.encode(t.id, "UTF-8")}?format=raw"),
+      karaoke = karaokeAudio[t.key]?.let(app.api::url),
+      karaokeOn = app.prefs.state.value.karaoke,
+      local = app.downloads.localUri(t),
+      online = app.network.online.value,
+    )
 
   /** Whether the item now playing is a karaoke version. */
   fun playingKaraoke(): Boolean {
@@ -152,7 +168,7 @@ class Playback(private val app: EchoApp) {
           .setTitle(t.title)
           .setArtist(t.artist)
           .setAlbumTitle(t.album.title)
-          .setArtworkUri(t.cover?.let { Uri.parse(app.api.url(it)) })
+          .setArtworkUri(t.cover?.let { Uri.parse(app.downloads.coverUri(it) ?: app.api.url(it)) })
           .setDurationMs(t.durationMs.takeIf { it > 0 })
           .build(),
       )
@@ -171,13 +187,15 @@ class Playback(private val app: EchoApp) {
   /**
    * Every queued item gets the source it should have now: the karaoke version while Karaoke mode
    * is on and the server has one, the song otherwise. The item playing is swapped at the same
-   * position, so the music goes on where it was.
+   * position, so the music goes on where it was. A download finishing leaves the item playing
+   * alone ([includeCurrent] false); losing or finding ECHO swaps it too.
    */
-  fun refreshSources() = run { mc ->
+  fun refreshSources(includeCurrent: Boolean = true) = run { mc ->
     for (i in 0 until mc.mediaItemCount) {
       val key = mc.getMediaItemAt(i).mediaId
       val t = tracks[key] ?: continue
       if (uris[key] == uriOf(t)) continue
+      if (i == mc.currentMediaItemIndex && !includeCurrent) continue
       val next = item(t)
       if (i == mc.currentMediaItemIndex) {
         val at = mc.currentPosition

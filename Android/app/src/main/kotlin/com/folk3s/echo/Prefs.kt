@@ -76,6 +76,8 @@ data class Prefs(
   val karaoke: Boolean = false,
   /** How much of the voice Karaoke mode leaves, 0 to 1. */
   val vocalLevel: Float = 0f,
+  /** Downloads (v0.8) wait for Wi-Fi (an unmetered network) unless this is off. */
+  val downloadWifiOnly: Boolean = true,
 ) {
   /** The tabs in the user's order: every known tab once, whatever an older save holds. */
   val tabOrder: List<String> get() = (tabs.filter { it in DEFAULT_TABS } + DEFAULT_TABS).distinct()

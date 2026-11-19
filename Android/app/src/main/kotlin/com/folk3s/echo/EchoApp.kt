@@ -15,6 +15,7 @@ import com.folk3s.echo.stage.AlbumPalette
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -32,11 +33,23 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   val sounds by lazy { com.folk3s.echo.ui.ThemeSounds(this) }
   val karaoke by lazy { com.folk3s.echo.playback.Karaoke(this) }
   val guests by lazy { com.folk3s.echo.ui.GuestState(this) }
+  val network by lazy { com.folk3s.echo.offline.Network(this) }
+  val downloads by lazy { com.folk3s.echo.offline.Downloads(this) }
 
   override fun onCreate() {
     super.onCreate()
     // A revoked token signs this device out; signing in (again) loads that account's library.
     scope.launch { api.revoked.collect { tokens.set(null) } }
+    downloads.start()
+    // Back online after a while without ECHO: the library comes back by itself (v0.8).
+    scope.launch {
+      network.online.drop(1).collect { on ->
+        if (on && tokens.token.value != null) {
+          if (library.status.value != com.folk3s.echo.library.Status.Ready || library.albums.value.isEmpty()) library.reload()
+          library.refreshCollections()
+        }
+      }
+    }
     scope.launch {
       var signedIn = false
       tokens.token.collect { t ->
@@ -58,6 +71,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
             playback.reset()
             games.clear()
             karaoke.clear()
+            downloads.clear()
           }
         }
         signedIn = t != null
@@ -68,7 +82,11 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   /** Covers through the same client, so they carry the device token. */
   override fun newImageLoader(context: PlatformContext): ImageLoader =
     ImageLoader.Builder(context)
-      .components { add(OkHttpNetworkFetcherFactory(callFactory = { api.http })) }
+      .components {
+        // A downloaded cover is read from its file, at any size asked for (offline too).
+        add(coil3.map.Mapper<String, String> { data, _ -> downloads.coverUri(data) })
+        add(OkHttpNetworkFetcherFactory(callFactory = { api.http }))
+      }
       .crossfade(true)
       .build()
 }

@@ -99,7 +99,7 @@ private fun Section(title: String) {
 }
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onDownloads: (() -> Unit)? = null) {
   val app = LocalContext.current.echo
   val scope = rememberCoroutineScope()
   val p by app.prefs.state.collectAsStateWithLifecycle()
@@ -214,6 +214,9 @@ fun SettingsScreen() {
       style = MaterialTheme.typography.bodySmall,
     )
     KaraokeProgress()
+
+    Section("Downloads")
+    DownloadsSettings(onDownloads)
 
     val guest by app.guests.me.collectAsStateWithLifecycle()
     if (guest == null) {

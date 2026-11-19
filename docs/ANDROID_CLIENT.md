@@ -45,6 +45,52 @@ throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
 
+## v0.8: offline downloads (2026-11-19)
+
+Owner decisions (2026-11-19): albums, playlists and Liked Songs can be downloaded to the phone
+and play with no connection. They are stored as **Opus at 192 kbps**, which Navidrome transcodes
+through ECHO's proxy (`/api/v1/navidrome/stream/{id}?format=opus&maxBitRate=192`, with the device
+token like any stream). Downloads wait for **Wi-Fi by default**.
+
+- **Storage** (`offline/OfflineIndex.kt`, `offline/Downloads.kt`): everything stays in
+  app-private storage under `files/offline/`. `index.json` lists each download (kind, id, title,
+  subtitle, cover and the `Track`s as they were last seen online) plus the finished files
+  (track id → bytes, cover id → bytes). Tracks go in `tracks/<id>.opus` (written as `.part`, then
+  renamed) and covers in `covers/<cover id>.jpg` (fetched at 600 px). A track or cover shared by
+  two downloads is kept until both are removed (`OfflineIndex.remove`). A downloaded playlist,
+  album or Liked Songs follows its online version whenever it is seen again (`Downloads.sync`;
+  Liked Songs follows the hearts). Signing out deletes everything (REL-05).
+- **The worker** (`offline/DownloadWorker.kt`): a WorkManager `CoroutineWorker`, so downloads go
+  on after the app closes. It needs `UNMETERED` (Wi-Fi only, the default) or `CONNECTED`
+  networks and enough free storage. It fetches covers first, then one track at a time, newest
+  download first. It runs as a `dataSync` foreground service with a quiet progress notification
+  when Android allows; if Android refuses because it was started from the background, it runs
+  without one. If a connection drops it retries with backoff; a track the server refuses is
+  skipped for that run and retried later. A new download is queued with `APPEND_OR_REPLACE`, so
+  one added just as a run ends is still fetched. Changing the Wi-Fi setting replaces the queued run.
+- **Playback** (`playback/Playback.kt`): `uriOf` asks `chooseSource`. The karaoke version wins
+  while Karaoke mode is on, it is ready and ECHO can be reached. Otherwise the downloaded file
+  plays (`file://`, even online, to save data), and otherwise the stream. A finished download
+  moves queued songs to their files without touching the one playing; going offline or online
+  swaps that one too, at the same position. `PlaybackService` reads through
+  `DefaultDataSource` (files, plus OkHttp for streams), and the notification artwork uses the
+  saved cover. A Coil `Mapper` serves saved covers at any size, and so does the Stage's
+  backdrop.
+- **Offline** (`offline/Network.kt`): online means the phone has a network *and* ECHO answered
+  the last request. `Api` marks the server unreachable when a request to it fails to connect,
+  but not when the request was cancelled. While the phone has a network but ECHO doesn't answer,
+  `/api/v1/health` is asked every 20 s. When ECHO is back, the library reloads by itself.
+  Offline, Home becomes the downloads list. Library shows an "Offline · your downloads still
+  play" note instead of the error, and other pages show that note above the bars. Album,
+  playlist and Liked Songs pages fall back to the downloaded copy.
+- **Screens** (`ui/Downloads.kt`): the download button sits in the album, playlist and Liked
+  Songs top bars. It shows an arrow to download, a ring that fills while downloading (tap to
+  cancel), or a filled disc once downloaded (tap to remove, after asking). The same actions are
+  in each page's ⋯ menu. Library → Downloads lists each download with its size or progress,
+  Play and ⋯, the total, the reason it's waiting ("Waiting for Wi-Fi") and Remove all. Settings →
+  Downloads has "Download only on Wi-Fi", the storage used and Manage downloads.
+- Tests: `OfflineTest` (which source plays, shared files, the missing list, sizes, cover ids).
+
 ## v0.7: sign-in and guest accounts (2026-11-19)
 
 Owner decisions (2026-11-19): a more beautiful, smoother sign-in screen (an album art wall,

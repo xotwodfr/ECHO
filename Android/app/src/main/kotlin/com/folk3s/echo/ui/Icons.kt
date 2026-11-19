@@ -91,6 +91,9 @@ object EchoIcons {
       P("m7 21-3-3 3-3"),
       P("M11 10.5 12.5 9.5v5"),
     )
+  // Offline downloads (v0.8): an arrow into a tray; a cloud struck through.
+  val download = icon("download", P("M12 4.5v10"), P("m7.5 10.5 4.5 4.5 4.5-4.5"), P("M5 19.5h14"))
+  val offline = icon("offline", P("M7 18.5h10.5a3.5 3.5 0 0 0 .9-6.9A6 6 0 0 0 7.1 9.6 4.5 4.5 0 0 0 7 18.5z"), P("M4 4l16 16"))
   val queue = icon("queue", P("M4 6h16"), P("M4 12h16"), P("M4 18h10"))
   val settings =
     icon(

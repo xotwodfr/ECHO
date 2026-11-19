@@ -81,6 +81,7 @@ dependencies {
   implementation(libs.serialization.json)
   implementation(libs.materialkolor)
   implementation(libs.haze)
+  implementation(libs.work.runtime.ktx)
   // Guest codes: scanning (the camera view) and drawing the QR code.
   implementation(libs.zxing.embedded) { isTransitive = false }
   implementation(libs.zxing.core)

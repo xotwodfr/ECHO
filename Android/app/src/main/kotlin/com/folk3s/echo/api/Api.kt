@@ -4,7 +4,9 @@ import android.os.Build
 import com.folk3s.echo.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
@@ -45,6 +47,14 @@ class Api(internal val tokens: TokenStore) {
   /** The server refused the token (revoked in Sessions & devices, or idle 60 days). */
   val revoked: SharedFlow<Unit> = _revoked
 
+  private val _reachable = MutableStateFlow(true)
+
+  /**
+   * Whether ECHO answered the last request (any answer, errors too). False after a request to it
+   * failed to connect, until one gets through (v0.8: the app shows the downloads meanwhile).
+   */
+  val reachable: StateFlow<Boolean> = _reachable
+
   val http: OkHttpClient =
     OkHttpClient.Builder()
       .addInterceptor { chain ->
@@ -55,7 +65,15 @@ class Api(internal val tokens: TokenStore) {
           if (token != null && ours && req.header("Authorization") == null) {
             req.newBuilder().header("Authorization", "Bearer $token").build()
           } else req
-        val res = chain.proceed(out)
+        val res =
+          try {
+            chain.proceed(out)
+          } catch (e: java.io.IOException) {
+            // A call given up on (a cover scrolled away) says nothing about the server.
+            if (ours && !chain.call().isCanceled()) _reachable.value = false
+            throw e
+          }
+        if (ours) _reachable.value = true
         if (res.code == 401 && token != null && ours && !req.url.encodedPath.endsWith("/auth/device")) {
           _revoked.tryEmit(Unit)
         }
@@ -64,7 +82,7 @@ class Api(internal val tokens: TokenStore) {
       .build()
 
   /** A server path (as tracks keep their artwork) as a full URL. */
-  fun url(path: String) = if (path.startsWith("http")) path else "$base$path"
+  fun url(path: String) = if (path.startsWith("http") || path.startsWith("file:")) path else "$base$path"
 
   suspend fun get(path: String): JsonElement = call(Request.Builder().url(url("/api/v1$path")).build())
 
