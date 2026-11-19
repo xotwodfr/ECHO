@@ -340,6 +340,14 @@ export const strings = {
   },
   prefs: {
     notSaved: "That setting wasn't saved. Try again.",
+    appearance: 'Appearance',
+    theme: 'Theme',
+    themeHint:
+      'Follows you to every device. The style themes are inspired by those services; the names are labels, nothing more.',
+    dark: 'Light or dark',
+    darkNames: { theme: 'Theme', system: 'System', light: 'Light', dark: 'Dark' },
+    darkHint:
+      "Theme: each theme's own (Spotify style is dark, Apple Music style light, ECHO dark).",
     later: 'Arrives in a later version.',
     perDevice: 'This device only.',
     perDeviceNextVisit: 'This device only. Applies the next time the Stage opens.',

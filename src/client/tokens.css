@@ -17,6 +17,8 @@
   --green-hover: var(--fl-accent-hover);
   --green-press: var(--fl-accent-press);
   --on-green: var(--fl-on-accent);
+  --accent-text: var(--fl-accent-text);
+  --accent-subtle: var(--fl-accent-subtle);
   --white-hover: var(--fl-fg2);
   --backdrop-dim: rgb(0 0 0 / 0.4);
   --header-shade: rgba(0, 0, 0, 0.5);
@@ -24,6 +26,8 @@
   --liked-from: #450AF5;
   --liked-to: #C4EFD9;
   --text-on-tint: rgba(255, 255, 255, 0.72);
+  /* words on Browse all's and Wrapped's coloured cards, in every scheme */
+  --on-hue: #FFFFFF; --on-hue-2: rgba(255, 255, 255, 0.72); --hue-shade: rgba(0, 0, 0, 0.5);
   --head-fallback: var(--fl-layer-solid);
   --avatar: var(--fl-accent-subtle);
   --card-shadow: var(--fl-shadow-4);
@@ -73,10 +77,12 @@
   --ly-active: clamp(24px, min(3.7vh, 2.3vw), 44px);
   --ly-phone: 26px;
   /* a page header's title steps down with its length (Spotify's 96/72/48/32) */
-  --title-xl: 700 96px/1.04;
-  --title-l: 700 72px/1.04;
-  --title-m: 700 48px/1.08;
-  --title-s: 700 32px/1.12;
+  --title-xl: var(--title-w) 96px/1.04;
+  --title-l: var(--title-w) 72px/1.04;
+  --title-m: var(--title-w) 48px/1.08;
+  --title-s: var(--title-w) 32px/1.12;
+  /* the weights a theme sets (Android's titleWeight): page titles, and headings */
+  --title-w: 700; --head-w: 600;
   --tracking-title: -0.04em;
   --tracking-caps: 0.1em;
 
@@ -112,6 +118,8 @@
   --r-pill: var(--fl-corner-circle); --r-control: var(--fl-corner-s);
   --r-panel: var(--fl-corner-m); --r-art: var(--fl-corner-s);
   --r-art-lg: var(--fl-corner-m); --r-card: var(--fl-corner-m);
+  /* a theme's corners (Android's Look): buttons, the floating player */
+  --r-button: var(--r-control); --r-dock: var(--r-pill);
   --shadow-float: var(--fl-shadow-16);
   --shadow-art: 0 4px 60px rgba(0,0,0,.5);
   --shadow-play: var(--fl-shadow-8);
@@ -251,10 +259,10 @@
   --fl-type-body-strong: 600 14px/20px;
   --fl-type-body-large: 400 16px/24px;
   --fl-type-subtitle2: 600 16px/22px;
-  --fl-type-subtitle1: 600 20px/28px;
-  --fl-type-title3: 600 24px/32px;
-  --fl-type-title2: 600 28px/36px;
-  --fl-type-title1: 600 32px/40px;
+  --fl-type-subtitle1: var(--head-w) 20px/28px;
+  --fl-type-title3: var(--head-w) 24px/32px;
+  --fl-type-title2: var(--head-w) 28px/36px;
+  --fl-type-title1: var(--head-w) 32px/40px;
 
   /* shape */
   --fl-corner-s: 4px; --fl-corner-m: 8px; --fl-corner-circle: 999px;
@@ -318,4 +326,402 @@
 :root[data-motion="off"] {
   --dur-spring: 0ms; --dur-fade: 0ms; --dur-exit: 0ms; --dur-exit-move: 0ms; --dur-exit-big: 0ms;
   --stagger: 0ms;
+}
+
+/* ==========================================================================================
+   Themes (Settings → Preferences → Appearance; DESIGN_SYSTEM.md §15): Android's ThemePreset
+   (Android/.../ui/Theme.kt) on the web. appearance.ts marks <html> with data-theme, data-scheme
+   (light or dark) and, for the hand-made ones, data-material; themes.css draws the materials.
+   ECHO, dark, is the web as it always was: none of this applies to it but the light scheme.
+   A theme sets its inputs (--th-*): the ground, the accent and what reads on it; the generic
+   blocks turn them into the frame's tokens. The inputs also apply to any element carrying
+   data-theme and data-scheme: the picker's swatches preview each theme with them.
+   ========================================================================================== */
+
+/* ---- Light (Fluent 2's light neutrals, webLightTheme and WinUI 3) ---- */
+:root[data-scheme="light"] {
+  color-scheme: light;
+  --fl-mica-base: #F3F3F3;
+  --fl-solid-base: #F3F3F3;
+  --mica-opacity: 0.22;
+  --fl-layer: rgb(255 255 255 / 0.5);
+  --fl-layer-solid: #F9F9F9;
+  --fl-layer-alt: rgb(255 255 255 / 0.7);
+  --fl-card: rgb(0 0 0 / 0.035);
+  --fl-card-hover: rgb(0 0 0 / 0.06);
+  --fl-subtle-hover: rgb(0 0 0 / 0.04);
+  --fl-subtle-press: rgb(0 0 0 / 0.025);
+  --fl-control: rgb(255 255 255 / 0.7);
+  --fl-control-hover: rgb(0 0 0 / 0.05);
+  --fl-control-press: rgb(0 0 0 / 0.03);
+  --fl-flyout: #FCFCFC;
+  --fl-flyout-hover: #F0F0F0;
+  --fl-dialog: #FFFFFF;
+  --fl-stroke: rgb(0 0 0 / 0.08);
+  --fl-stroke-control: rgb(0 0 0 / 0.1);
+  --fl-stroke-strong: rgb(0 0 0 / 0.446);
+  --fl-fg1: rgb(0 0 0 / 0.896);
+  --fl-fg2: rgb(0 0 0 / 0.62);
+  --fl-fg3: rgb(0 0 0 / 0.46);
+  --fl-fg-disabled: rgb(0 0 0 / 0.36);
+  --fl-focus-outer: #000000;
+  --fl-focus-inner: #FFFFFF;
+  --fl-danger: #C42B1C;  --fl-danger-bg: #FDE7E9;
+  --fl-success: #0F7B0F; --fl-success-bg: #DFF6DD;
+  --fl-warning: #9D5D00; --fl-warning-bg: #FFF4CE;
+  --fl-shadow-4: 0 0 2px rgb(0 0 0 / .12), 0 2px 4px rgb(0 0 0 / .14);
+  --fl-shadow-8: 0 0 2px rgb(0 0 0 / .12), 0 4px 8px rgb(0 0 0 / .14);
+  --fl-shadow-16: 0 0 2px rgb(0 0 0 / .12), 0 8px 16px rgb(0 0 0 / .14);
+  --fl-shadow-28: 0 0 8px rgb(0 0 0 / .12), 0 14px 28px rgb(0 0 0 / .14);
+  --fl-shadow-64: 0 0 8px rgb(0 0 0 / .12), 0 32px 64px rgb(0 0 0 / .14);
+  --shadow-art: 0 4px 40px rgba(0,0,0,.18);
+  --backdrop-dim: rgb(0 0 0 / 0.25);
+  /* the album's accent (palette/fluent.ts is tone 80, for the dark), deep enough for a white ground */
+  --green: oklch(from var(--fl-accent) 0.47 c h);
+  --green-hover: oklch(from var(--fl-accent) 0.53 c h);
+  --green-press: oklch(from var(--fl-accent) 0.42 c h);
+  --on-green: #FFFFFF;
+  --accent-text: oklch(from var(--fl-accent) 0.42 c h);
+  --accent-subtle: oklch(from var(--fl-accent) 0.9 c h);
+  /* page headers and the mini player: the playing song's colour, pale, under dark words */
+  --head-colour: oklch(from var(--art-accent) 0.9 min(c, 0.05) h);
+  --playing-tint: oklch(from var(--art-accent) 0.88 min(c, 0.06) h);
+  --header-shade: rgb(255 255 255 / 0.3);
+  --header-shade-2: rgb(255 255 255 / 0.15);
+  --text-on-tint: rgb(0 0 0 / 0.62);
+}
+
+/* ---- The generic blocks: a theme's inputs as the frame's tokens (never ECHO's) ---- */
+:where([data-scheme="dark"]) {
+  --th-frame: var(--th-ground);
+  --th-panel: color-mix(in srgb, var(--th-ground), white 5%);
+  --th-float: color-mix(in srgb, var(--th-ground), white 11%);
+  --th-ink: #FFFFFF;
+  --th-mix: white;
+}
+
+:where([data-scheme="light"]) {
+  --th-frame: color-mix(in srgb, var(--th-ground), black 5%);
+  --th-panel: var(--th-ground);
+  --th-float: var(--th-ground);
+  --th-ink: #1B1B1B;
+  --th-mix: black;
+}
+
+/* A theme's face and title weight (Android's font and titleWeight): Figtree at 800 unless it says. */
+:where([data-theme]) {
+  --th-font: "Figtree", system-ui, sans-serif;
+  --th-weight: 800;
+}
+
+:is(:root, .theme-swatch):not([data-theme="echo"]) {
+  --fl-mica-base: var(--th-frame);
+  --fl-solid-base: var(--th-frame);
+  --mica-opacity: 0;
+  --panel: var(--th-panel);
+  --fl-layer-solid: var(--th-panel);
+  --fl-flyout: var(--th-float);
+  --fl-flyout-hover: color-mix(in srgb, var(--th-float), var(--th-mix) 7%);
+  --fl-dialog: var(--th-float);
+  --green: var(--th-accent);
+  --green-hover: color-mix(in oklab, var(--th-accent), var(--th-mix) 12%);
+  --green-press: color-mix(in oklab, var(--th-accent), black 12%);
+  --on-green: var(--th-on-accent);
+  --accent-text: var(--th-accent);
+  --accent-subtle: color-mix(in srgb, var(--th-accent) 28%, var(--th-panel));
+  --font: var(--th-font); --font-ui: var(--th-font);
+  --title-w: var(--th-weight); --head-w: 700;
+  /* Android's default Look: art 16, rows 10, panels 28 (held to 24), buttons 26, mini player 22 */
+  --r-art: 10px; --r-art-lg: 16px; --r-card: 24px; --r-panel: 24px; --r-control: 10px;
+  --r-button: 26px; --r-dock: 22px; --fl-corner-s: 10px; --fl-corner-m: 16px;
+}
+
+:root[data-scheme="light"]:not([data-theme="echo"]) {
+  --accent-text: oklch(from var(--th-accent) min(l, 0.55) c h);
+}
+
+/* ---- The services' looks: an accent, a ground, a face, title weight and corners each ---- */
+/* ECHO in the picker: its own face, corners and the grey before anything plays */
+.theme-swatch[data-theme="echo"] {
+  --font-ui: "Segoe UI Variable Text", "Segoe UI", "Selawik", system-ui, sans-serif;
+  --th-font: var(--font-ui); --th-weight: 700;
+  --r-art: 4px; --r-art-lg: 8px; --r-button: 4px; --r-card: 8px;
+  --green: var(--th-accent);
+}
+[data-theme="echo"] { --th-ground: #1C1C1C; --th-accent: var(--fl-accent); --th-on-accent: var(--fl-on-accent); }
+[data-theme="echo"][data-scheme="light"] { --th-ground: #F3F3F3; --th-accent: oklch(from var(--fl-accent) 0.47 c h); --th-on-accent: #FFFFFF; }
+
+[data-theme="apple"] { --th-font: "Inter", system-ui, sans-serif; --th-ground: #000000; --th-accent: #FA2D48; --th-on-accent: #FFFFFF; }
+[data-theme="apple"][data-scheme="light"] { --th-ground: #FFFFFF; }
+:is(:root, .theme-swatch)[data-theme="apple"] {
+  --r-art: 6px; --r-art-lg: 10px; --r-card: 14px; --r-panel: 14px; --r-control: 8px;
+  --r-button: 12px; --r-dock: 14px; --fl-corner-s: 6px; --fl-corner-m: 12px;
+}
+
+[data-theme="spotify"] { --th-ground: #121212; --th-accent: #1ED760; --th-on-accent: #000000; }
+[data-theme="spotify"][data-scheme="light"] { --th-ground: #F6F6F6; }
+:is(:root, .theme-swatch)[data-theme="spotify"] {
+  --r-art: 4px; --r-art-lg: 4px; --r-card: 8px; --r-panel: 8px; --r-control: 4px;
+  --r-button: 999px; --r-dock: 8px; --fl-corner-s: 4px; --fl-corner-m: 8px;
+}
+
+[data-theme="soundcloud"] { --th-font: "Inter", system-ui, sans-serif; --th-weight: 700; --th-ground: #121212; --th-accent: #FF5500; --th-on-accent: #FFFFFF; }
+[data-theme="soundcloud"][data-scheme="light"] { --th-ground: #F2F2F2; }
+:is(:root, .theme-swatch)[data-theme="soundcloud"] {
+  --head-w: 600;
+  --r-art: 2px; --r-art-lg: 2px; --r-card: 4px; --r-panel: 4px; --r-control: 2px;
+  --r-button: 4px; --r-dock: 4px; --fl-corner-s: 2px; --fl-corner-m: 4px;
+}
+
+[data-theme="deezer"] { --th-ground: #0F0D13; --th-accent: #A238FF; --th-on-accent: #FFFFFF; }
+[data-theme="deezer"][data-scheme="light"] { --th-ground: #FAF8FF; }
+:is(:root, .theme-swatch)[data-theme="deezer"] {
+  --r-art: 8px; --r-art-lg: 12px; --r-card: 20px; --r-panel: 20px; --r-control: 8px;
+  --r-button: 999px; --r-dock: 16px; --fl-corner-s: 8px; --fl-corner-m: 16px;
+}
+
+[data-theme="qobuz"] { --th-font: "Inter", system-ui, sans-serif; --th-weight: 300; --th-ground: #0B0B0C; --th-accent: #3B8CFF; --th-on-accent: #FFFFFF; }
+[data-theme="qobuz"][data-scheme="light"] { --th-ground: #FFFFFF; }
+:is(:root, .theme-swatch)[data-theme="qobuz"] {
+  --head-w: 300;
+  --r-art: 0px; --r-art-lg: 0px; --r-card: 0px; --r-panel: 0px; --r-control: 0px;
+  --r-button: 0px; --r-dock: 0px; --fl-corner-s: 0px; --fl-corner-m: 0px;
+}
+
+[data-theme="tidal"] { --th-font: "Inter", system-ui, sans-serif; --th-weight: 700; --th-ground: #000000; --th-accent: #33FFEE; --th-on-accent: #000000; }
+[data-theme="tidal"][data-scheme="light"] { --th-ground: #FFFFFF; }
+:is(:root, .theme-swatch)[data-theme="tidal"] {
+  --head-w: 600;
+  --r-art: 4px; --r-art-lg: 6px; --r-card: 6px; --r-panel: 6px; --r-control: 4px;
+  --r-button: 6px; --r-dock: 6px; --fl-corner-s: 4px; --fl-corner-m: 6px;
+}
+
+[data-theme="youtube"] { --th-weight: 700; --th-ground: #030303; --th-accent: #FF0033; --th-on-accent: #FFFFFF; }
+[data-theme="youtube"][data-scheme="light"] { --th-ground: #FFFFFF; }
+:is(:root, .theme-swatch)[data-theme="youtube"] {
+  --head-w: 600;
+  /* round art (Android's circleArt): covers in lists and cards; a page's own cover stays square */
+  --r-art: 50%; --r-art-lg: 50%; --r-card: 16px; --r-panel: 16px; --r-control: 10px;
+  --r-button: 999px; --r-dock: 12px; --fl-corner-s: 8px; --fl-corner-m: 16px;
+}
+
+/* Monochrome: greys only, the accent is the words' colour; the art is the colour. */
+[data-theme="mono"] { --th-ground: #131313; --th-accent: #E8E8E8; --th-on-accent: #131313; }
+[data-theme="mono"][data-scheme="light"] { --th-ground: #FAFAFA; --th-accent: #1E1E1E; --th-on-accent: #FAFAFA; }
+:root[data-theme="mono"] {
+  --head-colour: #2A2A2A; --playing-tint: #2E2E2E;
+}
+:root[data-theme="mono"][data-scheme="light"] {
+  --head-colour: #E6E6E6; --playing-tint: #E2E2E2;
+}
+
+/* ==========================================================================================
+   Materials (Android's ui/Matter.kt): Clay, Yarn, Liquid glass, Paper and Retro hi-fi. Each has
+   its palette (Theme.kt matterColors: a ground, a paper for frames and bars, accents, ink, a
+   strong colour), and the light and shade themes.css paints its pieces with. Textures are small
+   SVG tiles, rasterised once by the browser and repeated: nothing is drawn per frame.
+   ========================================================================================== */
+
+:root {
+  /* clay's grain: fine speckle */
+  --tex-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .2 0 0 0 0 .15 0 0 0 0 .2 .5 0 0 0 -.22'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+  /* paper's fibres: a fine mottle with longer strands */
+  --tex-fibre: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8 .35' numOctaves='3' seed='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .3 0 0 0 0 .22 0 0 0 0 .12 .3 0 0 0 -.12'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23f)'/%3E%3C/svg%3E");
+  /* brushed aluminium: long horizontal streaks, light and dark */
+  --tex-brushed: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='120'%3E%3Cfilter id='b'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.003 1.6' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.4 0 0 0 -.25 1.4 0 0 0 -.25 1.4 0 0 0 -.25 0 0 0 0 .1'/%3E%3C/filter%3E%3Crect width='400' height='120' filter='url(%23b)'/%3E%3C/svg%3E");
+  /* wood veneer: long figured grain */
+  --tex-wood: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='240'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.004 .09' numOctaves='4' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .16 0 0 0 0 .08 0 0 0 0 .03 1.6 0 0 0 -.55'/%3E%3C/filter%3E%3Crect width='600' height='240' filter='url(%23w)'/%3E%3C/svg%3E");
+  /* knitting: stockinette's columns of V stitches, lit on top, shaded in the gaps */
+  --tex-knit: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='16'%3E%3Cg stroke='black' stroke-opacity='.16' stroke-width='.9'%3E%3Cellipse cx='3.6' cy='8' rx='2.7' ry='6.2' transform='rotate(-30 3.6 8)' fill='white' fill-opacity='.13'/%3E%3Cellipse cx='10.4' cy='8' rx='2.7' ry='6.2' transform='rotate(30 10.4 8)' fill='white' fill-opacity='.1'/%3E%3C/g%3E%3Cpath d='M3 3.5l2 2M9 3.5l2 2' stroke='white' stroke-opacity='.25' stroke-width='.7'/%3E%3C/svg%3E");
+  --tex-knit-soft: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='16'%3E%3Cg stroke='black' stroke-opacity='.08' stroke-width='.9'%3E%3Cellipse cx='3.6' cy='8' rx='2.7' ry='6.2' transform='rotate(-30 3.6 8)' fill='white' fill-opacity='.08'/%3E%3Cellipse cx='10.4' cy='8' rx='2.7' ry='6.2' transform='rotate(30 10.4 8)' fill='white' fill-opacity='.04'/%3E%3C/g%3E%3C/svg%3E");
+  --tex-knit-size: 14px 16px;
+
+  /* Clay: lit from the top left, a soft gloss, the far side in shade (clayBody) */
+  --clay-face: linear-gradient(135deg, rgb(255 255 255 / .3), transparent 42%, rgb(40 20 50 / .16));
+  --clay-gloss: radial-gradient(farthest-side at 28% 22%, rgb(255 255 255 / .38), transparent 60%);
+  --shadow-clay: inset 2px 2px 2px rgb(255 255 255 / .65), inset -3px -3px 5px rgb(60 30 70 / .2), 5px 8px 16px rgb(70 45 80 / .18), 1px 2px 3px rgb(70 45 80 / .12);
+  --shadow-claypress: inset 3px 3px 7px rgb(60 30 70 / .24), inset -2px -2px 3px rgb(255 255 255 / .45);
+  --shadow-claypanel: inset 2px 2px 3px rgb(255 255 255 / .55), inset -4px -4px 8px rgb(60 30 70 / .1), 6px 10px 24px rgb(70 45 80 / .12);
+
+  /* Yarn: a cushion's puff, the rolled edge, a stitched seam (yarnBody) */
+  --yarn-puff: radial-gradient(farthest-corner at 45% 38%, rgb(255 255 255 / .16), transparent 55%, rgb(0 0 0 / .2));
+  --shadow-yarn: inset 0 0 0 3px rgb(0 0 0 / .1), inset 0 0 10px rgb(0 0 0 / .22), 0 3px 6px rgb(40 20 10 / .25);
+  --shadow-yarnpress: inset 0 0 0 3px rgb(0 0 0 / .14), inset 0 2px 12px rgb(0 0 0 / .35);
+  --yarn-seam: rgb(255 246 230 / .8);
+  --yarn-seam-w: 2px; --yarn-seam-inset: 6px;
+
+  /* Liquid glass: frost lighter at the top, a slanting reflection, a lit rim (glassBody) */
+  --glass-frost: linear-gradient(rgb(255 255 255 / .2), rgb(255 255 255 / .04) 45%, rgb(255 255 255 / .1));
+  --glass-sheen: linear-gradient(118deg, transparent 30%, rgb(255 255 255 / .16) 38%, transparent 46%);
+  --glass-pane: rgb(255 255 255 / .1);
+  --glass-dock: color-mix(in srgb, var(--th-ground) 82%, white 18%);
+  --glass-edge: rgb(255 255 255 / .28);
+  --shadow-glass: inset 1.4px 1.4px 0 rgb(255 255 255 / .55), inset -1px -1px 0 rgb(255 255 255 / .12), 0 10px 30px rgb(0 0 0 / .22);
+  --shadow-glasspress: inset 1px 1px 0 rgb(255 255 255 / .3), inset 0 0 18px rgb(255 255 255 / .12);
+
+  /* Paper: card with its fibres; a crisp and a soft cut-paper shadow; tape; a crease (paperBody) */
+  --shadow-paper: 1px 1.5px 0 rgb(0 0 0 / .12), 2px 4px 0 rgb(70 50 30 / .08), 3px 6px 10px rgb(70 50 30 / .1);
+  --shadow-paperpress: 0.5px 0.5px 0 rgb(0 0 0 / .12), 1px 1px 2px rgb(70 50 30 / .1);
+  --paper-crease: linear-gradient(100deg, transparent 49.4%, rgb(0 0 0 / .07) 49.7%, rgb(255 255 255 / .55) 50.1%, transparent 50.5%);
+  --paper-tape: rgb(240 226 180 / .72);
+  --paper-tape-w: 64px; --paper-tape-h: 18px; --paper-dog: 22px;
+
+  /* Retro hi-fi: brushed aluminium with a bevel, screws in the corners, a teal glow (hifiBody) */
+  --hifi-face: linear-gradient(rgb(255 255 255 / .16), transparent 50%, rgb(0 0 0 / .16));
+  --hifi-press: linear-gradient(rgb(0 0 0 / .22), rgb(255 255 255 / .06));
+  --hifi-screw: radial-gradient(circle at 38% 38%, #FFFFFF, #8A8A8A 55%, rgb(0 0 0 / .55) 62%, transparent 70%);
+  --hifi-screw-size: 9px 9px; --hifi-screw-in: 6px;
+  --hifi-glow: #4FE3D0;
+  --shadow-hifi: inset 0 1.2px 0 rgb(255 255 255 / .55), inset 0 -1.2px 0 rgb(0 0 0 / .45), 0 2px 5px rgb(0 0 0 / .35);
+  --shadow-hifipress: inset 0 2px 4px rgb(0 0 0 / .45), inset 0 -1px 0 rgb(255 255 255 / .1);
+  --shadow-hifiglow: 0 0 10px rgb(79 227 208 / .55);
+  --hifi-shade: linear-gradient(rgb(0 0 0 / .12), rgb(0 0 0 / .38));
+
+  /* the picker's swatches (Android's ThemePicker): a ground, Aa, two covers and a button */
+  --swatch-w: 112px; --swatch-h: 132px; --swatch-art: 30px; --swatch-r: 18px;
+  --swatch-btn-w: 52px; --swatch-btn-h: 18px; --swatch-ring: 3px;
+  --swatch-art-1: #FF6B6B; --swatch-art-2: #6B8CFF;
+  --swatch-aa: 22px;
+  --shadow-matswatch: inset 1px 1px 1px rgb(255 255 255 / .5), 1px 2px 3px rgb(0 0 0 / .2);
+}
+
+/* Every material: its palette's words, and the pieces' colours (themes.css cycles the accents). */
+:is(:root, .theme-swatch)[data-material] {
+  --fl-fg1: var(--th-ink);
+  --fl-fg2: color-mix(in srgb, var(--th-ink), transparent 28%);
+  --fl-fg3: color-mix(in srgb, var(--th-ink), transparent 45%);
+  --fl-stroke: color-mix(in srgb, var(--th-ink), transparent 84%);
+  --fl-stroke-strong: color-mix(in srgb, var(--th-ink), transparent 60%);
+  --mat-card: var(--th-float);
+  --mat-control: var(--th-float);
+  --head-colour: color-mix(in oklab, var(--mat-a1) 60%, var(--th-panel));
+  --playing-tint: color-mix(in oklab, var(--mat-a1) 70%, var(--th-panel));
+  --header-shade: transparent; --header-shade-2: transparent;
+  --head-w: 800;
+}
+
+/* Clay: pastel plasticine; in the dark, a deep shade of what's playing. */
+[data-theme="clay"] {
+  --th-weight: 900;
+  --th-ground: #F3ECE6; --th-panel: #FBF5EF; --th-float: #FBF5EF; --th-frame: #F3ECE6;
+  --th-accent: #B04F6C; --th-on-accent: #FFFFFF; --th-ink: #3D3347;
+  --mat-a1: #FFC9B0; --mat-a2: #D8C8F4; --mat-a3: #B9EAD2; --mat-a4: #FFE7A3; --mat-a5: #BFE0F7; --mat-a6: #FFC0D3;
+}
+[data-theme="clay"][data-scheme="dark"] {
+  --clay-hi: oklch(from var(--art-accent) 0.68 min(c * 3, 0.09) h);
+  --th-ground: oklch(from var(--clay-hi) 0.26 calc(c * 0.4) h);
+  --th-frame: var(--th-ground);
+  --th-panel: oklch(from var(--clay-hi) 0.43 calc(c * 0.6) h);
+  --th-float: var(--th-panel);
+  --th-accent: oklch(from var(--clay-hi) 0.8 c h); --th-on-accent: #2A2230; --th-ink: #F6EEF7;
+  --mat-a1: var(--clay-hi); --mat-a2: oklch(from var(--clay-hi) l c calc(h + 22));
+  --mat-a3: oklch(from var(--clay-hi) l c calc(h - 22)); --mat-a4: oklch(from var(--clay-hi) 0.76 c h);
+  --mat-a5: oklch(from var(--clay-hi) 0.64 c calc(h + 40)); --mat-a6: oklch(from var(--clay-hi) l c calc(h - 40));
+}
+:is(:root, .theme-swatch)[data-theme="clay"] {
+  --r-art: 14px; --r-art-lg: 22px; --r-card: 24px; --r-panel: 24px; --r-control: 14px;
+  --r-button: 24px; --r-dock: 26px; --fl-corner-s: 14px; --fl-corner-m: 22px;
+}
+:root[data-theme="clay"][data-scheme="dark"] {
+  --shadow-clay: inset 2px 2px 2px rgb(255 255 255 / .3), inset -3px -3px 6px rgb(0 0 0 / .3), 5px 8px 16px rgb(0 0 0 / .35);
+  --shadow-claypanel: inset 2px 2px 3px rgb(255 255 255 / .2), inset -4px -4px 8px rgb(0 0 0 / .2), 6px 10px 24px rgb(0 0 0 / .3);
+}
+
+/* Yarn: knitted in cosy autumn colours. */
+[data-theme="yarn"] {
+  --th-weight: 900;
+  --th-ground: #E9DCC4; --th-panel: #EFE3CC; --th-float: #EFE3CC; --th-frame: #E9DCC4;
+  --th-accent: #8E2F4F; --th-on-accent: #FFFFFF; --th-ink: #3B2A22;
+  --mat-a1: #B8562F; --mat-a2: #8E2F4F; --mat-a3: #3F6B4A; --mat-a4: #D9A43A; --mat-a5: #6B4430; --mat-a6: #7C99A8;
+}
+[data-theme="yarn"][data-scheme="dark"] {
+  --th-ground: #2E2925; --th-panel: #4A413A; --th-float: #4A413A; --th-frame: #2E2925;
+  --th-accent: #E0AE4A; --th-on-accent: #1E1E20; --th-ink: #F3E9DC;
+}
+:is(:root, .theme-swatch)[data-theme="yarn"] {
+  --r-art: 12px; --r-art-lg: 18px; --r-card: 24px; --r-panel: 24px; --r-control: 12px;
+  --r-button: 999px; --r-dock: 24px; --fl-corner-s: 12px; --fl-corner-m: 18px;
+  --head-colour: color-mix(in oklab, var(--mat-a4) 45%, var(--th-panel));
+}
+
+/* Liquid glass: frosted panes over the album's colours, glowing on a deep ground. */
+[data-theme="glass"] {
+  --th-weight: 900;
+  --glow: oklch(from var(--art-accent) 0.72 max(c, 0.17) h);
+  --th-ground: oklch(from var(--glow) 0.24 0.08 h); --th-frame: var(--th-ground);
+  --th-panel: rgb(255 255 255 / .06); --th-float: rgb(255 255 255 / .12);
+  --th-accent: rgb(255 255 255 / .9); --th-on-accent: #1C1530; --th-ink: #FFFFFF;
+  --mat-a1: var(--glow); --mat-a2: oklch(from var(--glow) l c calc(h - 80)); --mat-a3: oklch(from var(--glow) l c calc(h + 55));
+  --mat-a4: var(--mat-a1); --mat-a5: var(--mat-a2); --mat-a6: var(--mat-a3);
+}
+[data-theme="glass"][data-scheme="light"] {
+  --th-ground: oklch(from var(--glow) 0.95 0.025 h); --th-frame: var(--th-ground);
+  --th-panel: rgb(255 255 255 / .35); --th-float: rgb(255 255 255 / .5);
+  --th-accent: #1C1530; --th-on-accent: #FFFFFF; --th-ink: #1C1530;
+  --mat-a1: oklch(from var(--glow) 0.82 c h); --mat-a2: oklch(from var(--glow) 0.82 c calc(h - 80)); --mat-a3: oklch(from var(--glow) 0.82 c calc(h + 55));
+}
+:is(:root, .theme-swatch)[data-theme="glass"] {
+  --mica-opacity: 0.5;
+  --fl-layer-solid: color-mix(in srgb, var(--th-ground), white 8%);
+  --r-art: 12px; --r-art-lg: 20px; --r-card: 24px; --r-panel: 24px; --r-control: 12px;
+  --r-button: 999px; --r-dock: 24px; --fl-corner-s: 12px; --fl-corner-m: 20px;
+  --head-colour: rgb(255 255 255 / .06); --playing-tint: rgb(255 255 255 / .14);
+  --mat-control: var(--glass-pane); --mat-card: var(--glass-pane);
+  --fl-flyout: color-mix(in srgb, var(--th-ground), white 14%);
+  --fl-dialog: color-mix(in srgb, var(--th-ground), white 10%);
+}
+:root[data-theme="glass"][data-scheme="light"] {
+  --glass-pane: rgb(255 255 255 / .42);
+  --glass-dock: color-mix(in srgb, var(--th-ground) 30%, white 70%);
+  --glass-edge: rgb(255 255 255 / .8);
+  --shadow-glass: inset 1.4px 1.4px 0 rgb(255 255 255 / .95), inset -1px -1px 0 rgb(255 255 255 / .4), 0 10px 30px rgb(40 20 80 / .12);
+  --head-colour: rgb(255 255 255 / .3); --playing-tint: rgb(255 255 255 / .6);
+  --fl-flyout: color-mix(in srgb, var(--th-ground), white 60%);
+  --fl-dialog: color-mix(in srgb, var(--th-ground), white 70%);
+}
+
+/* Paper & origami: folded card, polaroids and tape. */
+[data-theme="paper"] {
+  --th-weight: 900;
+  --th-ground: #EFE8DC; --th-panel: #F5F0E7; --th-float: #FBF8F2; --th-frame: #EFE8DC;
+  --th-accent: #E07E5C; --th-on-accent: #FFFFFF; --th-ink: #2F2A24;
+  --mat-a1: #F6C9B4; --mat-a2: #CFE3C8; --mat-a3: #CBD9F2; --mat-a4: #F4E3A1; --mat-a5: #E8C6E0; --mat-a6: #F2A385;
+}
+[data-theme="paper"][data-scheme="dark"] {
+  --th-ground: #24211D; --th-panel: #2E2A25; --th-float: #38332C; --th-frame: #24211D;
+  --th-ink: #F1EADF;
+  --mat-a1: #B9785E; --mat-a2: #7E9A74; --mat-a3: #7389B3; --mat-a4: #BFA458; --mat-a5: #9C7393; --mat-a6: #D98B6C;
+}
+:is(:root, .theme-swatch)[data-theme="paper"] {
+  --r-art: 2px; --r-art-lg: 2px; --r-card: 3px; --r-panel: 3px; --r-control: 2px;
+  --r-button: 3px; --r-dock: 4px; --fl-corner-s: 2px; --fl-corner-m: 3px;
+}
+:root[data-theme="paper"][data-scheme="dark"] {
+  --shadow-paper: 1px 1.5px 0 rgb(0 0 0 / .4), 2px 4px 0 rgb(0 0 0 / .25), 3px 6px 10px rgb(0 0 0 / .3);
+  --paper-crease: linear-gradient(100deg, transparent 49.4%, rgb(0 0 0 / .2) 49.7%, rgb(255 255 255 / .08) 50.1%, transparent 50.5%);
+  --paper-tape: rgb(200 186 140 / .5);
+}
+
+/* Retro hi-fi: wood veneer, brushed aluminium, a teal glow. */
+[data-theme="hifi"] {
+  --th-weight: 900;
+  --th-ground: #6B3F22; --th-panel: #3C3D41; --th-float: #45464B; --th-frame: #6B3F22;
+  --th-accent: #FFB547; --th-on-accent: #1E1E20; --th-ink: #F2E9DC;
+  --mat-a1: #CFD0D3; --mat-a2: #D8C9A3; --mat-a3: #4A4B50; --mat-a4: #B9BABD; --mat-a5: #8A8B90; --mat-a6: #E2D6B4;
+}
+[data-theme="hifi"][data-scheme="light"] {
+  --th-ground: #B98A5C; --th-panel: #D6D7DA; --th-float: #E4E5E8; --th-frame: #B98A5C;
+  --th-accent: #2A2A2C; --th-on-accent: #FFFFFF; --th-ink: #1F1F21;
+  --mat-a1: #E4E5E8; --mat-a2: #E6D9B6; --mat-a3: #C4C5C9; --mat-a4: #CFD0D3; --mat-a5: #B0B1B5; --mat-a6: #EDE3C7;
+}
+:is(:root, .theme-swatch)[data-theme="hifi"] {
+  --r-art: 2px; --r-art-lg: 3px; --r-card: 8px; --r-panel: 8px; --r-control: 4px;
+  --r-button: 6px; --r-dock: 8px; --fl-corner-s: 2px; --fl-corner-m: 6px;
+  --head-colour: color-mix(in srgb, var(--th-panel), black 18%);
+  --playing-tint: var(--th-panel);
+}
+:root[data-theme="hifi"][data-scheme="light"] {
+  --hifi-glow: #0E8C7E;
+  --head-colour: color-mix(in srgb, var(--th-panel), white 10%);
+  --shadow-hifi: inset 0 1.2px 0 rgb(255 255 255 / .8), inset 0 -1.2px 0 rgb(0 0 0 / .3), 0 2px 5px rgb(0 0 0 / .25);
 }

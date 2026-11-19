@@ -364,3 +364,39 @@ above. A music magazine: paper and ink, not YouTube's look and not Fluent's.
   cover springs in, the strip rises when music starts; the night spreads from the moon.
 - DS-01 and DS-02 hold here too: every value is a token in `tokens.css`.
 
+## 15. Themes (2026-11-19)
+
+Settings → Preferences → Appearance offers the Android app's themes (`ThemePreset` in
+`Android/.../ui/Theme.kt`, materials in `ui/Matter.kt`) as swatch cards, and light or dark:
+the theme's own, the system's, or fixed. Both follow the user (`appearance.theme`,
+`appearance.dark` in `/me/settings`, validated against `src/shared/themes.ts`); the browser keeps
+a copy so the page opens in its theme, and the fixture shell keeps it there alone.
+
+- **How it applies.** `src/client/appearance.ts` marks `<html>` with `data-theme`, `data-scheme`
+  (`light`/`dark`) and, for the hand-made themes, `data-material`. `tokens.css` holds everything:
+  Fluent 2's light neutrals under `[data-scheme="light"]`; each theme's inputs (`--th-ground`,
+  `--th-accent`, `--th-on-accent`, its face and title weight) under `[data-theme]`, turned into the
+  frame's tokens by one generic block; its corners (Android's `Look`: art, rows, panels, buttons,
+  the mini player as `--r-art`, `--r-art-lg`, `--r-card`, `--r-panel`, `--r-button`, `--r-dock`).
+  The inputs also apply to `.theme-swatch[data-theme]`, so each swatch previews its theme.
+- **ECHO** is this document's look, unchanged, and stays dark unless the user picks light.
+  **Material You** (the wallpaper's colours) has no web equivalent: it is not offered and shows as
+  ECHO when another device chose it.
+- **The services' looks** (Apple Music, Spotify, SoundCloud, Deezer, Qobuz, Tidal, YouTube Music
+  style; the names are labels) and **Monochrome**: a fixed accent on a fixed ground, no Mica,
+  Figtree or Inter (shipped, OFL), the theme's title weight and corners; YouTube Music's covers
+  round. Page headers keep the playing song's colour (§3.2), pale in the light.
+- **Materials** (`themes.css`, keyed on `data-material`): the ground, the three panels and the
+  pieces (cards, shortcuts, buttons, chips, the search field, the player, the tab bar) each drawn
+  in layered backgrounds and box shadows from tokens: Clay (puffy matte plasticine, lit top left,
+  grain, the cards in pastel accents; in the dark a deep shade of what plays), Yarn (knitted V
+  stitches, a cushion's puff, a rolled edge, stitched seams), Liquid glass (frosted panes with a lit
+  rim and a slanting reflection over three glows from the album's colour), Paper & origami
+  (fibre, layered cut-paper shadows, polaroid cards with tape, creases and dog-ears) and Retro hi-fi
+  (brushed aluminium with a bevel and corner screws on wood veneer, the playing song and the
+  progress in a teal glow). Textures are small SVG tiles the browser rasterises once.
+- **Still no glass filter** (§7.11): Liquid glass is translucency and light only; the player and
+  the tab bar are nearly opaque panes so their words keep contrast. No `backdrop-filter`, no
+  `filter: blur()`; `design-rules.test.ts` still holds every theme to DS-01 and DS-02.
+- **The lyrics view** keeps its own room in every theme.
+

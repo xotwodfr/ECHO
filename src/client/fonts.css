@@ -60,3 +60,58 @@
   font-style: normal;
   font-display: swap;
 }
+
+/*
+ * The themes' faces (Settings → Preferences → Appearance, as Android's ui/Theme.kt): Figtree
+ * (variable, 300–900) and Inter (Light, Regular, SemiBold, Bold, ExtraBold), the latin subsets of
+ * the Android app's files, as WOFF2. Only a theme that names them downloads them. SIL OFL 1.1: see
+ * fonts/OFL-Figtree.txt and fonts/OFL-Inter.txt.
+ */
+
+@font-face {
+  font-family: "Figtree";
+  src: url("./fonts/figtree-latin.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("./fonts/inter-light-latin.woff2") format("woff2");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("./fonts/inter-regular-latin.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("./fonts/inter-semibold-latin.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("./fonts/inter-bold-latin.woff2") format("woff2");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("./fonts/inter-extrabold-latin.woff2") format("woff2");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}

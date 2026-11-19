@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { api } from '../api.ts';
+import { THEMES, themeOf } from '../appearance.ts';
 import { type Prefs, prefsStore, setPref } from '../prefs.ts';
 import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
@@ -62,11 +63,68 @@ function save<S extends keyof Prefs, K extends keyof Prefs[S]>(s: S, k: K, v: Pr
   setPref(s, k, v).catch(() => toastStore.getState().show(t.notSaved));
 }
 
+/** Settings → Appearance: the themes as swatches (Android's ThemePicker), each drawn in its own
+ * ground, face, corners and accent by tokens.css (`.theme-swatch[data-theme]`). */
+function ThemePicker(p: { value: string; onChange: (id: (typeof THEMES)[number]['id']) => void }) {
+  const hintId = useId();
+  const current = themeOf(p.value).id;
+  const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  return (
+    <fieldset className="pref-choice" aria-describedby={hintId}>
+      <legend className="pref-label">{t.theme}</legend>
+      <div className="theme-picker">
+        {THEMES.map((th) => (
+          <button
+            key={th.id}
+            type="button"
+            className="theme-pick"
+            aria-pressed={th.id === current}
+            title={th.blurb}
+            onClick={() => p.onChange(th.id)}
+          >
+            <span
+              className="theme-swatch"
+              data-theme={th.id}
+              data-scheme={(th.dark ?? systemDark) ? 'dark' : 'light'}
+              data-material={th.material}
+              aria-hidden="true"
+            >
+              <span className="theme-swatch-aa">Aa</span>
+              <span className="theme-swatch-art">
+                <span />
+                <span />
+              </span>
+              <span className="theme-swatch-button" />
+            </span>
+            <span className="theme-pick-name">{th.label}</span>
+          </button>
+        ))}
+      </div>
+      <p className="field-hint" id={hintId}>
+        {t.themeHint}
+      </p>
+    </fieldset>
+  );
+}
+
 export function PreferencesSection() {
   const p = useStore(prefsStore);
   const perf = p.visuals.performance; // it decides the room and the motion while it is on
   return (
     <div className="prefs">
+      <section className="pref-group" aria-labelledby="pref-appearance">
+        <h3 id="pref-appearance">{t.appearance}</h3>
+        <ThemePicker value={p.appearance.theme} onChange={(v) => save('appearance', 'theme', v)} />
+        <Choice
+          label={t.dark}
+          value={p.appearance.dark}
+          options={['theme', 'system', 'light', 'dark'] as const}
+          names={(v) => t.darkNames[v]}
+          hint={t.darkHint}
+          onChange={(v) => save('appearance', 'dark', v)}
+        />
+      </section>
+
       <section className="pref-group" aria-labelledby="pref-playback">
         <h3 id="pref-playback">{t.playback}</h3>
         <Choice

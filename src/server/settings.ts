@@ -1,4 +1,5 @@
 import { Hono, type MiddlewareHandler } from 'hono';
+import { DARK_MODES, THEME_IDS } from '../shared/themes.ts';
 import { type AuthEnv, jsonObject } from './auth/routes.ts';
 import type { Db } from './db/db.ts';
 
@@ -56,6 +57,11 @@ const SCHEMA = {
     motion: { check: oneOf('system', 'full', 'reduced', 'off'), default: 'system' },
     grain: { check: bool, default: false },
     pointerParallax: { check: bool, default: true },
+  },
+  // The look (Settings → Preferences → Appearance): a theme of Android's, and light or dark.
+  appearance: {
+    theme: { check: oneOf(...THEME_IDS), default: 'echo' },
+    dark: { check: oneOf(...DARK_MODES), default: 'theme' },
   },
   // Each game's record, kept on the account so it follows the user to every device.
   games: {
