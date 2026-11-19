@@ -329,6 +329,9 @@ export const strings = {
     found: (n: number) => (n === 0 ? 'No results' : n === 1 ? '1 result' : `${n} results`),
     tracks: 'Tracks',
     albums: 'Albums',
+    /** Spoken as the arrows move over the songs (SRCH-01). */
+    highlighted: (title: string, artist: string) =>
+      `${title}, ${artist}. Enter plays, Shift+Enter adds to queue, Right arrow opens the album.`,
   },
   settings: {
     sections: { preferences: 'Preferences', account: 'Account', admin: 'Admin' },
