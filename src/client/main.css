@@ -2953,7 +2953,7 @@ a {
   color: var(--qr-paper, white);
   font: var(--fl-type-caption-strong) var(--font-ui);
   font-size: var(--fs-micro, 0.6rem);
-  letter-spacing: 0;
+  letter-spacing: normal;
 }
 
 .guest-joined {
