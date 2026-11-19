@@ -1,0 +1,145 @@
+name: apple
+
+# ECHO for iPhone and Mac (iOS/, macOS/, Apple/Shared): built unsigned on the macOS 26 runner with
+# Xcode 26, then the Liquid Glass preview (launch argument -ECHODemo, Apple/Shared/Preview) is
+# screenshotted in the iOS 26 simulator and on the runner's Mac. The builds and screenshots are
+# uploaded, and on a branch the screenshots are committed back under Apple/Screenshots, where the
+# sessions that work on this repository (which cannot download artifacts) see them. A push by this
+# workflow's token starts no workflow, so that commit does not run it again.
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'Apple/**'
+      - 'iOS/**'
+      - 'macOS/**'
+      - '.github/workflows/apple.yml'
+      - '!**/*.md'
+      - '!Apple/Screenshots/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write # the screenshots' commit
+
+concurrency:
+  group: apple-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  apple:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Xcode 26
+        run: |
+          ls -d /Applications/Xcode*.app
+          xc=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$xc" ]; then sudo xcode-select -s "$xc"; fi
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Projects
+        run: |
+          brew install xcodegen
+          (cd iOS && xcodegen)
+          (cd macOS && xcodegen)
+
+      - name: Build for iPhone (simulator, unsigned)
+        run: >
+          xcodebuild -quiet -project iOS/ECHO.xcodeproj -target ECHO -configuration Debug
+          -sdk iphonesimulator ARCHS=arm64 SYMROOT="$PWD/build/ios" CODE_SIGNING_ALLOWED=NO
+
+      - name: Build for Mac (ad-hoc signed, so it runs here)
+        run: >
+          xcodebuild -quiet -project macOS/ECHO.xcodeproj -target ECHO -configuration Debug
+          SYMROOT="$PWD/build/mac" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
+
+      - name: iPhone screenshots
+        run: |
+          mkdir -p Apple/Screenshots
+          dev=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devices = json.load(sys.stdin)["devices"]
+          phones = [(rt, d) for rt, ds in devices.items() if "iOS-26" in rt for d in ds if d["name"].startswith("iPhone")]
+          pro = [p for p in phones if "Pro" in p[1]["name"] and "Max" not in p[1]["name"]] or phones
+          print(sorted(pro, key=lambda p: (p[0], p[1]["name"]))[-1][1]["udid"])')
+          xcrun simctl list devices | grep "$dev"
+          xcrun simctl boot "$dev"
+          xcrun simctl bootstatus "$dev" -b
+          xcrun simctl ui "$dev" appearance dark
+          xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+          xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
+          for s in home album nowplaying lyrics library search; do
+            xcrun simctl terminate "$dev" com.folk3s.echo 2>/dev/null || true
+            xcrun simctl launch "$dev" com.folk3s.echo -ECHODemo "$s"
+            sleep 7
+            xcrun simctl io "$dev" screenshot "Apple/Screenshots/iphone-$s.png"
+          done
+          sips --resampleWidth 804 Apple/Screenshots/iphone-*.png >/dev/null
+
+      - name: Mac screenshots
+        run: |
+          app="$PWD/build/mac/Debug/ECHO.app"
+          cat > /tmp/window.swift <<'EOF'
+          import CoreGraphics
+          let all = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
+          for w in all where w[kCGWindowOwnerName as String] as? String == "ECHO" && w[kCGWindowLayer as String] as? Int == 0 {
+              print(w[kCGWindowNumber as String] as? Int ?? 0)
+              break
+          }
+          EOF
+          for s in library lyrics; do
+            pkill -x ECHO || true
+            open -n "$app" --args -ECHODemo "$s"
+            sleep 10
+            osascript -e 'tell application "System Events" to set frontmost of (first process whose name is "ECHO") to true' || true
+            sleep 2
+            id=$(swift /tmp/window.swift || true)
+            echo "window $id"
+            if [ -n "$id" ] && [ "$id" != "0" ]; then
+              screencapture -x -o -l"$id" "Apple/Screenshots/mac-$s.png"
+            else
+              screencapture -x "Apple/Screenshots/mac-$s.png"
+            fi
+          done
+          pkill -x ECHO || true
+          for f in Apple/Screenshots/mac-*.png; do
+            w=$(sips -g pixelWidth "$f" | awk '/pixelWidth/ {print $2}')
+            if [ "$w" -gt 1600 ]; then sips --resampleWidth 1600 "$f" >/dev/null; fi
+          done
+          ls -la Apple/Screenshots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: Apple/Screenshots
+
+      - name: Zip the apps
+        run: |
+          ditto -c -k --keepParent build/ios/Debug-iphonesimulator/ECHO.app ECHO-iOS-simulator.zip
+          ditto -c -k --keepParent build/mac/Debug/ECHO.app ECHO-macOS.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apps
+          path: ECHO-*.zip
+
+      - name: Commit the screenshots
+        if: github.ref_name != 'main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Apple/Screenshots
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git commit -m "Apple preview screenshots from apple run ${{ github.run_number }}"
+          for i in 1 2 3; do
+            git pull --rebase origin "${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}" && break
+            sleep 5
+          done

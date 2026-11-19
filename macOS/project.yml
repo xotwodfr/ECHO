@@ -5,7 +5,7 @@ name: ECHO
 options:
   bundleIdPrefix: com.folk3s
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "26.0"
 targets:
   ECHO:
     type: application
