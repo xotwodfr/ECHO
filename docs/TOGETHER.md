@@ -89,7 +89,20 @@ Routes (all signed in; documented in `docs/api/openapi.yaml`):
 
 ## Android
 
-See the Android section of this file's commit and `Android/app/src/main/kotlin/com/folk3s/echo/together/`.
+- Now Playing's pills have **Together** ("Together · 3" in a session). Its sheet starts a session
+  (the song playing and what is up next) or opens the scanner to join one; in a session it shows the
+  QR code and link, the listeners (host, you, away), the shared queue (the host taps a song to play
+  it now; Remove for the host, or on one's own songs) and End session or Leave.
+- The scanner is the guest scanner's camera (`Camera` and `Viewfinder` in `ui/GuestScan.kt`, now
+  shared) reading `<origin>/together/<id>` for this app's server. A link opened on the phone opens
+  the app too (an intent filter on `https://<server>/together/`, not auto-verified: Android asks
+  which app). Both show the offer: whose session, Join or Not now; a link opened while signed out is
+  offered after signing in.
+- `together/Sync.kt` is `sync.ts` in Kotlin (tested in `TogetherTest.kt`); `together/Together.kt`
+  holds the session, reads the event stream over OkHttp (no extra library), polls every 5 s (every
+  second while the stream is down) and follows the session twice a second through `Playback.follow*`.
+  While in a session `Playback.remote` takes Play/Pause, Next, Previous, Seek, Play next, Add to
+  queue and a tap on a song in a list, as on the web; the song ending tells the session (host).
 
 ## Rough edges
 
@@ -99,3 +112,8 @@ See the Android section of this file's commit and `Android/app/src/main/kotlin/c
 - YouTube songs cannot be shared (members could not play them): "Only songs from your library can be
   shared."
 - Members' volume, EQ and the like stay their own; Karaoke mode follows each device's own setting.
+- Android: the notification's and lock screen's buttons go to the player directly, not through
+  `Playback.remote`: a member pausing there is played again within half a second, and a host's Next
+  there skips only locally until the session puts it right. The app's Up next sheet still shows the
+  local queue (one song); the shared queue is in the Together sheet.
+- Sync is by position only: each device's own output latency (Bluetooth, say) is not measured.

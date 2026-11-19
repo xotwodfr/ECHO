@@ -163,7 +163,7 @@ fun GuestScanScreen(onBack: () -> Unit) {
 
 /** The camera, decoding QR codes continuously, following the screen's lifecycle. */
 @Composable
-private fun Camera(paused: Boolean, onScan: (String) -> Unit) {
+internal fun Camera(paused: Boolean, onScan: (String) -> Unit) {
   val lifecycle = LocalLifecycleOwner.current.lifecycle
   val ctx = LocalContext.current
   val view = remember {
@@ -195,7 +195,7 @@ private fun Camera(paused: Boolean, onScan: (String) -> Unit) {
 
 /** Four amber corners and a scan line sweeping between them. */
 @Composable
-private fun Viewfinder(modifier: Modifier) {
+internal fun Viewfinder(modifier: Modifier) {
   val sweep = rememberInfiniteTransition(label = "scan")
   val y by sweep.animateFloat(0.08f, 0.92f, infiniteRepeatable(tween(1600, easing = LinearEasing), RepeatMode.Reverse), label = "y")
   Canvas(modifier) {

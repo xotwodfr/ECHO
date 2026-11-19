@@ -209,6 +209,8 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
         Pill(EchoIcons.lyrics, "Lyrics") { nav.go(Route.Listen) }
         Pill(EchoIcons.queue, "Up next", onClick = onQueue)
         Pill(EchoIcons.mic, "Karaoke", on = prefs.karaoke) { app.karaoke.setOn(!prefs.karaoke) }
+        val together by app.together.session.collectAsStateWithLifecycle()
+        Pill(EchoIcons.user, togetherLabel(together), on = together != null) { app.together.sheetOpen.value = true }
         if (SleepTimer.minutes != null) Pill(EchoIcons.moon, "${SleepTimer.minutes} min") { SleepTimer.set(app, null) }
       }
       VocalsSlider(Color.White, Modifier.padding(start = 28.dp, end = 28.dp, bottom = 12.dp))

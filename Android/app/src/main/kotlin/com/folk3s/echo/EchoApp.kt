@@ -32,6 +32,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
   val sounds by lazy { com.folk3s.echo.ui.ThemeSounds(this) }
   val karaoke by lazy { com.folk3s.echo.playback.Karaoke(this) }
   val guests by lazy { com.folk3s.echo.ui.GuestState(this) }
+  val together by lazy { com.folk3s.echo.together.Together(this) }
 
   override fun onCreate() {
     super.onCreate()
@@ -43,6 +44,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
         library.clear()
         if (t != null) {
           library.reload()
+          launch { together.resume() }
           launch {
             guests.refresh()
             // The sign-in wall's covers: this account's library (not a guest's phone).
@@ -55,6 +57,7 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
           guests.clear()
           // Signed out: the next account must not get this queue or this music (REL-05).
           if (signedIn) {
+            together.clear()
             playback.reset()
             games.clear()
             karaoke.clear()
