@@ -96,6 +96,25 @@ describe('sign in with your phone', () => {
     expect((await s.phone(g.token, '/auth/qr/approve', { id: q2.id })).status).toBe(403);
   });
 
+  it('a sign-in page left open all day leaves sign-ins to its address; a flood of codes is refused', async () => {
+    const s = setup();
+    // The page renews its code every two minutes: a day of it used to spend the address's 100
+    // login attempts a day, refusing every password from there for the rest of it.
+    for (let i = 0; i < 24 * 30; i++) {
+      expect((await s.page('/auth/qr', {})).status).toBe(201);
+      s.clock.t += QR_TTL_MS;
+    }
+    const password = await s.page('/auth/login', { username: 'nobody', password: 'not it at all' });
+    expect(password.status).toBe(401); // a wrong password, not "too many attempts"
+
+    // Codes have a budget of their own: 30 a minute from one address.
+    s.clock.t += 60_000;
+    for (let i = 0; i < 30; i++) expect((await s.page('/auth/qr', {})).status).toBe(201);
+    expect((await s.page('/auth/qr', {})).status).toBe(429);
+    s.clock.t += 60_000;
+    expect((await s.page('/auth/qr', {})).status).toBe(201);
+  });
+
   it('names browsers plainly', () => {
     expect(
       browserOf(

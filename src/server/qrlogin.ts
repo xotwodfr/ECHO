@@ -79,7 +79,7 @@ export function qrLoginRoutes(
   /** The sign-in page asks for a request: its id goes in the QR code, the poll secret stays with it. */
   app.post('/auth/qr', (c) => {
     const t = now();
-    if (!limiter.ipAllows(c.var.ip, t)) return c.json({ error: 'rate_limited' }, 429);
+    if (!limiter.qrAllows(c.var.ip, t)) return c.json({ error: 'rate_limited' }, 429);
     sweep(t);
     if (pending.size >= MAX_PENDING) return c.json({ error: 'busy' }, 503);
     const id = randomBytes(16).toString('base64url');
