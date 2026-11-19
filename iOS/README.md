@@ -56,5 +56,7 @@ server.
 
 ## Next
 
-Run it on a device; covers, search, playlists, the queue that follows you (`/me/queue`), lyrics,
-the lock screen's controls and artwork (`MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`), an icon.
+Sign in to a real server and run it on a device; then the plan's next tasks
+(`docs/superpowers/plans/2026-11-19-apple-apps.md`): Home, Library and Search with covers, playback
+with the queue that follows you (`/me/queue`) and the lock screen's controls and artwork
+(`MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`), lyrics, and the rest.

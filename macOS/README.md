@@ -53,6 +53,7 @@ warnings, the Swift tests pass on the Mac and in the iOS 26 simulator, and the a
 
 ## Next
 
-Run it; covers, search, playlists, the queue that follows you (`/me/queue`), lyrics, the media keys
-and Now Playing in Control Center (`MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`), a menu bar,
-an icon, signing and notarization to share it.
+Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
+Home, Library and Search with covers, playback with the queue that follows you (`/me/queue`), the
+media keys and Now Playing in Control Center (`MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`),
+lyrics, the menu commands, and the rest; signing and notarization to share it.
