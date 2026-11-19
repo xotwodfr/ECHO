@@ -967,6 +967,107 @@ paths:
       responses:
         '200': { description: Ended }
         '404': { description: 'Not the caller''s guest (or an admin''s)' }
+  /together:
+    get:
+      summary: The Listen together session the caller is in, or null (a reload finds its way back)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { session: { oneOf: [{ $ref: '#/components/schemas/Together' }, { type: 'null' }] } } } } } }
+    post:
+      summary: Start a Listen together session (docs/TOGETHER.md), optionally on the song the host is playing; the caller leaves any other session
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { track: { $ref: '#/components/schemas/TrackRef' }, positionMs: { type: integer }, playing: { type: boolean } } }
+      responses:
+        '201': { description: 'Started; `url` is what the QR code holds', content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '400': { description: bad_track }
+        '409': { description: 'no_library: the caller has no Navidrome connection' }
+        '503': { description: too_many_sessions }
+  /together/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: 'The session id (18 random bytes, base64url; the link''s secret)' }
+    get:
+      summary: The session's state; for members, and for anyone on the host's Navidrome server about to join (`you.member` false)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '404': { description: 'not_found: unknown or ended' }
+        '409': { description: 'other_library: the caller''s Navidrome is not the host''s (`host` names the host)' }
+  /together/{id}/join:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Join (guests too); the caller leaves any other session
+      responses:
+        '200': { description: Joined, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '404': { description: not_found }
+        '409': { description: 'other_library, full (50 members)' }
+  /together/{id}/leave:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Leave; the host leaving ends the session for everyone
+      responses:
+        '200': { description: Left, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean }, ended: { type: boolean } } } } } }
+        '403': { description: not_member }
+        '404': { description: not_found }
+  /together/{id}/queue:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Add a song to the shared queue (any member); with nothing playing it starts for everyone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [track], properties: { track: { $ref: '#/components/schemas/TrackRef' }, next: { type: boolean, description: Before the rest of the queue } } }
+      responses:
+        '200': { description: Added, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '400': { description: bad_track }
+        '403': { description: not_member }
+        '404': { description: not_found }
+        '409': { description: 'queue_full (500 songs)' }
+  /together/{id}/queue/{uid}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: uid, in: path, required: true, schema: { type: string }, description: The queued item's uid }
+    delete:
+      summary: Remove a queued song; the host removes any, a member those they added
+      responses:
+        '200': { description: Removed, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '403': { description: 'not_member, host_only' }
+        '404': { description: not_found }
+  /together/{id}/control:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: The host's transport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { enum: [play, pause, seek, next, previous, jump] }
+                positionMs: { type: integer, description: seek }
+                uid: { type: string, description: 'jump: the queued song to play now' }
+                from: { type: string, description: 'next: the song the host''s player finished; ignored when the session has already moved past it' }
+      responses:
+        '200': { description: Done, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '400': { description: 'bad_action, bad_position' }
+        '403': { description: 'not_member, host_only' }
+        '404': { description: not_found }
+        '409': { description: nothing_to_play }
+  /together/{id}/events:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: 'Server-Sent Events for members: `state` (a Together) first and on every change, `ping` ({serverTime, version}) every 15 s, `end` when the session ends or the caller left'
+      responses:
+        '200': { description: The stream, content: { text/event-stream: {} } }
+        '403': { description: not_member }
+        '404': { description: not_found }
   /youtube/home:
     get:
       summary: YouTube Music's Home (personal when signed in, general when not)
@@ -1135,6 +1236,29 @@ components:
     session: { type: apiKey, in: cookie, name: __Host-echo_session }
     device: { type: http, scheme: bearer, bearerFormat: echo_dt_… }
   schemas:
+    Together:
+      type: object
+      description: 'A Listen together session (docs/TOGETHER.md). Position now = serverTime - startedAt while playing; clients correct their clock by serverTime.'
+      properties:
+        id: { type: string }
+        url: { type: string, description: '<origin>/together/<id>, what the QR code holds' }
+        host: { type: object, properties: { id: { type: integer }, username: { type: string } } }
+        you: { type: object, properties: { id: { type: integer }, host: { type: boolean }, member: { type: boolean } } }
+        members: { type: array, items: { type: object, properties: { id: { type: integer }, username: { type: string }, host: { type: boolean }, online: { type: boolean } } } }
+        now: { oneOf: [{ $ref: '#/components/schemas/TogetherItem' }, { type: 'null' }] }
+        queue: { type: array, items: { $ref: '#/components/schemas/TogetherItem' } }
+        playing: { type: boolean }
+        startedAt: { type: [integer, 'null'], description: 'Server time (ms) at which the song was at 0 ms, while playing' }
+        positionMs: { type: integer, description: The position at serverTime }
+        serverTime: { type: integer }
+        version: { type: integer }
+        createdAt: { type: integer }
+    TogetherItem:
+      type: object
+      properties:
+        uid: { type: string }
+        track: { $ref: '#/components/schemas/TrackRef' }
+        addedBy: { type: object, properties: { id: { type: integer }, username: { type: string } } }
     TrackRef:
       type: object
       required: [id, title, artist, album, durationMs]
