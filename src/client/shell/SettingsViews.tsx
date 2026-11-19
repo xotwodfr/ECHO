@@ -5,6 +5,7 @@ import { THEMES, themeOf } from '../appearance.ts';
 import { MAX_CROSSFADE_S } from '../playback/crossfade.ts';
 import { EQ_BANDS, EQ_MAX_DB, EQ_PRESET_IDS, eqGains } from '../playback/eq.ts';
 import { type Prefs, prefsStore, setPref } from '../prefs.ts';
+import { sessionStore } from '../session.ts';
 import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Pill, Toggle } from '../ui/controls.tsx';
@@ -392,7 +393,10 @@ function EqualizerSection() {
 /** The server's progress through the library (docs/KARAOKE.md), asked for when Settings opens. */
 function KaraokeProgress() {
   const [line, setLine] = useState<string | null>(null);
+  // Signed out (the fixture library), there is no server to ask: a 401 would only log an error.
+  const signedIn = useStore(sessionStore, (x) => x.status === 'signedIn');
   useEffect(() => {
+    if (!signedIn) return;
     let live = true;
     const k = strings.karaoke.progress;
     api<{
@@ -416,6 +420,6 @@ function KaraokeProgress() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [signedIn]);
   return line ? <p className="pref-label">{line}</p> : null;
 }
