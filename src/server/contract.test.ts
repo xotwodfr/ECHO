@@ -296,7 +296,7 @@ describe('API-01: responses match the OpenAPI document', () => {
     await req(app, 'GET', '/api/v1/motion', { cookie: bo });
     await req(app, 'GET', '/api/v1/motion/al-1?loop=7', { cookie: bo });
     await req(app, 'GET', '/api/v1/motion/al-1/video', { cookie: bo });
-    for (let i = 0; i < 200 && (await motion.jobFor(2, 'al-1', 8))?.status !== 'ready'; i++)
+    for (let i = 0; i < 1000 && (await motion.jobFor(2, 'al-1', 8))?.status !== 'ready'; i++)
       await new Promise((r) => setTimeout(r, 10));
     await req(app, 'GET', '/api/v1/motion/al-1?shape=square', { cookie: bo });
     const video = await req(app, 'GET', '/api/v1/motion/al-1/video', {

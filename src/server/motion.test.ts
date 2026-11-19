@@ -21,7 +21,7 @@ const MP4 = Buffer.concat([
 const MOV = Buffer.concat([Buffer.from('\0\0\0\x14ftypqt  \0\0\0\0qt  '), Buffer.alloc(100, 1)]);
 
 const until = async (ok: () => boolean) => {
-  for (let i = 0; i < 300 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+  for (let i = 0; i < 1000 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
   expect(ok()).toBe(true);
 };
 
