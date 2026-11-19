@@ -13,6 +13,7 @@ import { Icon } from '../ui/icons.tsx';
 import { formatTime } from '../ui/logic.ts';
 import { Artwork } from '../ui/media.tsx';
 import { Menu } from '../ui/overlays.tsx';
+import { KaraokePanel } from './Karaoke.tsx';
 import { fixTrackStore } from './LyricsAdminViews.tsx';
 import { Link, useView } from './link.tsx';
 
@@ -123,6 +124,7 @@ function NowPlayingSide() {
         <p className="np-title">{t.title}</p>
         <p className="np-artist">{t.artists.map((a) => a.name).join(', ')}</p>
       </div>
+      {t.provider === 'navidrome' && <KaraokePanel />}
     </div>
   );
 }

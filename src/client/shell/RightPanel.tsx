@@ -10,6 +10,7 @@ import { Artwork } from '../ui/media.tsx';
 import { useCoverChange, useExit } from '../ui/motion.ts';
 import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
+import { KaraokePanel } from './Karaoke.tsx';
 import { Link } from './link.tsx';
 import { panels } from './panels.ts';
 import { QueueList } from './Queue.tsx';
@@ -109,6 +110,7 @@ function NowPlayingPane() {
           </div>
           {t.provider === 'navidrome' && <HeartButton track={t} />}
         </div>
+        {t.provider === 'navidrome' && <KaraokePanel />}
         <AboutArtist track={t} />
         {next && (
           <section className="rp-card" aria-labelledby="rp-next">

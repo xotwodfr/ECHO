@@ -12,6 +12,7 @@ import { AccountMenu } from './AccountMenu.tsx';
 import { usePlaylists, useStarredAll } from './collections.ts';
 import { useCompact } from './compact.ts';
 import { useFresh } from './fresh.ts';
+import { KaraokeShelf } from './Karaoke.tsx';
 import { useAlbumMenu } from './LibraryViews.tsx';
 import { Link } from './link.tsx';
 import { MixArt, WrappedArt } from './MixViews.tsx';
@@ -301,6 +302,7 @@ export function HomeView() {
         <>
           <Shortcuts recent={shortcutsFrom} />
           <MadeForYouShelf />
+          <KaraokeShelf />
           <JumpBackInShelf />
           {SHELVES.slice(0, 2).map((s) => (
             <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />

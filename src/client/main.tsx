@@ -9,6 +9,7 @@ import { createNavidromeLibrary } from './library-navidrome.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
+import { karaokeSrc, startKaraoke } from './playback/karaoke.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
 import { effectiveVisuals, loadPrefs, prefsStore, setPref } from './prefs.ts';
@@ -123,12 +124,17 @@ const controller = createPlaybackController({
         get quality() {
           return prefs().playback.quality;
         },
+        karaokeSrc,
       })
     : (fixtures?.createFixtureProvider() ?? null),
   replayGain: () => prefs().playback.replayGain,
   notify: (message) => toastStore.getState().show(message),
   features,
 });
+
+// Karaoke mode (docs/KARAOKE.md): follows the player, for a signed-in user's own library.
+if (signedIn && controller.provider instanceof NavidromeProvider)
+  startKaraoke(controller, controller.provider, (m) => toastStore.getState().show(m));
 
 // The volume is this device's, kept between visits (PLAYBACK_ARCHITECTURE.md §3).
 controller.setVolume(prefs().playback.volume);

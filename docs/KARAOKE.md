@@ -1,6 +1,6 @@
 # Karaoke mode
 
-Turn the singer down, or off, in any song from the library. The vocals slider on Now Playing and
+Turn the singer down, or off, in any song from the library, in the Android app and on the web. The vocals slider on Now Playing and
 in the lyrics view sets how much of the voice is left: 0 % is the instrumental, 100 % the song as
 it was. You can change it at any time without a gap, because both parts are in one file.
 
@@ -29,6 +29,22 @@ it was. You can change it at any time without a gap, because both parts are in o
   A song that fails is tried again after 10 and then 20 minutes, then reported `failed`. Songs
   longer than `ECHO_STEMS_MAX_MINUTES` (20) are `skipped`. If the stem service is down, the queue
   just waits.
+
+## On the web
+
+- **Player bar:** the karaoke mic (a hand mic, next to the lyrics button) turns Karaoke on, and the
+  Vocals slider appears beside it. The same toggle and slider, with what's happening ("Preparing…
+  2 songs before this one"), are in Now Playing and the lyrics view.
+- **Home:** a Karaoke shelf with the songs that are ready. Every song's ⋯ menu has **Make karaoke
+  version**, and Settings → Preferences → Karaoke shows the server's progress.
+- **How it mixes:** each `<audio>` goes through Web Audio. It's up-mixed by speaker layout to six
+  channels, split, and put back to stereo as front + centre + rear × level (`vocalGains` in
+  `src/client/playback/audio.ts`). Stereo and mono songs pass through unchanged.
+- **Browsers:** tested in Chromium. With the vocals at 0 % a test tone on the vocal channels
+  measured −155 dB (gone); at 100 % it measured −47 dB. A browser that mixes 5.1 down to stereo
+  itself delivers empty rear channels. After 20 s of exact silence there while the music plays,
+  the app says so ("Try Chrome or Firefox").
+- Karaoke on/off and the level are kept per device, like the volume.
 
 ## Setting it up
 

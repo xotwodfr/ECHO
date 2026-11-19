@@ -2788,3 +2788,90 @@ a {
   flex-wrap: wrap;
   gap: var(--sp-2);
 }
+
+/* ---- Karaoke mode (docs/KARAOKE.md): the player bar's mic and Vocals slider, the panel in Now
+   Playing and the lyrics view ---- */
+.dock-karaoke {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.dock-karaoke[data-on] > .icon-btn {
+  color: var(--green);
+}
+
+.dock-karaoke .karaoke-vocals-label,
+.dock-karaoke .karaoke-vocals-value {
+  display: none;
+}
+
+.karaoke-vocals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.karaoke-vocals-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.karaoke-vocals-row .slider {
+  flex: 1;
+  width: auto;
+}
+
+.dock-karaoke .karaoke-vocals-row .slider {
+  flex: none;
+  width: var(--volume-w);
+}
+
+.karaoke-vocals-label,
+.karaoke-vocals-value {
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.karaoke-vocals-value {
+  min-width: var(--hit-lg);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.karaoke-note {
+  margin: 0;
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.karaoke-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-panel);
+  background: var(--raised);
+}
+
+.karaoke-panel > .karaoke-vocals {
+  flex: 1;
+}
+
+.karaoke-panel[data-on] > .icon-btn {
+  color: var(--green);
+}
+
+.karaoke-panel-title {
+  font: var(--fl-type-body-strong) var(--font-ui);
+  color: var(--muted);
+}
+
+/* On the Stage the panel sits under the titles, as wide as the cover. */
+.np-side .karaoke-panel {
+  width: var(--np-art);
+  max-width: 100%;
+}

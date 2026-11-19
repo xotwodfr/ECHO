@@ -663,6 +663,45 @@ export const strings = {
     sheetLabel: 'Lyrics',
     transcriptLabel: 'Lyrics',
   },
+  karaoke: {
+    title: 'Karaoke',
+    on: 'Karaoke on',
+    off: 'Karaoke off',
+    vocals: 'Vocals',
+    vocalsValue: (pct: number) => `${pct}%`,
+    shelf: 'Karaoke',
+    make: 'Make karaoke version',
+    preparing: (ahead: number) =>
+      ahead === 0
+        ? 'Preparing the karaoke version… it starts by itself when it’s ready.'
+        : `Preparing the karaoke version… ${ahead} ${ahead === 1 ? 'song' : 'songs'} before this one.`,
+    failed: 'The voice couldn’t be taken out of this song.',
+    tooLong: 'This song is too long for Karaoke.',
+    unavailable: 'Karaoke works with songs from your library.',
+    noServer: 'Karaoke needs the stem service on your ECHO server (docs/KARAOKE.md).',
+    downmixed:
+      'This browser mixes 5.1 audio down to stereo, so the voice stays in. Try Chrome or Firefox.',
+    requested: {
+      ready: (t: string) => `The karaoke version of “${t}” is ready.`,
+      now: (t: string) => `Making the karaoke version of “${t}” now: a few minutes.`,
+      queued: (t: string, n: number) =>
+        `“${t}” is next in line for karaoke: ${n} ${n === 1 ? 'song' : 'songs'} before it.`,
+      failed: (t: string) => `The voice couldn’t be taken out of “${t}”.`,
+      tooLong: (t: string) => `“${t}” is too long for Karaoke.`,
+      off: 'Karaoke isn’t set up on your ECHO server yet.',
+      error: 'Couldn’t reach ECHO. Try again in a moment.',
+    },
+    progress: {
+      title: 'Karaoke',
+      blurb:
+        'Turns the singer down with the Vocals slider in the player. Your ECHO server separates each song once; until a song is ready it plays as usual and switches over by itself.',
+      toggle: 'Karaoke mode on this device',
+      line: (ready: number, total: number, gb: string, failed: number) =>
+        `${ready.toLocaleString()} of ${total.toLocaleString()} songs ready · ${gb} GB${failed ? ` · ${failed} couldn’t be separated` : ''}`,
+      notSetUp: 'Not set up on your server yet: it needs the stem service (docs/KARAOKE.md).',
+      offline: 'The server’s stem service isn’t answering right now.',
+    },
+  },
   playback: {
     playingNext: (title: string) => `Playing “${title}” next`,
     added: (title: string) => `Added “${title}” to the queue`,
