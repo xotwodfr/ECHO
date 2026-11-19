@@ -78,6 +78,9 @@ async function ask(t: Track, soon: boolean): Promise<Answer | null> {
 export const setKaraoke = (on: boolean) => void setPref('playback', 'karaoke', on);
 export const setVocalLevel = (v: number) =>
   void setPref('playback', 'vocalLevel', Math.min(1, Math.max(0, v)));
+/** Karaoke's key, in whole semitones within ±6 (applied while Karaoke is on: effects.ts). */
+export const setKaraokeKey = (n: number) =>
+  void setPref('playback', 'karaokeKey', Math.min(6, Math.max(-6, Math.round(n))));
 
 /** A song's menu → Make karaoke version: made next on the server; the notice says where it is. */
 export async function requestKaraoke(t: Track, notify: (m: string) => void, onReady?: () => void) {

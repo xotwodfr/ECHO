@@ -10,6 +10,7 @@ import type {
 } from '../../shared/types.ts';
 import { strings } from '../strings.ts';
 import { type Clock, realClock } from './clock.ts';
+import { crossfadeBetween, MAX_CROSSFADE_S } from './crossfade.ts';
 import { SILENT_FEATURES } from './features.ts';
 import * as Q from './queue.ts';
 import { createSongClock, positionNow } from './songClock.ts';
@@ -124,7 +125,8 @@ export function createPlaybackController(opts: {
 
   /**
    * The next track is buffered 5 s into this one (Next starts at once: instant, step 4), or 20 s
-   * before it ends when it is shorter, for a gapless hand-over (§5.6).
+   * before it ends (and before the longest crossfade) when it is shorter, for a gapless hand-over
+   * or a crossfade (§5.6).
    */
   let preloadTimer: ReturnType<Clock['setTimeout']> | null = null;
   function schedulePreload(track: Track, startMs: number) {
@@ -138,9 +140,18 @@ export function createPlaybackController(opts: {
         const q = queue.getState();
         const next = Q.upcoming(q)[0];
         if (q.now?.key === track.key && next && player.getState().repeat !== 'one')
-          void p.preload?.(next);
+          void p.preload?.(next, {
+            // Asked when the fade would start: repeat or the queue may have changed since.
+            crossfade: () =>
+              player.getState().repeat !== 'one' &&
+              Q.upcoming(queue.getState())[0]?.key === next.key &&
+              crossfadeBetween(queue.getState().now, next),
+          });
       },
-      Math.min(PRELOAD_IN_MS, Math.max(0, track.durationMs - startMs - 20_000)),
+      Math.min(
+        PRELOAD_IN_MS,
+        Math.max(0, track.durationMs - startMs - 20_000 - MAX_CROSSFADE_S * 1000),
+      ),
     );
   }
   // A different next track (Play next, Add to queue, shuffle) is buffered in its turn.

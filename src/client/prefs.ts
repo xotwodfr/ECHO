@@ -1,9 +1,10 @@
 import { createStore } from 'zustand/vanilla';
 import type { DarkMode, ThemeId } from '../shared/themes.ts';
 import { api } from './api.ts';
+import type { EqPreset } from './playback/eq.ts';
 
 // The user's preferences (SETTINGS_AND_SECURITY.md §7.1). Most follow the user across devices and
-// live on the server (`/me/settings`); `visuals.quality`, `backdrop` and `performance`, `playback.quality` and the volume differ per device
+// live on the server (`/me/settings`); `visuals.quality`, `backdrop` and `performance`, `playback.quality`, the volume, crossfade, equalizer and karaoke differ per device
 // (a gaming PC and a laptop) and live in this browser's localStorage. Defaults apply until the
 // server answers, and without a server at all (the fixture shell). The appearance follows the user
 // too, and this browser keeps a copy, so the page opens in its theme before the server answers
@@ -11,6 +12,7 @@ import { api } from './api.ts';
 
 export interface Prefs {
   playback: {
+    /** Settings → Playback → Crossfade, 0 (off) to 12 s; per device (its own speakers). */
     crossfadeSec: number;
     replayGain: 'off' | 'track' | 'album' | 'auto';
     scrobble: boolean;
@@ -21,6 +23,12 @@ export interface Prefs {
     /** Karaoke mode (docs/KARAOKE.md), per device; and how much of the voice it leaves, 0..1. */
     karaoke: boolean;
     vocalLevel: number;
+    /** Karaoke's key change in semitones, −6..6; kept while Karaoke is off, applied only while it's on. */
+    karaokeKey: number;
+    /** The equalizer (per device): on or off, the preset, and the custom curve's ten bands in dB. */
+    eq: boolean;
+    eqPreset: EqPreset;
+    eqGains: number[];
   };
   lyrics: {
     sizeScale: 0.85 | 1 | 1.15 | 1.3;
@@ -57,6 +65,10 @@ export const DEFAULT_PREFS: Prefs = {
     volume: 1,
     karaoke: false,
     vocalLevel: 0,
+    karaokeKey: 0,
+    eq: false,
+    eqPreset: 'flat',
+    eqGains: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   },
   lyrics: {
     sizeScale: 1,
@@ -94,7 +106,18 @@ export function effectiveVisuals(v: Prefs['visuals']): Prefs['visuals'] {
 type Section = keyof Prefs;
 /** Keys kept per device, in localStorage, never sent to the server. */
 const DEVICE: { [S in Section]?: (keyof Prefs[S])[] } = {
-  playback: ['quality', 'volume', 'autoplay', 'karaoke', 'vocalLevel'],
+  playback: [
+    'quality',
+    'volume',
+    'autoplay',
+    'karaoke',
+    'vocalLevel',
+    'karaokeKey',
+    'crossfadeSec',
+    'eq',
+    'eqPreset',
+    'eqGains',
+  ],
   visuals: ['quality', 'backdrop', 'performance'],
 };
 const isDevice = (s: Section, k: string) => (DEVICE[s] as string[] | undefined)?.includes(k);

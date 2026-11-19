@@ -95,6 +95,12 @@ class Karaoke(private val app: EchoApp) {
 
   fun setLevel(level: Float) = app.prefs.update { it.copy(vocalLevel = level.coerceIn(0f, 1f)) }
 
+  /** Karaoke's key in semitones (the playback service applies it while Karaoke is on). */
+  fun setKey(semitones: Int) {
+    val n = semitones.coerceIn(-AudioMath.KEY_RANGE, AudioMath.KEY_RANGE)
+    if (n != app.prefs.state.value.karaokeKey) app.prefs.update { it.copy(karaokeKey = n) }
+  }
+
   /** Signed out: another account's server knows other songs. */
   fun clear() {
     asked.clear()

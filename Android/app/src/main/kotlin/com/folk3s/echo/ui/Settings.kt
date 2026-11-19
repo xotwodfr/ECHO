@@ -57,6 +57,9 @@ import com.folk3s.echo.Prefs
 import com.folk3s.echo.Quality
 import com.folk3s.echo.VisualMode
 import com.folk3s.echo.echo
+import com.folk3s.echo.playback.AudioMath
+import androidx.compose.ui.semantics.stateDescription
+import kotlin.math.roundToInt
 import com.folk3s.echo.stage.Intensity
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
@@ -99,7 +102,7 @@ private fun Section(title: String) {
 }
 
 @Composable
-fun SettingsScreen(onDownloads: (() -> Unit)? = null) {
+fun SettingsScreen(onDownloads: (() -> Unit)? = null, onEqualizer: () -> Unit = {}) {
   val app = LocalContext.current.echo
   val scope = rememberCoroutineScope()
   val p by app.prefs.state.collectAsStateWithLifecycle()
@@ -207,6 +210,41 @@ fun SettingsScreen(onDownloads: (() -> Unit)? = null) {
 
     Section("Playback")
     Toggle("Scrobble plays to Navidrome", p.scrobble) { v -> set { it.copy(scrobble = v) } }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Crossfade", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Text(if (p.crossfadeSec == 0) "Off" else "${p.crossfadeSec} s", color = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+      Slider(
+        value = p.crossfadeSec.toFloat(),
+        onValueChange = { v -> set { it.copy(crossfadeSec = v.roundToInt()) } },
+        valueRange = 0f..AudioMath.MAX_CROSSFADE_S.toFloat(),
+        steps = AudioMath.MAX_CROSSFADE_S - 1,
+        modifier = Modifier.semantics {
+          contentDescription = "Crossfade"
+          stateDescription = if (p.crossfadeSec == 0) "Off" else "${p.crossfadeSec} seconds"
+        },
+      )
+      Text(
+        "Each song fades out as the next fades in. Songs from the same album play straight into each other, without a fade.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+    Row(
+      Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onEqualizer).padding(horizontal = 16.dp, vertical = 14.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(Modifier.weight(1f)) {
+        Text("Equalizer", style = MaterialTheme.typography.bodyLarge)
+        Text(
+          if (p.eqOn) (AudioMath.EQ_PRESETS[p.eqPreset]?.first ?: "Custom") else "Off",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodySmall,
+        )
+      }
+      Icon(EchoIcons.chevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 
     Section("Karaoke")
     Toggle("Karaoke mode", p.karaoke) { v -> set { it.copy(karaoke = v) } }

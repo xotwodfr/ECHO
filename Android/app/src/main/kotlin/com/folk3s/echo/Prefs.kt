@@ -78,6 +78,15 @@ data class Prefs(
   val vocalLevel: Float = 0f,
   /** Downloads (v0.8) wait for Wi-Fi (an unmetered network) unless this is off. */
   val downloadWifiOnly: Boolean = true,
+  /** Karaoke's key in semitones, −6 to 6: kept while Karaoke is off, applied only while it's on. */
+  val karaokeKey: Int = 0,
+  /** Crossfade between songs in seconds, 0 (off) to 12; never within an album (playback/Crossfader.kt). */
+  val crossfadeSec: Int = 0,
+  /** The equalizer: on or off, a preset id (playback/AudioMath.kt), and the custom curve as points. */
+  val eqOn: Boolean = false,
+  val eqPreset: String = "flat",
+  val eqCustomHz: List<Int> = emptyList(),
+  val eqCustom: List<Float> = emptyList(),
 ) {
   /** The tabs in the user's order: every known tab once, whatever an older save holds. */
   val tabOrder: List<String> get() = (tabs.filter { it in DEFAULT_TABS } + DEFAULT_TABS).distinct()

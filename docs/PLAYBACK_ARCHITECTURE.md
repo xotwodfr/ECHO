@@ -173,8 +173,38 @@ OpenSubsonic responses]), `isrc` (an OpenSubsonic **array** when tags provide it
 - Two `<audio>` elements (A/B), each with its own `MediaElementAudioSourceNode` and ReplayGain node,
   summed into the shared analyser tap (`VISUALIZER_SPEC.md` §3.1).
 - **Preload** the next track 20 s before the end (`preload()`), so the hand-over is gapless.
-- **Crossfade** (Settings → Playback, 0 = off (default) … 8 s): equal-power gain ramps on the two
-  ReplayGain nodes. The lyric field prepares the next document (`LYRICS_EXPERIENCE.md` §9.7).
+- **Crossfade** (Settings → Playback, Off (default) … 12 s, per device; built 2026-11-19): each
+  voice has a crossfade gain after its ReplayGain. The controller preloads the next track 5 s in,
+  or 32 s before the end (20 s plus the longest fade) when the track is shorter. With
+  `crossfadeSec` left, the next voice buffered (`HAVE_FUTURE_DATA`), and the controller's
+  `crossfade()` answering yes, the provider starts the next voice under the playing one, ramps the
+  two gains on equal-power curves (`setValueCurveAtTime`, sin/cos), and emits `ended` at once. The
+  controller advances the queue and `load(next)` hands over to the voice already playing. The old
+  voice fades out and is paused when the fade ends.
+  - The controller says no under repeat-one, when the queue's next track changed since the
+    preload, and between two tracks of the same album (`crossfadeBetween`). Those keep the
+    gapless hand-over, so live and continuous albums play as recorded.
+  - A pause, a skip or a reload during the fade cuts it short. A preload asked for meanwhile waits
+    for the old voice to be free.
+  - Android does the same with two ExoPlayers (`docs/ANDROID_CLIENT.md`, v0.8).
+  - The lyric field prepares the next document (`LYRICS_EXPERIENCE.md` §9.7).
+- **Equalizer** (Settings → Equalizer, per device): ten bands an octave apart, 31 Hz … 16 kHz. The
+  ends are a low and a high shelf with their corners half an octave inward, and the eight between
+  are peaking filters with Q √2 (`playback/eq.ts`). They sit between the analyser tap and the
+  volume. A preamp takes off the largest boost. While the equalizer is off or flat, the tap is
+  wired straight to the volume, so nothing is filtered. There are seven presets and a custom
+  curve.
+- **Key** (Karaoke, −6 … +6 semitones, per device; applied only while Karaoke is on): a WSOLA
+  pitch shifter in an AudioWorklet (`playback/pitch.ts`, `pitch.worklet.ts`, written for ECHO).
+  It uses 40 ms Hann grains read at the pitch ratio, each aligned within ±12 ms to the previous
+  grain's continuation by normalised cross-correlation with a sub-sample peak. The tempo is
+  unchanged.
+  - It goes into each voice's chain (after the karaoke mix, before the ReplayGain) only while the
+    key is off 0, and the worklet's code is fetched the first time.
+  - It adds about 62 ms of delay, which `latencyMs()` reports so the lyrics stay in time. It costs
+    about 3 % of one core per voice (37× real time in Chromium).
+  - Measured in headless Chromium, a 220/440/880 Hz sine comes out at exactly `f × 2^(n/12)` for
+    every n tested, with 35–60 dB of signal over artefacts.
 
 ### 5.7 Scrobbling
 

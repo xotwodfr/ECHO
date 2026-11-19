@@ -90,6 +90,45 @@ token like any stream). Downloads wait for **Wi-Fi by default**.
   Play and ⋯, the total, the reason it's waiting ("Waiting for Wi-Fi") and Remove all. Settings →
   Downloads has "Download only on Wi-Fi", the storage used and Manage downloads.
 - Tests: `OfflineTest` (which source plays, shared files, the missing list, sizes, cover ids).
+## v0.8: crossfade, equalizer, key (2026-11-19)
+
+Owner decisions (2026-11-19): crossfade from Off to 12 s, an equalizer with presets and a custom
+curve, and a Key control for Karaoke (−6 to +6 semitones, same tempo), on Android and the web. The
+same sums are in `playback/AudioMath.kt` here and `src/client/playback/{crossfade,eq,pitch}.ts`
+on the web, tested on both sides.
+
+- **Crossfade** (`playback/Crossfader.kt`, Settings → Playback): ExoPlayer plays one song at a
+  time, so the service has two players. The media session always holds the main one. 8 s before
+  the fade, the spare gets the same playlist (with the same shuffle order), starting at the next
+  song, prepared, paused and at volume 0. With `crossfadeSec` left and the spare `READY`, the
+  spare starts and the volumes cross on equal-power curves (cos/sin, ticked every 40 ms). Then
+  the spare becomes the main player: `MediaSession.setPlayer` hands it over, audio focus moves to
+  it, and the old one is emptied. The queue, notification and scrobbles carry on from the
+  session, because the playlist is the same. The audio heard is never sought or restarted, so the
+  overlap is seamless.
+  - **No crossfade** between two songs of the same album (the album id travels in each
+    `MediaItem`'s metadata extras), under repeat one, or when the spare isn't buffered in time. In
+    those cases the ordinary gapless hand-over runs.
+  - **Interruptions**: a pause during the fade finishes it on the new song, paused. A seek, a skip
+    or a queue edit calls the fade off: the spare stops and the song playing goes on.
+  - **Visualizer**: only the main player's audio reaches the Stage's tap (`Crossfader.tap`), so
+    during a fade it follows the outgoing song.
+  - `Crossfader` is self-contained: the service builds the players and follows `onSwap`, so it
+    moves unchanged to a `MediaLibraryService`.
+- **Equalizer** (`playback/Effects.kt`, `ui/Equalizer.kt`, Settings → Playback → Equalizer):
+  Android's own `android.media.audiofx.Equalizer`. Both players share one audio session
+  (`Util.generateAudioSessionIdV21`; if that returns `C.AUDIO_SESSION_ID_UNSET`, the main
+  player's own session is used), so the equalizer covers a crossfade's two songs. The presets
+  (Flat, Bass boost, Treble boost, Vocal, Loudness, Acoustic, Electronic) are the web's ten-band
+  curves, read off at the phone's own bands (usually five) on a log-frequency axis. Moving a band
+  makes the curve Custom. It is kept as points (Hz → dB), so it survives a phone with different
+  bands. Boosts take the same amount off the player's volume, so loud songs don't clip. A phone
+  without an equalizer shows a note instead.
+- **Key** (`ui/Karaoke.kt`, under the Vocals slider; a KEY knob in Retro hi-fi): ExoPlayer's
+  `PlaybackParameters(speed = 1, pitch = 2^(n/12))`, which DefaultAudioSink applies with Sonic. It
+  is set on both players. The value is kept while Karaoke is off and applies only while Karaoke is
+  on.
+- Prefs (this device): `crossfadeSec`, `eqOn`, `eqPreset`, `eqCustomHz`/`eqCustom`, `karaokeKey`.
 
 ## v0.7: sign-in and guest accounts (2026-11-19)
 

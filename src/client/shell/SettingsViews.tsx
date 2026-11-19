@@ -2,6 +2,8 @@ import { useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import { api } from '../api.ts';
 import { THEMES, themeOf } from '../appearance.ts';
+import { MAX_CROSSFADE_S } from '../playback/crossfade.ts';
+import { EQ_BANDS, EQ_MAX_DB, EQ_PRESET_IDS, eqGains } from '../playback/eq.ts';
 import { type Prefs, prefsStore, setPref } from '../prefs.ts';
 import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
@@ -154,14 +156,28 @@ export function PreferencesSection() {
           onChange={(v) => save('playback', 'autoplay', v)}
         />
         <p className="field-hint">{t.autoplayHint}</p>
-        <Toggle
-          label={t.crossfade}
-          checked={p.playback.crossfadeSec > 0}
-          onChange={() => {}}
-          disabled
-          disabledReason={t.later}
-        />
+        <div className="pref-slider">
+          <p className="pref-label" aria-hidden="true">
+            {t.crossfade}{' '}
+            <span className="num field-hint">{t.crossfadeText(p.playback.crossfadeSec)}</span>
+          </p>
+          <Slider
+            label={t.crossfade}
+            value={p.playback.crossfadeSec}
+            min={0}
+            max={MAX_CROSSFADE_S}
+            step={1}
+            bigStep={3}
+            variant="volume"
+            valueText={(v) => t.crossfadeText(Math.round(v))}
+            bubble={(v) => t.crossfadeText(Math.round(v))}
+            onChange={(v) => save('playback', 'crossfadeSec', Math.round(v))}
+          />
+          <p className="field-hint">{t.crossfadeHint}</p>
+        </div>
       </section>
+
+      <EqualizerSection />
 
       <section className="pref-group" aria-labelledby="pref-karaoke">
         <h3 id="pref-karaoke">{strings.karaoke.progress.title}</h3>
@@ -319,6 +335,57 @@ export function PreferencesSection() {
         ))}
       </section>
     </div>
+  );
+}
+
+/** Settings → Playback → Equalizer: on or off, a preset, and the ten bands (eq.ts). */
+function EqualizerSection() {
+  const p = useStore(prefsStore, (s) => s.playback);
+  const gains = eqGains(p.eqPreset, p.eqGains);
+  const setBand = (i: number, db: number) => {
+    const next = gains.slice();
+    next[i] = Math.round(db);
+    save('playback', 'eqGains', next);
+    if (p.eqPreset !== 'custom') save('playback', 'eqPreset', 'custom');
+    if (!p.eq) save('playback', 'eq', true);
+  };
+  return (
+    <section className="pref-group" aria-labelledby="pref-eq">
+      <h3 id="pref-eq">{t.equalizer}</h3>
+      <Toggle label={t.eqOn} checked={p.eq} onChange={(v) => save('playback', 'eq', v)} />
+      <p className="field-hint">{t.eqHint}</p>
+      <Choice
+        label={t.eqPreset}
+        value={p.eqPreset}
+        options={EQ_PRESET_IDS}
+        names={(v) => t.eqPresetNames[v]}
+        onChange={(v) => {
+          save('playback', 'eqPreset', v);
+          if (!p.eq) save('playback', 'eq', true);
+        }}
+      />
+      <div className="pref-eq" data-off={!p.eq || undefined}>
+        {EQ_BANDS.map((hz, i) => (
+          <div className="pref-eq-band" key={hz}>
+            <span className="pref-eq-hz">{t.eqBand(hz)}</span>
+            <Slider
+              label={t.eqBand(hz)}
+              value={gains[i] ?? 0}
+              min={-EQ_MAX_DB}
+              max={EQ_MAX_DB}
+              step={1}
+              bigStep={3}
+              variant="volume"
+              valueText={(v) => t.eqGainText(Math.round(v))}
+              bubble={(v) => t.eqGainText(Math.round(v))}
+              onChange={(v) => setBand(i, v)}
+            />
+            <span className="pref-eq-db num">{t.eqGainText(gains[i] ?? 0)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="field-hint">{t.eqBandsHint}</p>
+    </section>
   );
 }
 

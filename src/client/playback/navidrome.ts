@@ -16,14 +16,14 @@ import { createAudioGraph } from './audio.ts';
 // NavidromeProvider (PLAYBACK_ARCHITECTURE.md §5): the signed-in user's own Navidrome through
 // ECHO's proxy. Raw when the browser can play the file (native seeking over Range), else Opus 192
 // transcoded by Navidrome, sought by reloading with `timeOffset`. ReplayGain, scrobbling, the Media
-// Session, and two voices (A/B) for gapless hand-overs; crossfade is a follow-up.
+// Session, and two voices (A/B) for gapless hand-overs and crossfades (§5.6).
 
 export const NAVIDROME_CAPABILITIES: ProviderCapabilities = {
   canSeek: true,
   canSetVolume: true,
   canReorderQueue: true,
   canRemoveFromQueue: true,
-  canCrossfade: false,
+  canCrossfade: true,
   audioFeatures: true,
 };
 
@@ -32,6 +32,9 @@ type Events = { state: ProviderState; ended: undefined; error: AppError };
 export type NavidromeTrack = Track & { contentType?: string };
 
 const SCROBBLE_MS = 4 * 60_000;
+
+/** One of the two voices: an element on its own branch of the audio graph (audio.ts). */
+type Voice = ReturnType<ReturnType<typeof createAudioGraph>['attach']>;
 
 export class NavidromeProvider implements PlaybackProvider {
   readonly id = 'navidrome' as const;
@@ -42,12 +45,7 @@ export class NavidromeProvider implements PlaybackProvider {
 
   private readonly graph = createAudioGraph();
   /** Two voices (A/B): one plays, the other buffers the next track for a gapless hand-over (§5.6). */
-  private readonly voices: {
-    el: HTMLAudioElement;
-    setReplayGain(db?: number, peak?: number): void;
-    setKaraoke(on: boolean): void;
-    downmixed(): boolean;
-  }[];
+  private readonly voices: Voice[];
   private cur = 0;
   /** The track buffering in the other voice, if any. */
   private next: {
@@ -55,7 +53,13 @@ export class NavidromeProvider implements PlaybackProvider {
     src: string;
     transcode: boolean;
     karaoke: boolean;
+    /** Whether the two may crossfade, asked when the fade would start (the controller decides). */
+    crossfade?: () => boolean;
   } | null = null;
+  /** A crossfade under way: the voice fading out, and when it ends. */
+  private fading: { out: number; timer: ReturnType<typeof setTimeout> } | null = null;
+  /** A preload asked for during a crossfade, for the outgoing voice once it's free. */
+  private deferred: { track: Track; opts?: { crossfade?: () => boolean } } | null = null;
   /** Whether the playing voice plays a karaoke file. */
   private karaoke = false;
   private endedAt = 0;
@@ -87,6 +91,8 @@ export class NavidromeProvider implements PlaybackProvider {
     quality?: 'auto' | 'raw' | '320' | '192' | '128';
     /** Karaoke mode: the karaoke file to play instead of the song, while it's on and ready. */
     karaokeSrc?: (t: Track) => string | null;
+    /** Settings → Playback → Crossfade in seconds, 0 off (per device). */
+    crossfadeSec?: number;
   };
 
   constructor(
@@ -111,7 +117,7 @@ export class NavidromeProvider implements PlaybackProvider {
 
   /** The playing voice's element. */
   private get el() {
-    return (this.voices[this.cur] as (typeof this.voices)[number]).el;
+    return (this.voices[this.cur] as Voice).el;
   }
 
   /** Events count only from the playing voice; the buffering one stays silent. */
@@ -138,7 +144,11 @@ export class NavidromeProvider implements PlaybackProvider {
       this.emitState();
       this.scrobble();
     });
-    el.addEventListener('timeupdate', () => mine() && this.scrobble());
+    el.addEventListener('timeupdate', () => {
+      if (!mine()) return;
+      this.scrobble();
+      this.maybeCrossfade();
+    });
     el.addEventListener('ended', () => {
       if (!mine()) return;
       this.endedAt = performance.now();
@@ -206,6 +216,7 @@ export class NavidromeProvider implements PlaybackProvider {
   async connect() {}
 
   async disconnect() {
+    this.endFade();
     for (const v of this.voices) {
       v.el.pause();
       v.el.removeAttribute('src');
@@ -262,7 +273,7 @@ export class NavidromeProvider implements PlaybackProvider {
 
   private applyGain(t: NavidromeTrack, mode: 'album' | 'track' | 'off') {
     const rg = t.replayGain;
-    const v = this.voices[this.cur] as (typeof this.voices)[number];
+    const v = this.voices[this.cur] as Voice;
     if (mode === 'off') return v.setReplayGain(undefined, undefined); // Settings → Playback
     // Album gain keeps an album's own dynamics between its tracks; track gain evens out a mix.
     if (mode === 'album' && rg?.albumGain !== undefined)
@@ -284,10 +295,10 @@ export class NavidromeProvider implements PlaybackProvider {
     if (!opts.retry && !opts.startMs && this.next?.track.key === t.key) {
       const old = this.el;
       this.cur = 1 - this.cur;
-      old.pause();
+      if (!this.fading) old.pause(); // a crossfade lets it fade out (endFade stops it)
       this.transcode = this.next.transcode;
       this.karaoke = this.next.karaoke;
-      (this.voices[this.cur] as (typeof this.voices)[number]).setKaraoke(this.karaoke);
+      (this.voices[this.cur] as Voice).setKaraoke(this.karaoke);
       this.next = null;
       this.track = t;
       this.loading = false;
@@ -303,6 +314,8 @@ export class NavidromeProvider implements PlaybackProvider {
       else this.emitState();
       return;
     }
+    this.deferred = null;
+    this.endFade(); // anything else cuts a crossfade short
     const el = this.el;
     this.track = t;
     this.loading = true;
@@ -318,7 +331,7 @@ export class NavidromeProvider implements PlaybackProvider {
     const { src, transcode, karaoke } = this.srcFor(t, this.startMs / 1000);
     this.transcode = transcode;
     this.karaoke = karaoke;
-    (this.voices[this.cur] as (typeof this.voices)[number]).setKaraoke(karaoke);
+    (this.voices[this.cur] as Voice).setKaraoke(karaoke);
     this.offsetS = transcode ? Math.floor(this.startMs / 1000) : 0;
     el.src = src;
     this.emitState();
@@ -377,6 +390,7 @@ export class NavidromeProvider implements PlaybackProvider {
 
   async pause() {
     this.wantPlay = false;
+    this.endFade();
     this.el.pause();
   }
 
@@ -403,15 +417,76 @@ export class NavidromeProvider implements PlaybackProvider {
   }
 
   /** Buffers `next` in the other voice, so `load(next)` hands over without a gap (§5.6). */
-  async preload(next: Track) {
+  async preload(next: Track, opts?: { crossfade?: () => boolean }) {
     const t = next as NavidromeTrack;
+    // The other voice is still fading out the last song: it buffers this once it's done.
+    if (this.fading) {
+      this.deferred = { track: next, ...(opts && { opts }) };
+      return;
+    }
+    if (t.key === this.next?.track.key && opts?.crossfade) this.next.crossfade = opts.crossfade;
     if (t.key === this.track?.key || t.key === this.next?.track.key) return;
     const { src, transcode, karaoke } = this.srcFor(t, 0);
-    const voice = this.voices[1 - this.cur] as (typeof this.voices)[number];
+    const voice = this.voices[1 - this.cur] as Voice;
     voice.el.src = src;
     voice.el.load();
     voice.setKaraoke(karaoke);
-    this.next = { track: t, src, transcode, karaoke };
+    this.next = {
+      track: t,
+      src,
+      transcode,
+      karaoke,
+      ...(opts?.crossfade && { crossfade: opts.crossfade }),
+    };
+  }
+
+  /**
+   * Crossfade (§5.6): with the next track buffered and allowed to, it starts playing under this one
+   * `crossfadeSec` before the end, on equal-power ramps; `ended` goes out at once, so the queue
+   * moves on and `load(next)` hands over to the voice already playing. The old voice fades out and
+   * stops when the fade is done.
+   */
+  private maybeCrossfade() {
+    const sec = this.opts.crossfadeSec ?? 0;
+    const n = this.next;
+    const t = this.track;
+    if (sec <= 0 || !n || !t || this.fading || this.loading || this.el.paused) return;
+    const el = this.el;
+    const total =
+      !this.transcode && Number.isFinite(el.duration) && el.duration > 0
+        ? el.duration
+        : t.durationMs / 1000;
+    const left = total - (this.offsetS + el.currentTime);
+    if (!(left > 0.3) || left > sec || !n.crossfade?.()) return;
+    const incoming = this.voices[1 - this.cur] as Voice;
+    // Not buffered far enough (HAVE_FUTURE_DATA): the gapless hand-over at the end instead.
+    if (incoming.el.readyState < 3) return;
+    const outgoing = this.voices[this.cur] as Voice;
+    outgoing.fade('out', left);
+    incoming.fade('in', left);
+    void incoming.el.play().catch(() => undefined);
+    this.fading = { out: this.cur, timer: setTimeout(() => this.endFade(), left * 1000 + 250) };
+    this.endedAt = 0;
+    this.emit('ended', undefined);
+  }
+
+  /**
+   * The crossfade is over, or cut short (a pause, a skip, a seek reload): the voice that isn't
+   * playing stops, both are back at full gain, and a preload that waited goes ahead.
+   */
+  private endFade() {
+    const f = this.fading;
+    if (!f) return;
+    clearTimeout(f.timer);
+    this.fading = null;
+    const other = this.voices[1 - this.cur] as Voice;
+    other.el.pause();
+    // No hand-over happened: the next track's voice played a little, so it buffers again.
+    if (f.out === this.cur) this.next = null;
+    for (const v of this.voices) v.unfade();
+    const d = this.deferred;
+    this.deferred = null;
+    if (d) void this.preload(d.track, d.opts);
   }
 
   /**
@@ -446,16 +521,22 @@ export class NavidromeProvider implements PlaybackProvider {
 
   /** A karaoke file whose rear channels arrive empty: this browser downmixed the 5.1 itself. */
   karaokeDownmixed() {
-    return (
-      this.karaoke &&
-      !this.el.paused &&
-      (this.voices[this.cur] as (typeof this.voices)[number]).downmixed()
-    );
+    return this.karaoke && !this.el.paused && (this.voices[this.cur] as Voice).downmixed();
   }
 
   /** Karaoke mode's vocals level, 0..1. */
   setVocalLevel(level: number) {
     this.graph.setVocalLevel(level);
+  }
+
+  /** Karaoke's key change as a frequency ratio; 1 takes the pitch shifter out. */
+  setPitchRatio(ratio: number) {
+    this.graph.setPitchRatio(ratio);
+  }
+
+  /** The equalizer (Settings → Playback): on or off, ten bands in dB. */
+  setEq(on: boolean, gains: number[]) {
+    this.graph.setEq(on, gains);
   }
 
   on<K extends keyof Events>(event: K, cb: (e: Events[K]) => void): Unsubscribe {
