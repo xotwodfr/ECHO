@@ -26,6 +26,11 @@ export interface Library {
   loadAlbum?(id: string): Promise<Album | undefined>;
   /** Server libraries: an artist and their albums (S6). Rejects when it could not ask. */
   artist?(id: string): Promise<{ name: string; albums: Album[] } | undefined>;
+  /**
+   * Server libraries: every artist, with their album counts (Navidrome `getArtists`, LIB-01). The
+   * fixture library has none: its Artists are the albums' (shell/artists.ts).
+   */
+  artists?(): Promise<ArtistEntry[]>;
   /** Server libraries: called whenever more of the library has arrived. */
   subscribe?(onChange: () => void): () => void;
   /** Bumped on every change (with `subscribe`), so React can re-render. */
@@ -76,6 +81,11 @@ export interface ArtistRef {
   id: string;
   name: string;
   image?: string;
+}
+
+/** An artist on the server's list, and how many albums the server has of theirs (LIB-01). */
+export interface ArtistEntry extends ArtistRef {
+  albumCount: number;
 }
 
 export interface ArtistInfo {

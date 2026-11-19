@@ -2,6 +2,7 @@ import { ApiError, api } from './api.ts';
 import type {
   Album,
   AlbumSort,
+  ArtistEntry,
   ArtistRef,
   Library,
   Playlist,
@@ -103,6 +104,14 @@ const artistOf = (a: SubArtist): ArtistRef => ({
   name: a.name,
   image: cover(a.coverArt ?? `ar-${a.id}`),
 });
+
+/** `getArtists`' letter index, flattened: the server's whole artist list, in its order (LIB-01). */
+export const artistEntries = (
+  index: { artist?: (SubArtist & { albumCount?: number })[] }[] = [],
+): ArtistEntry[] =>
+  index
+    .flatMap((i) => i.artist ?? [])
+    .map((a) => ({ ...artistOf(a), albumCount: a.albumCount ?? 0 }));
 
 const playlistOf = (p: SubPlaylist): Playlist => ({
   id: p.id,
@@ -243,6 +252,12 @@ export function createNavidromeLibrary(): Library {
       if (next === sort) return;
       sort = next;
       void loadAll();
+    },
+    async artists() {
+      const r = await rest<{ artists?: { index?: Parameters<typeof artistEntries>[0] } }>(
+        '/navidrome/rest/getArtists',
+      );
+      return artistEntries(r['subsonic-response'].artists?.index);
     },
     async artist(id) {
       // Not found (Subsonic 70) is an answer: no such artist. Anything else is an error, with Retry.

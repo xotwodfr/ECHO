@@ -27,6 +27,7 @@ import {
 import { ConfirmDialog, Menu, type MenuItem, Sheet } from '../ui/overlays.tsx';
 import { BlockEmpty, BlockError, FreshnessNote, GridLoading, RowsLoading } from '../ui/states.tsx';
 import type { LibraryTab } from '../view.ts';
+import { useArtists } from './artists.ts';
 import {
   refreshPlaylists,
   setStar,
@@ -330,7 +331,6 @@ export function Albums({ albums, sub }: { albums: Album[]; sub?: (a: Album) => s
 
 export function LibraryContent({ tab }: { tab: LibraryTab }) {
   const library = useLibrary();
-  const followed = useStarredAll();
   const s = strings.library;
   // The Wanted list is the server's, with or without a library connected.
   if (tab === 'wanted') return <WantedList />;
@@ -364,43 +364,42 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
     );
   if (tab === 'playlists' && library.playlists) return <Playlists />;
   if (tab === 'starred' && library.starred) return <Starred />;
-  if (tab === 'artists') {
-    // Derived from the album list, so the counts are only true once every page has loaded.
-    if (status === 'loading') return <RowsLoading label={s.tabs.artists} />;
-    // By id where the library has one (each row then links to the artist's page, S6), else by name.
-    const artists = new Map<string, { name: string; id?: string; n: number }>();
-    for (const a of library.albums) {
-      const key = a.artistId ?? `name:${a.artist}`;
-      const known = artists.get(key);
-      if (known) known.n++;
-      else artists.set(key, { name: a.artist.trim(), id: a.artistId, n: 1 });
-    }
-    // The artists the user follows (hearts), with or without a saved album of theirs.
-    for (const f of followed && followed !== 'error' ? followed.artists : [])
-      if (!artists.has(f.id)) artists.set(f.id, { name: f.name, id: f.id, n: 0 });
-    if (!artists.size) return <p className="empty">{s.noArtists}</p>;
-    return (
-      <ul className="artist-list">
-        {[...artists]
-          .sort(([, a], [, b]) => a.name.localeCompare(b.name))
-          .map(([key, a]) => (
-            <li key={key}>
-              {a.id ? (
-                <Link className={buttonClass('tertiary')} to={{ view: 'artist', id: a.id }}>
-                  {a.name}
-                </Link>
-              ) : (
-                <span>{a.name}</span>
-              )}
-              <span className="artist-count">
-                {a.n ? s.albumCount(a.n) : strings.artist.following}
-              </span>
-            </li>
-          ))}
-      </ul>
-    );
-  }
+  if (tab === 'artists') return <Artists />;
   return <p className="empty">{tab === 'playlists' ? s.noPlaylists : s.noStarred}</p>;
+}
+
+/** Your Library → Artists (LIB-01): the server's own list where it has one, else the albums'. */
+function Artists() {
+  const library = useLibrary();
+  const { state, rows, retry } = useArtists();
+  const s = strings.library;
+  // The albums' artists are only all there once every album page has loaded.
+  const deriving = !library?.artists && library?.status?.() === 'loading';
+  if (state === 'loading' || deriving) return <RowsLoading label={s.tabs.artists} />;
+  if (state === 'error') return <BlockError what={strings.states.artistsFailed} onRetry={retry} />;
+  if (!rows.length) return <p className="empty">{s.noArtists}</p>;
+  return (
+    <ul className="artist-list">
+      {rows.map((a) => (
+        <li key={a.key}>
+          {a.id ? (
+            <Link className={buttonClass('tertiary')} to={{ view: 'artist', id: a.id }}>
+              {a.name}
+            </Link>
+          ) : (
+            <span>{a.name}</span>
+          )}
+          <span className="artist-count">
+            {a.followedOnly
+              ? strings.artist.following
+              : a.albums
+                ? s.albumCount(a.albums)
+                : strings.artist.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** The album order (PRODUCT_SPEC.md §6.3): recently added, A–Z, year, most played. */

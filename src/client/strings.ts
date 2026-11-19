@@ -560,6 +560,7 @@ export const strings = {
     libraryFailed: "Couldn't load your library.",
     playlistsFailed: "Couldn't load playlists.",
     starredFailed: "Couldn't load starred tracks.",
+    artistsFailed: "Couldn't load your artists.",
     albumFailed: "Couldn't load this album.",
     artistFailed: "Couldn't load this artist.",
     searchFailed: "Search didn't answer.",

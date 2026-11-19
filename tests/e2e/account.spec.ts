@@ -179,6 +179,47 @@ test('album tracks hand over without a gap (PLAY-04, two voices)', async ({ page
 
 // Owner's request, 2026-10-28 (PRODUCT_SPEC §6.3, S6 "by this artist"): an artist's name is a link
 // to their page, from the Artists tab, an album's header and the dock.
+test("the Artists tab is the server's own list, with Retry when it fails (LIB-01)", async ({
+  page,
+}) => {
+  await signedInWithNavidrome(page);
+  // The first answer is a Subsonic refusal; then the mock's list plus an artist only the server's
+  // list has (credited on other artists' albums): never among the albums' own artists.
+  let refuse = true;
+  await page.route('**/api/v1/navidrome/rest/getArtists*', async (route) => {
+    if (refuse)
+      return route.fulfill({
+        json: { 'subsonic-response': { status: 'failed', error: { code: 0, message: 'busy' } } },
+      });
+    const res = await route.fetch();
+    const json = await res.json();
+    json['subsonic-response'].artists.index.push({
+      name: 'C',
+      artist: [{ id: 'ar-9', name: 'Choir of Strangers', albumCount: 3 }],
+    });
+    return route.fulfill({ response: res, json });
+  });
+  await page.goto('/library/artists');
+  await expect(page.getByText("Couldn't load your artists.")).toBeVisible();
+  refuse = false;
+  await page.getByRole('button', { name: 'Retry' }).click();
+  const row = (name: string) =>
+    page.locator('.artist-list').getByRole('listitem').filter({ hasText: name });
+  await expect(row('Choir of Strangers')).toContainText('3 albums');
+  await expect(row('Lowfield')).toContainText('2 albums');
+  await expect(page.locator('.artist-list').getByRole('listitem')).toHaveCount(4);
+  // The side panel's Artists chip reads the same list.
+  await page
+    .getByRole('navigation', { name: 'Your Library' })
+    .getByRole('button', { name: 'Artists' })
+    .click();
+  await expect(
+    page.getByRole('navigation', { name: 'Your Library' }).getByRole('link', {
+      name: /Choir of Strangers/,
+    }),
+  ).toBeVisible();
+});
+
 test('artists are links to their page: the Artists tab, an album and the dock (S6)', async ({
   page,
 }) => {
