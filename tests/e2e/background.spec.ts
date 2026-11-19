@@ -16,6 +16,30 @@ const playingColour = (page: Page) =>
     probe.remove();
     return c;
   });
+const chroma = (c: string) => Number(/^oklch\(\S+ (\S+)/.exec(c)?.[1] ?? 0);
+/**
+ * The album's own colour, once its palette's 1200 ms crossfade has ended: coloured (the neutral
+ * fallback is grey) and the same on two reads 300 ms apart. Waiting only for "not the colour before
+ * Play" passed on the crossfade's first frame, the same grey under another hue (Firefox, main).
+ */
+const arrivedColour = async (page: Page) => {
+  await expect
+    .poll(async () => chroma(await playingColour(page)), { timeout: 5000 })
+    .toBeGreaterThan(0.01);
+  let last = '';
+  await expect
+    .poll(
+      async () => {
+        const c = await playingColour(page);
+        const same = c === last;
+        last = c;
+        return same;
+      },
+      { intervals: [300], timeout: 5000 },
+    )
+    .toBe(true);
+  return last;
+};
 /** Settled: the header shows the playing colour (after the palette's crossfade). */
 const settled = async (page: Page) =>
   expect
@@ -31,14 +55,12 @@ test('every page header takes the playing song’s colour, and fades out under i
   await page.goto('/library/album/al-harbour');
   // Before anything plays the header is the neutral fallback; wait for the album's own colour to
   // arrive (its palette is fetched after Play), or "settled" can pass on the fallback still.
-  const before = await playingColour(page);
   await page
     .locator('.action-bar')
     .getByRole('button', { name: /^Play / })
     .click();
-  await expect.poll(() => playingColour(page), { timeout: 5000 }).not.toBe(before);
+  const playing = await arrivedColour(page);
   await settled(page);
-  const playing = await playingColour(page);
   // Another album's page, while Harbour Lights plays: the same colour, not its own cover's.
   await page.evaluate(() => {
     history.pushState(null, '', '/library/album/al-paper');
