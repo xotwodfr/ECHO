@@ -33,7 +33,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | **People** | A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes). DS-05 passed by three model reviews on 2026-10-28 (`reviews/M9.md`); a human five-second test is still worth doing |
 | **A 10-bit capture setup** | VIS-09 M (the dither test passes; the criterion asks for a 10-bit capture, which Playwright cannot make) |
 | **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
-| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | SRCH-01's keyboard part (arrows, Enter, Shift+Enter, →); LIB-01's Artists as a server list (artist pages are built; the list is derived from the albums); crossfade (no criterion requires it, PLAY-04 assumes 0) |
+| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | LIB-01's Artists as a server list (artist pages are built; the list is derived from the albums); crossfade (no criterion requires it, PLAY-04 assumes 0) |
 | **A hosted CI run** (no remote, by the owner's choice) | None of the criteria themselves: DS-06's baselines and VIS-07's Firefox context loss pass in CI's own image locally (`scripts/e2e-container.sh`, 2026-10-28). Only the GitHub Actions run itself is unproven |
 
 ---
@@ -85,8 +85,8 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | LIB-01 | Albums grid with 4 sorts, Artists, Playlists, Starred and Album detail render from the mock server. Grid edges land on both gutters at 1024, 1440 and 2560 widths | E + V | M5 |
 | LIB-02 | A library of 5,000 albums scrolls at ≥ 55 fps (virtualised, ≤ 150 album tiles in the DOM) | P | M9 |
 | LIB-03 | Covers show the cached dominant colour (or `--surface-2`) until loaded, with no layout shift (CLS 0) | E | M5 |
-| SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | E | M5 |
-| WNT-01 | The Wanted list (Your Library → Wanted, one for everyone on the server): items added on its page or from a search that finds nothing (a toast with Open), each with who added it and when; the same words are one item; an item the server's own library has (an album, else a song, with every word in its artist and title) is marked and plays from its album, else it links to YouTube Music; anyone removes anything; a user on another Navidrome server never marks items found; at most 200 items each | U (`wanted.test.ts`) + E (`wanted.spec.ts`) | 2026-11-03 |
+| SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | U (`searchKeys.test.ts`) + E (`shell.spec.ts`) | M5; keys 2026-11-19 |
+| WNT-01 | The Wanted list (Your Library → Wanted, one for everyone on the server): items added on its page or from a search that finds nothing (a toast with Open), each with who added it and when; the same words are one item; an item the server's own library has (an album, else a song, with every word in its artist and title) is marked and plays from its album, else it links to YouTube Music; anyone removes anything, with Undo while its toast is up (the server is told only then, or as the page closes); a user on another Navidrome server never marks items found; at most 200 items each | U (`wanted.test.ts`) + E (`wanted.spec.ts`) | 2026-11-03 |
 | SRCH-02 | Search finds the library's tracks, albums and artists; with nothing found it offers the same search on YouTube Music, in a new tab. *Changed 2026-11-03: was the active source only (Spotify ≤ 10 per type)* | E (`pages.spec.ts`: a search with no result offers…) | 2026-11-03 |
 | SRC-01 | **Removed 2026-11-03** with Spotify. | — | — |
 
