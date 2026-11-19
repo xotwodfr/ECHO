@@ -108,6 +108,7 @@ sealed interface Route {
   data class Mix(val id: String) : Route
   data class Wrapped(val year: Int) : Route
   data object Settings : Route
+  data object Downloads : Route
   data object NowPlaying : Route
   data object Listen : Route
 }
@@ -238,7 +239,8 @@ private fun Shell() {
               is Route.Genre -> GenreScreen(r.name, nav)
               is Route.Mix -> MixScreen(r.id, nav, picker)
               is Route.Wrapped -> WrappedScreen(r.year, nav)
-              Route.Settings -> SettingsScreen()
+              Route.Settings -> SettingsScreen(onDownloads = { nav.go(Route.Downloads) })
+              Route.Downloads -> DownloadsScreen(nav)
               else -> {}
             }
             }
@@ -247,6 +249,9 @@ private fun Shell() {
           }
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth()) {
+          // Offline (v0.8): a note over the bars, to the downloads (Home shows them already).
+          if (!rememberOnline() && page != Route.Home && page != Route.Downloads && nav.top !is Route.Game)
+            Box(Modifier.fillMaxWidth().padding(top = 4.dp), contentAlignment = Alignment.Center) { OfflineNote(onDownloads = { nav.go(Route.Downloads) }) }
           if (player.track != null && nav.top !is Route.Game) Box(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) { MiniPlayer(player, glass) { nav.go(Route.NowPlaying) } }
           TabBar(nav, prefs.tabOrder, glass)
         }

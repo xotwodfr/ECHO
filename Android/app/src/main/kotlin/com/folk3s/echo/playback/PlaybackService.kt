@@ -6,6 +6,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSourceBitmapLoader
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
@@ -29,7 +30,9 @@ class PlaybackService : MediaSessionService() {
   override fun onCreate() {
     super.onCreate()
     KaraokeMix.level = echo.prefs.state.value.vocalLevel // before the app's UI (Karaoke) is up
-    val http = OkHttpDataSource.Factory(echo.api.http)
+    // Streams through the API client (its bearer header); downloaded files (v0.8) and saved covers
+    // from file:// URIs.
+    val http = DefaultDataSource.Factory(this, OkHttpDataSource.Factory(echo.api.http))
     // Karaoke files (5.1) are mixed back to stereo at the vocals level; then decoded PCM is copied
     // to the Stage's feature analyser before it reaches the speaker.
     val renderers =

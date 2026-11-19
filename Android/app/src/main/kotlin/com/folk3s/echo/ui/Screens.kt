@@ -301,6 +301,8 @@ fun Color.compositeOver(bg: Color): Color =
 @Composable
 fun HomeScreen(nav: Nav, onProfile: () -> Unit) {
   val app = LocalContext.current.echo
+  // ECHO can't be reached (v0.8): the downloads instead of shelves that can't load.
+  if (!rememberOnline()) return OfflineHome(nav, onProfile)
   val playlists by app.library.playlistsFlow.collectAsStateWithLifecycle()
   val (recent, _) = load("recent") { app.library.albumList(AlbumList.Recent, 12) }
   val (newest, _) = load("newest") { app.library.albumList(AlbumList.Newest, 12) }
@@ -506,6 +508,7 @@ fun YourLibraryScreen(nav: Nav, onProfile: () -> Unit) {
   val playlists by app.library.playlistsFlow.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   val (newest, _) = load("newest") { app.library.albumList(AlbumList.Newest, 12) }
+  val online = rememberOnline()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item {
       LargeTitle("Library") {
@@ -519,7 +522,9 @@ fun YourLibraryScreen(nav: Nav, onProfile: () -> Unit) {
     item { CategoryRow(EchoIcons.user, "Artists") { nav.go(Route.LibraryList("artists")) } }
     item { CategoryRow(EchoIcons.disc, "Albums") { nav.go(Route.LibraryList("albums")) } }
     item { CategoryRow(EchoIcons.heart, "Liked Songs") { nav.go(Route.Liked) } }
-    if (status == Status.NotConnected) item { Empty("Nothing in your library yet. Connect a server in Settings on the web.") }
+    item { CategoryRow(EchoIcons.download, "Downloads") { nav.go(Route.Downloads) } }
+    if (!online) item { OfflineNote(Modifier.padding(horizontal = 20.dp, vertical = 12.dp), onDownloads = { nav.go(Route.Downloads) }) }
+    else if (status == Status.NotConnected) item { Empty("Nothing in your library yet. Connect a server in Settings on the web.") }
     else if (status == Status.Error) item { BlockError("Couldn't load your library.", app.library::reload) }
     val added = (newest as? Load.Ok)?.value.orEmpty()
     if (added.isNotEmpty()) {
@@ -604,8 +609,10 @@ private fun LibRow(art: @Composable () -> Unit, title: String, sub: String, onCl
 fun AlbumScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
   val app = LocalContext.current.echo
   val now = nowKey()
-  val (state, retry) = load(id) { app.library.loadAlbum(id) }
+  // Offline, or ECHO away: the downloaded copy, when there is one (v0.8).
+  val (state, retry) = load(id) { runCatching { app.library.loadAlbum(id) }.getOrElse { e -> app.downloads.album(id) ?: throw e } }
   val (live, playing) = contextLive("album", id)
+  val download = rememberDownloadStatus("album", id)
   val starred by app.library.starredFlow.collectAsStateWithLifecycle()
   val scope = rememberCoroutineScope()
   when (state) {
@@ -617,6 +624,7 @@ fun AlbumScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
       val saved = starred?.albums?.any { it.id == a.id } == true
       val tracksMs = a.tracks.sumOf { it.durationMs }
       val accent = rememberAlbumAccent(a.key)
+      LaunchedEffect(a) { app.downloads.sync("album", a.id, a.tracks) }
       AlbumAccent(accent) {
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
@@ -629,8 +637,12 @@ fun AlbumScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
               contentAlignment = Alignment.Center,
             ) { Icon(if (saved) EchoIcons.check else EchoIcons.plus, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp)) }
             Spacer(Modifier.width(8.dp))
+            if (a.tracks.isNotEmpty()) {
+              DownloadButton("album", a.id, a.title) { app.downloads.download(a) }
+              Spacer(Modifier.width(8.dp))
+            }
             Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-              MoreMenu("More for ${a.title}", listOf("Add to queue" to { a.tracks.forEach(app.playback::addToQueue) }))
+              MoreMenu("More for ${a.title}", listOf("Add to queue" to { a.tracks.forEach(app.playback::addToQueue) }, downloadMenuItem(app, download, "album", a.id) { app.downloads.download(a) }))
             }
           }
           PageHeader(
@@ -736,8 +748,9 @@ fun PlaylistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
   val app = LocalContext.current.echo
   val now = nowKey()
   var version by remember { mutableIntStateOf(0) }
-  val (state, retry) = load("$id:$version") { app.library.playlist(id) }
+  val (state, retry) = load("$id:$version") { runCatching { app.library.playlist(id) }.getOrElse { e -> app.downloads.playlist(id) ?: throw e } }
   val (live, playing) = contextLive("playlist", id)
+  val download = rememberDownloadStatus("playlist", id)
   val scope = rememberCoroutineScope()
   var editing by remember { mutableStateOf(false) }
   var deleting by remember { mutableStateOf(false) }
@@ -748,13 +761,23 @@ fun PlaylistScreen(id: String, nav: Nav, picker: (Track) -> Unit) {
       val p = state.value ?: return Empty("This playlist does not exist.")
       val ctx = PlayContext("playlist", id, p.playlist.name)
       val accent = rememberAlbumAccent(p.entries.firstOrNull()?.album?.key)
+      LaunchedEffect(p) { app.downloads.sync("playlist", id, p.entries) }
       AlbumAccent(accent) {
       LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
         item {
           AlbumWash(accent) {
           PageBar(nav) {
+            if (p.entries.isNotEmpty()) {
+              DownloadButton("playlist", id, p.playlist.name) { app.downloads.download(p) }
+              Spacer(Modifier.width(8.dp))
+            }
             Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-              MoreMenu("More for ${p.playlist.name}", listOf("Smart Shuffle" to { smartShuffle(app, scope, p.entries, ctx) }, "Edit details" to { editing = true }, "Delete" to { deleting = true }))
+              MoreMenu(
+                "More for ${p.playlist.name}",
+                listOf("Smart Shuffle" to { smartShuffle(app, scope, p.entries, ctx) }) +
+                  (if (p.entries.isNotEmpty()) listOf(downloadMenuItem(app, download, "playlist", id) { app.downloads.download(p) }) else emptyList()) +
+                  listOf("Edit details" to { editing = true }, "Delete" to { deleting = true }),
+              )
             }
           }
           PageHeader(
@@ -827,21 +850,34 @@ fun LikedScreen(nav: Nav, picker: (Track) -> Unit) {
   val app = LocalContext.current.echo
   val now = nowKey()
   val starred by app.library.starredFlow.collectAsStateWithLifecycle()
-  val tracks = starred?.tracks ?: emptyList()
+  // Not loaded (offline): the downloaded Liked Songs, when there are (v0.8).
+  val offline by app.downloads.index.collectAsStateWithLifecycle()
+  val saved = offline.item("liked", "liked")?.tracks
+  val tracks = starred?.tracks ?: saved ?: emptyList()
   val ctx = PlayContext("starred", title = "Liked Songs")
   val (live, playing) = contextLive("starred", null)
   val scope = rememberCoroutineScope()
+  val download = rememberDownloadStatus("liked", "liked")
+  val online = rememberOnline()
   LazyColumn(Modifier.fillMaxSize(), contentPadding = BottomRoom) {
     item {
       PageBar(nav) {
+        if (tracks.isNotEmpty()) {
+          DownloadButton("liked", "liked", "Liked Songs") { app.downloads.downloadLiked(tracks) }
+          Spacer(Modifier.width(8.dp))
+        }
         Box(Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh), contentAlignment = Alignment.Center) {
-          MoreMenu("More for Liked Songs", listOf("Smart Shuffle" to { smartShuffle(app, scope, tracks, ctx) }))
+          MoreMenu(
+            "More for Liked Songs",
+            listOf("Smart Shuffle" to { smartShuffle(app, scope, tracks, ctx) }) +
+              (if (tracks.isNotEmpty()) listOf(downloadMenuItem(app, download, "liked", "liked") { app.downloads.downloadLiked(tracks) }) else emptyList()),
+          )
         }
       }
       PageHeader(art = { LikedArt(260) }, title = "Liked Songs", subtitle = null, meta = "${tracks.size} songs")
       if (tracks.isNotEmpty()) PlayShuffle("Liked Songs", live, playing, { app.playback.playList(tracks, 0, ctx) }, { app.playback.playList(tracks.shuffled(), 0, ctx) })
     }
-    if (starred == null) item { Loading() }
+    if (starred == null && saved == null) item { if (online) Loading() else Empty("You're offline. Download Liked Songs to play them with no connection.") }
     else if (tracks.isEmpty()) item { Empty("Songs you like will appear here. Save songs by tapping the heart icon.") }
     itemsIndexed(tracks, key = { n, t -> "$n:${t.key}" }) { n, t -> SongRow(t, t.key == now, { app.playback.playList(tracks, n, ctx) }, true, songMenu(app, t, nav, picker)) }
   }
