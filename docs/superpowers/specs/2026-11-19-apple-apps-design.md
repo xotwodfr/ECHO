@@ -1,8 +1,8 @@
 # ECHO for iPhone and Mac — design
 
-Status: **decisions taken** by the owner 2026-11-19; the real Liquid Glass preview (simulator
-screenshots) is being built before the full apps. Not built yet beyond the 2026-11-04 baseline
-(`iOS/`, `macOS/`, `Apple/Shared`: sign in, albums, songs, a player bar).
+Status: **approved** by the owner 2026-11-19 on the real Liquid Glass preview (simulator
+screenshots in `Apple/Screenshots/`, `.github/workflows/apple.yml`); the full apps are being
+built (plan: `docs/superpowers/plans/2026-11-19-apple-apps.md`), to be shown when complete.
 Mockups (browser approximations of the glass): https://claude.ai/artifact/4T8uWxuB8p7qisZxH98VPW.
 
 ## Intent
@@ -26,9 +26,19 @@ mockups "not even real liquid glass": the look is approved on real renders, not 
 - **Sign-in**: username, password and the authenticator code; the iPhone scans the web sign-in
   page's QR code to sign a computer in (as on Android); guest passes (scan to listen as a guest,
   invite guests). The server stays `https://echo.folk3s.com` (no server field).
-- **Themes**: the Android app's themes, with Liquid Glass worked into most of them where it
-  suits, **plus a plain Liquid Glass theme** (ECHO's room lit by the album, glass on top).
-- **A new app icon**, layered for iOS and macOS 26's glass rendering; options are shown first.
+- **Themes**: **all** the Android app's themes (ECHO; the Apple Music, Spotify, SoundCloud,
+  Deezer, Qobuz, Tidal, YouTube Music and Monochrome styles; Clay, Yarn, Liquid glass, Paper &
+  origami, Retro hi-fi), **each with its lyric style and its sounds and haptics**, Liquid Glass
+  worked into most of them where it suits, **plus a plain Liquid Glass theme** (ECHO's room lit by
+  the album, glass on top). Material You is Android's own and has no counterpart here.
+- **All at once**: the owner sees the finished apps, not milestones.
+- **The look, from the preview**: no bar or header backgrounds: the album-lit ground runs
+  full-bleed under the status bar and the floating glass, with no hard edge at the top (the
+  owner's "remove the ugly borders"); controls white over the glass, not the system blue; one
+  glass capsule for the transport.
+- **The app icon is "Echo"** (concept A of four: a point of sound and three fading rings, amber
+  light over deep blue), an Icon Composer icon whose rings and dot are glass layers
+  (`Apple/Shared/AppIcon.icon`).
 - **Lyrics** open from a glass Lyrics button on Now Playing; swipe down to go back.
 - **Mac**: the keyboard's media keys and macOS's Now Playing control the app.
 - **Installing**: unsigned simulator builds as CI downloads for now; TestFlight or device builds
@@ -41,8 +51,10 @@ full screen) or square, with a still first frame (`MPMediaItemAnimatedArtwork`,
 `MPNowPlayingInfoProperty3x4AnimatedArtwork`); without one the lock screen shows the still cover.
 
 - **Where**: the iPhone lock screen only (not the app's Now Playing, not the Mac).
-- **Source**: **any video in the album's folder** (the first `.mp4`/`.mov`) when there is one;
-  otherwise **ECHO generates one** from the cover.
+- **Source**: a video **an admin uploads for the album in ECHO's web app** when there is one;
+  otherwise **ECHO generates one** from the cover. (The owner first chose any video in the album's
+  folder, then, told that ECHO cannot see the music folders, chose uploading over giving a new
+  service read-only access to them.)
 - **When**: on an album's **first play**, then kept on the server. Until it is ready the lock
   screen shows the still cover.
 - **Frame**: the **whole tall frame moves**: the square cover fills the 3:4 frame (cropped at the
@@ -60,6 +72,5 @@ full screen) or square, with a still first frame (`MPMediaItemAnimatedArtwork`,
 
 ## Open
 
-- The generator's home on the server (the depth model runs with onnxruntime; ffmpeg encodes HEVC
-  for the lock screen) and its cost on the OptiPlex per album.
-- Which Android themes take glass and how; the icon options; the widget's sizes.
+- The generator's cost on the OptiPlex per album (measured when built).
+- How glass meets each material theme (Clay, Yarn, Paper, Hi-fi): judged on screenshots.
