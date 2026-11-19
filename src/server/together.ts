@@ -340,6 +340,13 @@ export function togetherRoutes(t: Together, requireUser: MiddlewareHandler<AuthE
       playing: b.playing === true,
     });
     if (!s) return c.json({ error: 'too_many_sessions' }, 503);
+    // The host's queue comes along: what was up next here is up next for everyone.
+    if (Array.isArray(b.queue))
+      for (const q of b.queue.slice(0, MAX_QUEUE)) {
+        const ref = trackRefOf(q);
+        if (ref) s.queue.push(t.item(ref, me(c)));
+      }
+    if (!s.now && s.queue.length) t.advance(s);
     c.header('Cache-Control', 'no-store');
     return c.json(t.view(s, c.var.user.id), 201);
   });

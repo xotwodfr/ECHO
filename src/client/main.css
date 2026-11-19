@@ -3010,3 +3010,52 @@ a {
   padding: 0 var(--gutter);
   text-align: center;
 }
+
+/* ---- Listen together (together/Together.tsx): the chip, the session's sheet, the shared queue ---- */
+.together-chip[data-on] {
+  background: var(--green);
+  color: var(--on-green);
+}
+
+.together-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  max-width: 100%;
+}
+
+.together-link code {
+  overflow-wrap: anywhere;
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.together-members {
+  align-self: stretch;
+  margin: 0;
+  text-align: start;
+}
+
+.together-members li[data-away] {
+  color: var(--muted);
+}
+
+.together-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.together-queue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
+.together-queue > ul,
+.together-queue > ol,
+.together-queue > .empty {
+  align-self: stretch;
+}

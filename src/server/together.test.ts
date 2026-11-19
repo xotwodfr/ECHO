@@ -107,8 +107,10 @@ describe('listen together', () => {
       track: song('s1'),
       positionMs: 30_000,
       playing: true,
+      queue: [song('s2'), { bad: true }, song('s3')],
     });
     expect(made.status).toBe(201);
+    expect(made.body.queue.map((q) => q.track.id)).toEqual(['s2', 's3']);
     const id = made.body.id;
     // 18 random bytes, base64url: 24 characters nobody guesses.
     expect(id).toMatch(/^[\w-]{24}$/);

@@ -977,7 +977,7 @@ paths:
       requestBody:
         content:
           application/json:
-            schema: { type: object, properties: { track: { $ref: '#/components/schemas/TrackRef' }, positionMs: { type: integer }, playing: { type: boolean } } }
+            schema: { type: object, properties: { track: { $ref: '#/components/schemas/TrackRef' }, positionMs: { type: integer }, playing: { type: boolean }, queue: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/TrackRef' }, description: The host's upcoming songs, the shared queue's start } } }
       responses:
         '201': { description: 'Started; `url` is what the QR code holds', content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
         '400': { description: bad_track }

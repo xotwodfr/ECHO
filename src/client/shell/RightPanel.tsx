@@ -5,6 +5,7 @@ import type { ArtistInfo } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { upcoming } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
+import { TogetherButton } from '../together/Together.tsx';
 import { IconButton } from '../ui/controls.tsx';
 import { Artwork } from '../ui/media.tsx';
 import { useCoverChange, useExit } from '../ui/motion.ts';
@@ -111,6 +112,7 @@ function NowPlayingPane() {
           {t.provider === 'navidrome' && <HeartButton track={t} />}
         </div>
         {t.provider === 'navidrome' && <KaraokePanel />}
+        {t.provider === 'navidrome' && <TogetherButton />}
         <AboutArtist track={t} />
         {next && (
           <section className="rp-card" aria-labelledby="rp-next">

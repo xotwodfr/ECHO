@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import { usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { orderedContext } from '../playback/queue.ts';
 import { strings } from '../strings.ts';
+import { TogetherButton, TogetherQueue, useTogether } from '../together/Together.tsx';
 import { Button } from '../ui/controls.tsx';
 import { TrackList, TrackRow } from '../ui/media.tsx';
 import { occurrenceKeys, useFlip } from '../ui/motion.ts';
@@ -12,6 +13,12 @@ import { ConfirmDialog, Sheet } from '../ui/overlays.tsx';
 // right panel on wide screens, a sheet on phones.
 
 export function QueueList({ scope }: { scope: string }) {
+  // Listen together: the shared queue stands in for this one (together/Together.tsx).
+  if (useTogether()) return <TogetherQueue />;
+  return <LocalQueueList scope={scope} />;
+}
+
+function LocalQueueList({ scope }: { scope: string }) {
   const c = usePlayback();
   const q = useQueue((x) => x);
   const status = usePlayer((p) => p.status);
@@ -76,6 +83,7 @@ export function QueueList({ scope }: { scope: string }) {
   );
   return (
     <>
+      {q.now?.provider === 'navidrome' && <TogetherButton />}
       {!q.now && <p className="empty">{s.empty}</p>}
       {q.now && (
         <>

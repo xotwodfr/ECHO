@@ -6,6 +6,7 @@ import type { PlaybackController } from '../playback/controller.ts';
 import { sessionStore } from '../session.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
+import { TogetherRoot } from '../together/Together.tsx';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
 import { useSlide } from '../ui/motion.ts';
@@ -433,6 +434,7 @@ function Frame() {
       <ToastRegion />
       <PlaylistPicker />
       <SessionExpiredSheet />
+      <TogetherRoot />
     </div>
   );
 }
