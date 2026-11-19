@@ -72,6 +72,8 @@ class EchoApp : Application(), SingletonImageLoader.Factory {
             games.clear()
             karaoke.clear()
             downloads.clear()
+            // The car's cover cache (ArtworkProvider), and the sign-in wall's: the next account sees none of these.
+            java.io.File(cacheDir, "artwork").deleteRecursively()
           }
         }
         signedIn = t != null

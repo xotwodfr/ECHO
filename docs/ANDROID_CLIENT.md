@@ -18,7 +18,7 @@ could not run in a third-party Android app; the web dropped Spotify too on 2026-
 |---|---|
 | `api.ts`, session cookie | `api/Api.kt`: OkHttp with a **device token** (`POST /api/v1/auth/device`, `Authorization: Bearer echo_dt_…`; the Origin check exempts it), kept encrypted by an Android Keystore key |
 | `library-navidrome.ts` | `library/Library.kt`: the same Subsonic calls through `/api/v1/navidrome/rest/*` |
-| `playback/*` (an `<audio>` element) | `playback/`: a Media3 `MediaSessionService` (ExoPlayer, background playback, notification and lock-screen controls), streams from `/navidrome/stream/{id}` with the bearer header |
+| `playback/*` (an `<audio>` element) | `playback/`: a Media3 `MediaLibraryService` (ExoPlayer, Android Auto's browse tree, background playback, notification and lock-screen controls), streams from `/navidrome/stream/{id}` with the bearer header |
 | `playback/analyser.ts` (Web Audio) | `playback/Features.kt`: the same FFT features from a `TeeAudioProcessor` tap |
 | `stage/*` (three.js, WebGL 2) | `stage/`: OpenGL ES 3.0 with the same GLSL ES 3.00 shaders (room, energy, composite, probe), the governor and Reverb ported as is |
 | `stage/lyrics/*` | `stage/lyrics/`: timing, springs, beat and the field model ported as is; layout and drawing in Compose |
@@ -200,6 +200,48 @@ possible, and sounds on presses in each.
 - **Sounds** (`ui/Sounds.kt`, `res/raw/*.wav`, synthesized for ECHO): Clay squish, pop, and a
   squish-pop for a right answer; Yarn thump, needle tick, and two ticks. Played through
   `Haptics` with a little pitch variation, as UI sounds; `Prefs.themeSounds` turns them off.
+
+## v0.8: Android Auto and the widget
+
+**Android Auto.** `PlaybackService` is a Media3 `MediaLibraryService` (the manifest's
+`com.google.android.gms.car.application` → `res/xml/automotive_app_desc.xml`, and the
+`MediaLibraryService` / `MediaSessionService` / `android.media.browse.MediaBrowserService` intent
+filters), so the car browses the library and plays from it. The tree (`playback/CarTree.kt`, pure
+and tested in `CarTreeTest`): *Recently played* (`getAlbumList2` recent), *Made for you* (the mixes),
+*Playlists*, *New albums* (newest) and *Liked songs*; a car whose root hint allows fewer rows
+(Android Auto: 4 tabs) gets the first three and a *More* folder. Albums, playlists and mixes open
+to their songs; a song plays **its whole list from there**, as in the app, and the history learns
+the context (`Playback.playingFrom`). Search (`onSearch`, Subsonic `search3`) lists songs, then
+albums; voice ("play … on ECHO") plays the songs found, else the first album, and with nothing said,
+Liked songs. Signed out, every list is an *authentication expired* error that says to sign in on the
+phone. No lyrics and no Stage on the car screen.
+
+`playback/CarLibrary.kt` is the session callback. Items from the app's own `MediaController` carry
+their stream URIs and pass straight through; the browser's ids (`song/<track>/<list>`) are resolved
+there to the same items the app plays (`/api/v1/navidrome/stream/{id}?format=raw`, the bearer header
+through the service's OkHttp data source). Songs the session queued are put in `KnownTracks`, so the
+in-app player shows them too. Starting the service (the car, the widget) brings up the app's player
+model as well, so scrobbles, the history and the saved queue work without opening the app.
+
+Covers: the car loads artwork URIs itself and cannot send the device token, so every artwork URI the
+session hands out (browse items and the queue's, the app's included) is a `content://<app>.artwork/`
+URI served by `playback/ArtworkProvider.kt`: fetched through the authed client and cached in
+`cacheDir/artwork`. It serves `/api/v1/navidrome/cover/…` only, nothing else of the API. The session's
+bitmap loader reads both (a `DefaultDataSource` over the OkHttp one).
+
+**Widget.** `widget/NowPlayingWidget.kt` (classic `RemoteViews`, `res/layout/widget_now_playing.xml`,
+`res/xml/widget_now_playing_info.xml`, 4×1 and resizable; the layout is also its picker preview):
+the cover, the song and artist, previous / play-pause / next; a tap elsewhere opens the app. The
+service's player listener pushes every change of song or play state (the cover loaded once per song
+through the session's bitmap loader, scaled to 256 px); when the service stops it shows the last song,
+paused. The buttons are broadcasts to the widget's receiver, which calls the app's `Playback`
+(`previous` / `toggle` / `next`): it connects to the service, starting it if need be.
+
+**Trying it.** Android Auto: enable developer mode in the Android Auto app (tap the version ten times),
+"Start head unit server", then run the Desktop Head Unit (`$ANDROID_HOME/extras/google/auto/desktop-head-unit`,
+after `adb forward tcp:5277 tcp:5277`); sideloaded apps also need *Unknown sources* on in Android
+Auto's developer settings. The Media Controller Test app (androidx/media's `session-test`) browses the
+same tree on a phone. The widget: long-press the home screen → Widgets → ECHO.
 
 ## v0.3: themes, lyric styles, motion (2026-11-18)
 
