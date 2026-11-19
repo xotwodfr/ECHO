@@ -2953,7 +2953,7 @@ a {
   color: var(--qr-paper, white);
   font: var(--fl-type-caption-strong) var(--font-ui);
   font-size: var(--fs-micro, 0.6rem);
-  letter-spacing: 0;
+  letter-spacing: normal;
 }
 
 .guest-joined {
@@ -3009,4 +3009,222 @@ a {
   margin: var(--sp-9) auto;
   padding: 0 var(--gutter);
   text-align: center;
+}
+
+/* ---- Sign in (shell/SignIn.tsx): the drifting wall of covers, the wordmark, the frosted card and
+   "Sign in with your phone" ---- */
+.auth-page:has(> .signin-stage) {
+  display: block;
+  padding: 0;
+}
+
+.signin-stage {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--signin-ground);
+  color: white;
+}
+
+.signin-wall {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.signin-wall-tilt {
+  position: absolute;
+  inset: -40% -30%;
+  display: flex;
+  justify-content: center;
+  gap: var(--signin-gap);
+  rotate: -12deg;
+}
+
+.signin-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--signin-gap);
+  animation: signin-drift var(--signin-drift) linear infinite;
+}
+
+.signin-col[data-dir="up"] {
+  animation-direction: reverse;
+}
+
+@keyframes signin-drift {
+  to {
+    translate: 0 var(--signin-drift-by);
+  }
+}
+
+:root[data-motion="less"] .signin-col,
+:root[data-motion="off"] .signin-col {
+  animation: none;
+}
+
+.signin-tile {
+  flex: none;
+  width: var(--signin-tile);
+  height: var(--signin-tile);
+  border-radius: var(--r-panel);
+  object-fit: cover;
+  box-shadow: var(--shadow-float);
+}
+
+.signin-tile[data-tile="0"] {
+  background: var(--tile-0);
+}
+.signin-tile[data-tile="1"] {
+  background: var(--tile-1);
+}
+.signin-tile[data-tile="2"] {
+  background: var(--tile-2);
+}
+.signin-tile[data-tile="3"] {
+  background: var(--tile-3);
+}
+.signin-tile[data-tile="4"] {
+  background: var(--tile-4);
+}
+.signin-tile[data-tile="5"] {
+  background: var(--tile-5);
+}
+.signin-tile[data-tile="6"] {
+  background: var(--tile-6);
+}
+.signin-tile[data-tile="7"] {
+  background: var(--tile-7);
+}
+
+/* Dark toward the card, so the form reads; the covers glow at the top. */
+.signin-shade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 75% at 50% 70%, var(--signin-ground) 32%, transparent 100%);
+  opacity: 0.94;
+}
+
+.signin-content {
+  position: relative;
+  display: grid;
+  box-sizing: border-box;
+  min-height: 100vh;
+  place-items: center;
+  align-content: center;
+  gap: var(--sp-6);
+  padding: var(--sp-8) var(--gutter);
+}
+
+.signin-logo {
+  display: grid;
+  margin: 0;
+  text-align: center;
+  font: var(--fl-type-title1) var(--font);
+  font-size: calc(var(--hit-lg) * 1.2);
+  font-weight: 900;
+  letter-spacing: var(--tracking-title);
+  background: linear-gradient(90deg, var(--signin-amber), var(--signin-rose), var(--signin-violet));
+  background-clip: text;
+  color: transparent;
+  animation: signin-rise var(--dur-ui) var(--ease-in-out) both;
+}
+
+.signin-logo span {
+  font: var(--fl-type-body) var(--font-ui);
+  letter-spacing: normal;
+  background: none;
+  color: white;
+  opacity: 0.65;
+}
+
+@keyframes signin-rise {
+  from {
+    opacity: 0;
+    translate: 0 var(--sp-5);
+  }
+}
+
+.signin-card {
+  display: grid;
+  box-sizing: border-box;
+  width: min(100%, calc(var(--form-w) + 2 * var(--sp-8)));
+  gap: var(--sp-7);
+  padding: var(--sp-7);
+  border: var(--rule) solid var(--signin-edge);
+  border-radius: calc(var(--r-panel) * 2);
+  background: var(--signin-card);
+  box-shadow: var(--shadow-float);
+}
+
+@media (min-width: 900px) {
+  .signin-card[data-phone] {
+    width: min(100%, calc(var(--form-w) * 2 + 4 * var(--sp-8)));
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+.signin-card .auth {
+  width: auto;
+  padding: 0;
+  background: none;
+}
+
+.auth--signin > h1 {
+  text-align: start;
+}
+
+.signin-card .auth .btn--primary {
+  border: none;
+  background: linear-gradient(90deg, var(--signin-amber), var(--signin-rose));
+  color: var(--signin-ink);
+}
+
+.signin-card .field input:focus-visible {
+  outline-color: var(--signin-amber);
+}
+
+.signin-phone {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-3);
+  padding-inline-start: var(--sp-7);
+  border-inline-start: var(--rule) solid var(--signin-edge);
+}
+
+@media (max-width: 899.98px) {
+  .signin-phone {
+    padding: var(--sp-6) 0 0;
+    border-inline-start: none;
+    border-top: var(--rule) solid var(--signin-edge);
+  }
+}
+
+.signin-phone h2 {
+  margin: 0;
+  font: var(--fl-type-subtitle2) var(--font);
+}
+
+.signin-qr {
+  display: grid;
+  place-items: center;
+  width: calc(var(--hit-lg) * 4);
+  aspect-ratio: 1;
+  padding: var(--sp-3);
+  border-radius: var(--r-panel);
+  background: white;
+  color: black;
+}
+
+.signin-qr .guest-qr path {
+  fill: currentColor;
+}
+
+.signin-steps {
+  margin: 0;
+  padding-inline-start: var(--sp-5);
+  font: var(--fl-type-caption) var(--font-ui);
+  opacity: 0.75;
 }

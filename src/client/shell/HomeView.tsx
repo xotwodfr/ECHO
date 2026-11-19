@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useEffect } from 'react';
 import type { Album, AlbumListKind } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { strings } from '../strings.ts';
@@ -17,6 +18,7 @@ import { useAlbumMenu } from './LibraryViews.tsx';
 import { Link } from './link.tsx';
 import { MixArt, WrappedArt } from './MixViews.tsx';
 import { trackOf, useJumpBackIn, useMixes } from './mixes.ts';
+import { saveWall } from './wall.ts';
 
 // Home (Spotify's): a grid of shortcuts to what was played last, then shelves of covers: recently
 // played, new in the library, most played, something different, the user's playlists and the
@@ -275,6 +277,11 @@ export function HomeView() {
     frequent: retryFrequent,
     random: retryRandom,
   };
+  // The sign-in page's wall: this account's covers, kept in this browser (shell/wall.ts).
+  useEffect(() => {
+    if (Array.isArray(recent) && Array.isArray(random))
+      void saveWall([...recent, ...random].map((a) => a.cover));
+  }, [recent, random]);
   const shortcutsFrom =
     Array.isArray(recent) && recent.length ? recent : Array.isArray(newest) ? newest : [];
   return (

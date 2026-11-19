@@ -562,6 +562,14 @@ export const strings = {
     passwordHint: 'At least 12 characters.',
     expiredTitle: 'Sign in again',
     expiredIntro: 'Your session ended. Sign in to carry on where you were.',
+    phoneTitle: 'Sign in with your phone',
+    phoneQr: 'Sign-in QR code',
+    phoneSteps: [
+      'Open ECHO on your phone',
+      'Settings → Sign in on a computer',
+      'Scan this code and approve',
+    ],
+    phoneFailed: 'Couldn’t make a code. Reload to try again.',
   },
   navidrome: {
     title: 'Navidrome',

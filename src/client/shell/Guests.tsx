@@ -23,7 +23,7 @@ const HOUR = 3_600_000;
 const DURATIONS = [HOUR, 24 * HOUR, 7 * 24 * HOUR] as const;
 
 /** A QR code as SVG modules (crisp at any size). */
-function QrCode({ text, label }: { text: string; label: string }) {
+export function QrCode({ text, label }: { text: string; label: string }) {
   const svg = useMemo(() => {
     const q = qrcode(0, 'H');
     q.addData(text);

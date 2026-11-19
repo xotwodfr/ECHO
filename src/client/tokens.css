@@ -169,6 +169,15 @@
   --ln-np-art: min(40vh, 440px); --ln-lyrics-min: 360px; --ln-leader-lift: -0.3em;
 
   /* motion */
+  /* The sign-in page (shell/SignIn.tsx): ECHO's amber-to-rose, the ground, the wall's stand-in tiles
+     and how slowly it drifts. */
+  --signin-amber: #ffb36b; --signin-rose: #ff6f91; --signin-violet: #b18cf0; --signin-ground: #121014;
+  --signin-ink: #2a1020; --signin-card: rgb(40 36 46 / 0.9); --signin-edge: rgb(255 255 255 / 0.18);
+  --signin-tile: 104px; --signin-gap: 12px; --signin-drift: 60s; --signin-drift-by: -50%;
+  --tile-0: linear-gradient(140deg, #ff8a7a, #ffc88a); --tile-1: linear-gradient(140deg, #7a9cf0, #b18cf0);
+  --tile-2: linear-gradient(140deg, #59c9a5, #a6e3a1); --tile-3: linear-gradient(140deg, #f57fa8, #8a8cf5);
+  --tile-4: linear-gradient(140deg, #2b2d6e, #e05d8a); --tile-5: linear-gradient(140deg, #f2c14e, #e0603a);
+  --tile-6: linear-gradient(140deg, #1f4037, #99f2c8); --tile-7: linear-gradient(140deg, #3a1c71, #d76d77);
   --dur-press: 100ms; --dur-hover: 150ms; --dur-ui: 200ms; --dur-toast: 250ms;
   --dur-art: 640ms; --dur-palette: 1200ms;
   --dur-pop: 160ms; --dur-scrub: 100ms; --dur-loop: 1000ms;
