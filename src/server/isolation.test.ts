@@ -35,6 +35,15 @@ const NO_USER_DATA = [
   // server, so another server's never answer (karaoke.test.ts). The audio is attacked below.
   'GET /karaoke',
   'GET /karaoke/ready',
+  // Guests: codes are the caller's own; another user's guests are refused (guests.test.ts).
+  'POST /guests/codes',
+  'POST /guests/peek',
+  'POST /guests/redeem',
+  'GET /guests/me',
+  'POST /guests/me/keep',
+  'GET /guests',
+  'POST /guests/:id/approve',
+  'POST /guests/:id/end',
   'GET /karaoke/:id',
   'GET /me/account',
   'POST /me/password',

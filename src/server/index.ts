@@ -15,6 +15,7 @@ import { DEVICE_BEARER, pruneSessions, resolveSession, SESSION_COOKIE } from './
 import { loadConfig } from './config.ts';
 import { createSealer, loadMasterKey, subkey } from './crypto.ts';
 import { openDb } from './db/db.ts';
+import { guestRoutes, sweepGuests } from './guests.ts';
 import { BODY_LIMIT, type HttpConfig, hardening, type Vars } from './http.ts';
 import { createKaraoke, type Karaoke, karaokeRoutes } from './karaoke.ts';
 import { accessLog, createLogger, createSecretSet, type Log } from './log.ts';
@@ -181,6 +182,10 @@ export function createApp(deps: AppDeps) {
   );
   app.route('/api/v1', youtubeRoutes(deps.youtube, requireUser(deps.auth)));
   app.route('/api/v1', karaokeRoutes(deps.karaoke ?? null, requireUser(deps.auth)));
+  app.route(
+    '/api/v1',
+    guestRoutes({ ...deps.auth, publicOrigin: deps.http.publicOrigin }, requireUser(deps.auth)),
+  );
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 
   // The built web client (vite build → dist/client), relative to the working directory. Hashed
@@ -280,7 +285,8 @@ if (import.meta.main) {
   setInterval(() => {
     const sessions = pruneSessions(auth.db, Date.now());
     const addresses = auth.limiter.sweep(Date.now());
-    if (sessions || addresses) log('info', 'pruned', { sessions, addresses });
+    const guests = sweepGuests(auth.db, Date.now()); // guest accounts whose time is up
+    if (sessions || addresses || guests) log('info', 'pruned', { sessions, addresses, guests });
   }, 3_600_000).unref();
   const userAgent = 'ECHO/0.1 (+https://github.com/folkes/echo)';
   // Each Navidrome server once, through the first user connected to it (admins first).

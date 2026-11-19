@@ -12,6 +12,8 @@ describe('database (TECHNICAL_ARCHITECTURE.md §5.5)', () => {
     expect(tables).toEqual([
       'audit_log',
       'connections',
+      'guest_codes',
+      'guests',
       'invites',
       'plays',
       'queue_state',

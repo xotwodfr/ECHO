@@ -137,13 +137,30 @@ const UNMETERED = /^\/api\/v1\/(navidrome\/(stream|cover)\/|youtube\/image$)/;
 
 /** The signed-in user (cookie or bearer device token), or 401. */
 
+const WRITE = /^(POST|PUT|PATCH|DELETE)$/;
+const ANY = /./;
+/** What a guest may not do (method, path). Reading, playing, plays, queue and settings stay open. */
+export const GUEST_DENY: [RegExp, RegExp][] = [
+  [WRITE, /^\/api\/v1\/navidrome\/rest\//], // stars, playlists, scrobbles: the host's Navidrome
+  [WRITE, /^\/api\/v1\/wanted/],
+  [WRITE, /^\/api\/v1\/me\/(connections|password|totp|recovery-codes|tracks)/],
+  [WRITE, /^\/api\/v1\/youtube\/like\//],
+  [ANY, /^\/api\/v1\/admin/],
+  [ANY, /^\/api\/v1\/guests(?!\/me(\/|$))/], // codes and other guests; their own /guests/me stays
+];
+
 export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {
   return async (c, next) => {
     const bearer = c.req.header('authorization')?.match(DEVICE_BEARER)?.[1];
     const token = bearer ?? getCookie(c, SESSION_COOKIE);
     const user = token ? resolveSession(deps.db, token, deps.now()) : null;
     if (!user) return c.json({ error: 'unauthenticated' }, 401);
-    if (!user.totpEnabled && !ENROLMENT_PATHS.includes(c.req.path) && totpForAll(deps.db))
+    // A guest listens: nothing that writes to the host's Navidrome, the shared lists, an account's
+    // credentials or connections, or other guests (guests.ts). Guests have no TOTP to enrol.
+    if (user.guestUntil !== undefined) {
+      if (GUEST_DENY.some(([m, re]) => m.test(c.req.method) && re.test(c.req.path)))
+        return c.json({ error: 'guest' }, 403);
+    } else if (!user.totpEnabled && !ENROLMENT_PATHS.includes(c.req.path) && totpForAll(deps.db))
       return c.json({ error: 'totp_enrolment_required' }, 403);
     // The per-user API budget (§5.6); Navidrome's streams and covers, and YouTube thumbnails, are
     // outside it.

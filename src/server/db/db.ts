@@ -196,6 +196,29 @@ const MIGRATIONS: string[] = [
   );
   CREATE INDEX stems_jobs_next ON stems_jobs(status, priority DESC, created_at);
   `,
+  // Guest accounts (guests.ts): a user made from a one-time code another user showed as a QR code,
+  // signed in on one phone until `expires_at`, then deleted. `keep_*` is the guest's request to stay
+  // (a username and a password hash) until the person who invited them, or an admin, approves it.
+  `
+  CREATE TABLE guests (
+    user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    invited_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER NOT NULL,
+    keep_username TEXT,
+    keep_password_hash TEXT,
+    keep_requested_at INTEGER
+  );
+  CREATE INDEX guests_expiry ON guests(expires_at);
+  CREATE TABLE guest_codes (
+    code_hash TEXT PRIMARY KEY,
+    created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    duration_ms INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    used_by INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  `,
 ];
 
 export function openDb(path: string): Db {
