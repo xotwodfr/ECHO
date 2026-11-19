@@ -22,9 +22,14 @@ export class ApiError extends Error {
   }
 }
 
+/** How often a read over the API budget asks again, and the longest Retry-After it waits for. */
+const BUDGET_RETRIES = 2;
+const BUDGET_WAIT_MAX_S = 5;
+
 export async function api<T>(
   path: string,
   init: { method?: string; body?: unknown; keepalive?: boolean } = {},
+  retries = BUDGET_RETRIES,
 ): Promise<T> {
   let res: Response;
   try {
@@ -44,6 +49,20 @@ export async function api<T>(
   try {
     body = await res.json();
   } catch {}
+  // Over the per-user API budget (§5.6: bursts of 50, then 10 a second): a read asks again after
+  // the server's Retry-After, rather than showing an error for a burst (pages opened in quick
+  // succession). Writes are not repeated, and sign-in limits send no Retry-After.
+  const wait = Number(res.headers.get('retry-after'));
+  if (
+    res.status === 429 &&
+    (init.method ?? 'GET') === 'GET' &&
+    retries > 0 &&
+    wait > 0 &&
+    wait <= BUDGET_WAIT_MAX_S
+  ) {
+    await new Promise((r) => setTimeout(r, wait * 1000));
+    return api<T>(path, init, retries - 1);
+  }
   if (!res.ok) {
     const e = new ApiError(res.status, (body ?? {}) as Record<string, string>);
     if (e.code === 'navidrome.unreachable') reportDown('navidrome');
