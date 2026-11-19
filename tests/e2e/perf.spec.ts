@@ -126,27 +126,37 @@ test('PERF-03, LYR-26: Stage main-thread work and the lyric update per frame at 
   await page.evaluate(() => localStorage.setItem('echo.visuals.quality', '"high"'));
   await playAlbum(page, 'al-1'); // its first track has word-synced lyrics (mock Navidrome)
   await expect(page.getByRole('list', { name: 'Lyrics' })).toBeAttached();
+  type Perf = { frameMs: number[]; lyricsMs: number[]; tiers: string[]; tier: string };
+  // The setting holds: the Stage draws at T0.
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as { __echoPerf?: Perf }).__echoPerf?.tier))
+    .toBe('T0');
   await page.waitForTimeout(8000);
+  // A manual tier still gives way below 20 fps for 3 s (VISUALIZER_SPEC.md §8.2), and SwiftShader
+  // draws T0 at 12-15 fps: the governor steps down to T1 about 7 s in (60 frames for the refresh
+  // rate, then 3 s), before or after the 8 s are up as the machine's speed falls. The costs are the
+  // frames drawn at T0.
   const p = await page.evaluate(() => {
-    const perf = (
-      window as unknown as { __echoPerf: { frameMs: number[]; lyricsMs: number[]; tier: string } }
-    ).__echoPerf;
+    const perf = (window as unknown as { __echoPerf: Perf }).__echoPerf;
+    const at = (xs: number[]) => xs.filter((_, i) => perf.tiers[i] === 'T0');
     const q = (xs: number[], f: number) =>
       [...xs].sort((a, b) => a - b)[Math.floor(xs.length * f)] as number;
+    const frameMs = at(perf.frameMs);
+    const lyricsMs = at(perf.lyricsMs);
     return {
       tier: perf.tier,
       frames: perf.frameMs.length,
-      frameMedian: q(perf.frameMs, 0.5),
-      frameP95: q(perf.frameMs, 0.95),
-      lyricsMedian: q(perf.lyricsMs, 0.5),
-      lyricsP95: q(perf.lyricsMs, 0.95),
+      framesAtT0: frameMs.length,
+      frameMedian: q(frameMs, 0.5),
+      frameP95: q(frameMs, 0.95),
+      lyricsMedian: q(lyricsMs, 0.5),
+      lyricsP95: q(lyricsMs, 0.95),
     };
   });
   console.log(`stage perf on this machine: ${JSON.stringify(p)}`);
-  expect(p.tier).toBe('T0');
   // SwiftShader draws T0 in software, so frames are few here; the main-thread costs per frame are
   // what this measures. The reference clients' GPU numbers (PERF-01) are the owner's runs.
-  expect(p.frames).toBeGreaterThan(30);
+  expect(p.framesAtT0).toBeGreaterThan(30);
   expect(p.lyricsMedian).toBeLessThanOrEqual(2.5); // LYR-26
   expect(p.frameMedian).toBeLessThanOrEqual(4); // PERF-03
 });

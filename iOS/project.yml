@@ -36,3 +36,24 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         # Your Apple developer team, to run it on a device (Xcode → Signing & Capabilities):
         # DEVELOPMENT_TEAM: XXXXXXXXXX
+  # The Swift tests (Swift Testing, Apple/Tests): the API client, models and sign-in against the
+  # server's recorded answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its
+  # own with the API code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
+  ECHOTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../Apple/Shared/Api
+      - path: ../Apple/Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        SWIFT_VERSION: "5.0"
+schemes:
+  ECHOTests:
+    build:
+      targets:
+        ECHOTests: [test]
+    test:
+      targets: [ECHOTests]

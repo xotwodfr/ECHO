@@ -7,13 +7,13 @@ struct EchoApp: App {
     var body: some Scene {
         WindowGroup {
             if let screen = demoScreen {
-                MacDemo(screen: screen)
+                DemoRoot(screen: screen)
                     .frame(minWidth: 1100, minHeight: 720)
             } else {
-                RootView()
-                    .frame(minWidth: 480, minHeight: 400)
+                RootView(session: Live.session)
+                    .frame(minWidth: 760, minHeight: 520)
             }
         }
-        .defaultSize(width: demoScreen == nil ? 960 : 1280, height: demoScreen == nil ? 680 : 800)
+        .defaultSize(width: demoScreen == nil ? 1100 : 1280, height: demoScreen == nil ? 720 : 800)
     }
 }

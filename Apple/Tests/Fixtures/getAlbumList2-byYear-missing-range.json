@@ -1,0 +1,9 @@
+{
+  "subsonic-response": {
+    "status": "failed",
+    "error": {
+      "code": 10,
+      "message": "missing parameter: 'fromYear'"
+    }
+  }
+}

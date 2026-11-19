@@ -1,11 +1,13 @@
 name: apple
 
 # ECHO for iPhone and Mac (iOS/, macOS/, Apple/Shared): built unsigned on the macOS 26 runner with
-# Xcode 26, then the Liquid Glass preview (launch argument -ECHODemo, Apple/Shared/Preview) is
-# screenshotted in the iOS 26 simulator and on the runner's Mac. The builds and screenshots are
-# uploaded, and on a branch the screenshots are committed back under Apple/Screenshots, where the
-# sessions that work on this repository (which cannot download artifacts) see them. A push by this
-# workflow's token starts no workflow, so that commit does not run it again.
+# Xcode 26, the Swift tests (Apple/Tests, Swift Testing) run on the Mac and in the iOS 26 simulator,
+# then every screen (launch argument -ECHODemo, Apple/Shared/Preview) is screenshotted in the
+# simulator and on the runner's Mac. The builds, screenshots and test logs are uploaded, and on a
+# branch the screenshots are committed back under Apple/Screenshots, where the sessions that work on
+# this repository (which cannot download artifacts) see them. A failed test fails the run, after the
+# screenshots are in. A push by this workflow's token starts no workflow, so that commit does not
+# run it again.
 on:
   push:
     branches: [main, 'claude/**']
@@ -67,6 +69,20 @@ jobs:
           xcodebuild -quiet -project macOS/ECHO.xcodeproj -target ECHO -configuration Debug
           SYMROOT="$PWD/build/mac" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
 
+      - name: Tests on the Mac (Swift Testing)
+        id: mac_tests
+        continue-on-error: true # the screenshots still come; the last step fails the run
+        run: |
+          mkdir -p build/logs
+          limit() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
+          limit 1200 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS' \
+            -derivedDataPath build/tests-mac CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO \
+            > build/logs/tests-mac.log 2>&1 && status=0 || status=$?
+          # Each test's result, every issue with its expectation, and any compile error.
+          grep -E '✔|✘|◇|↳|Test case|Test run|recorded an issue|Expectation failed|error:|\*\* TEST' build/logs/tests-mac.log | tail -400 || true
+          if [ "$status" != 0 ]; then echo "::error::Mac tests: xcodebuild exited $status"; tail -60 build/logs/tests-mac.log; fi
+          exit "$status"
+
       - name: The icon in the builds
         run: |
           for app in build/ios/Debug-iphonesimulator/ECHO.app build/mac/Debug/ECHO.app; do
@@ -98,7 +114,7 @@ jobs:
           limit 60 xcrun simctl ui "$dev" appearance dark
           limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           limit 480 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
-          for s in home album nowplaying lyrics library search; do
+          for s in home album nowplaying lyrics library search signin shell; do
             f="Apple/Screenshots/iphone-$s.png"
             limit 180 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             # A slow first frame leaves the shot black (lyrics, run 7): a black PNG is a few dozen KB,
@@ -171,7 +187,7 @@ jobs:
               break
           }
           EOF
-          for s in library lyrics; do
+          for s in library lyrics signin shell; do
             pkill -x ECHO || true
             open -n "$app" --args -ECHODemo "$s"
             sleep 10
@@ -192,11 +208,31 @@ jobs:
           done
           ls -la Apple/Screenshots
 
+      - name: Tests in the iPhone simulator (Swift Testing)
+        id: ios_tests
+        continue-on-error: true
+        run: |
+          dev=$(cat /tmp/sim-udid)
+          mkdir -p build/logs
+          limit() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
+          limit 1500 xcodebuild test -project iOS/ECHO.xcodeproj -scheme ECHOTests \
+            -destination "platform=iOS Simulator,id=$dev" -derivedDataPath build/tests-ios CODE_SIGNING_ALLOWED=NO \
+            > build/logs/tests-ios.log 2>&1 && status=0 || status=$?
+          grep -E '✔|✘|◇|↳|Test case|Test run|recorded an issue|Expectation failed|error:|\*\* TEST' build/logs/tests-ios.log | tail -400 || true
+          if [ "$status" != 0 ]; then echo "::error::iPhone tests: xcodebuild exited $status"; tail -60 build/logs/tests-ios.log; fi
+          exit "$status"
+
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: screenshots
           path: Apple/Screenshots
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-logs
+          path: build/logs
 
       - name: Zip the apps
         run: |
@@ -220,3 +256,9 @@ jobs:
             git pull --rebase origin "${{ github.ref_name }}" && git push origin "HEAD:${{ github.ref_name }}" && break
             sleep 5
           done
+
+      - name: The tests passed
+        if: always()
+        run: |
+          echo "Mac: ${{ steps.mac_tests.outcome }}; iPhone simulator: ${{ steps.ios_tests.outcome }}"
+          [ "${{ steps.mac_tests.outcome }}" = success ] && [ "${{ steps.ios_tests.outcome }}" = success ]

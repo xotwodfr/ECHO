@@ -1,0 +1,31 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2",
+    "openSubsonic": true,
+    "song": {
+      "id": "al-1-t1",
+      "title": "Harbour Lights 1",
+      "artist": "Lowfield",
+      "artistId": "ar-1",
+      "album": "Harbour Lights",
+      "albumId": "al-1",
+      "coverArt": "al-1",
+      "track": 1,
+      "year": 2019,
+      "genre": "Ambient",
+      "duration": 20,
+      "suffix": "wav",
+      "contentType": "audio/wav",
+      "bitRate": 128,
+      "replayGain": {
+        "trackGain": -6,
+        "albumGain": -7,
+        "trackPeak": 0.9,
+        "albumPeak": 0.95
+      }
+    }
+  }
+}

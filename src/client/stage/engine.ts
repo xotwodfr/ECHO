@@ -57,18 +57,22 @@ const browserEnv: LoopEnv = {
   },
 };
 
-const perf: { frameMs: number[]; lyricsMs: number[]; tier: Tier } = {
+/** Per frame: its main-thread time, the lyric field's share, and the tier it was drawn at. */
+const perf: { frameMs: number[]; lyricsMs: number[]; tiers: Tier[]; tier: Tier } = {
   frameMs: [],
   lyricsMs: [],
+  tiers: [],
   tier: 'T1',
 };
 function recordPerf(frameMs: number, lyricsMs: number, tier: Tier) {
   perf.frameMs.push(frameMs);
   perf.lyricsMs.push(lyricsMs);
+  perf.tiers.push(tier);
   perf.tier = tier;
   if (perf.frameMs.length > 600) {
     perf.frameMs.shift();
     perf.lyricsMs.shift();
+    perf.tiers.shift();
   }
   (window as unknown as { __echoPerf?: typeof perf }).__echoPerf = perf;
 }
