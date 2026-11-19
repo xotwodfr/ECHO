@@ -44,7 +44,12 @@ it was. You can change it at any time without a gap, because both parts are in o
   measured −155 dB (gone); at 100 % it measured −47 dB. A browser that mixes 5.1 down to stereo
   itself delivers empty rear channels. After 20 s of exact silence there while the music plays,
   the app says so ("Try Chrome or Firefox").
-- Karaoke on/off and the level are kept per device, like the volume.
+- **Key** (2026-11-19, web and Android): under the Vocals slider, the Key moves the song up or
+  down by up to six semitones at the same tempo, to suit the singer. It's kept while Karaoke is
+  off and applies only while Karaoke is on. The web uses its own WSOLA pitch shifter in an
+  AudioWorklet, and Android uses ExoPlayer's pitch (Sonic). See `docs/PLAYBACK_ARCHITECTURE.md`
+  §5.6.
+- Karaoke on/off, the level and the key are kept per device, like the volume.
 
 ## Setting it up
 

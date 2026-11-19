@@ -1,7 +1,13 @@
-// The <audio> → Web Audio path (VISUALIZER_SPEC.md §3.1): each element → its own ReplayGain → one
-// shared analyser tap → user volume → output. One AudioContext, created on the first user gesture
-// (autoplay policy). The Navidrome provider attaches two elements (A/B, for gapless hand-overs);
-// the fixture provider one.
+import { fadeCurve } from './crossfade.ts';
+import { bandFrequency, bandType, EQ_BANDS, EQ_Q, eqPreampDb } from './eq.ts';
+import { pitchDelay } from './pitch.ts';
+import pitchWorklet from './pitch.worklet.ts?worker&url';
+
+// The <audio> → Web Audio path (VISUALIZER_SPEC.md §3.1): each element → karaoke mix → (key change,
+// only while it is off 0) → its own ReplayGain → its crossfade gain → one shared analyser tap →
+// (equalizer, only while it is on) → user volume → output. One AudioContext, created on the first
+// user gesture (autoplay policy). The Navidrome provider attaches two elements (A/B, for gapless
+// hand-overs and crossfades); the fixture provider one.
 
 /** ReplayGain in dB as a linear gain, limited so the peak stays under full scale; unknown: unity. */
 export function replayGainLinear(db: number | undefined, peak: number | undefined) {
@@ -38,6 +44,14 @@ export function createAudioGraph() {
   let tapNode: AnalyserNode | null = null;
   let volume = 1;
   let vocalLevel = 0;
+  /** Karaoke's key change as a frequency ratio; 1 leaves the pitch shifter out. */
+  let pitchRatio = 1;
+  /** The AudioWorklet module (pitch.worklet.ts), fetched the first time it's needed. */
+  let pitchModule: 'none' | 'loading' | 'ready' | 'failed' = 'none';
+  let eq: { on: boolean; gains: number[] } = { on: false, gains: [] };
+  /** Whether the tap feeds the equalizer (else straight into the volume). */
+  let eqRouted = false;
+  let eqNodes: { pre: GainNode; bands: BiquadFilterNode[] } | null = null;
   const perceptual = (v: number) => v ** 3;
   type Mix = {
     centre: GainNode;
@@ -49,9 +63,86 @@ export function createAudioGraph() {
     el: HTMLAudioElement;
     gain: number;
     node: GainNode | null;
+    /** The crossfade's gain, after the ReplayGain. */
+    fade: GainNode | null;
     karaoke: boolean;
     mix: Mix | null;
+    merge: ChannelMergerNode | null;
+    pitch: AudioWorkletNode | null;
   }[] = [];
+
+  /** Puts the pitch shifter in each voice's chain, or takes it out, as the key asks. */
+  const routePitch = (v: (typeof voices)[number]) => {
+    if (!ctx || !v.merge || !v.node) return;
+    const want = pitchRatio !== 1;
+    if (want && !v.pitch) {
+      if (pitchModule === 'none') {
+        // Lazy: the worklet's code is fetched the first time the key moves off 0.
+        pitchModule = 'loading';
+        ctx.audioWorklet
+          .addModule(pitchWorklet)
+          .then(() => {
+            pitchModule = 'ready';
+            for (const x of voices) routePitch(x);
+          })
+          .catch(() => {
+            pitchModule = 'failed';
+          });
+      }
+      if (pitchModule !== 'ready') return;
+      v.pitch = new AudioWorkletNode(ctx, 'echo-pitch', {
+        numberOfInputs: 1,
+        numberOfOutputs: 1,
+        outputChannelCount: [2],
+        channelCount: 2,
+        channelCountMode: 'explicit',
+      });
+      v.merge.disconnect();
+      v.merge.connect(v.pitch).connect(v.node);
+    }
+    if (!v.pitch) return;
+    if (want) v.pitch.port.postMessage({ ratio: pitchRatio });
+    else {
+      v.merge.disconnect();
+      v.merge.connect(v.node);
+      v.pitch.disconnect();
+      v.pitch = null; // a new one starts clean next time
+    }
+  };
+
+  /** The equalizer between the tap and the volume, or straight through while it is off. */
+  const routeEq = () => {
+    if (!ctx || !tapNode || !volumeNode) return;
+    const on = eq.on && eq.gains.some((g) => g !== 0);
+    if (on && !eqNodes) {
+      const c = ctx;
+      const pre = c.createGain();
+      const bands = EQ_BANDS.map((_, i) => {
+        const b = c.createBiquadFilter();
+        b.type = bandType(i);
+        b.frequency.value = bandFrequency(i);
+        b.Q.value = EQ_Q;
+        b.gain.value = 0;
+        return b;
+      });
+      let last: AudioNode = pre;
+      for (const b of bands) last = last.connect(b);
+      last.connect(volumeNode);
+      eqNodes = { pre, bands };
+    }
+    if (on && eqNodes) {
+      // A short glide, so moving a band never clicks.
+      const t = ctx.currentTime;
+      eqNodes.pre.gain.setTargetAtTime(10 ** (eqPreampDb(eq.gains) / 20), t, 0.02);
+      eqNodes.bands.forEach((b, i) => {
+        b.gain.setTargetAtTime(eq.gains[i] ?? 0, t, 0.02);
+      });
+    }
+    if (on === eqRouted) return;
+    eqRouted = on;
+    tapNode.disconnect();
+    tapNode.connect(on && eqNodes ? eqNodes.pre : volumeNode);
+  };
 
   const setMix = (v: (typeof voices)[number]) => {
     if (!v.mix || !ctx) return;
@@ -101,8 +192,11 @@ export function createAudioGraph() {
     sink.connect(ctx.destination);
     ctx.createMediaElementSource(v.el).connect(upmix);
     merge.connect(v.node);
-    v.node.connect(tapNode);
+    v.fade = ctx.createGain();
+    v.node.connect(v.fade).connect(tapNode);
     v.mix = { centre, rears, front, back };
+    v.merge = merge;
+    routePitch(v);
     const g = vocalGains(v.karaoke, vocalLevel);
     centre.gain.value = g.centre;
     for (const r of rears) r.gain.value = g.rear;
@@ -115,8 +209,11 @@ export function createAudioGraph() {
         el,
         gain: 1,
         node: null as GainNode | null,
+        fade: null as GainNode | null,
         karaoke: false,
         mix: null as Mix | null,
+        merge: null as ChannelMergerNode | null,
+        pitch: null as AudioWorkletNode | null,
       };
       voices.push(v);
       wire(v);
@@ -130,6 +227,22 @@ export function createAudioGraph() {
         setKaraoke(on: boolean) {
           v.karaoke = on;
           setMix(v);
+        },
+        /**
+         * Crossfade: this voice's gain runs from where it is to silence (`out`) or from silence to
+         * full (`in`) over `seconds`, on an equal-power curve.
+         */
+        fade(direction: 'in' | 'out', seconds: number) {
+          if (!ctx || !v.fade) return;
+          const g = v.fade.gain;
+          g.cancelScheduledValues(0);
+          g.setValueCurveAtTime(fadeCurve(direction), ctx.currentTime, Math.max(0.05, seconds));
+        },
+        /** Back to full at once (a fade finished or was cut short). */
+        unfade() {
+          if (!v.fade || !ctx) return;
+          v.fade.gain.cancelScheduledValues(0);
+          v.fade.gain.setValueAtTime(1, ctx.currentTime);
         },
         /** For a karaoke voice: true when its rears are silent while its fronts play. */
         downmixed() {
@@ -147,6 +260,16 @@ export function createAudioGraph() {
       vocalLevel = level;
       for (const v of voices) setMix(v);
     },
+    /** Karaoke's key change as a frequency ratio (1: none, and the shifter leaves the chain). */
+    setPitchRatio(ratio: number) {
+      pitchRatio = ratio;
+      for (const v of voices) routePitch(v);
+    },
+    /** The equalizer: on or off, and its ten bands' gains in dB (eq.ts). */
+    setEq(on: boolean, gains: number[]) {
+      eq = { on, gains };
+      routeEq();
+    },
     /** Builds the graph on first use and resumes a suspended context; call from a user gesture. */
     start() {
       if (!ctx) {
@@ -160,6 +283,7 @@ export function createAudioGraph() {
         volumeNode.gain.value = perceptual(volume);
         tapNode.connect(volumeNode).connect(ctx.destination);
         for (const v of voices) wire(v);
+        routeEq();
       }
       if (ctx.state === 'suspended') void ctx.resume();
     },
@@ -170,7 +294,10 @@ export function createAudioGraph() {
     },
     /** Output latency in ms (`outputLatency`, else `baseLatency`); 0 before the graph exists. */
     latencyMs() {
-      return ctx ? 1000 * (ctx.outputLatency || ctx.baseLatency || 0) : 0;
+      if (!ctx) return 0;
+      // The key change delays the music by its grain and search (pitch.ts), so the lyrics wait too.
+      const shift = voices.some((v) => v.pitch) ? pitchDelay(ctx.sampleRate) / ctx.sampleRate : 0;
+      return 1000 * (ctx.outputLatency || ctx.baseLatency || 0) + 1000 * shift;
     },
     /** The analyser tap (VISUALIZER_SPEC.md §3.1), once the graph exists. */
     analyser() {

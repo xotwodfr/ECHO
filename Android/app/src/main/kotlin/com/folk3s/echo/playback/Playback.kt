@@ -154,6 +154,8 @@ class Playback(private val app: EchoApp) {
           .setAlbumTitle(t.album.title)
           .setArtworkUri(t.cover?.let { Uri.parse(app.api.url(it)) })
           .setDurationMs(t.durationMs.takeIf { it > 0 })
+          // The crossfade stays out of an album (Crossfader.albumOf).
+          .setExtras(android.os.Bundle().apply { putString(Crossfader.ALBUM_KEY, t.album.id ?: t.album.key) })
           .build(),
       )
       .build()

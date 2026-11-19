@@ -108,6 +108,7 @@ sealed interface Route {
   data class Mix(val id: String) : Route
   data class Wrapped(val year: Int) : Route
   data object Settings : Route
+  data object Equalizer : Route
   data object NowPlaying : Route
   data object Listen : Route
 }
@@ -238,7 +239,8 @@ private fun Shell() {
               is Route.Genre -> GenreScreen(r.name, nav)
               is Route.Mix -> MixScreen(r.id, nav, picker)
               is Route.Wrapped -> WrappedScreen(r.year, nav)
-              Route.Settings -> SettingsScreen()
+              Route.Settings -> SettingsScreen(onEqualizer = { nav.go(Route.Equalizer) })
+              Route.Equalizer -> EqualizerScreen(nav)
               else -> {}
             }
             }

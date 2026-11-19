@@ -2166,6 +2166,38 @@ a {
   width: 100%;
 }
 
+/* Settings → Equalizer: a row per band, frequency | slider | gain; dimmed while it is off. */
+.pref-eq {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.pref-eq[data-off] {
+  opacity: 0.6;
+}
+
+.pref-eq-band {
+  display: contents;
+}
+
+.pref-eq .slider--volume {
+  width: 100%;
+}
+
+.pref-eq-hz,
+.pref-eq-db {
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pref-eq-db {
+  min-width: calc(var(--hit-lg) * 1.5);
+  text-align: end;
+}
+
 .keymap {
   display: grid;
   gap: var(--sp-2);
@@ -2868,6 +2900,11 @@ a {
 .karaoke-vocals-value {
   font: var(--fl-type-caption) var(--font-ui);
   color: var(--muted);
+}
+
+/* Vocals over Key: the two sliders start at the same place. */
+.karaoke-vocals-label {
+  min-width: calc(var(--hit-lg) * 1.5);
 }
 
 .karaoke-vocals-value {

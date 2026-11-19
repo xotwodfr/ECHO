@@ -137,7 +137,11 @@ export interface PlaybackProvider {
   pause(): Promise<void>;
   seek(ms: number): Promise<void>;
   setVolume(v: number): Promise<void>; // 0..1 UI value
-  preload?(next: Track): Promise<void>;
+  /**
+   * Buffers the next track for a gapless hand-over. `crossfade`, asked when the fade would start,
+   * says whether these two may crossfade (not under repeat-one, not within an album).
+   */
+  preload?(next: Track, opts?: { crossfade?: () => boolean }): Promise<void>;
 
   on(event: 'state', cb: (s: ProviderState) => void): Unsubscribe;
   on(event: 'ended', cb: () => void): Unsubscribe;

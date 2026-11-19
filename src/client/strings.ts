@@ -358,7 +358,28 @@ export const strings = {
     scrobble: 'Scrobble plays to Navidrome',
     autoplay: 'Autoplay',
     autoplayHint: 'When your music ends, similar songs play. This device only.',
-    crossfade: 'Crossfade between tracks',
+    crossfade: 'Crossfade',
+    crossfadeText: (sec: number) => (sec === 0 ? 'Off' : `${sec} s`),
+    crossfadeHint:
+      'Each song fades out as the next fades in. Songs from the same album play straight into each other, without a fade. This device only.',
+    equalizer: 'Equalizer',
+    eqOn: 'Use the equalizer',
+    eqHint:
+      'Shapes the sound on this device. Boosts lower the overall level a little, so loud songs never distort.',
+    eqPreset: 'Preset',
+    eqPresetNames: {
+      flat: 'Flat',
+      bass: 'Bass boost',
+      treble: 'Treble boost',
+      vocal: 'Vocal',
+      loudness: 'Loudness',
+      acoustic: 'Acoustic',
+      electronic: 'Electronic',
+      custom: 'Custom',
+    },
+    eqBand: (hz: number) => (hz >= 1000 ? `${hz / 1000} kHz` : `${hz} Hz`),
+    eqGainText: (db: number) => (db > 0 ? `+${db} dB` : db < 0 ? `−${-db} dB` : '0 dB'),
+    eqBandsHint: 'Moving a band switches to Custom, starting from the preset you had.',
     lyrics: 'Lyrics',
     size: 'Lyric size',
     sizeNames: { '0.85': 'Small', '1': 'Default', '1.15': 'Large', '1.3': 'Largest' },
@@ -704,6 +725,12 @@ export const strings = {
     off: 'Karaoke off',
     vocals: 'Vocals',
     vocalsValue: (pct: number) => `${pct}%`,
+    key: 'Key',
+    keyValue: (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0'),
+    keyText: (n: number) =>
+      n === 0
+        ? 'Original key'
+        : `${n > 0 ? 'Up' : 'Down'} ${Math.abs(n)} ${Math.abs(n) === 1 ? 'semitone' : 'semitones'}`,
     shelf: 'Karaoke',
     make: 'Make karaoke version',
     preparing: (ahead: number) =>

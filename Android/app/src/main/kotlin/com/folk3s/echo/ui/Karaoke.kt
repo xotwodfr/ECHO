@@ -25,7 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.folk3s.echo.echo
 import com.folk3s.echo.playback.KaraokeState
+import com.folk3s.echo.playback.AudioMath.KEY_RANGE
 import com.folk3s.echo.playback.KaraokeStatus
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 // Karaoke mode's controls (docs/KARAOKE.md): the vocals slider, under Now Playing's pills and over
 // the lyrics view's dock, and a line saying where the karaoke version is.
@@ -48,7 +51,58 @@ fun karaokeNote(s: KaraokeState): String? =
     KaraokeStatus.Downmixed -> "This phone mixes 5.1 audio down to stereo, so the voice stays in."
   }
 
-/** The vocals slider: 0 % is the instrumental, 100 % the song as recorded. */
+private fun keyValue(n: Int) = if (n > 0) "+$n" else if (n < 0) "−${-n}" else "0"
+
+private fun keyText(n: Int) =
+  if (n == 0) "Original key" else "${if (n > 0) "Up" else "Down"} ${abs(n)} ${if (abs(n) == 1) "semitone" else "semitones"}"
+
+/**
+ * Karaoke's key, under the vocals: up or down by up to six semitones at the same tempo, kept for
+ * next time and applied only while Karaoke is on. A KEY knob (one detent a semitone) in Hi-fi.
+ */
+@Composable
+private fun KeyControl(tint: Color) {
+  val app = LocalContext.current.echo
+  val prefs by app.prefs.state.collectAsStateWithLifecycle()
+  val key = prefs.karaokeKey
+  if (look.material == Material.HiFi)
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp).matter(matter.paper, 8.dp, seed = 72, depth = 0.8f).padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+      val ink = inkOn(matter.paper, matter.ink)
+      Text("KEY", color = ink, style = MaterialTheme.typography.labelMedium.copy(letterSpacing = androidx.compose.ui.unit.TextUnit(1.5f, androidx.compose.ui.unit.TextUnitType.Sp)))
+      Spacer(Modifier.width(12.dp))
+      Knob((key + KEY_RANGE) / (2f * KEY_RANGE), { v -> app.karaoke.setKey((v * 2 * KEY_RANGE).roundToInt() - KEY_RANGE) }, "Key", 40.dp) { if (prefs.themeSounds) app.sounds.play(Material.HiFi, Sound.Toggle) }
+      Spacer(Modifier.width(12.dp))
+      Text("move it to suit your voice", color = ink.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+      Text(keyValue(key), color = ink.copy(alpha = 0.85f), style = MaterialTheme.typography.labelMedium)
+    }
+  else
+    Row(verticalAlignment = Alignment.CenterVertically) {
+      Text("Key", color = tint.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(28.dp))
+      Slider(
+        value = key.toFloat(),
+        onValueChange = { app.karaoke.setKey(it.roundToInt()) },
+        valueRange = -KEY_RANGE.toFloat()..KEY_RANGE.toFloat(),
+        steps = 2 * KEY_RANGE - 1,
+        modifier =
+          Modifier.weight(1f).semantics {
+            contentDescription = "Key"
+            stateDescription = keyText(key)
+          },
+        colors =
+          SliderDefaults.colors(
+            thumbColor = tint,
+            activeTrackColor = tint,
+            inactiveTrackColor = tint.copy(alpha = 0.22f),
+            activeTickColor = tint.copy(alpha = 0.4f),
+            inactiveTickColor = tint.copy(alpha = 0.4f),
+          ),
+      )
+      Spacer(Modifier.width(10.dp))
+      Text(keyValue(key), color = tint.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(40.dp))
+    }
+}
+
+/** The vocals slider: 0 % is the instrumental, 100 % the song as recorded; the key under it. */
 @Composable
 fun VocalsSlider(tint: Color, modifier: Modifier = Modifier, showNote: Boolean = true) {
   val app = LocalContext.current.echo
@@ -89,6 +143,7 @@ fun VocalsSlider(tint: Color, modifier: Modifier = Modifier, showNote: Boolean =
       Spacer(Modifier.width(10.dp))
       Text("${(prefs.vocalLevel * 100).toInt()}%", color = tint.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(40.dp))
     }
+    KeyControl(tint)
     val note = if (showNote) karaokeNote(state) else null
     if (note != null)
       Text(note, color = tint.copy(alpha = 0.65f), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = 28.dp, top = 2.dp))

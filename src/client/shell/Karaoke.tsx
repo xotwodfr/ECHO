@@ -8,8 +8,10 @@ import {
   markReady,
   readyKaraokeSongs,
   setKaraoke,
+  setKaraokeKey,
   setVocalLevel,
 } from '../playback/karaoke.ts';
+import { KEY_RANGE } from '../playback/pitch.ts';
 import { prefsStore } from '../prefs.ts';
 import { strings } from '../strings.ts';
 import { IconButton } from '../ui/controls.tsx';
@@ -38,9 +40,13 @@ export function karaokeNote(s: KaraokeState): string | null {
   }
 }
 
-/** The Vocals slider: 0% the instrumental, 100% the song as recorded. */
+/**
+ * The Vocals slider: 0% the instrumental, 100% the song as recorded. Under it, the Key: up or
+ * down by up to six semitones at the same tempo, for a key that suits the singer.
+ */
 export function VocalsSlider({ note = false }: { note?: boolean }) {
   const level = useStore(prefsStore, (p) => p.playback.vocalLevel);
+  const key = useStore(prefsStore, (p) => p.playback.karaokeKey);
   const state = useStore(karaokeStore);
   const text = note ? karaokeNote(state) : null;
   return (
@@ -62,6 +68,22 @@ export function VocalsSlider({ note = false }: { note?: boolean }) {
         <span className="karaoke-vocals-value">
           {strings.karaoke.vocalsValue(Math.round(level * 100))}
         </span>
+      </div>
+      <div className="karaoke-vocals-row">
+        <span className="karaoke-vocals-label">{strings.karaoke.key}</span>
+        <Slider
+          variant="volume"
+          label={strings.karaoke.key}
+          value={key}
+          min={-KEY_RANGE}
+          max={KEY_RANGE}
+          step={1}
+          bigStep={2}
+          wheel
+          valueText={(v) => strings.karaoke.keyText(Math.round(v))}
+          onChange={setKaraokeKey}
+        />
+        <span className="karaoke-vocals-value">{strings.karaoke.keyValue(key)}</span>
       </div>
       {text && (
         <p className="karaoke-note" role="status">
