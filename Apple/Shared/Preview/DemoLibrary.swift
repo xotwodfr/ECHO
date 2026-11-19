@@ -69,10 +69,11 @@ struct DemoLibrary: LibrarySource {
     ]
 
     static var playlistList: [Playlist] {
-        [("late-ferries", "Late Ferries"), ("rain-on-glass", "Rain on Glass")].map { id, name in
+        [("late-ferries", "Late Ferries", DemoCover.harbour), ("rain-on-glass", "Rain on Glass", DemoCover.glass)].map {
+            id, name, art in
             let entries = songs(playlistSongs[id] ?? [])
             return Playlist(
-                id: id, name: name, tracks: entries.count, cover: nil, owner: "ada",
+                id: id, name: name, tracks: entries.count, cover: cover(art), owner: "ada",
                 durationSec: entries.reduce(0) { $0 + $1.seconds })
         }
     }

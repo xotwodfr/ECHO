@@ -270,7 +270,7 @@ struct MacAlbums: View {
         .navigationTitle("Albums")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Picker("Sort", selection: Binding(get: { library.albumSort }, set: { library.setSort($0) })) {
+                Picker("Sort", selection: Binding(get: { library.albumSort }, set: { _ = library.setSort($0) })) {
                     ForEach(AlbumSort.allCases) { sort in
                         Text(sort.label).tag(sort)
                     }

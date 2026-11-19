@@ -29,6 +29,8 @@ targets:
         SWIFT_VERSION: "5.0"
         # The Icon Composer icon in Apple/Shared (Liquid Glass layers), compiled by actool.
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The amber accent (Apple/Shared/Assets.xcassets): the Mac sidebar's selection, menus' tint.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   # The Swift tests (Swift Testing, Apple/Tests): the API client, models, sign-in and the library
   # (hearts, the sorts, Wanted's Undo, the cover cache) against the server's recorded answers
   # (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own with the API and library

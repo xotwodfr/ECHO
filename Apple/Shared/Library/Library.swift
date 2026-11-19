@@ -222,12 +222,13 @@ final class Library {
 
     // MARK: - Albums
 
-    /// A new order: the list is asked for again in it.
-    func setSort(_ sort: AlbumSort) {
-        guard sort != albumSort else { return }
+    /// A new order: the list is asked for again in it (the task loading it; nil when unchanged).
+    @discardableResult
+    func setSort(_ sort: AlbumSort) -> Task<Void, Never>? {
+        guard sort != albumSort else { return nil }
         albumSort = sort
         defaults?.set(sort.rawValue, forKey: Self.sortKey)
-        loadAlbums()
+        return loadAlbums()
     }
 
     /// The whole album list in the chosen order, a page at a time (each shown as it comes); a newer
