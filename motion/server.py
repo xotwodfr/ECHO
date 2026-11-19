@@ -34,7 +34,7 @@ THREADS = max(1, int(os.environ.get("ECHO_MOTION_THREADS", "2")))
 CODEC = "h264" if os.environ.get("ECHO_MOTION_CODEC", "hevc") == "h264" else "hevc"
 MAX_IMAGE = 30_000_000  # a cover
 MAX_VIDEO = 60_000_000  # ECHO takes 50 MB uploads
-KEY = re.compile(r"^[A-Za-z0-9._-]{1,200}$")
+KEY = re.compile(r"^[A-Za-z0-9_-]{1,128}$")  # no dots: never a path out of OUT
 NAMES = ("tall.mp4", "square.mp4", "tall.jpg", "square.jpg")
 TYPES = {"mp4": "video/mp4", "jpg": "image/jpeg"}
 

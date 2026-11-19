@@ -304,6 +304,8 @@ def test_the_service_refuses_what_it_cannot_use(service):
     assert request(port, "PUT", "/render/k2?loop=7", b"x")[0] == 400  # not a loop length it makes
     assert request(port, "PUT", "/render/k2?loop=8&style=drift", b"x")[0] == 400
     assert request(port, "PUT", "/render/../x?loop=8", b"x")[0] == 404
+    assert request(port, "PUT", "/render/..?loop=8", b"x")[0] == 404  # a key is never a path
+    assert request(port, "DELETE", "/motion/..")[0] == 404
     assert request(port, "PUT", "/render/k2?loop=8", b"not an image at all")[0] == 422
     status, _, body = request(port, "PUT", "/transcode/k3", b"\x00\x00\x00\x18ftypisom" + b"\x00" * 64)
     assert status == 422 and json.loads(body)["error"] == "bad_video"
