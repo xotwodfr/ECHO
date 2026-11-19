@@ -20,6 +20,9 @@ android {
     // ./gradlew assembleDebug -Pecho.devUrl=http://10.0.2.2:18797
     buildConfigField("String", "ECHO_URL", "\"https://echo.folk3s.com\"")
     manifestPlaceholders["cleartext"] = "false"
+    // Listen together links open in the app (AndroidManifest.xml): the server's scheme and host.
+    manifestPlaceholders["echoScheme"] = "https"
+    manifestPlaceholders["echoHost"] = "echo.folk3s.com"
   }
 
   // A release key from the environment when there is one (CI: the ECHO_KEYSTORE_* secrets), so every
@@ -40,6 +43,10 @@ android {
   buildTypes {
     debug {
       devUrl?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      devUrl?.let {
+        manifestPlaceholders["echoScheme"] = it.substringBefore("://")
+        manifestPlaceholders["echoHost"] = it.substringAfter("://").substringBefore("/").substringBefore(":")
+      }
       manifestPlaceholders["cleartext"] = "true"
     }
     release {
@@ -53,6 +60,10 @@ android {
     create("qa") {
       initWith(getByName("release"))
       devUrl?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      devUrl?.let {
+        manifestPlaceholders["echoScheme"] = it.substringBefore("://")
+        manifestPlaceholders["echoHost"] = it.substringAfter("://").substringBefore("/").substringBefore(":")
+      }
       manifestPlaceholders["cleartext"] = "true"
     }
   }

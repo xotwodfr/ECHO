@@ -279,6 +279,7 @@ private fun Shell() {
         }
       }
       if (queueOpen) QueueSheet(player, onClose = { queueOpen = false })
+      TogetherHost()
       MenuSheet()
       picking?.let { PlaylistPicker(it) { picking = null } }
     }

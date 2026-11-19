@@ -25,6 +25,7 @@ import { startAutoplay } from './shell/radio.ts';
 import { Shell } from './shell/Shell.tsx';
 import { loadWanted } from './shell/wanted.ts';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
+import { startTogether, takeTogetherLink } from './together/session.ts';
 import { toastStore } from './ui/logic.ts';
 import { motionLevel } from './ui/motion.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
@@ -72,6 +73,8 @@ markAppearance();
 prefsStore.subscribe((s, prev) => s.appearance !== prev.appearance && markAppearance());
 darkQuery.addEventListener('change', markAppearance);
 
+// A Listen together link (`/together/<id>`): offered once signed in (together/session.ts).
+takeTogetherLink(window.location, window.history);
 const store = createViewStore(window, pageTransition);
 
 // Deterministic mode (VISUALIZER_SPEC.md §10): `fixture` supplies Features (a lyric fixture's name
@@ -183,6 +186,9 @@ if ('mediaSession' in navigator) {
 
 // The queue follows a signed-in user across sessions and devices (M5).
 if (signedIn) void startQueueSync(controller, (m) => toastStore.getState().show(m));
+// Listen together: a session this user is in, or the link they opened (docs/TOGETHER.md).
+if (signedIn && controller.provider instanceof NavidromeProvider)
+  startTogether(controller, (m) => toastStore.getState().show(m));
 // YouTube Music: the next songs' audio resolved while this one plays (youtube/radio.ts).
 if (youtube) startYtPrepare(controller);
 

@@ -43,6 +43,7 @@ import { playsRoutes } from './plays.ts';
 import { qrLoginRoutes } from './qrlogin.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
+import { createTogether, type Together, togetherRoutes } from './together.ts';
 import { checkWanted, wantedRoutes, wantedScope } from './wanted.ts';
 import { createCatalogue } from './youtube/catalogue.ts';
 import { createFakeCatalogue } from './youtube/fake.ts';
@@ -60,6 +61,8 @@ export interface AppDeps {
   youtube: YoutubeDeps;
   /** Karaoke mode's queue; off (every song "off") when no stem service is configured. */
   karaoke?: Karaoke | null;
+  /** Listen together's sessions (together.ts); made here when absent. */
+  together?: Together;
   http: HttpConfig;
   /** Development and E2E: palettes of the generated covers without a session (ECHO_DEV_FIXTURES). */
   devFixtures?: boolean;
@@ -190,6 +193,19 @@ export function createApp(deps: AppDeps) {
   app.route(
     '/api/v1',
     guestRoutes({ ...deps.auth, publicOrigin: deps.http.publicOrigin }, requireUser(deps.auth)),
+  );
+  app.route(
+    '/api/v1',
+    togetherRoutes(
+      deps.together ??
+        createTogether({
+          db: deps.auth.db,
+          now: deps.auth.now,
+          publicOrigin: deps.http.publicOrigin,
+          timers: true,
+        }),
+      requireUser(deps.auth),
+    ),
   );
   app.all('/api/*', (c) => c.json({ error: 'not_found' }, 404));
 

@@ -74,6 +74,21 @@ private const val SAVE_DEBOUNCE_MS = 2000L
 private const val SAVE_EVERY_MS = 15_000L
 private const val HISTORY = 50
 
+/**
+ * Listen together (together/Together.kt): while one is set, the transport and the queue go to the
+ * shared session; the player only follows it ([Playback.follow]).
+ */
+interface RemoteQueue {
+  fun toggle()
+  fun next()
+  fun previous()
+  fun seek(ms: Long)
+  fun add(t: Track, next: Boolean)
+  fun play(list: List<Track>, index: Int)
+  /** The song ended here; the session decides what comes next. */
+  fun ended()
+}
+
 /** The saved queue's position: any JSON number, as the web writes a fraction of a ms (QueueTest). */
 internal fun savedPositionMs(saved: JsonObject): Long = saved["positionMs"]?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0
 
@@ -108,6 +123,8 @@ class Playback(private val app: EchoApp) {
   private var recorded = false
   private var queueBase = 0L
   private var saveJob: Job? = null
+  /** Listen together's session, while in one: commands go there. */
+  var remote: RemoteQueue? = null
 
   init {
     val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
@@ -212,6 +229,7 @@ class Playback(private val app: EchoApp) {
 
   fun playList(list: List<Track>, index: Int, ctx: PlayContext) {
     if (list.isEmpty()) return
+    remote?.let { return it.play(list, index.coerceIn(0, list.lastIndex)) }
     run { mc ->
       nextUp = 0
       source = ctx
@@ -221,7 +239,7 @@ class Playback(private val app: EchoApp) {
     }
   }
 
-  fun toggle() = run { mc ->
+  fun toggle() = remote?.toggle() ?: run { mc ->
     when {
       mc.isPlaying -> mc.pause()
       mc.playbackState == Player.STATE_ENDED -> {
@@ -235,12 +253,38 @@ class Playback(private val app: EchoApp) {
     }
   }
 
-  fun next() = run { if (it.hasNextMediaItem()) it.seekToNextMediaItem() }
+  fun next() = remote?.next() ?: run { if (it.hasNextMediaItem()) it.seekToNextMediaItem() }
 
   /** Restart past 3 s, else the track before (the web's Previous). */
-  fun previous() = run { it.seekToPrevious() }
+  fun previous() = remote?.previous() ?: run { it.seekToPrevious() }
 
-  fun seek(ms: Long) = run { it.seekTo(ms.coerceAtLeast(0)) }
+  fun seek(ms: Long) = remote?.seek(ms) ?: run { it.seekTo(ms.coerceAtLeast(0)) }
+
+  // ---- following a Listen together session (together/Together.kt) ----
+
+  /** The session's song, alone in the queue, from [startMs]. */
+  fun follow(t: Track, startMs: Long, play: Boolean, ctx: PlayContext) = run { mc ->
+    nextUp = 0
+    source = ctx
+    mc.setMediaItems(listOf(item(t)), 0, startMs.coerceAtLeast(0))
+    mc.prepare()
+    mc.playWhenReady = play
+  }
+
+  fun followPlay() = run { mc ->
+    if (mc.playbackState == Player.STATE_IDLE) mc.prepare()
+    mc.play()
+  }
+
+  fun followPause() = run { it.pause() }
+
+  fun followSeek(ms: Long) = run { it.seekTo(ms.coerceAtLeast(0)) }
+
+  /** The player's state for following: the song (its Navidrome id), playing, loading, where. */
+  fun followState(): Triple<String?, Boolean, Boolean> {
+    val s = _state.value
+    return Triple(s.track?.id, s.playing, s.buffering)
+  }
 
   fun toggleShuffle() = run { it.shuffleModeEnabled = !it.shuffleModeEnabled }
 
@@ -258,7 +302,7 @@ class Playback(private val app: EchoApp) {
 
   fun addToQueue(t: Track) = enqueue(t, first = false)
 
-  private fun enqueue(t: Track, first: Boolean) = run { mc ->
+  private fun enqueue(t: Track, first: Boolean) = remote?.add(t, first) ?: run { mc ->
     if (mc.mediaItemCount == 0) return@run playList(listOf(t), 0, PlayContext("search", title = t.title))
     val at = mc.currentMediaItemIndex + 1 + if (first) 0 else nextUp
     mc.addMediaItem(at.coerceAtMost(mc.mediaItemCount), item(t))
@@ -400,6 +444,7 @@ class Playback(private val app: EchoApp) {
       override fun onEvents(player: Player, events: Player.Events) {
         val before = _state.value
         publish()
+        if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) && player.playbackState == Player.STATE_ENDED) remote?.ended()
         val after = _state.value
         val jumped = kotlin.math.abs(after.positionNow() - before.positionNow()) > 2000
         if (

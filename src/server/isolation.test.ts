@@ -274,6 +274,26 @@ describe('SEC-11: isolation between users', () => {
     ).json();
     expect(pal.source).toBe('fallback');
 
+    // Listen together: A's session, by its id. B (no Navidrome, so not A's library) can neither
+    // join nor read it, nor act in it; B is in no session; B cannot start one (no library).
+    const jam = (await (await as(A, 'POST', '/api/v1/together', {})).json()) as { id: string };
+    expect(await json(await as(B, 'GET', '/api/v1/together'))).toBe('{"session":null}');
+    expect((await as(B, 'POST', '/api/v1/together', {})).status).toBe(409);
+    expect((await as(B, 'GET', `/api/v1/together/${jam.id}`)).status).toBe(409);
+    expect((await as(B, 'POST', `/api/v1/together/${jam.id}/join`, {})).status).toBe(409);
+    for (const [m, p] of [
+      ['POST', `/api/v1/together/${jam.id}/leave`],
+      ['POST', `/api/v1/together/${jam.id}/queue`],
+      ['DELETE', `/api/v1/together/${jam.id}/queue/x`],
+      ['POST', `/api/v1/together/${jam.id}/control`],
+      ['GET', `/api/v1/together/${jam.id}/events`],
+    ] as const)
+      expect(
+        (await as(B, m, p, m === 'GET' || m === 'DELETE' ? undefined : { action: 'pause' })).status,
+        `${m} ${p}`,
+      ).toBe(403);
+    t.clock.t += 2000; // B's API budget refills
+
     // Admin routes, with A's id: B is not an admin.
     for (const [m, p] of [
       ['GET', '/api/v1/admin/settings'],

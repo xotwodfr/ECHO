@@ -71,7 +71,16 @@ export interface FeatureSource {
 }
 
 export interface PlayContext {
-  kind: 'album' | 'playlist' | 'artist' | 'search' | 'starred' | 'radio' | 'mix' | 'karaoke';
+  kind:
+    | 'album'
+    | 'playlist'
+    | 'artist'
+    | 'search'
+    | 'starred'
+    | 'radio'
+    | 'mix'
+    | 'karaoke'
+    | 'together';
   id?: string;
   title: string;
 }
