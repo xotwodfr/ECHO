@@ -220,9 +220,10 @@ test("the Artists tab is the server's own list, with Retry when it fails (LIB-01
   ).toBeVisible();
 });
 
-test('artists are links to their page: the Artists tab, an album and the dock (S6)', async ({
-  page,
-}) => {
+// S6: artists are links to their page, from the Artists tab, an album's header and the dock. One
+// user each: together the three reloaded the app five times in a few seconds and could run one
+// user out of the per-user API budget (§5.6), leaving an album unloaded or the player idle.
+test('artists are links to their page: from the Artists tab (S6)', async ({ page }) => {
   await signedInWithNavidrome(page);
   await page.goto('/library/artists');
   await page.getByRole('main').getByRole('link', { name: 'Lowfield' }).click();
@@ -238,11 +239,18 @@ test('artists are links to their page: the Artists tab, an album and the dock (S
     2,
   );
   await expect(page.getByRole('region', { name: 'About' })).toContainText('small room by the sea');
-  // From an album's header…
+});
+
+test("artists are links to their page: from an album's header (S6)", async ({ page }) => {
+  await signedInWithNavidrome(page);
   await page.goto('/library/album/al-2');
   await page.locator('.ph-facts').getByRole('link', { name: 'Lowfield' }).click();
   await expect(page).toHaveURL(/\/library\/artist\/ar-1$/);
-  // …and from the dock, while it plays.
+  await expect(page.getByRole('heading', { level: 1, name: 'Lowfield' })).toBeVisible();
+});
+
+test('artists are links to their page: from the dock, while it plays (S6)', async ({ page }) => {
+  await signedInWithNavidrome(page);
   await playAlbum(page, 'al-1');
   await page
     .getByRole('region', { name: 'Player' })
