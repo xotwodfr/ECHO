@@ -533,7 +533,8 @@ export function authRoutes(deps: AuthDeps) {
         username: user.username,
         role: user.role,
         navidrome: !!nd,
-        mustEnrolTotp: !user.totpEnabled && totpForAll(db),
+        mustEnrolTotp: !user.totpEnabled && totpForAll(db) && user.guestUntil === undefined,
+        ...(user.guestUntil !== undefined && { guest: true }),
         youtube: youtubeOf(db, user.id),
       });
     }

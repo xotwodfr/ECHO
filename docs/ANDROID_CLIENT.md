@@ -45,6 +45,30 @@ throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
 
+## v0.7: sign-in and guest accounts (2026-11-19)
+
+Owner decisions (2026-11-19): a more beautiful, smoother sign-in screen (an album art wall,
+chosen from mockups); guest accounts from a QR code. Any user can invite and picks 1 hour, 1 day
+or 1 week. Guests listen only, with a "Keep account" request the inviter approves. The web app
+invites too.
+
+- **Sign in** (`ui/SignIn.kt`): `CoverWall` keeps up to 24 small covers from the last signed-in
+  session, refreshed daily and never on a guest's phone; coloured tiles stand in before that. Six
+  tilted columns drift (still with reduced motion) under a darkening gradient. The wordmark has a
+  gradient brush and rises in with a spring. The card is a translucent panel with a lit edge,
+  fields glow amber when focused, and a refused sign-in shakes. Two-factor works as before.
+- **Scanning** (`ui/GuestScan.kt`): ZXing's `BarcodeView` (QR only, continuous, following the
+  lifecycle) with ECHO's own viewfinder and scan line. `guestCodeOf` accepts only
+  `<this server>/guest#<code>`. `peek` shows whose pass it is, and `redeem` stores the guest's
+  device token in the usual token store.
+- **Guests** (`ui/Guests.kt`, `api/Guests.kt`): `GuestState` holds the guest's `/guests/me` and
+  the inviter's pending keep requests. Home shows the guest's countdown banner (with "Keep
+  account") or, for an inviter, the request card. Settings → Guests has the invite sheet (a ZXing
+  QR code with error correction H and the ECHO mark in its centre, 1 hour / 1 day / 1 week, a
+  countdown, and it notices a join by polling `/guests`), plus the list with Approve and End now.
+  Guests get no heart and no "Add to playlist".
+- Server: `src/server/guests.ts`; the rules are in `GUEST_DENY` (auth/routes.ts).
+
 ## v0.6: Liquid glass, Paper & origami, Retro hi-fi (2026-11-18)
 
 Owner decision (2026-11-18): build the three themes from the mockups (themes3), each with its own

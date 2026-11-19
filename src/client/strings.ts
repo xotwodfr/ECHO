@@ -12,6 +12,7 @@ export const strings = {
     admin: 'Admin',
     profile: 'Profile',
     signOut: 'Log out',
+    inviteGuest: 'Invite a guest',
   },
   home: {
     title: 'Home',
@@ -662,6 +663,40 @@ export const strings = {
     unsynced: 'Lyrics aren’t time-synced for this track',
     sheetLabel: 'Lyrics',
     transcriptLabel: 'Lyrics',
+  },
+  guests: {
+    title: 'Guests',
+    blurb:
+      'Show a QR code; whoever scans it with the ECHO app on their phone can listen for an hour, a day or a week.',
+    invite: 'Invite a guest',
+    inviteHint:
+      'Let someone try ECHO on their phone: they open the ECHO app, tap “Scan a guest code” and point it here.',
+    qrLabel: 'Guest QR code',
+    howLong: 'How long they can listen',
+    duration: (ms: number) => (ms <= 3_600_000 ? '1 hour' : ms <= 86_400_000 ? '1 day' : '1 week'),
+    codeLeft: (s: number) =>
+      `Code works once, for ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`,
+    ranOut: 'This code ran out.',
+    newCode: 'New code',
+    making: 'Making a code…',
+    failed: 'Couldn’t make a code. Try again.',
+    tooMany: 'You have five codes waiting. Let them run out first.',
+    joined: (who: string) => `✓ ${who} joined`,
+    joinedHint: (d: string) => `They’re in. They can listen for ${d}.`,
+    wantsToStay: (name: string) => `${name} (wants to stay)`,
+    timeLeft: (ms: number) => {
+      const min = Math.max(0, Math.floor(ms / 60_000));
+      return min < 60
+        ? `Guest · ${min} min left`
+        : min < 48 * 60
+          ? `Guest · ${Math.floor(min / 60)} h left`
+          : `Guest · ${Math.floor(min / 1440)} days left`;
+    },
+    approve: 'Approve',
+    end: 'End now',
+    landingTitle: 'An ECHO guest pass',
+    landingText:
+      'This code is for the ECHO app. Open ECHO on your phone, tap “Scan a guest code” on the sign-in screen, and scan the code again.',
   },
   karaoke: {
     title: 'Karaoke',

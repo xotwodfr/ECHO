@@ -15,6 +15,7 @@ import { startQueueSync } from './playback/queueSync.ts';
 import { effectiveVisuals, loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { startCollections } from './shell/collections.ts';
+import { GuestLanding } from './shell/Guests.tsx';
 import { startHistory } from './shell/mixes.ts';
 import { pageTransition } from './shell/page-transition.ts';
 import { startAutoplay } from './shell/radio.ts';
@@ -33,6 +34,8 @@ import { startYtPrepare } from './youtube/radio.ts';
 // other failure stands: offline, or a navigation cutting the request off (Firefox aborts the old
 // page's imports), where a reload would fight the navigation. The new build is the page's own
 // after one reload, so this cannot loop.
+// A guest link opened in a browser (`/guest#<code>`): the pass is for the app (shell/Guests.tsx).
+const guestLink = window.location.pathname === '/guest';
 const build = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src;
 addEventListener('vite:preloadError', () => {
   if (!build) return;
@@ -192,7 +195,9 @@ const root = document.getElementById('root');
 if (root)
   createRoot(root).render(
     <AppErrorBoundary>
-      {unreachable ? (
+      {guestLink ? (
+        <GuestLanding />
+      ) : unreachable ? (
         <ServerUnreachable />
       ) : (
         <Shell store={store} controller={controller} library={library} />
