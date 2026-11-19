@@ -1,0 +1,33 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2",
+    "openSubsonic": true,
+    "artists": {
+      "index": [
+        {
+          "name": "#",
+          "artist": [
+            {
+              "id": "ar-1",
+              "name": "Lowfield",
+              "albumCount": 2
+            },
+            {
+              "id": "ar-2",
+              "name": "Mira Sole",
+              "albumCount": 1
+            },
+            {
+              "id": "ar-3",
+              "name": "Field Ensemble",
+              "albumCount": 1
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

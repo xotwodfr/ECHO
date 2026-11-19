@@ -1,0 +1,48 @@
+{
+  "version": 2,
+  "playback": {
+    "crossfadeSec": 0,
+    "replayGain": "auto",
+    "scrobble": true
+  },
+  "lyrics": {
+    "sizeScale": 1,
+    "globalOffsetMs": 0,
+    "showUnsynced": true,
+    "announceLines": false,
+    "disabledSources": []
+  },
+  "visuals": {
+    "mode": "auto",
+    "intensity": "expressive",
+    "motion": "system",
+    "grain": false,
+    "pointerParallax": true
+  },
+  "appearance": {
+    "theme": "echo",
+    "dark": "theme"
+  },
+  "games": {
+    "songGuesser": {
+      "best": 0,
+      "streak": 0,
+      "rounds": 0
+    },
+    "finishLyric": {
+      "best": 0,
+      "streak": 0,
+      "rounds": 0
+    },
+    "coverReveal": {
+      "best": 0,
+      "streak": 0,
+      "rounds": 0
+    },
+    "timeline": {
+      "best": 0,
+      "streak": 0,
+      "rounds": 0
+    }
+  }
+}

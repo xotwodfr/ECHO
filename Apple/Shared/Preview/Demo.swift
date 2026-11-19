@@ -1,9 +1,9 @@
 import SwiftUI
 
-// The Liquid Glass preview (launch argument `-ECHODemo <screen>`): built-in albums, covers drawn in
-// code after the web app's fixture covers (src/client/fixtures/covers), and the album-lit room, so
-// the screens render with no server. Apple/Screenshots holds what the macOS runner's simulator and
-// Mac draw from it (.github/workflows/apple.yml).
+// The Liquid Glass preview (launch argument `-ECHODemo <screen>`, DemoRoot.swift): built-in albums
+// and covers drawn in code after the web app's fixture covers (src/client/fixtures/covers), in the
+// album-lit room (UI/Room.swift), so the screens render with no server. Apple/Screenshots holds what
+// the macOS runner's simulator and Mac draw from it (.github/workflows/apple.yml).
 
 enum DemoCover: String, CaseIterable, Hashable {
     case harbour, paper, glass, exposure, signal
@@ -71,18 +71,6 @@ enum Demo {
     }
 }
 
-extension Color {
-    init(hex: UInt32) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255, green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255)
-    }
-
-    /// The playing album's light (Harbour Lights): amber lamps over a navy harbour.
-    static let amber = Color(hex: 0xF6D48A)
-    static let harbourNavy = Color(hex: 0x10283E)
-}
-
 /// A fixture cover, drawn on a 300-unit square like the web app's SVGs.
 struct CoverArt: View {
     let cover: DemoCover
@@ -145,30 +133,6 @@ struct CoverArt: View {
         .aspectRatio(1, contentMode: .fit)
         .clipShape(.rect(cornerRadius: corner))
         .accessibilityHidden(true)
-    }
-}
-
-/// The room lit by the playing album (ECHO's Stage): its colours as a slow mesh of light.
-struct AlbumLight: View {
-    var strength: Double = 1
-
-    var body: some View {
-        MeshGradient(
-            width: 3, height: 3,
-            points: [
-                [0, 0], [0.5, 0], [1, 0],
-                [0, 0.5], [0.42, 0.55], [1, 0.45],
-                [0, 1], [0.5, 1], [1, 1],
-            ],
-            colors: [
-                Color(hex: 0x1C4F7A), Color(hex: 0x173450), Color(hex: 0x2A5D8C),
-                Color(hex: 0x6B5322), Color(hex: 0xC4964A).opacity(0.9), Color(hex: 0x163A5A),
-                Color(hex: 0x081620), Color(hex: 0x0B1B2B), Color(hex: 0x081620),
-            ]
-        )
-        .opacity(strength)
-        .background(Color.harbourNavy)
-        .ignoresSafeArea()
     }
 }
 

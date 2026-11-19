@@ -7,9 +7,9 @@ struct EchoApp: App {
     var body: some Scene {
         WindowGroup {
             if let screen = demoScreen {
-                PhoneDemo(screen: screen)
+                DemoRoot(screen: screen)
             } else {
-                RootView()
+                RootView(session: Live.session)
             }
         }
     }

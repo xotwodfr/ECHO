@@ -1,0 +1,110 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2",
+    "openSubsonic": true,
+    "album": {
+      "id": "al-1",
+      "name": "Harbour Lights",
+      "artist": "Lowfield",
+      "artistId": "ar-1",
+      "coverArt": "al-1",
+      "songCount": 4,
+      "duration": 110,
+      "year": 2019,
+      "genre": "Ambient",
+      "song": [
+        {
+          "id": "al-1-t1",
+          "title": "Harbour Lights 1",
+          "artist": "Lowfield",
+          "artistId": "ar-1",
+          "album": "Harbour Lights",
+          "albumId": "al-1",
+          "coverArt": "al-1",
+          "track": 1,
+          "year": 2019,
+          "genre": "Ambient",
+          "duration": 20,
+          "suffix": "wav",
+          "contentType": "audio/wav",
+          "bitRate": 128,
+          "replayGain": {
+            "trackGain": -6,
+            "albumGain": -7,
+            "trackPeak": 0.9,
+            "albumPeak": 0.95
+          }
+        },
+        {
+          "id": "al-1-t2",
+          "title": "Harbour Lights 2",
+          "artist": "Lowfield",
+          "artistId": "ar-1",
+          "album": "Harbour Lights",
+          "albumId": "al-1",
+          "coverArt": "al-1",
+          "track": 2,
+          "year": 2019,
+          "genre": "Ambient",
+          "duration": 25,
+          "suffix": "wav",
+          "contentType": "audio/wav",
+          "bitRate": 128,
+          "replayGain": {
+            "trackGain": -7,
+            "albumGain": -7,
+            "trackPeak": 0.9,
+            "albumPeak": 0.95
+          }
+        },
+        {
+          "id": "al-1-t3",
+          "title": "Harbour Lights 3",
+          "artist": "Lowfield",
+          "artistId": "ar-1",
+          "album": "Harbour Lights",
+          "albumId": "al-1",
+          "coverArt": "al-1",
+          "track": 3,
+          "year": 2019,
+          "genre": "Ambient",
+          "duration": 30,
+          "suffix": "wav",
+          "contentType": "audio/wav",
+          "bitRate": 128,
+          "replayGain": {
+            "trackGain": -8,
+            "albumGain": -7,
+            "trackPeak": 0.9,
+            "albumPeak": 0.95
+          }
+        },
+        {
+          "id": "al-1-t4",
+          "title": "Harbour Lights 4",
+          "artist": "Lowfield",
+          "artistId": "ar-1",
+          "album": "Harbour Lights",
+          "albumId": "al-1",
+          "coverArt": "al-1",
+          "track": 4,
+          "year": 2019,
+          "genre": "Ambient",
+          "duration": 35,
+          "suffix": "wav",
+          "contentType": "audio/wav",
+          "bitRate": 128,
+          "replayGain": {
+            "trackGain": -9,
+            "albumGain": -7,
+            "trackPeak": 0.9,
+            "albumPeak": 0.95
+          }
+        }
+      ]
+    }
+  }
+}
