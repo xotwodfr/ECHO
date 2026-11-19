@@ -238,6 +238,12 @@ class Playback(private val app: EchoApp) {
     queueBase = 0
   }
 
+  /** Another controller (Android Auto) replaced the queue: where it plays from, none of it added. */
+  fun playingFrom(ctx: PlayContext) {
+    nextUp = 0
+    source = ctx
+  }
+
   fun dismissNotice() {
     _state.value = _state.value.copy(notice = null)
   }
@@ -276,7 +282,11 @@ class Playback(private val app: EchoApp) {
     return out.reversed()
   }
 
-  private fun trackAt(mc: Player, i: Int) = tracks[mc.getMediaItemAt(i).mediaId]
+  /** What the app queued, or what the library session queued (Android Auto): see KnownTracks. */
+  private fun trackAt(mc: Player, i: Int): Track? {
+    val id = mc.getMediaItemAt(i).mediaId
+    return tracks[id] ?: KnownTracks[id]?.also { tracks[id] = it }
+  }
 
   private fun publish() {
     val mc = c ?: return
