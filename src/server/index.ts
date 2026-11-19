@@ -40,6 +40,7 @@ import {
 import { fixtureCover, libraryCover } from './palette/covers.ts';
 import { createPaletteService, type PaletteService } from './palette/service.ts';
 import { playsRoutes } from './plays.ts';
+import { qrLoginRoutes } from './qrlogin.ts';
 import { queueRoutes } from './queue.ts';
 import { settingsRoutes, userSettings } from './settings.ts';
 import { checkWanted, wantedRoutes, wantedScope } from './wanted.ts';
@@ -182,6 +183,10 @@ export function createApp(deps: AppDeps) {
   );
   app.route('/api/v1', youtubeRoutes(deps.youtube, requireUser(deps.auth)));
   app.route('/api/v1', karaokeRoutes(deps.karaoke ?? null, requireUser(deps.auth)));
+  app.route(
+    '/api/v1',
+    qrLoginRoutes({ ...deps.auth, publicOrigin: deps.http.publicOrigin }, requireUser(deps.auth)),
+  );
   app.route(
     '/api/v1',
     guestRoutes({ ...deps.auth, publicOrigin: deps.http.publicOrigin }, requireUser(deps.auth)),

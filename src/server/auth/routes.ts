@@ -147,6 +147,7 @@ export const GUEST_DENY: [RegExp, RegExp][] = [
   [WRITE, /^\/api\/v1\/youtube\/like\//],
   [ANY, /^\/api\/v1\/admin/],
   [ANY, /^\/api\/v1\/guests(?!\/me(\/|$))/], // codes and other guests; their own /guests/me stays
+  [ANY, /^\/api\/v1\/auth\/qr\/(peek|approve)/], // signing a browser in as the guest
 ];
 
 export function requireUser(deps: AuthDeps): MiddlewareHandler<AuthEnv> {

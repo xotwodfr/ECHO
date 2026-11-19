@@ -888,6 +888,48 @@ paths:
         '404': { description: Karaoke mode is off }
         '409': { description: 'not_ready: queued, working, failed or skipped' }
         '502': { description: stems_offline }
+  /auth/qr:
+    post:
+      summary: 'Sign in with your phone: the sign-in page asks for a request; its id goes in a QR code (<origin>/link#<id>), the poll secret stays with the page. Two minutes, once.'
+      security: []
+      responses:
+        '201': { description: The request, content: { application/json: { schema: { type: object, properties: { id: { type: string }, poll: { type: string }, url: { type: string }, expiresAt: { type: integer } } } } } }
+        '429': { description: rate_limited }
+  /auth/qr/peek:
+    post:
+      summary: The phone (signed in, not a guest) sees which browser asks and from where, before approving
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id], properties: { id: { type: string } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { browser: { type: string }, ip: { type: string }, expiresAt: { type: integer } } } } } }
+        '403': { description: 'guest: a guest cannot sign a browser in' }
+        '404': { description: expired, used or unknown }
+  /auth/qr/approve:
+    post:
+      summary: The phone approves; the browser that asked gets a session for the phone's user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id], properties: { id: { type: string } } }
+      responses:
+        '200': { description: Approved }
+        '403': { description: 'guest' }
+        '404': { description: expired, used or unknown }
+  /auth/qr/poll:
+    post:
+      summary: The sign-in page waits; once approved it gets its session cookie
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id, poll], properties: { id: { type: string }, poll: { type: string } } }
+      responses:
+        '200': { description: 'pending, approved (with Set-Cookie) or expired', content: { application/json: { schema: { type: object, properties: { status: { type: string, enum: [pending, approved, expired] } } } } } }
   /guests/codes:
     post:
       summary: A one-time guest code to show as a QR code (any signed-in user but a guest); it can be scanned for 10 minutes, once

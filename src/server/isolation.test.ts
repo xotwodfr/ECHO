@@ -36,6 +36,12 @@ const NO_USER_DATA = [
   'GET /karaoke',
   'GET /karaoke/ready',
   // Guests: codes are the caller's own; another user's guests are refused (guests.test.ts).
+  // Sign in with your phone: a request is the browser's own; approving it signs that browser in
+  // as the approver (qrlogin.test.ts).
+  'POST /auth/qr',
+  'POST /auth/qr/peek',
+  'POST /auth/qr/approve',
+  'POST /auth/qr/poll',
   'POST /guests/codes',
   'POST /guests/peek',
   'POST /guests/redeem',
