@@ -50,10 +50,31 @@ test('what the library has is marked, plays from its album, and is removed', asy
   await row(page, text).getByRole('button', { name: 'Play Harbour Lights' }).click();
   await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   await expect(dock(page)).toContainText('Harbour Lights 1');
-  await row(page, text)
-    .getByRole('button', { name: `Remove ${text} from Wanted` })
-    .click();
+  const remove = () =>
+    row(page, text)
+      .getByRole('button', { name: `Remove ${text} from Wanted` })
+      .click();
+  // B8: a removal can be undone while its toast is up; the item comes back as it was.
+  await remove();
   await expect(row(page, text)).toHaveCount(0);
+  await expect(page.getByText(`Removed “${text}” from Wanted`)).toBeVisible();
+  await page.getByRole('button', { name: 'Undo' }).click();
+  await expect(row(page, text)).toContainText('Added by you');
+  await page.reload(); // nothing reached the server
+  await expect(row(page, text)).toContainText('In your library');
+  // Not undone: gone for good once the toast has left.
+  await remove();
+  await expect(page.getByText(`Removed “${text}” from Wanted`)).toBeHidden({ timeout: 8000 });
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        await expect(page.getByLabel('Add something')).toBeVisible();
+        return row(page, text).count();
+      },
+      { timeout: 5000 },
+    )
+    .toBe(0);
 });
 
 test('on a phone the Wanted page opens from Your Library', async ({ page }) => {

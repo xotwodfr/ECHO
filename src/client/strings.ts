@@ -312,6 +312,8 @@ export const strings = {
     youTubeMusic: 'YouTube Music',
     play: (title: string) => `Play ${title}`,
     remove: (text: string) => `Remove ${text} from Wanted`,
+    removed: (text: string) => `Removed “${text}” from Wanted`,
+    undo: 'Undo',
     /** Your Library's row. */
     sub: (n: number, found: number) =>
       `List • ${n} item${n === 1 ? '' : 's'}${found ? ` · ${found} in your library` : ''}`,
