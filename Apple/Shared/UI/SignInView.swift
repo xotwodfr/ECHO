@@ -120,7 +120,13 @@ struct SignInView: View {
                     if busy { ProgressView().controlSize(.small).tint(.white) }
                     Text(busy ? "Signing in…" : "Sign in")
                 }
+                // White on the amber, as on the iPhone (the Mac would tint it a pale amber), and
+                // on the Mac as tall as the fields above it.
+                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
+                #if os(macOS)
+                .frame(minHeight: 34)
+                #endif
             }
             .buttonStyle(.glassProminent)
             .tint(Color.echoAccent)
