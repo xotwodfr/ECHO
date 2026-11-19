@@ -2966,9 +2966,12 @@ a {
 .guest-durations {
   display: flex;
   gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: none;
 }
 
-.guest-durations .chip[data-on] {
+.guest-durations .chip[aria-pressed="true"] {
   background: var(--green);
   color: var(--on-green);
 }

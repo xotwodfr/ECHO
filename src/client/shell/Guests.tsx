@@ -134,21 +134,19 @@ export function InviteGuestSheet({ open, onClose }: { open: boolean; onClose: ()
             <p className="field-hint">{error ?? g.making}</p>
           )}
         </div>
-        <div className="guest-durations" role="radiogroup" aria-label={g.howLong}>
+        <fieldset className="guest-durations" aria-label={g.howLong}>
           {DURATIONS.map((d) => (
             <button
               key={d}
               type="button"
-              role="radio"
-              aria-checked={duration === d}
+              aria-pressed={duration === d}
               className="chip"
-              data-on={duration === d || undefined}
               onClick={() => setDuration(d)}
             >
               {g.duration(d)}
             </button>
           ))}
-        </div>
+        </fieldset>
         <p className="field-hint num" aria-live="polite">
           {joined
             ? g.joinedHint(g.duration(duration))

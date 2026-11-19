@@ -10,6 +10,9 @@ import { loadWall } from './wall.ts';
 
 const COLUMNS = 7;
 const PER_COLUMN = 8;
+/** The wall's fixed grid: columns and rows (each column twice over, so its drift loops). */
+const COLUMN_IDS = Array.from({ length: COLUMNS }, (_, i) => i);
+const ROW_IDS = Array.from({ length: PER_COLUMN * 2 }, (_, i) => i);
 
 /** The drifting wall: tilted columns of covers (or coloured tiles), alternating up and down. */
 export function CoverWall() {
@@ -17,9 +20,9 @@ export function CoverWall() {
   return (
     <div className="signin-wall" aria-hidden="true">
       <div className="signin-wall-tilt">
-        {Array.from({ length: COLUMNS }, (_, col) => (
+        {COLUMN_IDS.map((col) => (
           <div key={col} className="signin-col" data-dir={col % 2 ? 'up' : 'down'}>
-            {Array.from({ length: PER_COLUMN * 2 }, (_, row) => {
+            {ROW_IDS.map((row) => {
               const i = col * PER_COLUMN + (row % PER_COLUMN);
               const cover = covers.length ? covers[(i * 7) % covers.length] : null;
               return cover ? (
