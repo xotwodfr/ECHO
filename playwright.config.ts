@@ -31,7 +31,7 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: /photosensitivity|reliability|states|csp|perf/,
+      testIgnore: /photosensitivity|reliability|states|csp|perf|spotify-matching/,
       use: {
         ...devices['Desktop Chrome'],
         // WebGL 2 in software, the same everywhere (TECHNICAL_ARCHITECTURE.md §8).
@@ -51,13 +51,15 @@ export default defineConfig({
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
-      testIgnore: /photosensitivity|reliability|states|csp|perf/,
+      testIgnore: /photosensitivity|reliability|states|csp|perf|spotify-matching/,
     },
-    // Run on their own, after the rest: A11Y-08 reads the stage back every frame for 10 s, and the
-    // reliability and states specs break the shared mock Navidrome on purpose.
+    // Run on their own, after the rest: A11Y-08 reads the stage back every frame for 10 s, the
+    // reliability and states specs break the shared mock Navidrome on purpose, and spotify-matching
+    // empties every Spotify match and the lyrics cache and fixes the match of a track others play
+    // (run alongside them, its tests and its other browser's copy undid each other's state).
     {
       name: 'isolated',
-      testMatch: /(photosensitivity|reliability|states|csp|perf)\.spec\.ts/,
+      testMatch: /(photosensitivity|reliability|states|csp|perf|spotify-matching)\.spec\.ts/,
       workers: 1, // reliability and states both break the shared mock: one test at a time
       dependencies: ['chromium', 'firefox'],
       use: {
@@ -71,6 +73,14 @@ export default defineConfig({
           ],
         },
       },
+    },
+    // spotify-matching in Firefox too, after the Chromium pass and on its own the same way.
+    {
+      name: 'isolated-firefox',
+      testMatch: /spotify-matching\.spec\.ts/,
+      workers: 1,
+      dependencies: ['isolated'],
+      use: { ...devices['Desktop Firefox'] },
     },
   ],
   webServer: [
