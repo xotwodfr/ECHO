@@ -2,7 +2,9 @@
 // server's own code (src/server, as its tests wire it) with the mock Navidrome, signed in as a
 // native client with a device token. Run from the repository root, then format:
 //   node scripts/apple-fixtures.ts && pnpm biome format --write Apple/Tests/Fixtures
-// The tests give each answer its HTTP status; the console lists them.
+// The tests give each answer its HTTP status; the console lists them. The device token and the
+// stream URL's signature are written as fixed stand-ins (secret scanners flag the real, random ones;
+// they belong to this throwaway server only).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { startSetup } from '../src/server/auth/routes.ts';
@@ -36,11 +38,20 @@ await call(app, 'POST', '/api/v1/setup/totp', {
 });
 t.clock.t += STEP_S * 1000;
 
+const FAKE_TOKEN = 'echo_dt_test_token_not_a_secret';
+/** What goes in a fixture: the answer, its token and signatures replaced by plain stand-ins. */
+const scrub = (text: string) =>
+  text
+    .replace(/echo_dt_[\w-]+/g, FAKE_TOKEN)
+    .replace(/([?&]sig=)[\w-]+/g, '$1test_signature_not_a_secret');
+
 async function save(name: string, res: Response) {
-  const body = JSON.parse(await res.text()) as Record<string, unknown>;
+  const text = await res.text();
+  const body = JSON.parse(text) as Record<string, unknown>;
   const wait = res.headers.get('retry-after');
   console.log(`${name}: ${res.status}${wait ? ` (Retry-After: ${wait})` : ''}`);
-  writeFileSync(join(OUT, `${name}.json`), `${JSON.stringify(body, null, 2)}\n`);
+  const kept = JSON.parse(scrub(text)) as unknown;
+  writeFileSync(join(OUT, `${name}.json`), `${JSON.stringify(kept, null, 2)}\n`);
   return body;
 }
 
