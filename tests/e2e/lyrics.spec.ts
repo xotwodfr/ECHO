@@ -448,6 +448,10 @@ test('pause freezes the sweep and dims the glow to 60%; resume restores it (LYR-
   await page.waitForTimeout(800);
   expect(await sweeping(page)).toEqual(frozen); // t is frozen: same word, same --p, same glow
   await dock(page).getByRole('button', { name: 'Play', exact: true }).click();
+  // Seeked while paused, playback starts again once the audio at the new place is ready: on a busy
+  // runner that took most of the glow's 2 s (0.244 at the end: the restore's first frame). The
+  // restore starts when playback does, so it gets its 2 s from there.
+  await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   await expect
     .poll(() => sweeping(page).then((s) => (s?.text === held.text ? s.glow : 1)), {
       timeout: 2000,
