@@ -60,8 +60,9 @@ struct MacLibrary: View {
                 .padding(.bottom, 120)
             }
             .background(alignment: .top) {
-                AlbumLight(strength: 0.5).frame(height: 460).mask(
+                AlbumLight(strength: 0.5).frame(height: 560).mask(
                     LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+                    .ignoresSafeArea()
             }
             .background(Color(hex: 0x101319))
             .overlay(alignment: .bottom) { MacPlayerBar().padding(16) }
@@ -183,6 +184,8 @@ struct MacLyrics: View {
                 .glassEffect()
                 .padding(20)
         }
+        .toolbar(removing: .title)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
     }
 }
 #endif

@@ -30,6 +30,7 @@ struct PhoneDemo: View {
             }
         }
         .preferredColorScheme(.dark)
+        .tint(Color(hex: 0xE8B65C))
     }
 
     private var tabs: some View {
@@ -83,8 +84,9 @@ struct PhoneHome: View {
             .padding(.bottom, 24)
         }
         .background(alignment: .top) {
-            AlbumLight(strength: 0.55).frame(height: 420).mask(
+            AlbumLight(strength: 0.55).frame(height: 560).mask(
                 LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+                .ignoresSafeArea()
         }
         .background(Color(hex: 0x0C0E13))
         .navigationTitle("Good evening")
@@ -190,8 +192,9 @@ struct PhoneAlbum: View {
             .padding(.bottom, 24)
         }
         .background(alignment: .top) {
-            AlbumLight(strength: 0.85).frame(height: 600).mask(
+            AlbumLight(strength: 0.85).frame(height: 760).mask(
                 LinearGradient(colors: [.black, .black, .clear], startPoint: .top, endPoint: .bottom))
+                .ignoresSafeArea()
         }
         .background(Color(hex: 0x0B1520))
         .navigationBarTitleDisplayMode(.inline)
@@ -509,8 +512,9 @@ struct PhoneSearch: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(alignment: .top) {
-            AlbumLight(strength: 0.45).frame(height: 420).mask(
+            AlbumLight(strength: 0.45).frame(height: 560).mask(
                 LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom))
+                .ignoresSafeArea()
         }
         .background(Color(hex: 0x0C0E13))
         .navigationTitle("Search")
