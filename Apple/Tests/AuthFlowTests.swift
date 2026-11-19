@@ -205,4 +205,57 @@ struct KeychainTests {
         let gone = try store.load()
         #expect(gone == nil)
     }
+
+    #if os(macOS)
+    @Test(
+        "On a Mac build without a team, the login keychain keeps it instead",
+        .enabled(if: KeychainTests.loginKeychainAnswers(), "the login keychain does not answer here"))
+    func loginKeychainFallback() throws {
+        let store = KeychainTokenStore(
+            account: "https://test-\(UUID().uuidString).invalid", service: "com.folk3s.echo.tests")
+        defer { store.delete() }
+        let empty = try store.load()
+        #expect(empty == nil)
+        try store.save("echo_dt_one")
+        try store.save("echo_dt_two")
+        let two = try store.load()
+        #expect(two == "echo_dt_two")
+        if !KeychainTokenStore.dataProtectionKeychainWorks() {
+            // Refused the data-protection keychain (no team, as on the runner): the login one has it.
+            #expect(Self.readLoginKeychain(store) == "echo_dt_two")
+        }
+        store.delete()
+        let gone = try store.load()
+        #expect(gone == nil)
+    }
+
+    /// What the login keychain holds for this store, read directly.
+    static func readLoginKeychain(_ store: KeychainTokenStore) -> String? {
+        var q = store.query(dataProtection: false)
+        q[kSecReturnData as String] = true
+        var out: AnyObject?
+        let status = SecItemCopyMatching(q as CFDictionary, &out)
+        guard status == errSecSuccess, let data = out as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// Whether the login keychain keeps an item and gives it back without asking anyone (it is
+    /// unlocked), tried on a thread of its own so that one which would put up a dialog cannot hold
+    /// up the tests.
+    static func loginKeychainAnswers() -> Bool {
+        final class Answer: @unchecked Sendable { var worked = false }
+        let probe = KeychainTokenStore(
+            account: "probe-\(UUID().uuidString)", service: "com.folk3s.echo.tests.probe", fileKeychainFallback: true)
+        let answer = Answer()
+        let done = DispatchSemaphore(value: 0)
+        Thread.detachNewThread {
+            let added = SecItemAdd(probe.addQuery("probe", dataProtection: false) as CFDictionary, nil)
+            answer.worked = added == errSecSuccess && KeychainTests.readLoginKeychain(probe) == "probe"
+            probe.delete()
+            done.signal()
+        }
+        guard done.wait(timeout: .now() + 10) == .success else { return false }
+        return answer.worked
+    }
+    #endif
 }

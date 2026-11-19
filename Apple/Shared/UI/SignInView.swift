@@ -17,9 +17,14 @@ struct SignInView: View {
 
     private enum Field: Hashable { case username, password, code }
 
-    private var ready: Bool {
-        !busy && !username.trimmingCharacters(in: .whitespaces).isEmpty && !password.isEmpty
-            && (!needsCode || !code.trimmingCharacters(in: .whitespaces).isEmpty)
+    /// The first field still to fill in, and what to say about it; nil when the form can go.
+    private var missing: (field: Field, message: String)? {
+        if username.trimmingCharacters(in: .whitespaces).isEmpty { return (.username, "Enter your username.") }
+        if password.isEmpty { return (.password, "Enter your password.") }
+        if needsCode && code.trimmingCharacters(in: .whitespaces).isEmpty {
+            return (.code, ApiError.totpRequired.userMessage)
+        }
+        return nil
     }
 
     var body: some View {
@@ -108,6 +113,8 @@ struct SignInView: View {
                     .transition(.opacity)
             }
 
+            // Always lit (a disabled prominent button is a dark slab on the glass, the Mac's nearly
+            // black): pressed with a field empty, it says which one and goes there.
             Button(action: submit) {
                 HStack(spacing: 10) {
                     if busy { ProgressView().controlSize(.small).tint(.white) }
@@ -119,7 +126,6 @@ struct SignInView: View {
             .tint(Color.echoAccent)
             .controlSize(.large)
             .font(.headline)
-            .disabled(!ready)
             .keyboardShortcut(.defaultAction)
             .padding(.top, 4)
         }
@@ -141,7 +147,12 @@ struct SignInView: View {
     }
 
     private func submit() {
-        guard ready else { return }
+        guard !busy else { return }
+        if let missing {
+            focus = missing.field
+            show(missing.message)
+            return
+        }
         busy = true
         message = nil
         Task {

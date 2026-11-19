@@ -47,9 +47,9 @@ the server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS'
 ```
 
-Checked 2026-11-04 without a Mac: every file parses with Swift 6.2, and `Api.swift` compiled and
-ran on Linux against a test server with the mock Navidrome (a wrong password, sign in, albums, an
-album's songs, a stream without a header, sign out). The app itself has not run yet.
+Checked 2026-11-19 on GitHub's macOS 26 runner (Xcode 26): both apps build with no Swift
+warnings, the Swift tests pass on the Mac and in the iOS 26 simulator, and the app runs on the Mac
+(`Apple/Screenshots`, `-ECHODemo signin` and `shell`). It has not yet signed in to a real server.
 
 ## Next
 

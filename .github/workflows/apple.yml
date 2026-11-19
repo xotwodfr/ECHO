@@ -66,7 +66,7 @@ jobs:
 
       - name: Build for Mac (ad-hoc signed, so it runs here)
         run: >
-          xcodebuild -quiet -project macOS/ECHO.xcodeproj -target ECHO -configuration Debug
+          xcodebuild -quiet -project macOS/ECHO.xcodeproj -target ECHO -configuration Debug ONLY_ACTIVE_ARCH=NO
           SYMROOT="$PWD/build/mac" CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO
 
       - name: Tests on the Mac (Swift Testing)
@@ -78,8 +78,9 @@ jobs:
           limit 1200 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS' \
             -derivedDataPath build/tests-mac CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO \
             > build/logs/tests-mac.log 2>&1 && status=0 || status=$?
-          # Each test's result, every issue with its expectation, and any compile error.
-          grep -E '✔|✘|◇|↳|Test case|Test run|recorded an issue|Expectation failed|error:|\*\* TEST' build/logs/tests-mac.log | tail -400 || true
+          # Each test's result (skipped ones too), every issue with its expectation, and any compile
+          # error or Swift warning.
+          grep -E '✔|✘|◇|↳|➜|Test case|Test run|recorded an issue|Expectation failed|error:|\.swift:[0-9]+:[0-9]+: warning:|\*\* TEST' build/logs/tests-mac.log | tail -400 || true
           if [ "$status" != 0 ]; then echo "::error::Mac tests: xcodebuild exited $status"; tail -60 build/logs/tests-mac.log; fi
           exit "$status"
 
@@ -218,7 +219,7 @@ jobs:
           limit 1500 xcodebuild test -project iOS/ECHO.xcodeproj -scheme ECHOTests \
             -destination "platform=iOS Simulator,id=$dev" -derivedDataPath build/tests-ios CODE_SIGNING_ALLOWED=NO \
             > build/logs/tests-ios.log 2>&1 && status=0 || status=$?
-          grep -E '✔|✘|◇|↳|Test case|Test run|recorded an issue|Expectation failed|error:|\*\* TEST' build/logs/tests-ios.log | tail -400 || true
+          grep -E '✔|✘|◇|↳|➜|Test case|Test run|recorded an issue|Expectation failed|error:|\.swift:[0-9]+:[0-9]+: warning:|\*\* TEST' build/logs/tests-ios.log | tail -400 || true
           if [ "$status" != 0 ]; then echo "::error::iPhone tests: xcodebuild exited $status"; tail -60 build/logs/tests-ios.log; fi
           exit "$status"
 
