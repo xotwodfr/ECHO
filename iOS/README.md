@@ -242,9 +242,9 @@ the camera; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple
 on a device, signed (the simulator's lock screen and home screen cannot be screenshotted
 reliably, and an unsigned build has no App Group). Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by `git revert 6bf75cb`), unfinished, it had not built green yet.
 
-## Themes (11b, stage 1)
+## Themes (11b, stages 1 and 2a)
 
-ECHO (the default) and **Liquid Glass** are made; the picker is first in Settings → Appearance, with Light or
+The **Apple Music, Spotify and SoundCloud styles** are made too (apple run 51: 332 Swift tests; Android's accents, grounds and squareness; haptics only; demo screens `theme-apple-music-*`, `theme-spotify-*`, `theme-soundcloud-*`). Next: Deezer, Qobuz, Tidal, YouTube Music, Monochrome, then Clay, Yarn, Paper & origami, Retro hi-fi. ECHO (the default) and **Liquid Glass** are made; the picker is first in Settings → Appearance, with Light or
 dark, **Haptics** and **Theme sounds** (this device's). The choice is the user's (`UserSettings.appearance`,
 saved one key at a time and loaded at sign-in). `Apple/Shared/Themes` holds the model and the feedback
 (haptics and a theme's sounds), `UI/Theming.swift` the environment value every screen reads, `UI/ThemePicker.swift`

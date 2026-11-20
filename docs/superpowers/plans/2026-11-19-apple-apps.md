@@ -54,7 +54,7 @@ Sideloadly) besides the simulator builds and screenshots.
 | 6 Widget | done (apple run 36) |
 | 7 Scan to sign in, guests | done (apple run 38) |
 | 11a Settings parity with Android | done (apple run 46; the table: [`apple-settings-parity.md`](apple-settings-parity.md)) |
-| 11b Themes (Liquid Glass, ECHO, then Android's) | **stage 1 done (apple run 49)**: the Theme model, the picker, ECHO and Liquid Glass. **Stage 2 next**: Apple Music, Spotify, SoundCloud, Deezer, Qobuz, Tidal, YouTube Music, Monochrome; then Clay, Yarn, Paper & origami, Retro hi-fi (see "Picking this up") |
+| 11b Themes (Liquid Glass, ECHO, then Android's) | **done so far**: stage 1 (apple run 49): the Theme model, the picker, ECHO and Liquid Glass; stage 2a (apple run 51): Apple Music, Spotify and SoundCloud styles. **Next (2b)**: Deezer, Qobuz, Tidal, YouTube Music, Monochrome; then Clay, Yarn, Paper & origami, Retro hi-fi (see "Picking this up") |
 | 8 Karaoke | then |
 | 9 Listen together | then |
 | 10 Downloads | paused: code kept in commits 36116ea, 56c096c, 380d2d6; re-apply with `git revert 6bf75cb`; unfinished: it did not build yet (run 39's tests failed to type-check a test expression, since fixed in 56c096c; the later fixes were never run through to green) |
@@ -111,7 +111,7 @@ Sideloadly) besides the simulator builds and screenshots.
 
 ## Picking this up
 
-**11b, themes: stage 1 is done** (apple run 49, 330 Swift tests on both platforms, `ECHO-ipa` uploaded). Made: **ECHO**
+**11b, themes: stages 1 and 2a are done** (apple run 51, 332 Swift tests on both platforms, `ECHO-ipa` uploaded). Made: **Apple Music, Spotify and SoundCloud styles** (Android's accents and grounds, light by default for Apple Music and SoundCloud, dark for Spotify; `Theme.Shapes` scales the corners of art and cards, `Palette.onAccent` is the label on the accent; lyric looks `.appleMusic`, `.spotify`, `.soundcloud` in `LyricStyle.swift`; haptics only, as Android gives them no sounds; demo screens `theme-apple-music-*`, `theme-spotify-*`, `theme-soundcloud-*` with home, nowplaying, lyrics, and the Mac's home). Add the next service styles the same way: one `static let` in `Theme.swift`, a `Lyric` case and look, the demo names in `DemoThemes` and the workflow's lists. Not yet: Android's fonts (Inter; the system face is used), the tab pill off, Spotify's header tone. Also made: **ECHO**
 (default) and **Liquid Glass** (server id `glass`, which is also Android's "Liquid glass": the owner's plain Liquid
 Glass theme takes that id, so the Android one is not a separate theme; its lens-style lyrics and the rest of its
 look can still be added to it). What stage 2 needs to know:
