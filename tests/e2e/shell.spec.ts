@@ -48,6 +48,10 @@ for (const link of DEEP_LINKS) {
       expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe(link.url);
       if (link.tab) await expect(page.locator('.tabs [aria-current="page"]')).toHaveText(link.tab);
       if (link.text) await expect(page.getByText(link.text)).toBeVisible();
+      // A reload while a font is still downloading aborts it, and Firefox logs that as a console
+      // error (a CI run failed on three of them). The page has laid out by now, so the fonts it
+      // uses have started loading: wait for them.
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
       await page.reload();
     }
     expect(errors).toEqual([]);
