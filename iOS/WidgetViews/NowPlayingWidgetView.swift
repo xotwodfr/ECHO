@@ -29,7 +29,9 @@ struct NowPlayingWidgetView: View {
         NowPlayingContent(
             snapshot: entry.snapshot, cover: entry.cover, wide: family == .systemMedium,
             ink: renderingMode == .fullColor ? .fullColor : .accented)
-            .containerBackground(for: .widget) { WidgetGround(palette: entry.snapshot?.palette) }
+            .containerBackground(for: .widget) {
+                WidgetGround(palette: entry.snapshot?.palette, wide: family == .systemMedium)
+            }
             .widgetURL(AppLink.nowPlaying.url)
     }
 }
@@ -158,11 +160,7 @@ struct NothingPlaying: View {
                     .fill(ink.plate)
                     .aspectRatio(1, contentMode: .fit)
                     .overlay { mark(side: 66) }
-                VStack(alignment: .leading, spacing: 2) {
-                    words
-                    Spacer(minLength: 0)
-                }
-                .padding(.top, 2)
+                words
                 Spacer(minLength: 0)
             }
         } else {
@@ -180,7 +178,8 @@ struct NothingPlaying: View {
             Text("Play something")
                 .font(.system(size: wide ? 17 : 15, weight: .semibold))
                 .foregroundStyle(ink.primary)
-            Text(wide ? "Tap to open ECHO" : "ECHO")
+            // Not "ECHO": the home screen names the widget under it.
+            Text("Tap to open ECHO")
                 .font(.system(size: wide ? 14 : 13))
                 .foregroundStyle(ink.secondary)
         }
@@ -349,17 +348,19 @@ struct TransportGlyph: View {
 }
 
 /// The ground under the widget: the album's light, as the app's room has it (its colours dark above,
-/// its vivid colour glowing in the middle, the floor nearly black); ECHO's own Harbour light without
-/// a cover.
+/// its vivid colour glowing in the middle, the floor nearly black; a pale cover's glow dimmed:
+/// AlbumPalette.widgetMesh); ECHO's own Harbour light without a cover. On the medium widget the glow
+/// sits behind the cover, the words beside it on the darker side.
 struct WidgetGround: View {
     let palette: AlbumPalette?
+    var wide = false
 
     var body: some View {
         MeshGradient(
             width: 3, height: 3,
             points: [
                 [0, 0], [0.5, 0], [1, 0],
-                [0, 0.5], [0.42, 0.55], [1, 0.45],
+                [0, 0.5], [wide ? 0.27 : 0.42, 0.55], [1, 0.45],
                 [0, 1], [0.5, 1], [1, 1],
             ],
             colors: colors
@@ -375,7 +376,7 @@ struct WidgetGround: View {
                 Self.hex(0x081620), Self.hex(0x0B1B2B), Self.hex(0x081620),
             ]
         }
-        return palette.mesh.enumerated().map { i, rgb in i == 4 ? Self.color(rgb).opacity(0.9) : Self.color(rgb) }
+        return palette.widgetMesh.enumerated().map { i, rgb in i == 4 ? Self.color(rgb).opacity(0.9) : Self.color(rgb) }
     }
 
     private var floor: Color {

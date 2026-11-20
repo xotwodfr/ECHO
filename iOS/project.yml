@@ -19,9 +19,6 @@ targets:
     dependencies:
       # The widget extension, embedded in the app (PlugIns).
       - target: ECHOWidget
-    # The App Group the app writes what plays into for the widget (WidgetStore).
-    entitlements:
-      path: ECHO.entitlements
     info:
       path: Info.plist
       properties:
@@ -43,6 +40,9 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo
+        # The App Group the app writes what plays into for the widget (WidgetStore). Named here, not
+        # with XcodeGen's `entitlements:`, which writes the file over.
+        CODE_SIGN_ENTITLEMENTS: ECHO.entitlements
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
@@ -67,12 +67,12 @@ targets:
       - path: ../Apple/Shared/Library/AlbumPalette.swift
       - path: ../Apple/Shared/UI/EchoMark.swift
       - path: ../Apple/Shared/App/AppLink.swift
-    entitlements:
-      path: ECHOWidget.entitlements
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo.widget
         INFOPLIST_FILE: ECHOWidget-Info.plist
+        # The App Group the widget reads what plays from.
+        CODE_SIGN_ENTITLEMENTS: ECHOWidget.entitlements
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"

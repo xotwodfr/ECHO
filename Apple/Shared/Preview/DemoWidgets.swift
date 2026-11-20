@@ -162,7 +162,7 @@ struct DemoWidgetTile: View {
         switch look {
         case .fullColor:
             content
-                .background { WidgetGround(palette: snapshot?.palette) }
+                .background { WidgetGround(palette: snapshot?.palette, wide: wide) }
                 .clipShape(shape)
         case .tinted:
             content
