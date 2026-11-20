@@ -32,63 +32,6 @@ defaults:
     shell: bash
 
 jobs:
-  # TEMPORARY (task 5): the iOS 26 SDK's animated-artwork API, printed from its headers.
-  sdk:
-    runs-on: macos-26
-    timeout-minutes: 15
-    steps:
-      - name: MediaPlayer's animated artwork in the SDKs
-        run: |
-          xc=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
-          if [ -n "$xc" ]; then sudo xcode-select -s "$xc"; fi
-          for sdk in iphoneos macosx; do
-            root=$(xcrun --sdk "$sdk" --show-sdk-path)
-            fw="$root/System/Library/Frameworks/MediaPlayer.framework/Headers"
-            echo "=================== $sdk MPMediaItem.h 250-350"
-            sed -n 250,350p "$fw/MPMediaItem.h"
-            echo "=================== $sdk apinotes"
-            grep -n -B2 -A6 -i "animated" "$fw/MediaPlayer.apinotes" || echo "nothing in the apinotes"
-          done
-          echo "=================== the Swift names, type-checked"
-          mkdir -p /tmp/probe
-          cat > /tmp/probe/ios.swift <<'SWIFT'
-          import MediaPlayer
-          import UIKit
-          func probe(url: URL, image: UIImage) -> [String: Any] {
-              let art = MPMediaItemAnimatedArtwork(
-                  artworkID: "id",
-                  previewImageRequestHandler: { (size: CGSize) async -> UIImage? in image },
-                  videoAssetFileURLRequestHandler: { (size: CGSize) async -> URL? in url })
-              let keys: [String] = MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys
-              print(keys)
-              return [MPNowPlayingInfoProperty3x4AnimatedArtwork: art, MPNowPlayingInfoProperty1x1AnimatedArtwork: art]
-          }
-          SWIFT
-          cat > /tmp/probe/mac.swift <<'SWIFT'
-          import MediaPlayer
-          import AppKit
-          func probe(url: URL, image: NSImage) -> [String: Any] {
-              let art = MPMediaItemAnimatedArtwork(
-                  artworkID: "id",
-                  previewImageRequestHandler: { (size: CGSize) async -> NSImage? in image },
-                  videoAssetFileURLRequestHandler: { (size: CGSize) async -> URL? in url })
-              let keys: [String] = MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys
-              print(keys)
-              return [MPNowPlayingInfoProperty3x4AnimatedArtwork: art]
-          }
-          SWIFT
-          sed -i '' 's/^          //' /tmp/probe/ios.swift /tmp/probe/mac.swift
-          echo "--- iOS simulator, Swift 6 mode"
-          xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -target arm64-apple-ios26.0-simulator /tmp/probe/ios.swift && echo "iOS probe type-checks" || echo "iOS probe FAILS (6)"
-          echo "--- iOS simulator, Swift 5 mode"
-          xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 5 -target arm64-apple-ios26.0-simulator /tmp/probe/ios.swift && echo "iOS probe type-checks (5)" || echo "iOS probe FAILS (5)"
-          echo "--- macOS"
-          xcrun --sdk macosx swiftc -typecheck -swift-version 5 -target arm64-apple-macos26.0 /tmp/probe/mac.swift && echo "Mac probe type-checks" || echo "Mac probe FAILS"
-          echo "--- the interface, by swift-synthesize-interface"
-          xcrun swift-synthesize-interface --help 2>&1 | head -30 || true
-          xcrun swift-synthesize-interface -module-name MediaPlayer -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -target arm64-apple-ios26.0-simulator -o /tmp/mp.swift 2>&1 | head -20 || true
-          ls -la /tmp/mp.swift 2>/dev/null && grep -n -B3 -A16 "class MPMediaItemAnimatedArtwork" /tmp/mp.swift || true
-
   apple:
     runs-on: macos-26
     timeout-minutes: 45
@@ -172,7 +115,7 @@ jobs:
           limit 60 xcrun simctl ui "$dev" appearance dark
           limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           limit 480 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
-          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu signin shell; do
+          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu settings lockcover signin shell; do
             f="Apple/Screenshots/iphone-$s.png"
             limit 180 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             # A slow first frame leaves the shot black (lyrics, run 7): a black PNG is a few dozen KB,
@@ -237,21 +180,25 @@ jobs:
       - name: Mac screenshots
         run: |
           app="$PWD/build/mac/Debug/ECHO.app"
+          # ECHO's frontmost window; with "smallest", its smallest (the Settings window over the main one).
           cat > /tmp/window.swift <<'EOF'
           import CoreGraphics
           let all = CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID) as? [[String: Any]] ?? []
-          for w in all where w[kCGWindowOwnerName as String] as? String == "ECHO" && w[kCGWindowLayer as String] as? Int == 0 {
-              print(w[kCGWindowNumber as String] as? Int ?? 0)
-              break
+          let echo = all.filter { $0[kCGWindowOwnerName as String] as? String == "ECHO" && $0[kCGWindowLayer as String] as? Int == 0 }
+          func area(_ w: [String: Any]) -> Double {
+              let b = w[kCGWindowBounds as String] as? [String: Double] ?? [:]
+              return (b["Width"] ?? 0) * (b["Height"] ?? 0)
           }
+          let pick = CommandLine.arguments.dropFirst().first == "smallest" ? echo.min { area($0) < area($1) } : echo.first
+          print(pick?[kCGWindowNumber as String] as? Int ?? 0)
           EOF
-          for s in home shelves albums album search player lyrics signin shell; do
+          for s in home shelves albums album search player lyrics settings signin shell; do
             pkill -x ECHO || true
             open -n "$app" --args -ECHODemo "$s"
             sleep 10
             osascript -e 'tell application "System Events" to set frontmost of (first process whose name is "ECHO") to true' || true
             sleep 2
-            id=$(swift /tmp/window.swift || true)
+            id=$(swift /tmp/window.swift "$([ "$s" = settings ] && echo smallest)" || true)
             echo "window $id"
             if [ -n "$id" ] && [ "$id" != "0" ]; then
               screencapture -x -o -l"$id" "Apple/Screenshots/mac-$s.png"

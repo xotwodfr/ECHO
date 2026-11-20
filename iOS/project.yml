@@ -41,8 +41,9 @@ targets:
   # The Swift tests (Swift Testing, Apple/Tests): the API client, models, sign-in, the library
   # (hearts, the sorts, Wanted's Undo, the cover cache), playback (the queue, the saved queue,
   # scrobbles, the lock screen's info and controls, on a fake engine) and the lyrics (the loader,
-  # the field's timing, springs and motion on the web's lyric fixtures, the layout) against the
-  # server's recorded answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own
+  # the field's timing, springs and motion on the web's lyric fixtures, the layout), the animated
+  # lock-screen covers (asking, waiting, the files kept, the loop speed) against the server's recorded
+  # answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own
   # with that code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
   ECHOTests:
     type: bundle.unit-test
@@ -52,6 +53,8 @@ targets:
       - path: ../Apple/Shared/Library
       - path: ../Apple/Shared/Playback
       - path: ../Apple/Shared/Lyrics
+      - path: ../Apple/Shared/Motion
+      - path: ../Apple/Shared/Settings
       - path: ../Apple/Shared/Preview/Lyrics
       - path: ../Apple/Tests
     settings:

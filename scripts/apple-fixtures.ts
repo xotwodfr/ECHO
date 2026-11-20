@@ -1,11 +1,12 @@
 // Records the server's real answers as the Apple apps' test fixtures (Apple/Tests/Fixtures): the
-// server's own code (src/server, as its tests wire it) with the mock Navidrome, signed in as a
-// native client with a device token. Run from the repository root, then format:
+// server's own code (src/server, as its tests wire it) with the mock Navidrome and the stand-in
+// motion service (motion-fake.ts), signed in as a native client with a device token. Run from the repository root, then format:
 //   node scripts/apple-fixtures.ts && pnpm biome format --write Apple/Tests/Fixtures
 // The tests give each answer its HTTP status; the console lists them. The device token and the
 // stream URL's signature are written as fixed stand-ins (secret scanners flag the real, random ones;
 // they belong to this throwaway server only).
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { lyricFixtures } from '../src/client/fixtures/lyrics.ts';
 import { startSetup } from '../src/server/auth/routes.ts';
@@ -17,6 +18,8 @@ import {
   navidromePlainSource,
   navidromeSource,
 } from '../src/server/lyrics/sources.ts';
+import { createMotion, motionKey } from '../src/server/motion.ts';
+import { startFakeMotion } from '../src/server/motion-fake.ts';
 import { startMockSubsonic } from '../src/server/navidrome/mock.ts';
 import { navidromeClientFor, navidromeUrlOf } from '../src/server/navidrome/routes.ts';
 import { call, testDeps } from '../src/server/testing.ts';
@@ -57,7 +60,20 @@ t.deps.lyrics.sourcesFor = (userId) => {
     navidromePlainSource(client),
   ];
 };
-const app = createApp({ ...t.deps, karaoke });
+// Animated lock-screen covers with the server's stand-in for the motion service (motion-fake.ts: it
+// renders nothing, a cover's "video" is a few bytes behind an MP4 header), as the server's tests wire
+// them.
+const motionService = await startFakeMotion();
+const motion = createMotion({
+  db,
+  now: t.deps.auth.now,
+  motionUrl: motionService.url,
+  dir: mkdtempSync(join(tmpdir(), 'echo-motion-fixtures-')),
+  cacheBytes: 1e9,
+  scopeFor: (id) => navidromeUrlOf(db, id),
+  navidrome: (id) => navidromeClientFor(t.deps.navidrome, id),
+});
+const app = createApp({ ...t.deps, karaoke, motion });
 
 // The admin, with two-factor on (the one-time setup).
 const setupToken = startSetup(t.deps.auth) as string;
@@ -125,6 +141,7 @@ await save(
 );
 await save('navidrome-not-connected', await rest('getAlbumList2', 'type=newest&size=500&offset=0'));
 await save('stream-url-not-connected', await bearer('/navidrome/stream-url/al-1-t1'));
+await save('motion-not-connected', await bearer('/motion/al-1?shape=tall&loop=8'));
 await bearer('/me/connections/navidrome', 'PUT', { username: 'ada', password: 'navidrome-pass' });
 await save(
   'getAlbumList2',
@@ -304,10 +321,82 @@ await save('lyrics-override-pin', await override({ pinnedSource: 'lrclib' }));
 await save('lyrics-override-unpin', await override({ pinnedSource: null }));
 await save('lyrics-override-bad', await override({ offsetMs: 20_000 }));
 
+// Animated lock-screen covers (docs/MOTION.md): the loop lengths the apps may ask for; an album's first
+// ask queues its cover (202 with Retry-After while it is made, the next album's behind it), then it is
+// ready, tall and square, with its video's and still's paths; another loop length is another cover
+// (its video 202 while it is made); a length not offered; an admin's upload takes the album's place
+// at any length; a cover the service cannot make; too many waiting; no motion service at all.
+t.clock.t += 10_000; // the API budget fills again
+const motionOf = (album: string, shape = 'tall', loop = 8) =>
+  bearer(`/motion/${album}?shape=${shape}&loop=${loop}`);
+const until = async (ok: () => boolean) => {
+  for (let i = 0; i < 500 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+  if (!ok()) throw new Error('motion: the stand-in service did not finish');
+};
+const job = (album: string, variant: string) => motion.get(motionKey(scope, album, variant));
+let release = () => {};
+const hold = () => {
+  motionService.state.hold = new Promise<void>((r) => {
+    release = () => {
+      motionService.state.hold = null;
+      r();
+    };
+  });
+};
+await save('motion-status', await bearer('/motion'));
+hold();
+await save('motion-working', await motionOf('al-1'));
+await save('motion-queued', await motionOf('al-2'));
+release();
+await until(() => job('al-1', 'g8')?.status === 'ready' && job('al-2', 'g8')?.status === 'ready');
+await save('motion-ready', await motionOf('al-1'));
+await save('motion-ready-square', await motionOf('al-1', 'square'));
+hold();
+await save('motion-loop-12', await motionOf('al-1', 'tall', 12));
+await save('motion-video-pending', await bearer('/motion/al-1/video?shape=tall&loop=12'));
+release();
+await until(() => job('al-1', 'g12')?.status === 'ready');
+await save('motion-ready-loop-12', await motionOf('al-1', 'tall', 12));
+await save('motion-bad-loop', await motionOf('al-1', 'tall', 10));
+motionService.state.refuse.add(motionKey(scope, 'al-3', 'g8'));
+await motionOf('al-3');
+await until(() => job('al-3', 'g8')?.status === 'failed');
+await save('motion-failed', await motionOf('al-3'));
+const video = Buffer.concat([
+  Buffer.from('\0\0\0\x18ftypmp42\0\0\0\0isommp42'),
+  Buffer.alloc(200, 7),
+]);
+await save(
+  'motion-upload',
+  await app.request('http://localhost/api/v1/motion/al-1/upload', {
+    method: 'PUT',
+    headers: { host: 'localhost', authorization: `Bearer ${token}`, 'content-type': 'video/mp4' },
+    body: video,
+  }),
+);
+await until(() => motion.uploadJob(scope, 'al-1')?.status === 'ready');
+await save('motion-ready-upload', await motionOf('al-1'));
+await save('motion-ready-upload-loop-12', await motionOf('al-1', 'tall', 12));
+t.clock.t += 10_000;
+hold();
+let busy: Response | undefined;
+for (let i = 1; i <= 30 && busy?.status !== 429; i++) busy = await motionOf(`busy-${i}`);
+if (busy) await save('motion-busy', busy);
+release();
+const noMotion = createApp({ ...t.deps, karaoke });
+await save(
+  'motion-off',
+  await noMotion.request('http://localhost/api/v1/motion/al-1?shape=tall&loop=8', {
+    headers: { host: 'localhost', authorization: `Bearer ${token}` },
+  }),
+);
+
 await save('logout', await bearer('/auth/logout', 'POST', {}));
 await save('unauthenticated', await bearer('/me'));
 await save(
   'health',
   await app.request('http://localhost/api/v1/health', { headers: { host: 'localhost' } }),
 );
+motion.stop();
+motionService.close();
 await mock.close();

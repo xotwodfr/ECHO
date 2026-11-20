@@ -276,6 +276,12 @@ struct DemoLibrary: LibrarySource {
         case "nowplaying": return ShellStart(page: .home, playing: .song)
         case "queue": return ShellStart(page: .home, playing: .queue)
         case "player": return ShellStart(page: .albums)
+        case "settings", "lockcover":
+            #if os(macOS)
+            return ShellStart(page: .albums) // Settings opens in its own window
+            #else
+            return ShellStart(page: .home, path: [.settings])
+            #endif
         case "lyrics", "lyrics-interlude", "lyrics-plain", "lyrics-menu":
             #if os(macOS)
             return ShellStart(page: .albums, playing: .lyrics)

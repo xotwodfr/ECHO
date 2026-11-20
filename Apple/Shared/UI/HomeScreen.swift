@@ -16,12 +16,12 @@ enum Greeting {
 /// for you, Karaoke, the playlists, most played, something different and the artists played.
 struct HomeScreen: View {
     let session: Session
-    @Binding var account: Bool
     /// A shelf to open scrolled to (the `-ECHODemo shelves` screen: Made for you).
     var scrolledTo: String? = nil
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(\.navigate) private var navigate
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -46,7 +46,7 @@ struct HomeScreen: View {
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Account", systemImage: "person.crop.circle") { account = true }
+                Button("Settings", systemImage: "person.crop.circle") { navigate(.settings) }
             }
         }
         #endif

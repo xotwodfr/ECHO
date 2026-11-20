@@ -29,6 +29,15 @@ enum Config {
 /// (never in the preview, which has its own: Preview/DemoLibrary.swift).
 @MainActor
 enum Live {
+    static let device = DeviceSettings()
+    /// The lock screen's animated covers: the iPhone's alone.
+    static let motion: MotionCovers? = {
+        #if os(iOS)
+        return MotionCovers(source: Live.session.client, files: MotionFiles(), loop: { Live.device.motionLoop.seconds })
+        #else
+        return nil
+        #endif
+    }()
     static let session = Session(
         server: Config.server,
         tokens: KeychainTokenStore(account: Config.server.absoluteString),
@@ -36,7 +45,7 @@ enum Live {
     static let library = Library(source: session.client, images: .live(session.client))
     static let player = Player(
         source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
-        images: library.images, settings: { Live.session.settings.playback },
+        images: library.images, motion: motion, settings: { Live.session.settings.playback },
         notify: { Live.library.show(Toast(message: $0)) })
     static let lyrics = Lyrics(
         source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },

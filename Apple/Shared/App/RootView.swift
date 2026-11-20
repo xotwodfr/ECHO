@@ -4,12 +4,13 @@ import SwiftUI
 /// token the server refuses, from anywhere in the app, brings the sign-in back (Session); signing
 /// out forgets the library (its covers too), stops the music and empties the queue. Signed in, the
 /// queue saved from any device comes back (Player, QueueSync). The playing track's lyrics follow it
-/// (Lyrics).
+/// (Lyrics). The lock screen's animated cover is asked for again when its speed changes in Settings.
 struct RootView: View {
     let session: Session
     let library: Library
     let player: Player
     let lyrics: Lyrics
+    let device: DeviceSettings
     var start = ShellStart()
 
     @Environment(\.scenePhase) private var scenePhase
@@ -26,10 +27,13 @@ struct RootView: View {
                 AlbumLight().overlay { ProgressView().tint(.white) }
             }
         }
+        .environment(session)
         .environment(library)
         .environment(player)
         .environment(lyrics)
+        .environment(device)
         .animation(.smooth, value: session.phase)
+        .onChange(of: device.motionLoop) { player.lockScreenChanged() }
         .task(id: player.track?.key) { lyrics.follow(player.track) }
         .task { await session.refresh() }
         .task(id: session.phase) {

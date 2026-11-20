@@ -53,13 +53,14 @@ final class DemoEngine: PlaybackEngine {
 
 extension Player {
     /// The preview's player: Ferry at Six paused at 1:24, Harbour Lights after it and two songs
-    /// queued next, on the screens that show playing (`nowplaying`, `queue`, `mini`, `player`); on
-    /// the lyrics' screens paused where the screen shows (DemoLyrics.time(for:)).
-    static func demo(library: Library, screen: String) -> Player {
+    /// queued next, on the screens that show playing (`nowplaying`, `queue`, `mini`, `player`, and
+    /// `settings` and `lockcover`, whose lock screen preview shows its album's motion cover); on the
+    /// lyrics' screens paused where the screen shows (DemoLyrics.time(for:)).
+    static func demo(library: Library, screen: String, motion: MotionCovers? = nil) -> Player {
         let player = Player(
-            source: DemoPlaybackSource(), engine: DemoEngine(), hearts: library, images: library.images, follows: false,
-            notify: { library.show(Toast(message: $0)) })
-        if ["nowplaying", "queue", "mini", "player"].contains(screen) {
+            source: DemoPlaybackSource(), engine: DemoEngine(), hearts: library, images: library.images, motion: motion,
+            follows: false, notify: { library.show(Toast(message: $0)) })
+        if ["nowplaying", "queue", "mini", "player", "settings", "lockcover"].contains(screen) {
             player.cue(DemoLibrary.nowPlaying, at: 84)
         } else if let time = DemoLyrics.time(for: screen) {
             player.cue(DemoLibrary.nowPlaying, at: time)

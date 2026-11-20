@@ -1,0 +1,10 @@
+{
+  "status": "ready",
+  "source": "generated",
+  "style": "light",
+  "shape": "tall",
+  "seconds": 8,
+  "version": "35834c26989a-mywq7vt4",
+  "video": "/api/v1/motion/al-1/video?shape=tall&loop=8",
+  "still": "/api/v1/motion/al-1/still?shape=tall&loop=8"
+}

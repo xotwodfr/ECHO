@@ -9,7 +9,8 @@ import AppKit
 
 // The lock screen, Control Center and the Mac's Now Playing (and its media keys): what plays,
 // through MPNowPlayingInfoCenter, and the controls, through MPRemoteCommandCenter. The info is built
-// in one place, NowPlayingInfo.build (the animated lock-screen covers and the widget start there).
+// in one place, NowPlayingInfo.build, the iPhone's animated lock-screen cover too (MotionCovers);
+// the widget starts there.
 
 /// A control pressed outside the app: the lock screen, Control Center, headphones, a car, the Mac's
 /// media keys or its Now Playing.
@@ -22,9 +23,14 @@ enum RemoteCommand: Equatable, Sendable {
 
 enum NowPlayingInfo {
     /// What the system shows for the song playing: its title, artist, album and cover, its length,
-    /// where it is and whether it moves on (the rate), and its place in the queue.
+    /// where it is and whether it moves on (the rate), and its place in the queue. On the iPhone,
+    /// once its album's motion cover is downloaded (`animated`), the lock screen's animated
+    /// artwork too, tall (3:4) and square, over the still cover, which stays for everything else
+    /// (and for the lock screen should the video not play). The Mac shows none (the owner's
+    /// decision: the iPhone's lock screen only).
     static func build(
-        track: Track, elapsed: Double, duration: Double, playing: Bool, index: Int, count: Int, artwork: CGImage?
+        track: Track, elapsed: Double, duration: Double, playing: Bool, index: Int, count: Int, artwork: CGImage?,
+        animated: AnimatedCover? = nil
     ) -> [String: Any] {
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: track.title,
@@ -40,8 +46,27 @@ enum NowPlayingInfo {
             MPNowPlayingInfoPropertyExternalContentIdentifier: track.key,
         ]
         if let artwork { info[MPMediaItemPropertyArtwork] = Self.artwork(artwork) }
+        #if os(iOS)
+        if let tall = animated?.tall { info[MPNowPlayingInfoProperty3x4AnimatedArtwork] = Self.animatedArtwork(tall) }
+        if let square = animated?.square { info[MPNowPlayingInfoProperty1x1AnimatedArtwork] = Self.animatedArtwork(square) }
+        #endif
         return info
     }
+
+    #if os(iOS)
+    /// A motion cover for the lock screen (iOS 26's MPMediaItemAnimatedArtwork): its first frame as
+    /// the preview the system shows until the video plays, and the looping video's local file. The
+    /// id changes with the files (another version, shape or loop length), so the system takes the
+    /// new ones and keeps showing the same ones otherwise.
+    static func animatedArtwork(_ frame: AnimatedCover.Frame) -> MPMediaItemAnimatedArtwork {
+        let still = frame.still
+        let video = frame.video
+        return MPMediaItemAnimatedArtwork(
+            artworkID: frame.id,
+            previewImageRequestHandler: { _ in UIImage(contentsOfFile: still.path(percentEncoded: false)) },
+            videoAssetFileURLRequestHandler: { _ in video })
+    }
+    #endif
 
     /// A cover for the system, which asks for it at the sizes it draws (from any thread).
     static func artwork(_ image: CGImage) -> MPMediaItemArtwork {

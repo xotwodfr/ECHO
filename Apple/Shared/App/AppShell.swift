@@ -51,7 +51,6 @@ struct PhoneShell: View {
     @State private var libraryPath: [Route]
     @State private var searchPath: [Route]
     @State private var query: String
-    @State private var account = false
     @State private var nowPlaying = false
     @State private var showsQueue = false
     @State private var showsLyrics = false
@@ -108,7 +107,7 @@ struct PhoneShell: View {
         TabView(selection: $tab) {
             Tab("Home", systemImage: "house.fill", value: Section.home) {
                 NavigationStack(path: $homePath) {
-                    HomeScreen(session: session, account: $account, scrolledTo: shelf).libraryRoutes()
+                    HomeScreen(session: session, scrolledTo: shelf).libraryRoutes()
                 }
                 .environment(\.navigate, NavigateAction { homePath.append($0) })
             }
@@ -147,7 +146,6 @@ struct PhoneShell: View {
                     go(route)
                 })
         }
-        .sheet(isPresented: $account) { AccountView(session: session) }
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
         .task {
@@ -187,12 +185,12 @@ struct MacShell: View {
     @State private var selection: MacItem?
     @State private var path: [Route]
     @State private var query: String
-    @State private var account = false
     /// The lyrics over the window (the player bar's Lyrics button).
     @State private var showsLyrics: Bool
 
     @Environment(Library.self) private var libraryModel
     @Environment(Player.self) private var player
+    @Environment(\.openSettings) private var openSettings
 
     init(session: Session, start: ShellStart = ShellStart()) {
         self.session = session
@@ -274,7 +272,7 @@ struct MacShell: View {
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button("Account", systemImage: "person.crop.circle") { account = true }
+                Button("Settings", systemImage: "gearshape") { openSettings() }
             }
         }
         .searchable(text: $query, placement: .toolbar, prompt: "Search")
@@ -282,7 +280,6 @@ struct MacShell: View {
         .onChange(of: query) {
             if !query.isEmpty, selection != .search { selection = .search }
         }
-        .sheet(isPresented: $account) { AccountView(session: session) }
     }
 }
 
@@ -292,11 +289,10 @@ struct MacPage: View {
     let session: Session
     let query: String
     var shelf: String? = nil
-    @State private var account = false
 
     var body: some View {
         switch item {
-        case .home: HomeScreen(session: session, account: $account, scrolledTo: shelf)
+        case .home: HomeScreen(session: session, scrolledTo: shelf)
         case .search: MacSearch(session: session, query: query)
         case .albums: MacAlbums(session: session)
         case .artists: MacArtists(session: session)

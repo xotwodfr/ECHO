@@ -16,6 +16,8 @@ enum Route: Hashable {
     case liked
     case wanted
     case mix(Mix)
+    /// Settings (Home's account button on the iPhone).
+    case settings
 }
 
 /// Opens a page on the current stack, from where a NavigationLink cannot be (a menu, a toast).
@@ -57,6 +59,7 @@ struct RouteScreen: View {
         case .liked: LikedSongsScreen()
         case .wanted: WantedScreen()
         case .mix(let mix): MixScreen(mix: mix)
+        case .settings: SettingsScreen()
         }
     }
 }

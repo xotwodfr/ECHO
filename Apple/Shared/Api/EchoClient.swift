@@ -111,6 +111,15 @@ final class EchoClient: Sendable {
         retries: Int = EchoClient.budgetRetries, waitMax: Int = EchoClient.budgetWaitMax,
         accepting: Set<Int> = []
     ) async throws -> Data {
+        try await answer(method, path, query: query, body: body, retries: retries, waitMax: waitMax, accepting: accepting).data
+    }
+
+    /// As data(…), with the answer's status and headers (a 202's Retry-After, say).
+    func answer(
+        _ method: String, _ path: String, query: [(String, String)] = [], body: Data? = nil,
+        retries: Int = EchoClient.budgetRetries, waitMax: Int = EchoClient.budgetWaitMax,
+        accepting: Set<Int> = []
+    ) async throws -> (data: Data, response: HTTPURLResponse) {
         var attempt = 0
         while true {
             let (data, res, sent) = try await exchange(method, path, query, body)
@@ -128,7 +137,7 @@ final class EchoClient: Sendable {
             }
             if (200..<300).contains(status) || accepting.contains(status) {
                 onEvent(.reachable(true))
-                return data
+                return (data, res)
             }
             let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
             let code = (object?["code"] as? String) ?? (object?["error"] as? String)
@@ -178,6 +187,15 @@ final class EchoClient: Sendable {
     /// ("/api/v1/navidrome/cover/al-1?size=300"), with the bearer header: an image loader's request.
     /// A cover that does not come says nothing about ECHO, so nothing is reported to the session.
     func fetch(_ path: String) async throws -> Data {
+        let (data, res) = try await fetchAnswer(path)
+        guard (200..<300).contains(res.statusCode) else {
+            throw ApiError(status: res.statusCode, code: nil, message: nil, signingIn: false)
+        }
+        return data
+    }
+
+    /// As fetch(_:), whatever the status, with the answer's headers (a motion cover's 202).
+    func fetchAnswer(_ path: String) async throws -> (data: Data, response: HTTPURLResponse) {
         guard let url = url(path) else { throw ApiError.badResponse }
         var req = authorized(url)
         req.timeoutInterval = 30
@@ -189,10 +207,7 @@ final class EchoClient: Sendable {
             throw ApiError(transport: error)
         }
         guard let res = answer.1 as? HTTPURLResponse else { throw ApiError.badResponse }
-        guard (200..<300).contains(res.statusCode) else {
-            throw ApiError(status: res.statusCode, code: nil, message: nil, signingIn: false)
-        }
-        return answer.0
+        return (answer.0, res)
     }
 
     /// A GET whose JSON answer decodes as `T`.

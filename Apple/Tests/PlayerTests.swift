@@ -21,13 +21,13 @@ final class Rig {
     private(set) var notices: [String] = []
     private(set) var player: Player!
 
-    init(images: ImageLoader? = nil, seed: UInt32 = 7) {
+    init(images: ImageLoader? = nil, motion: MotionCovers? = nil, seed: UInt32 = 7) {
         let clock = TestClock()
         self.clock = clock
         source = FakeSource(clock: clock)
         let random = SeededRandom(seed)
         player = Player(
-            source: source, engine: engine, media: media, hearts: hearts, images: images, follows: false,
+            source: source, engine: engine, media: media, hearts: hearts, images: images, motion: motion, follows: false,
             // Weak: a task the player started may outlive the test and its rig.
             settings: { [weak self] in self?.settings ?? UserSettings.Playback() },
             notify: { [weak self] in self?.notices.append($0) },

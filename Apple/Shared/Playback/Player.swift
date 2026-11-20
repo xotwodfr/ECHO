@@ -125,6 +125,8 @@ final class Player {
     @ObservationIgnored private let media: (any MediaCenter)?
     @ObservationIgnored private weak var hearts: (any Hearts)?
     @ObservationIgnored private let images: ImageLoader?
+    /// The iPhone's animated lock-screen covers (nil on the Mac, in the tests that leave it out).
+    @ObservationIgnored let motion: MotionCovers?
     @ObservationIgnored private let settings: @MainActor () -> UserSettings.Playback
     @ObservationIgnored private let notify: @MainActor (String) -> Void
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
@@ -158,6 +160,7 @@ final class Player {
     ///   - media: the lock screen and Control Center (nil: none, as in the preview and the tests).
     ///   - hearts: the library's Liked Songs, for the heart on the lock screen.
     ///   - images: covers for the lock screen.
+    ///   - motion: the lock screen's animated covers (the iPhone's).
     ///   - follows: whether the queue follows the user (`/me/queue`).
     ///   - settings: the preferences that follow the user (scrobbling, ReplayGain).
     ///   - notify: a short message for the user (a toast).
@@ -167,6 +170,7 @@ final class Player {
         media: (any MediaCenter)? = nil,
         hearts: (any Hearts)? = nil,
         images: ImageLoader? = nil,
+        motion: MotionCovers? = nil,
         follows: Bool = true,
         settings: @escaping @MainActor () -> UserSettings.Playback = { UserSettings.Playback() },
         notify: @escaping @MainActor (String) -> Void = { _ in },
@@ -179,6 +183,7 @@ final class Player {
         self.media = media
         self.hearts = hearts
         self.images = images
+        self.motion = motion
         self.settings = settings
         self.notify = notify
         self.sleep = sleep
@@ -413,8 +418,15 @@ final class Player {
         engineDuration = nil
         artwork = nil
         artworkKey = nil
+        // The downloaded motion covers go too, as the library's covers do.
+        motion?.clear()
         setPosition(0)
         media?.publish(nil, playing: false)
+    }
+
+    /// The lock screen's loop speed changed in Settings: its cover is asked for at the new length.
+    func lockScreenChanged() {
+        publish()
     }
 
     // MARK: - Controls from outside the app
@@ -768,10 +780,12 @@ final class Player {
         positionAt = now()
     }
 
-    /// Tells the system what plays (NowPlayingInfo.build), and loads the cover for it once.
+    /// Tells the system what plays (NowPlayingInfo.build), and loads the cover for it once; on the
+    /// iPhone the album's animated cover is asked for too, and told once it is downloaded.
     private func publish() {
         guard let media else { return }
         guard let track else {
+            motion?.want(nil) {}
             media.publish(nil, playing: false)
             return
         }
@@ -779,9 +793,11 @@ final class Player {
         media.publish(
             NowPlayingInfo.build(
                 track: track, elapsed: time(at: now()), duration: duration, playing: status == .playing,
-                index: queue.history.count, count: queue.history.count + 1 + upcoming.count, artwork: cover),
+                index: queue.history.count, count: queue.history.count + 1 + upcoming.count, artwork: cover,
+                animated: motion?.cover(for: track)),
             playing: isPlaying)
         publishControls()
+        motion?.want(track) { [weak self] in self?.publish() }
         guard cover == nil, artworkKey != track.key, let path = track.cover, let images else { return }
         artworkKey = track.key
         let key = track.key
