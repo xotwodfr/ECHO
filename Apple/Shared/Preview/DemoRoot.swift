@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// What `-ECHODemo <screen>` shows: the real app around a session and a library that never call the
-/// server (DemoLibrary), opened on a page: `home`, `album`, `artist`, `playlist`, `library`,
-/// `albums`, `artists`, `liked`, `wanted`, `search`; `signin`, the sign-in page; `shell`, the app
+/// server (DemoLibrary), opened on a page: `home`, `shelves` (Home at Made for you), `album`,
+/// `artist`, `playlist`, `mix`, `library`, `albums`, `artists`, `liked`, `wanted`, `search`; `signin`, the sign-in page; `shell`, the app
 /// while ECHO is not answering (the banner and the error states). `nowplaying` and `lyrics` are the
 /// approved preview's (PhoneDemo, MacDemo) until the playback and lyrics tasks build them.
 struct DemoRoot: View {

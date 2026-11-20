@@ -271,6 +271,8 @@ struct DemoLibrary: LibrarySource {
         case "liked": return ShellStart(page: .liked)
         case "wanted": return ShellStart(page: .wanted)
         case "search": return ShellStart(page: .search("harbour"))
+        case "shelves": return ShellStart(page: .home, shelf: "made")
+        case "mix": return ShellStart(page: .home, path: mixList.first.map { [Route.mix($0)] } ?? [])
         default: return ShellStart()
         }
     }

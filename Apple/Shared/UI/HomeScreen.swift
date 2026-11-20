@@ -17,19 +17,28 @@ enum Greeting {
 struct HomeScreen: View {
     let session: Session
     @Binding var account: Bool
+    /// A shelf to open scrolled to (the `-ECHODemo shelves` screen: Made for you).
+    var scrolledTo: String? = nil
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 26) {
-                ConnectionBanner(connectivity: session.connectivity)
-                content
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 26) {
+                    ConnectionBanner(connectivity: session.connectivity)
+                    content
+                }
+                .padding(.horizontal, pagePadding)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
-            .padding(.horizontal, pagePadding)
-            .padding(.top, 8)
-            .padding(.bottom, 32)
+            .task(id: library.home == nil) {
+                guard library.home != nil, let scrolledTo else { return }
+                try? await Task.sleep(for: .milliseconds(300))
+                proxy.scrollTo(scrolledTo, anchor: .top)
+            }
         }
         .echoRoom(strength: 0.55, height: 560)
         .navigationTitle(Greeting.at())
@@ -59,6 +68,7 @@ struct HomeScreen: View {
                         .buttonStyle(.plain)
                     }
                 }
+                .id("made")
             }
             if !home.karaoke.isEmpty {
                 karaokeShelf(home.karaoke)

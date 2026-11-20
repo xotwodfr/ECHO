@@ -27,6 +27,8 @@ struct ShellStart {
     var page: Page = .home
     /// Pages open on top of it.
     var path: [Route] = []
+    /// A Home shelf to open scrolled to.
+    var shelf: String? = nil
 }
 
 #if os(iOS)
@@ -35,6 +37,7 @@ struct PhoneShell: View {
 
     let session: Session
     private let chip: LibraryChip
+    private let shelf: String?
     @State private var tab: Section
     @State private var homePath: [Route]
     @State private var libraryPath: [Route]
@@ -75,6 +78,7 @@ struct PhoneShell: View {
             library = [.wanted] + start.path
         }
         self.chip = chip
+        shelf = start.shelf
         _tab = State(initialValue: tab)
         _homePath = State(initialValue: home)
         _libraryPath = State(initialValue: library)
@@ -86,7 +90,7 @@ struct PhoneShell: View {
         TabView(selection: $tab) {
             Tab("Home", systemImage: "house.fill", value: Section.home) {
                 NavigationStack(path: $homePath) {
-                    HomeScreen(session: session, account: $account).libraryRoutes()
+                    HomeScreen(session: session, account: $account, scrolledTo: shelf).libraryRoutes()
                 }
                 .environment(\.navigate, NavigateAction { homePath.append($0) })
             }
@@ -122,6 +126,7 @@ enum MacItem: Hashable {
 
 struct MacShell: View {
     let session: Session
+    private let shelf: String?
     @State private var selection: MacItem?
     @State private var path: [Route]
     @State private var query: String
@@ -143,6 +148,7 @@ struct MacShell: View {
         case .liked: item = .liked
         case .wanted: item = .wanted
         }
+        shelf = start.shelf
         _selection = State(initialValue: item)
         _path = State(initialValue: start.path)
         _query = State(initialValue: query)
@@ -170,7 +176,7 @@ struct MacShell: View {
             .navigationSplitViewColumnWidth(min: 200, ideal: 220)
         } detail: {
             NavigationStack(path: $path) {
-                MacPage(item: selection ?? .home, session: session, query: query)
+                MacPage(item: selection ?? .home, session: session, query: query, shelf: shelf)
                     .libraryRoutes()
             }
             .environment(\.navigate, NavigateAction { path.append($0) })
@@ -197,11 +203,12 @@ struct MacPage: View {
     let item: MacItem
     let session: Session
     let query: String
+    var shelf: String? = nil
     @State private var account = false
 
     var body: some View {
         switch item {
-        case .home: HomeScreen(session: session, account: $account)
+        case .home: HomeScreen(session: session, account: $account, scrolledTo: shelf)
         case .search: MacSearch(session: session, query: query)
         case .albums: MacAlbums(session: session)
         case .artists: MacArtists(session: session)
