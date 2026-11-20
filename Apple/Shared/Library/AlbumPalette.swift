@@ -112,14 +112,14 @@ struct AlbumPalette: Codable, Hashable, Sendable {
         ]
     }
 
-    /// The room's lights as the home-screen widget has them: the same, but the glow (the middle row's
-    /// left and centre) dimmed for a pale cover, whose glow is near white: the widget's white words
-    /// sit over it. A vivid cover (Harbour Lights' amber, Glass Weather's pink) keeps its glow.
+    /// The room's lights as the home-screen widget has them: the same, but dimmed for a pale cover,
+    /// whose greys and near-white glow would light the small widget too brightly for the white words
+    /// over them. A vivid cover (Harbour Lights' amber, Glass Weather's pink) keeps its own.
     var widgetMesh: [RGB] {
         let vivid = min(1, accent.hsb.saturation / 0.4)
         let keep = 0.6 + 0.4 * vivid
-        return mesh.enumerated().map { i, rgb in
-            guard keep < 1, i == 3 || i == 4 else { return rgb }
+        guard keep < 1 else { return mesh }
+        return mesh.map { rgb in
             let (hue, saturation, brightness) = rgb.hsb
             return RGB(hue: hue, saturation: saturation, brightness: brightness * keep)
         }

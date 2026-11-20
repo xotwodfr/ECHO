@@ -168,16 +168,17 @@ struct WidgetTests {
         #expect(!playing.showsSame(as: other))
     }
 
-    @Test("The ground: a pale cover's glow dimmed under the widget's white words; a vivid cover keeps its own")
+    @Test("The ground: a pale cover's lights dimmed under the widget's white words; a vivid cover keeps its own")
     func ground() {
         // Paper Satellites: beige and black, its most vivid colour the beige.
         let pale = AlbumPalette(base: RGB(0.78, 0.76, 0.72), accent: RGB(0.91, 0.89, 0.85))
+        // The glow, and the top right where the medium widget's title sits.
         #expect(pale.widgetMesh[4].hsb.brightness < 0.55)
-        #expect(pale.widgetMesh[4].hsb.brightness < pale.mesh[4].hsb.brightness)
-        #expect(pale.widgetMesh[3].hsb.brightness < pale.mesh[3].hsb.brightness)
-        // Only the glow: the rest of the room as the app has it.
-        for i in [0, 1, 2, 5, 6, 7, 8] {
-            #expect(pale.widgetMesh[i] == pale.mesh[i])
+        #expect(pale.widgetMesh[2].hsb.brightness < 0.4)
+        // Every light dimmed alike, its colour kept.
+        for (dim, lit) in zip(pale.widgetMesh, pale.mesh) {
+            #expect(dim.hsb.brightness < lit.hsb.brightness)
+            #expect(abs(dim.hsb.hue - lit.hsb.hue) < 1e-6)
         }
         // Harbour Lights' amber lamps: as in the app.
         let vivid = AlbumPalette(base: RGB(0.06, 0.13, 0.2), accent: RGB(0.96, 0.77, 0.42))
