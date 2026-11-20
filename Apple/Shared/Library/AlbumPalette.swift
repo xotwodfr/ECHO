@@ -64,9 +64,10 @@ struct AlbumPalette: Hashable, Sendable {
         self.accent = accent
     }
 
-    /// The colours of an image, from an 8 × 8 copy of it.
+    /// The colours of an image, from a 40 × 40 copy of it: fine enough that small bright parts (Harbour
+    /// Lights' lamps) keep their colour.
     init?(_ image: CGImage) {
-        let side = 8
+        let side = 40
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
         let drawn: Bool = pixels.withUnsafeMutableBytes { buffer in
             guard let context = CGContext(

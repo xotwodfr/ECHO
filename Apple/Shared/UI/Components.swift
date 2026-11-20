@@ -295,7 +295,7 @@ struct Shelf<Content: View>: View {
             ScrollView(.horizontal) {
                 LazyHStack(alignment: .top, spacing: 14) { content }
             }
-            .scrollIndicators(.hidden)
+            .scrollIndicators(.never)
             .scrollClipDisabled()
         }
     }
@@ -495,6 +495,36 @@ struct AlbumMenu: View {
     }
 }
 
+// MARK: - Glass buttons
+
+extension View {
+    /// A glass button with an amber label (the preview's Shuffle). The iPhone's system glass style;
+    /// on the Mac the same glass drawn here, since the Mac's system style fills itself with the tint.
+    func echoGlass(circle: Bool = false) -> some View {
+        #if os(macOS)
+        return buttonStyle(MacGlassButton(circle: circle))
+        #else
+        return buttonStyle(.glass).buttonBorderShape(circle ? .circle : .automatic)
+        #endif
+    }
+}
+
+#if os(macOS)
+struct MacGlassButton: ButtonStyle {
+    var circle = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(Color.echoTint)
+            .padding(.horizontal, circle ? 7 : 14)
+            .padding(.vertical, 7)
+            .glassEffect(.regular.interactive(), in: .capsule)
+            .opacity(configuration.isPressed ? 0.75 : 1)
+            .contentShape(.capsule)
+    }
+}
+#endif
+
 // MARK: - Page header
 
 /// The amber Play and the glass Shuffle (the preview's album page).
@@ -514,7 +544,7 @@ struct PlayButtons: View {
                 Button(action: shuffle) {
                     Label("Shuffle", systemImage: "shuffle").frame(maxWidth: playButtonWidth)
                 }
-                .buttonStyle(.glass)
+                .echoGlass()
             }
             .controlSize(.large)
             .font(.headline)
@@ -621,7 +651,7 @@ struct ErrorCard: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
             Button("Try Again", systemImage: "arrow.clockwise", action: retry)
-                .buttonStyle(.glass)
+                .echoGlass()
                 .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)

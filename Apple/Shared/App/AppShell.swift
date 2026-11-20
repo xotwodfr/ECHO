@@ -159,9 +159,11 @@ struct MacShell: View {
                     Label("Liked Songs", systemImage: "heart").tag(MacItem.liked)
                     Label("Wanted", systemImage: "music.note.list").tag(MacItem.wanted)
                 }
-                Section("Playlists") {
-                    ForEach(library.playlists) { playlist in
-                        Label(playlist.name, systemImage: "music.note.list").tag(MacItem.playlist(playlist))
+                if !library.playlists.isEmpty {
+                    Section("Playlists") {
+                        ForEach(library.playlists) { playlist in
+                            Label(playlist.name, systemImage: "music.note.list").tag(MacItem.playlist(playlist))
+                        }
                     }
                 }
             }

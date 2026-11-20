@@ -52,6 +52,7 @@ struct AlbumScreen: View {
             ToolbarSpacer(.fixed, placement: .primaryAction)
             ToolbarItem(placement: .primaryAction) {
                 Menu("More", systemImage: "ellipsis") { AlbumMenu(album: shown) }
+                    .menuIndicator(.hidden)
             }
         }
         .task { await load() }
@@ -207,7 +208,7 @@ struct ArtistScreen: View {
                     Label(following ? "Following" : "Follow", systemImage: following ? "heart.fill" : "heart")
                         .frame(maxWidth: playButtonWidth)
                 }
-                .buttonStyle(.glass)
+                .echoGlass()
             }
             .controlSize(.large)
             .font(.headline)
@@ -284,7 +285,7 @@ struct PlaylistScreen: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 16) {
-                PageHeader(title: playlist.name, subtitle: detail?.comment, facts: facts) {
+                PageHeader(title: playlist.name, subtitle: playlist.owner, facts: facts) {
                     PlaylistArt(cover: playlist.cover, covers: detail?.covers ?? [], corner: 18)
                 } actions: {
                     PlayButtons(disabled: detail?.entries.isEmpty ?? true) {
@@ -319,12 +320,12 @@ struct PlaylistScreen: View {
         }
     }
 
-    /// "ada · 12 songs, 48 min".
+    /// Its description, then "12 songs, 48 min".
     private var facts: String {
         let count = detail?.entries.count ?? playlist.tracks
         let ms = detail?.durationMs ?? (playlist.durationSec ?? 0) * 1000
         let size = ms > 0 ? "\(songs(count)), \(length(ms: ms))" : songs(count)
-        return [playlist.owner, size].compactMap { $0 }.joined(separator: " · ")
+        return [detail?.comment, size].compactMap { $0 }.joined(separator: "\n")
     }
 
     private func load() async {
