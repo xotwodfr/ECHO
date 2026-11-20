@@ -247,7 +247,7 @@ final class KaraokeAudioEngine: PlaybackEngine, KaraokeControls {
             position(of: opened, at: held)
             onEvent?(.duration(fileDuration))
             refill(gen: gen)
-            KaraokeFiles.prune(keeping: [key, next?.item.key].compactMap { $0 })
+            KaraokeFiles.prune(keeping: Set([key, next?.item.key].compactMap { $0 }))
             if wantsPlay { startNodes() } else { say(.paused) }
         } catch {
             self.key = nil
