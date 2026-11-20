@@ -128,7 +128,9 @@ struct DownloadTests {
         #expect(d.state(of: song(1)) == .downloading(0.25))
         let status = d.status(.album, "al-1")
         #expect(status.done == 0 && status.total == 3)
-        #expect(abs(status.progress - 0.25 / 3) < 0.0001)
+        let third: Double = 0.25 / 3.0
+        let gap: Double = abs(status.progress - third)
+        #expect(gap < 0.0001)
 
         rig.transport.finish("t:al-1-t1", size: 2000)
         #expect(d.state(of: song(1)) == .done)
@@ -308,10 +310,11 @@ struct DownloadTests {
         d.download(playlist)
         rig.transport.finish("c:al-2", size: 50)
         rig.transport.finish("t:al-2-t1", size: 4000)
-        #expect(d.bytes == 100 + 1000 + 2000 + 50 + 4000)
+        let all: Int = 7150
+        #expect(d.bytes == all)
         #expect(d.bytes == rig.store.bytes)
-        #expect(d.bytes(of: album) == 100 + 1000 + 2000)
-        #expect(d.bytes(of: playlist) == 2000 + 4000 + 100 + 50) // song 2 is in both
+        #expect(d.bytes(of: album) == 3100)
+        #expect(d.bytes(of: playlist) == 6150) // song 2 is in both
         #expect(d.songCount == 3)
 
         d.remove(.album, "al-1")
@@ -320,7 +323,7 @@ struct DownloadTests {
         #expect(rig.store.existingTrack("al-1-t2") != nil)
         #expect(rig.store.existingTrack("al-1-t1") == nil)
         #expect(d.bytes == rig.store.bytes)
-        #expect(d.bytes == 2000 + 4000 + 100 + 50) // the cover the playlist's song uses stays
+        #expect(d.bytes == 6150) // the cover the playlist's song uses stays
 
         d.remove(.playlist, "pl-1")
         #expect(d.bytes == 0)
@@ -400,8 +403,11 @@ struct DownloadTests {
         let request = try #require(client.trackRequest(song(1)))
         let url = try #require(request.url)
         #expect(url.path == "/api/v1/navidrome/stream/al-1-t1")
-        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.reduce(into: [String: String]()) { $0[$1.name] = $1.value }
-        #expect(query == ["format": "mp3", "maxBitRate": "192", "estimateContentLength": "true"])
+        let items: [URLQueryItem] = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems ?? []
+        var query: [String: String] = [:]
+        for item in items { query[item.name] = item.value ?? "" }
+        let expected: [String: String] = ["format": "mp3", "maxBitRate": "192", "estimateContentLength": "true"]
+        #expect(query == expected)
         #expect(request.value(forHTTPHeaderField: "Authorization") == "Bearer echo_dt_x")
         let cover = try #require(client.coverRequest(id: "al-1"))
         #expect(cover.url?.absoluteString == "https://echo.test/api/v1/navidrome/cover/al-1?size=600")
