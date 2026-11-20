@@ -35,6 +35,7 @@ extension Color {
 struct AlbumLight: View {
     var strength: Double = 1
     var palette: AlbumPalette? = nil
+    @Environment(\.theme) private var theme
 
     var body: some View {
         MeshGradient(
@@ -48,6 +49,7 @@ struct AlbumLight: View {
         )
         .opacity(strength)
         .background(palette.map { Color($0.mesh[7]) } ?? Color.harbourNavy)
+        .saturation(theme.monochrome ? 0 : 1)
         .animation(.smooth(duration: 0.8), value: palette)
         .ignoresSafeArea()
     }
@@ -83,7 +85,7 @@ struct RoomModifier: ViewModifier {
         content
             .background(alignment: .top) {
                 ZStack {
-                    AlbumLight(strength: lit, palette: palette).saturation(theme.monochrome ? 0 : 1)
+                    AlbumLight(strength: lit, palette: palette)
                     if look.wash > 0 { theme.floor.opacity(look.wash).ignoresSafeArea() }
                 }
                 .frame(height: height * look.roomHeight)
