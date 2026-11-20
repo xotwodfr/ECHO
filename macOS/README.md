@@ -144,9 +144,9 @@ Mac on its built-in library, a player that never streams and the web's lyric fix
 Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
 the rest of Themes (11b stage 2; stage 1, ECHO and Liquid Glass, is done, apple run 49), Karaoke, Listen together, downloads (10), the menu commands; signing and notarization to share it. Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by `git revert 6bf75cb`), unfinished, it had not built green yet.
 
-## Themes (11b, stages 1, 2a and 2b)
+## Themes (11b, all 14: stage 3, apple run 58)
 
-The **Apple Music, Spotify, SoundCloud, Deezer, Qobuz, Tidal, YouTube Music and Monochrome styles** are made too (apple run 53: 332 Swift tests; Android's accents, grounds and squareness; haptics only; demo screens `theme-<name>-home|nowplaying|lyrics`). Next: Clay, Yarn, Paper & origami, Retro hi-fi. ECHO (the default) and **Liquid Glass** are made, chosen first in Settings → Appearance (the Settings window),
+**Clay, Yarn, Paper & origami and Retro hi-fi** are made too (textured surfaces and grounds, a plate under the lyrics, lyric looks, Android's sounds, **Clay in the dark** in Appearance; closest faithful versions, the differences are in the plan's "Picking this up"). Only Material You (Android's wallpaper theme) is not built. The **Apple Music, Spotify, SoundCloud, Deezer, Qobuz, Tidal, YouTube Music and Monochrome styles** are made too (apple run 53: 332 Swift tests; Android's accents, grounds and squareness; haptics only; demo screens `theme-<name>-home|nowplaying|lyrics`).  ECHO (the default) and **Liquid Glass** are made, chosen first in Settings → Appearance (the Settings window),
 with Light or dark and **Theme sounds** (the Mac has no haptics; its sounds play as system sounds). The choice
 follows the account. The Mac's main window and Settings window read the theme as the iPhone's screens do
 (`Apple/Shared/Themes`, `UI/Theming.swift`). Demo screens: `themes` (the Settings window), `theme-liquid-glass-home`
