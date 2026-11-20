@@ -53,7 +53,8 @@ Sideloadly) besides the simulator builds and screenshots.
 | 5 Animated lock-screen covers, Settings | done (apple run 30) |
 | 6 Widget | done (apple run 36) |
 | 7 Scan to sign in, guests | done (apple run 38) |
-| 11 Settings parity and themes (Liquid Glass, ECHO, then Android's) | next |
+| 11a Settings parity with Android | done (apple run 46; the table: [`apple-settings-parity.md`](apple-settings-parity.md)) |
+| 11b Themes (Liquid Glass, ECHO, then Android's) | next: goes in Settings' **Appearance** group (see "Picking this up") |
 | 8 Karaoke | then |
 | 9 Listen together | then |
 | 10 Downloads | paused: code kept in commits 36116ea, 56c096c, 380d2d6; re-apply with `git revert 6bf75cb`; unfinished: it did not build yet (run 39's tests failed to type-check a test expression, since fixed in 56c096c; the later fixes were never run through to green) |
@@ -107,3 +108,25 @@ Sideloadly) besides the simulator builds and screenshots.
   length from the request; ECHO caches it. The preview renderer's lessons are in the spec.
 - The API: the motion cover for an album, tall or square, with its first frame as a still, and
   the admin's upload and removal; `compose.example.yaml`, `docs/MOTION.md`, tests.
+
+## Picking this up
+
+**11b, themes** (the next agent):
+
+- **Where:** `Apple/Shared/App/SettingsGroups.swift`, `AppearanceSettings`: it holds Motion, Performance
+  mode and Background brightness now. Put a `ThemePicker` first in that group, then the light or dark
+  choice. Settings opens with Appearance at the top, so the picker is the first thing on the screen.
+- **The key:** `UserSettings.appearance` (`theme: ThemeID`, `dark: DarkMode`), the user's, so it follows
+  the account and loads at sign-in. Change it with `SettingsEditor.save { $0.appearance.theme = .glass }`
+  (one key at a time, in order, put back if the server refuses; tested in `SettingsScreenTests`). The
+  Apple apps show "materialyou" as ECHO. Read it from `session.settings.appearance`.
+- **The lyric seam:** `LyricStyle` and `LyricLook` (`Apple/Shared/Lyrics/LyricStyle.swift`) with the
+  `lyricLook` environment value (`LyricFieldView.swift`): a made theme sets the look the lyric screens use,
+  as Android sets its lyric style from the theme. Android's per-device "Lyric style" and "Clay in the dark"
+  settings, and theme sounds, belong here (deferred in the parity table).
+- **The widget** does not follow themes yet (it reads its own snapshot, `Apple/Shared/Widget`).
+- Per-device choices go in `DeviceSettings` (a property, a key, a setter), as `streamQuality`,
+  `backdrop` and `performance` do; the demo screens `settings`, `settings-playback`, `settings-lyrics`
+  show the groups (add a `settings-appearance` that scrolls to `SettingsAnchor.appearance` if useful).
+
+**Deferred settings** (the parity table says why): Crossfade, Equalizer, Karaoke (task 8), Autoplay.

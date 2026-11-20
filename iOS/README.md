@@ -238,6 +238,15 @@ sideload. It has not yet signed in to a real server or played through one.
 ## Next
 
 Sign in to a real server and play on a device, and scan a real sign-in page and guest pass with
-the camera; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`): Settings parity and themes (11), then Karaoke, Listen together, downloads (10), finish. The real lock screen's animated cover and the real widget on the home screen are to be seen
+the camera; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`): Themes (11b: they go in Settings' Appearance group; Settings parity, 11a, is done, apple run 46), then Karaoke, Listen together, downloads (10), finish. The real lock screen's animated cover and the real widget on the home screen are to be seen
 on a device, signed (the simulator's lock screen and home screen cannot be screenshotted
 reliably, and an unsigned build has no App Group). Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by `git revert 6bf75cb`), unfinished, it had not built green yet.
+
+## Settings (11a)
+
+Settings has the groups Appearance, Playback, Lyrics, Lock screen, Sign in and guests, Account, About
+(`Apple/Shared/App/SettingsScreen.swift`, `SettingsGroups.swift`). What follows the user is
+`/me/settings` (`SettingsEditor`, one key at a time); what is this device's is `DeviceSettings` (stream
+quality, background brightness, Performance mode). Every Android setting, where it is kept and its status:
+`docs/superpowers/plans/apple-settings-parity.md`. The demo screens `settings`, `settings-playback` and
+`settings-lyrics` show it (apple run 46: Swift tests 308 on both platforms).
