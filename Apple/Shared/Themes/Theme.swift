@@ -320,9 +320,13 @@ struct Theme: Equatable, Sendable, Identifiable {
         .clay, .yarn,
     ]
 
+    /// Themes built but not yet whole, which the preview's demo screens may show (never the picker, and
+    /// never a real account's choice): a theme moves into `made` when it is complete.
+    nonisolated(unsafe) static var unreleased: [Theme] = []
+
     /// The theme an id names; one not made here is ECHO.
     static func of(_ id: UserSettings.ThemeID) -> Theme {
-        made.first { $0.id == id } ?? .echo
+        (made + unreleased).first { $0.id == id } ?? .echo
     }
 
     // MARK: - Resolving

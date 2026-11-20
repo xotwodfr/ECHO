@@ -18,6 +18,8 @@ final class DemoWorld {
 
     init(screen: String) {
         self.screen = screen
+        // The two material themes still being built can be previewed, not chosen.
+        if screen.hasPrefix("theme-paper") || screen.hasPrefix("theme-hifi") { Theme.unreleased = [.paper, .hifi] }
         let theme = DemoThemes.of(screen)
         let screen = theme?.base ?? screen
         base = screen
@@ -174,6 +176,12 @@ enum DemoThemes {
         case "theme-yarn-lyrics": Look(base: "lyrics", appearance: .init(theme: .yarn, dark: .theme))
         case "theme-clay-dark-home": Look(base: "mini", appearance: .init(theme: .clay, dark: .dark))
         case "theme-clay-dark-lyrics": Look(base: "lyrics", appearance: .init(theme: .clay, dark: .dark))
+        case "theme-paper-home": Look(base: "mini", appearance: .init(theme: .paper, dark: .theme))
+        case "theme-paper-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .paper, dark: .theme))
+        case "theme-paper-lyrics": Look(base: "lyrics", appearance: .init(theme: .paper, dark: .theme))
+        case "theme-hifi-home": Look(base: "mini", appearance: .init(theme: .hifi, dark: .theme))
+        case "theme-hifi-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .hifi, dark: .theme))
+        case "theme-hifi-lyrics": Look(base: "lyrics", appearance: .init(theme: .hifi, dark: .theme))
         case "theme-light-home": Look(base: "mini", appearance: .init(theme: .echo, dark: .light))
         default: nil
         }
