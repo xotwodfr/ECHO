@@ -18,8 +18,6 @@ final class DemoWorld {
 
     init(screen: String) {
         self.screen = screen
-        // The two material themes still being built can be previewed, not chosen.
-        if screen.hasPrefix("theme-paper") || screen.hasPrefix("theme-hifi") { Theme.unreleased = [.paper, .hifi] }
         let theme = DemoThemes.of(screen)
         let screen = theme?.base ?? screen
         base = screen

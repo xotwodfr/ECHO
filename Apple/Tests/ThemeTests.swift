@@ -47,6 +47,9 @@ struct ThemeResolveTests {
             #expect(Theme.of(id).id == .echo, "\(id)")
         }
         #expect(Theme.of(.materialyou).id == .echo)
+        // Every Android theme but Material You (its own, wallpaper-based) is made.
+        let missing = UserSettings.ThemeID.allCases.filter { id in id != .materialyou && !Theme.made.contains { $0.id == id } }
+        #expect(missing.isEmpty, "\(missing)")
     }
 
     @Test("Now Playing's variant is always the dark one")
