@@ -31,6 +31,7 @@ struct LibraryScreen: View {
     @State private var chip: LibraryChip
 
     @Environment(Library.self) private var library
+    @Environment(Downloads.self) private var downloads
 
     init(session: Session, chip: LibraryChip = .playlists) {
         self.session = session
@@ -50,6 +51,10 @@ struct LibraryScreen: View {
                 .buttonStyle(.plain)
                 NavigationLink(value: Route.wanted) {
                     LibraryRow(title: "Wanted", subtitle: library.wantedLine) { WantedArt() }
+                }
+                .buttonStyle(.plain)
+                NavigationLink(value: Route.downloads) {
+                    LibraryRow(title: "Downloads", subtitle: downloads.summary) { DownloadsArt() }
                 }
                 .buttonStyle(.plain)
                 switch chip {

@@ -6,10 +6,10 @@ import SwiftUI
 /// under the status bar, no bar backgrounds, white on glass, amber for what is chosen.
 ///
 /// The groups, in order: Lock screen (the iPhone's animated cover and its speed), Sign in and
-/// guests (scanning a computer's code, the guests; a guest's own pass), Account, About.
-/// Later groups go between Sign in and guests and Account, each a view of its own wrapped in a
-/// SettingsGroup: Appearance (task 11, the themes; they follow the user, `/me/settings`, Session)
-/// and Downloads (task 10, the storage used and freed; this device's own, DeviceSettings).
+/// guests (scanning a computer's code, the guests; a guest's own pass), Downloads, Account, About.
+/// Downloads (Wi-Fi only, the storage used and freed; this device's own, DeviceSettings) is between
+/// Sign in and guests and Account. A later group goes there too, a view of its own wrapped in a
+/// SettingsGroup: Appearance (task 11, the themes; they follow the user, `/me/settings`, Session).
 struct SettingsScreen: View {
     @Environment(Session.self) private var session
 
@@ -20,6 +20,7 @@ struct SettingsScreen: View {
                 LockScreenSettings()
                 #endif
                 GuestSettings(session: session)
+                DownloadsSettings()
                 AccountSettings(session: session)
                 AboutSettings()
             }
@@ -155,6 +156,8 @@ struct AboutSettings: View {
 struct SettingsWindow: View {
     let session: Session
     let invites: GuestInvites
+    let downloads: Downloads
+    let device: DeviceSettings
     var guests = false
 
     var body: some View {
@@ -167,6 +170,8 @@ struct SettingsWindow: View {
         }
         .environment(session)
         .environment(invites)
+        .environment(downloads)
+        .environment(device)
         .frame(width: 520, height: guests ? 560 : 520)
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)

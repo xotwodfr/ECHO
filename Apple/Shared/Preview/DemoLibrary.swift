@@ -270,6 +270,13 @@ struct DemoLibrary: LibrarySource {
         case "artists": return ShellStart(page: .artists)
         case "liked": return ShellStart(page: .liked)
         case "wanted": return ShellStart(page: .wanted)
+        case "downloads": return ShellStart(page: .downloads)
+        case "downloads-album":
+            #if os(macOS)
+            return ShellStart(page: .albums, path: [.album(harbour)])
+            #else
+            return ShellStart(page: .home, path: [.album(harbour)])
+            #endif
         case "search": return ShellStart(page: .search("harbour"))
         case "shelves": return ShellStart(page: .home, shelf: "made")
         case "mix": return ShellStart(page: .home, path: mixList.first.map { [Route.mix($0)] } ?? [])
@@ -282,7 +289,7 @@ struct DemoLibrary: LibrarySource {
             #else
             return ShellStart(page: .home, path: [.settings, .guests])
             #endif
-        case "settings", "lockcover":
+        case "settings", "lockcover", "downloads-settings":
             #if os(macOS)
             return ShellStart(page: .albums) // Settings opens in its own window
             #else

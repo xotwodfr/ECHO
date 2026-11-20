@@ -12,6 +12,8 @@ struct AlbumScreen: View {
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(Downloads.self) private var downloads: Downloads?
+    @Environment(Session.self) private var session: Session?
     @State private var album: Album? = nil
     @State private var failure: ApiError? = nil
     @State private var missing = false
@@ -53,6 +55,13 @@ struct AlbumScreen: View {
                 ToolbarSpacer(.fixed, placement: .primaryAction)
             }
             ToolbarItem(placement: .primaryAction) {
+                DownloadButton(kind: .album, id: start.id) {
+                    guard let album, !album.tracks.isEmpty else { return nil }
+                    return DownloadItem(album: album)
+                }
+            }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
                 Menu("More", systemImage: "ellipsis") { AlbumMenu(album: shown) }
                     .menuIndicator(.hidden)
             }
@@ -89,15 +98,25 @@ struct AlbumScreen: View {
 
     private func load() async {
         failure = nil
+        // Offline, the downloaded copy shows at once (no waiting for a request that cannot answer).
+        if !(session?.connectivity.isOnline ?? true), let saved = downloads?.album(start.id) {
+            album = saved
+            return
+        }
         do {
             if let full = try await library.source.album(id: start.id) {
                 album = full
+                downloads?.sync(DownloadItem(album: full))
             } else {
                 missing = true
             }
         } catch is CancellationError {
         } catch {
-            failure = error as? ApiError ?? .badResponse
+            if let saved = downloads?.album(start.id) {
+                album = saved
+            } else {
+                failure = error as? ApiError ?? .badResponse
+            }
         }
     }
 }
@@ -278,6 +297,8 @@ struct PlaylistScreen: View {
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(Downloads.self) private var downloads: Downloads?
+    @Environment(Session.self) private var session: Session?
     @State private var detail: PlaylistDetail? = nil
     @State private var failure: ApiError? = nil
     @State private var missing = false
@@ -318,6 +339,24 @@ struct PlaylistScreen: View {
         .echoRoom(strength: 0.8, height: 720, palette: palette, held: true)
         .pageTitle(playlist.name)
         .clearBars()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                DownloadButton(kind: .playlist, id: start.id) {
+                    guard let detail, !detail.entries.isEmpty else { return nil }
+                    return DownloadItem(playlist: detail)
+                }
+            }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
+                Menu("More", systemImage: "ellipsis") {
+                    DownloadMenuItems(kind: .playlist, id: start.id) {
+                        guard let detail, !detail.entries.isEmpty else { return nil }
+                        return DownloadItem(playlist: detail)
+                    }
+                }
+                .menuIndicator(.hidden)
+            }
+        }
         .task { await load() }
         .task(id: detail?.covers.first ?? start.cover) {
             if let cover = detail?.covers.first ?? start.cover { palette = await library.images.palette(cover) }
@@ -334,15 +373,24 @@ struct PlaylistScreen: View {
 
     private func load() async {
         failure = nil
+        if !(session?.connectivity.isOnline ?? true), let saved = downloads?.playlist(start.id) {
+            detail = saved
+            return
+        }
         do {
             if let loaded = try await library.source.playlist(id: start.id) {
                 detail = loaded
+                downloads?.sync(DownloadItem(playlist: loaded))
             } else {
                 missing = true
             }
         } catch is CancellationError {
         } catch {
-            failure = error as? ApiError ?? .badResponse
+            if let saved = downloads?.playlist(start.id) {
+                detail = saved
+            } else {
+                failure = error as? ApiError ?? .badResponse
+            }
         }
     }
 }
@@ -352,11 +400,13 @@ struct PlaylistScreen: View {
 struct LikedSongsScreen: View {
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(Downloads.self) private var downloads: Downloads?
 
     private let context = PlayContext(kind: "starred", title: "Liked Songs")
 
     var body: some View {
-        let tracks = library.starred?.tracks ?? []
+        // Offline (or before the hearts load), the downloaded Liked Songs.
+        let tracks = library.starred?.tracks ?? downloads?.likedTracks ?? []
         ScrollView {
             VStack(spacing: 16) {
                 PageHeader(title: "Liked Songs", facts: library.starred.map { songs($0.tracks.count) }) {
@@ -384,6 +434,22 @@ struct LikedSongsScreen: View {
         .echoRoom(strength: 0.75, height: 680, palette: AlbumPalette.liked, held: true)
         .pageTitle("Liked Songs")
         .clearBars()
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                DownloadButton(kind: .liked, id: DownloadItem.likedId) {
+                    tracks.isEmpty ? nil : DownloadItem.liked(tracks)
+                }
+            }
+            ToolbarSpacer(.fixed, placement: .primaryAction)
+            ToolbarItem(placement: .primaryAction) {
+                Menu("More", systemImage: "ellipsis") {
+                    DownloadMenuItems(kind: .liked, id: DownloadItem.likedId) {
+                        tracks.isEmpty ? nil : DownloadItem.liked(tracks)
+                    }
+                }
+                .menuIndicator(.hidden)
+            }
+        }
         .task { await library.loadStarred() }
     }
 }

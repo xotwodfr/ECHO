@@ -23,7 +23,7 @@ struct ShellStart {
     enum Page: Hashable {
         case home
         case search(String)
-        case playlists, albums, artists, liked, wanted
+        case playlists, albums, artists, liked, wanted, downloads
     }
 
     /// Now Playing open over it (the iPhone), on the song, on Up next or with its lyrics over it;
@@ -99,6 +99,9 @@ struct PhoneShell: View {
         case .wanted:
             tab = .library
             library = [.wanted] + start.path
+        case .downloads:
+            tab = .library
+            library = [.downloads] + start.path
         }
         self.chip = chip
         shelf = start.shelf
@@ -210,7 +213,7 @@ struct PhoneShell: View {
 #if os(macOS)
 /// A page of the Mac's sidebar.
 enum MacItem: Hashable {
-    case home, search, albums, artists, liked, wanted
+    case home, search, albums, artists, liked, wanted, downloads
     case playlist(Playlist)
 }
 
@@ -240,6 +243,7 @@ struct MacShell: View {
         case .artists: item = .artists
         case .liked: item = .liked
         case .wanted: item = .wanted
+        case .downloads: item = .downloads
         }
         shelf = start.shelf
         _selection = State(initialValue: item)
@@ -278,6 +282,7 @@ struct MacShell: View {
                     Label("Artists", systemImage: "music.microphone").tag(MacItem.artists)
                     Label("Liked Songs", systemImage: "heart").tag(MacItem.liked)
                     Label("Wanted", systemImage: "music.note.list").tag(MacItem.wanted)
+                    Label("Downloads", systemImage: "arrow.down.circle").tag(MacItem.downloads)
                 }
                 if !libraryModel.playlists.isEmpty {
                     Section("Playlists") {
@@ -333,6 +338,7 @@ struct MacPage: View {
         case .artists: MacArtists(session: session)
         case .liked: LikedSongsScreen()
         case .wanted: WantedScreen()
+        case .downloads: DownloadsScreen()
         case .playlist(let playlist): PlaylistScreen(start: playlist).id(playlist.id)
         }
     }
