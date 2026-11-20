@@ -58,6 +58,16 @@ struct ThemeResolveTests {
         #expect(light.forcedDark.theme == light.theme)
     }
 
+    @Test("The service-style themes start as Android has them: Apple Music and SoundCloud light, Spotify dark")
+    func serviceDefaults() {
+        for (id, dark) in [(UserSettings.ThemeID.apple, false), (.spotify, true), (.soundcloud, false)] {
+            let r = Theme.resolve(.init(theme: id, dark: .theme), systemDark: !dark)
+            #expect(r.theme.id == id)
+            #expect(r.dark == dark, "\(id)")
+        }
+        #expect(Theme.of(.spotify).dark.onAccent == RGB(0, 0, 0))
+    }
+
     @Test("The picker offers only whole themes, each once, ECHO first")
     func made() {
         #expect(Theme.made.first?.id == .echo)
@@ -98,6 +108,22 @@ struct ThemeTokenTests {
         }
     }
 
+    @Test("A label on the accent can be read, and the shapes are in range, squarer than ECHO's for the services")
+    func accentsAndShapes() {
+        for theme in Theme.made {
+            for p in [theme.light, theme.dark] {
+                #expect(abs(luminance(p.onAccent) - luminance(p.accent)) > 0.3, "\(theme.id)")
+            }
+            #expect(theme.shapes.art > 0 && theme.shapes.art <= 1 && theme.shapes.card > 0 && theme.shapes.card <= 1)
+        }
+        for theme in [Theme.appleMusic, .spotify, .soundcloud] {
+            #expect(theme.shapes.art < Theme.echo.shapes.art, "\(theme.id)")
+            #expect(theme.sounds == .none && theme.sounds.files.isEmpty)
+        }
+        #expect(Theme.soundcloud.shapes.art < Theme.spotify.shapes.art)
+        #expect(Theme.spotify.shapes.art < Theme.appleMusic.shapes.art)
+    }
+
     @Test("Liquid Glass is glassier than ECHO: tinted rimmed cards, rows on glass, refracting buttons")
     func glassier() {
         #expect(!Theme.echo.glass.rows && !Theme.echo.glass.refractive && Theme.echo.glass.rim == 0)
@@ -115,6 +141,8 @@ struct ThemeTokenTests {
             #expect(style.ink != style.room, "\(theme.id)")
             #expect(style.glowScale > 0 && style.depthBlur >= 0, "\(theme.id)")
         }
+        let looks = Theme.made.map { $0.lyric.look.make(.harbour, 30) }
+        for i in looks.indices { for j in looks.indices where i < j { #expect(looks[i] != looks[j], "\(i) \(j)") } }
         let echo = Theme.echo.lyric.look.make(.harbour, 30)
         let glass = Theme.glass.lyric.look.make(.harbour, 30)
         #expect(echo != glass)

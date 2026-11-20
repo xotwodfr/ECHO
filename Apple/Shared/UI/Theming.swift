@@ -17,6 +17,7 @@ extension Theme.Resolved {
     var highlight: Color { Color(palette.highlight) }
     var warning: Color { Color(palette.warning) }
     var floor: Color { Color(palette.floor) }
+    var onAccent: Color { Color(palette.onAccent) }
 
     /// The scheme to ask the system for; nil leaves it to the system.
     var scheme: ColorScheme? { preferredDark.map { $0 ? .dark : .light } }
@@ -81,7 +82,7 @@ struct ThemedGlass: ViewModifier {
 
     func body(content: Content) -> some View {
         let glass = theme.glass
-        let shape = radius.map { AnyShape(RoundedRectangle(cornerRadius: $0, style: .continuous)) } ?? AnyShape(Capsule())
+        let shape = radius.map { AnyShape(RoundedRectangle(cornerRadius: $0 * theme.shapes.card, style: .continuous)) } ?? AnyShape(Capsule())
         content
             .glassEffect(style, in: shape)
             .overlay {

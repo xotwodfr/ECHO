@@ -142,6 +142,15 @@ enum DemoThemes {
         case "theme-liquid-glass-home": Look(base: "mini", appearance: .init(theme: .glass, dark: .theme))
         case "theme-liquid-glass-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .glass, dark: .theme))
         case "theme-liquid-glass-lyrics": Look(base: "lyrics", appearance: .init(theme: .glass, dark: .theme))
+        case "theme-apple-music-home": Look(base: "mini", appearance: .init(theme: .apple, dark: .theme))
+        case "theme-apple-music-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .apple, dark: .theme))
+        case "theme-apple-music-lyrics": Look(base: "lyrics", appearance: .init(theme: .apple, dark: .theme))
+        case "theme-spotify-home": Look(base: "mini", appearance: .init(theme: .spotify, dark: .theme))
+        case "theme-spotify-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .spotify, dark: .theme))
+        case "theme-spotify-lyrics": Look(base: "lyrics", appearance: .init(theme: .spotify, dark: .theme))
+        case "theme-soundcloud-home": Look(base: "mini", appearance: .init(theme: .soundcloud, dark: .theme))
+        case "theme-soundcloud-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .soundcloud, dark: .theme))
+        case "theme-soundcloud-lyrics": Look(base: "lyrics", appearance: .init(theme: .soundcloud, dark: .theme))
         case "theme-light-home": Look(base: "mini", appearance: .init(theme: .echo, dark: .light))
         default: nil
         }

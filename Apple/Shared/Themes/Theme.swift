@@ -6,7 +6,7 @@ import Foundation
 /// treated, the look of its lyrics and its UI sounds. The screens read the resolved one from the
 /// environment (`\.theme`, UI/Theming.swift) and take every colour and surface from it.
 ///
-/// Made so far: ECHO and Liquid Glass. The server knows the Android app's other ids too; one that is
+/// Made so far: ECHO, Liquid Glass, and the Apple Music, Spotify and SoundCloud styles. The server knows the Android app's other ids too; one that is
 /// not built here shows as ECHO (`Theme.of`), as "materialyou" always does. A theme is added to
 /// `Theme.made` only when it is whole: its tokens, its lyric look and its sounds. The next ones, in
 /// the owner's order: docs/superpowers/plans/2026-11-19-apple-apps.md ("Picking this up").
@@ -17,6 +17,8 @@ struct Theme: Equatable, Sendable, Identifiable {
         var tint: RGB
         /// The prominent buttons' fill (Play).
         var accent: RGB
+        /// The label on that fill (Android's `onAccent`: black on Spotify's green).
+        var onAccent: RGB
         /// The small marks: the playing song, a liked heart, a page's artist.
         var highlight: RGB
         /// Something went wrong.
@@ -49,8 +51,17 @@ struct Theme: Equatable, Sendable, Identifiable {
         var rowRadius: Double
     }
 
+    /// How square or round a theme is, as multiples of the corners the screens are drawn with
+    /// (Android's `Look`: Spotify's art is 4 dp where ECHO's is 16).
+    struct Shapes: Equatable, Sendable {
+        /// Covers and art.
+        var art: Double
+        /// Cards, panels and glass surfaces.
+        var card: Double
+    }
+
     /// Whose lyric look the theme brings (LyricLook).
-    enum Lyric: Equatable, Sendable { case echo, glass }
+    enum Lyric: Equatable, Sendable { case echo, glass, appleMusic, spotify, soundcloud }
 
     /// Whose UI sounds the theme brings (none: only the haptics).
     enum Sounds: String, Equatable, Sendable { case none, glass }
@@ -63,6 +74,7 @@ struct Theme: Equatable, Sendable, Identifiable {
     let light: Palette
     let dark: Palette
     let glass: Glass
+    let shapes: Shapes
     let lyric: Lyric
     let sounds: Sounds
 
@@ -75,14 +87,15 @@ struct Theme: Equatable, Sendable, Identifiable {
     static let echo = Theme(
         id: .echo, name: "ECHO", blurb: "The album's light, in a dark room", defaultDark: true,
         light: Palette(
-            tint: RGB(0.62, 0.38, 0.06), accent: RGB(0.78, 0.55, 0.16), highlight: RGB(0.60, 0.38, 0.05),
+            tint: RGB(0.62, 0.38, 0.06), accent: RGB(0.78, 0.55, 0.16), onAccent: RGB(1, 1, 1), highlight: RGB(0.60, 0.38, 0.05),
             warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.953, 0.941, 0.918), roomStrength: 0.8, roomHeight: 1,
             wash: 0.5, swatch: [RGB(0.93, 0.80, 0.55), RGB(0.86, 0.80, 0.70), RGB(0.953, 0.941, 0.918)]),
         dark: Palette(
-            tint: RGB(0.910, 0.714, 0.361), accent: RGB(0.769, 0.588, 0.290), highlight: RGB(0.965, 0.831, 0.541),
+            tint: RGB(0.910, 0.714, 0.361), accent: RGB(0.769, 0.588, 0.290), onAccent: RGB(1, 1, 1), highlight: RGB(0.965, 0.831, 0.541),
             warning: RGB(1, 0.706, 0.643), floor: RGB(0.047, 0.055, 0.075), roomStrength: 1, roomHeight: 1,
             wash: 0, swatch: [RGB(0.11, 0.31, 0.48), RGB(0.42, 0.33, 0.13), RGB(0.047, 0.055, 0.075)]),
         glass: Glass(tint: 0, rim: 0, rows: false, refractive: false, caustic: 0, rowRadius: 14),
+        shapes: Shapes(art: 1, card: 1),
         lyric: .echo, sounds: .none)
 
     /// Liquid Glass: ECHO's room lit by the album, brighter and taller, with glass over all of it: tinted
@@ -93,18 +106,73 @@ struct Theme: Equatable, Sendable, Identifiable {
     static let glass = Theme(
         id: .glass, name: "Liquid Glass", blurb: "Frosted glass over the album's colours", defaultDark: true,
         light: Palette(
-            tint: RGB(0.12, 0.38, 0.72), accent: RGB(0.22, 0.48, 0.82), highlight: RGB(0.10, 0.34, 0.66),
+            tint: RGB(0.12, 0.38, 0.72), accent: RGB(0.22, 0.48, 0.82), onAccent: RGB(1, 1, 1), highlight: RGB(0.10, 0.34, 0.66),
             warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.929, 0.949, 0.973), roomStrength: 0.95, roomHeight: 1.25,
             wash: 0.38, swatch: [RGB(0.62, 0.78, 0.95), RGB(0.80, 0.88, 0.96), RGB(0.929, 0.949, 0.973)]),
         dark: Palette(
-            tint: RGB(0.690, 0.847, 1), accent: RGB(0.431, 0.671, 0.925), highlight: RGB(0.808, 0.906, 1),
+            tint: RGB(0.690, 0.847, 1), accent: RGB(0.431, 0.671, 0.925), onAccent: RGB(1, 1, 1), highlight: RGB(0.808, 0.906, 1),
             warning: RGB(1, 0.706, 0.643), floor: RGB(0.039, 0.063, 0.098), roomStrength: 1.35, roomHeight: 1.25,
             wash: 0, swatch: [RGB(0.17, 0.42, 0.70), RGB(0.30, 0.50, 0.68), RGB(0.039, 0.063, 0.098)]),
         glass: Glass(tint: 0.14, rim: 0.55, rows: true, refractive: true, caustic: 0.22, rowRadius: 16),
+        shapes: Shapes(art: 1, card: 1),
         lyric: .glass, sounds: .glass)
 
+    /// Apple Music style: red on white (a light theme), large bold titles, art with small corners, plain
+    /// system glass for the bars. Android: accent FA2D48, light by default, black and white grounds.
+    static let appleMusic = Theme(
+        id: .apple, name: "Apple Music style", blurb: "Red, light, large bold titles", defaultDark: false,
+        light: Palette(
+            tint: RGB(0.98, 0.176, 0.282), accent: RGB(0.98, 0.176, 0.282), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.98, 0.176, 0.282), warning: RGB(0.70, 0.15, 0.10), floor: RGB(1, 1, 1),
+            roomStrength: 0.45, roomHeight: 0.8, wash: 0.55,
+            swatch: [RGB(0.99, 0.82, 0.85), RGB(0.99, 0.93, 0.94), RGB(1, 1, 1)]),
+        dark: Palette(
+            tint: RGB(0.98, 0.176, 0.282), accent: RGB(0.98, 0.176, 0.282), onAccent: RGB(1, 1, 1),
+            highlight: RGB(1, 0.36, 0.44), warning: RGB(1, 0.706, 0.643), floor: RGB(0, 0, 0),
+            roomStrength: 0.6, roomHeight: 0.8, wash: 0,
+            swatch: [RGB(0.36, 0.08, 0.12), RGB(0.12, 0.03, 0.05), RGB(0, 0, 0)]),
+        glass: Glass(tint: 0, rim: 0, rows: false, refractive: false, caustic: 0, rowRadius: 10),
+        shapes: Shapes(art: 0.6, card: 0.75),
+        lyric: .appleMusic, sounds: .none)
+
+    /// Spotify style: green on near-black, square art, round buttons. Android: accent 1ED760 with black
+    /// on it, dark by default, grounds 121212 and F6F6F6.
+    static let spotify = Theme(
+        id: .spotify, name: "Spotify style", blurb: "Green on black, square art", defaultDark: true,
+        light: Palette(
+            tint: RGB(0.07, 0.62, 0.28), accent: RGB(0.118, 0.843, 0.376), onAccent: RGB(0, 0, 0),
+            highlight: RGB(0.06, 0.52, 0.23), warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.965, 0.965, 0.965),
+            roomStrength: 0.55, roomHeight: 0.9, wash: 0.5,
+            swatch: [RGB(0.72, 0.9, 0.78), RGB(0.86, 0.94, 0.88), RGB(0.965, 0.965, 0.965)]),
+        dark: Palette(
+            tint: RGB(0.118, 0.843, 0.376), accent: RGB(0.118, 0.843, 0.376), onAccent: RGB(0, 0, 0),
+            highlight: RGB(0.118, 0.843, 0.376), warning: RGB(1, 0.706, 0.643), floor: RGB(0.071, 0.071, 0.071),
+            roomStrength: 0.85, roomHeight: 0.9, wash: 0,
+            swatch: [RGB(0.16, 0.34, 0.24), RGB(0.10, 0.17, 0.13), RGB(0.071, 0.071, 0.071)]),
+        glass: Glass(tint: 0, rim: 0, rows: false, refractive: false, caustic: 0, rowRadius: 8),
+        shapes: Shapes(art: 0.25, card: 0.5),
+        lyric: .spotify, sounds: .none)
+
+    /// SoundCloud style: orange, light, flat and square. Android: accent FF5500, light by default,
+    /// grounds 121212 and F2F2F2.
+    static let soundcloud = Theme(
+        id: .soundcloud, name: "SoundCloud style", blurb: "Orange, light, flat and square", defaultDark: false,
+        light: Palette(
+            tint: RGB(0.92, 0.33, 0), accent: RGB(1, 0.333, 0), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.86, 0.30, 0), warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.949, 0.949, 0.949),
+            roomStrength: 0.3, roomHeight: 0.7, wash: 0.65,
+            swatch: [RGB(0.98, 0.80, 0.68), RGB(0.97, 0.90, 0.85), RGB(0.949, 0.949, 0.949)]),
+        dark: Palette(
+            tint: RGB(1, 0.42, 0.12), accent: RGB(1, 0.333, 0), onAccent: RGB(1, 1, 1),
+            highlight: RGB(1, 0.5, 0.22), warning: RGB(1, 0.706, 0.643), floor: RGB(0.071, 0.071, 0.071),
+            roomStrength: 0.45, roomHeight: 0.7, wash: 0,
+            swatch: [RGB(0.34, 0.16, 0.08), RGB(0.16, 0.10, 0.07), RGB(0.071, 0.071, 0.071)]),
+        glass: Glass(tint: 0, rim: 0, rows: false, refractive: false, caustic: 0, rowRadius: 4),
+        shapes: Shapes(art: 0.12, card: 0.25),
+        lyric: .soundcloud, sounds: .none)
+
     /// The themes the picker offers, in its order.
-    static let made: [Theme] = [.echo, .glass]
+    static let made: [Theme] = [.echo, .glass, .appleMusic, .spotify, .soundcloud]
 
     /// The theme an id names; one not made here is ECHO.
     static func of(_ id: UserSettings.ThemeID) -> Theme {
@@ -123,6 +191,7 @@ struct Theme: Equatable, Sendable, Identifiable {
 
         var palette: Palette { theme.palette(dark: dark) }
         var glass: Glass { theme.glass }
+        var shapes: Shapes { theme.shapes }
 
         /// The same theme in its dark variant: Now Playing and the lyrics sit on the album's colours and
         /// are always dark (as Android's `forceDark`).
@@ -163,6 +232,9 @@ extension Theme.Lyric {
         switch self {
         case .echo: .echo
         case .glass: .glass
+        case .appleMusic: .appleMusic
+        case .spotify: .spotify
+        case .soundcloud: .soundcloud
         }
     }
 }

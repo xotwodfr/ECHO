@@ -113,6 +113,7 @@ struct Cover: View {
     var symbol = "music.note"
 
     @Environment(Library.self) private var library
+    @Environment(\.theme) private var theme
     @State private var loaded: Loaded? = nil
 
     private struct Loaded {
@@ -140,7 +141,7 @@ struct Cover: View {
                     }
                 }
             }
-            .clipShape(round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: corner, style: .continuous)))
+            .clipShape(round ? AnyShape(Circle()) : AnyShape(RoundedRectangle(cornerRadius: corner * theme.shapes.art, style: .continuous)))
             .task(id: path) { await load() }
             .accessibilityHidden(true)
     }
@@ -162,6 +163,7 @@ struct Cover: View {
 /// Liked Songs' cover: violet to lilac, a white heart (the preview's).
 struct LikedArt: View {
     var corner: CGFloat = 10
+    @Environment(\.theme) private var theme
 
     var body: some View {
         LinearGradient(
@@ -176,7 +178,7 @@ struct LikedArt: View {
                     .frame(width: g.size.width, height: g.size.height)
             }
         }
-        .clipShape(.rect(cornerRadius: corner))
+        .clipShape(.rect(cornerRadius: corner * theme.shapes.art))
         .accessibilityHidden(true)
     }
 }
@@ -184,9 +186,10 @@ struct LikedArt: View {
 /// The Wanted list's tile: a list on dark glass.
 struct WantedArt: View {
     var corner: CGFloat = 10
+    @Environment(\.theme) private var theme
 
     var body: some View {
-        RoundedRectangle(cornerRadius: corner)
+        RoundedRectangle(cornerRadius: corner * theme.shapes.art)
             .fill(Color.primary.opacity(0.1))
             .aspectRatio(1, contentMode: .fit)
             .overlay {
@@ -206,6 +209,7 @@ struct MixArt: View {
     let mix: Mix
     var corner: CGFloat = 14
     var titleFont: Font = .headline.weight(.heavy)
+    @Environment(\.theme) private var theme
 
     var body: some View {
         Cover(path: mix.cover, corner: corner)
@@ -219,7 +223,7 @@ struct MixArt: View {
                     .lineLimit(2)
                     .padding(10)
             }
-            .clipShape(.rect(cornerRadius: corner))
+            .clipShape(.rect(cornerRadius: corner * theme.shapes.art))
     }
 
     /// The same colour for the same mix, as the web's (a hash of its id).
@@ -234,6 +238,7 @@ struct PlaylistArt: View {
     let cover: String?
     let covers: [String]
     var corner: CGFloat = 12
+    @Environment(\.theme) private var theme
 
     var body: some View {
         if covers.count >= 4 {
@@ -248,7 +253,7 @@ struct PlaylistArt: View {
                 }
             }
             .aspectRatio(1, contentMode: .fit)
-            .clipShape(.rect(cornerRadius: corner))
+            .clipShape(.rect(cornerRadius: corner * theme.shapes.art))
         } else {
             Cover(path: cover ?? covers.first, corner: corner, symbol: "music.note.list")
         }
@@ -333,12 +338,12 @@ struct ShortcutSurface: ViewModifier {
     func body(content: Content) -> some View {
         if theme.glass.rows {
             content
-                .clipShape(.rect(cornerRadius: 12))
+                .clipShape(.rect(cornerRadius: 12 * theme.shapes.card))
                 .themedGlass(12)
         } else {
             content
                 .background(Color.primary.opacity(0.08))
-                .clipShape(.rect(cornerRadius: 12))
+                .clipShape(.rect(cornerRadius: 12 * theme.shapes.card))
         }
     }
 }
@@ -602,7 +607,7 @@ struct PlayButtons: View {
         if theme.glass.refractive {
             button.buttonStyle(.glass).tint(theme.accent)
         } else {
-            button.buttonStyle(.glassProminent).tint(theme.accent)
+            button.buttonStyle(.glassProminent).tint(theme.accent).foregroundStyle(theme.onAccent)
         }
     }
 }

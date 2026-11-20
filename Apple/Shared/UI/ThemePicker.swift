@@ -92,7 +92,7 @@ struct ThemeSwatch: View {
                     Circle()
                         .fill(Color(palette.accent))
                         .frame(width: 26, height: 26)
-                        .overlay { Image(systemName: "play.fill").font(.system(size: 10)).foregroundStyle(.white) }
+                        .overlay { Image(systemName: "play.fill").font(.system(size: 10)).foregroundStyle(Color(palette.onAccent)) }
                     Spacer()
                 }
             }

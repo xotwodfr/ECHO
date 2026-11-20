@@ -126,6 +126,41 @@ struct LyricLook: Sendable {
         style.depthBlur = 0.95
         return style
     }
+
+    /// Apple Music style: plain white words, no glow, a bold face; the sweep is white.
+    static let appleMusic = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .bold
+        style.ink = RGB(1, 1, 1)
+        style.lit = RGB(1, 1, 1)
+        style.edge = RGB(1, 1, 1)
+        style.glowScale = 0
+        return style
+    }
+
+    /// Spotify style: the heaviest face, the sung words and the sweep's edge a pale green, a green glow.
+    static let spotify = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .black
+        style.lit = RGB(0.86, 1, 0.9)
+        style.edge = RGB(0.45, 0.95, 0.65)
+        style.glow = RGB(0.118, 0.843, 0.376)
+        style.accent = RGB(0.118, 0.843, 0.376)
+        style.glowScale = 1.2
+        return style
+    }
+
+    /// SoundCloud style: a bold face with an orange edge and glow.
+    static let soundcloud = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .bold
+        style.lit = RGB(1, 0.94, 0.9)
+        style.edge = RGB(1, 0.62, 0.38)
+        style.glow = RGB(1, 0.333, 0)
+        style.accent = RGB(1, 0.333, 0)
+        style.glowScale = 1.4
+        return style
+    }
 }
 
 extension AlbumPalette {

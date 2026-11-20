@@ -20,7 +20,7 @@ struct GuestsScreen: View {
                 } label: {
                     Label("Invite a guest", systemImage: "qrcode")
                         .font(.headline)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(theme.onAccent)
                         .frame(maxWidth: .infinity)
                         #if os(macOS)
                         .frame(minHeight: 30)
@@ -135,7 +135,7 @@ private struct GuestRow: View {
             Button("Approve") { act { await invites.keep(guest) } }
                 .buttonStyle(.glassProminent)
                 .tint(theme.accent)
-                .foregroundStyle(.white)
+                .foregroundStyle(theme.onAccent)
                 .fixedSize()
                 .disabled(busy)
         }

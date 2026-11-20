@@ -158,7 +158,7 @@ struct SignInView: View {
                 }
                 // White on the amber, as on the iPhone (the Mac would tint it a pale amber), and
                 // on the Mac as tall as the fields above it.
-                .foregroundStyle(.white)
+                .foregroundStyle(theme.forcedDark.onAccent)
                 .frame(maxWidth: .infinity)
                 #if os(macOS)
                 .frame(minHeight: 34)
