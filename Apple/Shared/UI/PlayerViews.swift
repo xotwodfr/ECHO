@@ -134,6 +134,16 @@ struct QueueList: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        // No hard edge where the rows scroll away: they fade into the room above and below.
+        .contentMargins(.vertical, 14, for: .scrollContent)
+        .mask {
+            LinearGradient(
+                stops: [
+                    .init(color: .clear, location: 0), .init(color: .black, location: 0.035),
+                    .init(color: .black, location: 0.93), .init(color: .clear, location: 1),
+                ],
+                startPoint: .top, endPoint: .bottom)
+        }
         .animation(.smooth, value: shown)
     }
 
