@@ -236,7 +236,7 @@ struct LyricColumn: View {
                         .contentShape(.rect)
                         .onTapGesture { onTap(line.index) }
                         .scaleEffect(line.scale, anchor: end ? .trailing : .leading)
-                        .blur(radius: style.depthBlur ? line.blur : 0)
+                        .blur(radius: line.blur * style.depthBlur)
                         .opacity(line.opacity)
                         .offset(x: line.x - lay.box.w / 2, y: Double(top) + line.y - lay.box.h / 2)
                 }

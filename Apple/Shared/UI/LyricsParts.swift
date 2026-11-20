@@ -180,7 +180,8 @@ struct LyricSheet: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, CGFloat((1 - LyricsConfig.maxWidth) / 2) * geo.size.width)
-                .padding(.top, top + (geo.size.height - top - bottom) * CGFloat(LyricsConfig.anchorY) - CGFloat(size))
+                // The first line a little above the anchor: the sheet is read, not followed.
+                .padding(.top, top + (geo.size.height - top - bottom) * 0.2)
                 .padding(.bottom, bottom + geo.size.height * 0.3)
             }
             .scrollIndicators(.hidden)
@@ -324,33 +325,30 @@ struct LyricsMenu: View {
             }
             Divider()
             VStack(alignment: .leading, spacing: 2) {
-                Text("Source").font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(.uppercase)
-                row("Choose automatically", on: lyrics.pinnedSource == nil) { pin(nil) }
+                heading("Source for this song")
+                row("Automatic", on: lyrics.pinnedSource == nil) { pin(nil) }
                 ForEach(Lyrics.sourceNames.indices, id: \.self) { i in
                     let source = Lyrics.sourceNames[i]
-                    row("Use \(source.name) for this track", on: lyrics.pinnedSource == source.id) { pin(source.id) }
+                    row(source.name, on: lyrics.pinnedSource == source.id) { pin(source.id) }
+                        .accessibilityLabel("Use \(source.name) for this song")
                 }
             }
             if lyrics.doc?.sync != .plain {
                 Divider()
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Timing").font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(.uppercase)
+                    heading("Timing for this song")
                     HStack(spacing: 12) {
-                        Button("Earlier", systemImage: "minus") { lyrics.nudge(-1) }
-                            .labelStyle(.iconOnly)
-                            .echoGlass(circle: true)
+                        step("minus", "Earlier") { lyrics.nudge(-1) }
                             .accessibilityHint("Shows this song's lyrics 50 ms earlier")
                         Text(Lyrics.offsetMessage(lyrics.totalOffsetMs))
                             .font(.subheadline.weight(.medium))
                             .monospacedDigit()
                             .frame(maxWidth: .infinity)
-                        Button("Later", systemImage: "plus") { lyrics.nudge(1) }
-                            .labelStyle(.iconOnly)
-                            .echoGlass(circle: true)
+                        step("plus", "Later") { lyrics.nudge(1) }
                             .accessibilityHint("Shows this song's lyrics 50 ms later")
                     }
                     if lyrics.offsetMs != 0 {
-                        Button("Reset this song's timing") { lyrics.resetOffset() }
+                        Button("Back to the song's own timing") { lyrics.resetOffset() }
                             .font(.footnote)
                             .foregroundStyle(Color.echoTint)
                             .buttonStyle(.plain)
@@ -360,6 +358,24 @@ struct LyricsMenu: View {
         }
         .padding(18)
         .frame(width: 310)
+    }
+
+    private func heading(_ text: String) -> some View {
+        Text(text).font(.caption.weight(.semibold)).foregroundStyle(.secondary).textCase(.uppercase)
+    }
+
+    /// A timing step: white on glass, as the approved look's controls are.
+    private func step(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(.white)
+                .frame(width: 38, height: 38)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.plain)
+        .glassEffect(.regular.interactive(), in: .circle)
+        .accessibilityLabel(label)
     }
 
     private func row(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {

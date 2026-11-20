@@ -105,7 +105,7 @@ struct LyricsApiTests {
 @MainActor
 private final class LyricsRig {
     let source = FakeLyricsSource()
-    let gate = Gate()
+    let gate = LyricWaits()
     var settings = UserSettings()
     var next: Track? = nil
     private(set) var toasts: [String] = []

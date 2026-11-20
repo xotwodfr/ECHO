@@ -191,7 +191,7 @@ struct MacShell: View {
     /// The lyrics over the window (the player bar's Lyrics button).
     @State private var showsLyrics: Bool
 
-    @Environment(Library.self) private var library
+    @Environment(Library.self) private var libraryModel
     @Environment(Player.self) private var player
 
     init(session: Session, start: ShellStart = ShellStart()) {
@@ -216,6 +216,26 @@ struct MacShell: View {
     }
 
     var body: some View {
+        Group {
+            // The lyrics in the whole window, in place of the library (its toolbar, title and search
+            // go with it): the room under the title bar and its window controls, as the approved
+            // preview has them. The library's place is kept in the shell (selection, path, query).
+            if showsLyrics, player.track != nil {
+                MacLyricsView(shown: $showsLyrics)
+                    .toolbar(removing: .title)
+                    .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+                    .transition(.opacity)
+            } else {
+                library
+                    .transition(.opacity)
+            }
+        }
+        .animation(.smooth(duration: 0.35), value: showsLyrics)
+        .preferredColorScheme(.dark)
+        .tint(Color.echoTint)
+    }
+
+    private var library: some View {
         NavigationSplitView {
             List(selection: $selection) {
                 Label("Home", systemImage: "house").tag(MacItem.home)
@@ -226,9 +246,9 @@ struct MacShell: View {
                     Label("Liked Songs", systemImage: "heart").tag(MacItem.liked)
                     Label("Wanted", systemImage: "music.note.list").tag(MacItem.wanted)
                 }
-                if !library.playlists.isEmpty {
+                if !libraryModel.playlists.isEmpty {
                     Section("Playlists") {
-                        ForEach(library.playlists) { playlist in
+                        ForEach(libraryModel.playlists) { playlist in
                             Label(playlist.name, systemImage: "music.note.list").tag(MacItem.playlist(playlist))
                         }
                     }
@@ -263,17 +283,6 @@ struct MacShell: View {
             if !query.isEmpty, selection != .search { selection = .search }
         }
         .sheet(isPresented: $account) { AccountView(session: session) }
-        // The lyrics over the whole window: no toolbar over them, the room under the title bar.
-        .toolbar(showsLyrics ? .hidden : .automatic, for: .windowToolbar)
-        .overlay {
-            if showsLyrics, player.track != nil {
-                MacLyricsView(shown: $showsLyrics)
-                    .transition(.opacity)
-            }
-        }
-        .animation(.smooth(duration: 0.35), value: showsLyrics)
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
     }
 }
 

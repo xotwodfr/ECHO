@@ -106,7 +106,7 @@ final class FakeLyricsSource: LyricsSource {
 
 /// Waits that end when the test says: each `sleep` is held until `pass` lets waits of its length go.
 @MainActor
-final class Gate {
+final class LyricWaits {
     private var waits: [(Duration, CheckedContinuation<Void, Never>)] = []
 
     var pending: [Duration] { waits.map(\.0) }

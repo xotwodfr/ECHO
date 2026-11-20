@@ -45,8 +45,10 @@ struct LyricStyle: Equatable, Sendable {
     var edgeBehind = LyricsConfig.Sweep.edgeBehind
     /// The glow's radius × this (the glow is §5.2's, a theme may want more or none).
     var glowScale = 1.0
-    /// Far lines blurred by distance (§4.1); off where blur reads as a smudge (paper).
-    var depthBlur = true
+    /// How much of §4.1's depth blur the far lines get: 0.6 keeps the lines to come readable at
+    /// these screens' density, as the approved preview has them; 0 where blur reads as a smudge
+    /// (paper).
+    var depthBlur = 0.6
 
     /// The unsung ink at distance mix `m` (0…0.22): toward the room.
     func unlit(_ m: Double) -> RGB { ink.mixed(with: room, m) }
@@ -74,7 +76,9 @@ struct LyricStyle: Equatable, Sendable {
             lit: text.mixed(with: highlight, 0.18),
             edge: highlight,
             glow: RGB(hue: accent.hue, saturation: min(1, max(0.35, accent.saturation * 1.1)), brightness: 0.86),
-            accent: RGB(hue: accent.hue, saturation: min(1, accent.saturation), brightness: max(0.7, accent.brightness)))
+            accent: RGB(hue: accent.hue, saturation: min(1, accent.saturation), brightness: max(0.7, accent.brightness)),
+            // A wider halo than the web's, so it shows on the phone's smaller type (the preview's glow).
+            glowScale: 1.5)
     }
 
     /// The face at a size (points), as CoreText sets it and SwiftUI draws it.
