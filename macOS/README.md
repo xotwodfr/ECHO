@@ -8,7 +8,8 @@ Code both apps share lives in `Apple/Shared` (the plan's layout,
 `docs/superpowers/plans/2026-11-19-apple-apps.md`): `App/` (entry, routing, the tabs or sidebar,
 the account sheet), `Api/` (the client, models, preferences, the Keychain token, the session and
 the offline state), `Library/` (the library the screens see: hearts, playlists, the album sorts,
-the artists, Home's shelves, the Wanted list and the cover cache), `Playback/`, `UI/` (the screens,
+the artists, Home's shelves, the Wanted list and the cover cache), `Playback/` (the player: the
+queue, the engine, the queue that follows you, scrobbles, Now Playing's info), `UI/` (the screens,
 their components and the room's look), `Preview/` (the `-ECHODemo` screens on a built-in library),
 `Assets.xcassets` (the amber accent) and `AppIcon.icon`. `Apple/Tests` holds the Swift tests.
 This folder holds what is the Mac's own: the app entry (a window of a laptop's size) and the
@@ -43,7 +44,26 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
 - **Covers** through `/navidrome/cover` with the device token, kept in memory and in Caches (the
   least recently used let go past each limit) and forgotten on sign-out.
 
-Playing is the baseline's player for now (`Playback/`); the playback task makes it the real queue.
+## Playback
+
+- **The queue** as the web keeps it (`QueueState`, so a queue saved here plays on the web and on
+  Android): a list plays from the song tapped, Play Next and Add to Queue go first, shuffle keeps the
+  list's own order to come back to, repeat all and repeat one, Previous starts the song again past
+  3 s; Up next (the player bar's) reorders, removes and plays a song now.
+- **AVQueuePlayer**, the next song buffered 5 s in so it starts without a gap where its format
+  allows; each song's signed stream URL (`/navidrome/stream-url`, 6 hours), fetched again on Play
+  after a long pause when it would run out before the song ends; a broken stream asked for again at
+  its place three times, then skipped; ReplayGain as Settings has it (album gain within an album).
+- **The queue that follows you** (`/me/queue`): read at sign-in and cued where it was (the API
+  budget's 429 waited out after each Retry-After, five times at most), saved 2 s after a change and
+  every 15 s while playing; a newer queue from another device is taken unless this one is playing.
+- **Scrobbles** to Navidrome (now playing, then played at half the song or 4 minutes, as Settings
+  allows) and ECHO's history (`/me/plays`, for Made For You) at the same point.
+- **The player bar** at the bottom of the window, in glass: the song, shuffle, previous, play or
+  pause, next and repeat over the scrubber, Up next and the volume (Lyrics opens with its task).
+- **The keyboard's media keys and macOS's Now Playing**: the song, its cover, length and place
+  (`MPNowPlayingInfoCenter`, built in one place, `Playback/NowPlayingInfo.swift`), and play, pause,
+  next, previous, seek and the heart (`MPRemoteCommandCenter`).
 
 ## Build and run
 
@@ -57,24 +77,27 @@ cd macOS && xcodegen && open ECHO.xcodeproj
 Then Run. The generated `ECHO.xcodeproj` and `Info.plist` are not committed: `project.yml` is the
 project.
 
-The Swift tests (Swift Testing, `Apple/Tests`: the API client, models, sign-in and the library,
-with the sorts, Wanted's Undo and the cover cache, against the server's recorded answers in
-`Apple/Tests/Fixtures`, which `scripts/apple-fixtures.ts` records from the server's own code) run
-in Xcode (the `ECHOTests` scheme), on every push in `.github/workflows/apple.yml`, or with:
+The Swift tests (Swift Testing, `Apple/Tests`: the API client, models, sign-in, the library, with
+the sorts, Wanted's Undo and the cover cache, and playback on a fake engine: the queue, the gapless
+hand-over, signed URLs, the saved queue with its 429s and conflicts, scrobbles, interruptions, the
+media keys' commands and Now Playing's info, what the player bar shows; against the server's
+recorded answers in `Apple/Tests/Fixtures`, which `scripts/apple-fixtures.ts` records from the
+server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
+`.github/workflows/apple.yml`, or with:
 
 ```sh
 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26, apple run 16): both apps build with no
-Swift warnings, the Swift tests pass on the Mac (88) and in the iOS 26 simulator (87; the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26, apple run 19): both apps build with no
+Swift warnings, the Swift tests pass on the Mac (146) and in the iOS 26 simulator (145; the Keychain's
 data-protection round trip skips where the test host has no entitlement), and the app runs on the
-Mac on its built-in library (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `albums`, `album`,
-`search`, `signin`, `shell`). It has not yet signed in to a real server.
+Mac on its built-in library and a player that never streams (`Apple/Screenshots`: `-ECHODemo home`,
+`shelves`, `albums`, `album`, `search`, `player`, `signin`, `shell`). It has not yet signed in to a
+real server or played through one.
 
 ## Next
 
 Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
-playback with the queue that follows you (`/me/queue`), the player bar, the media keys and Now
-Playing in Control Center (`MPNowPlayingInfoCenter`, `MPRemoteCommandCenter`), lyrics, the menu
-commands, and the rest; signing and notarization to share it.
+lyrics (from the player bar's Lyrics button), the menu commands, and the rest; signing and
+notarization to share it.
