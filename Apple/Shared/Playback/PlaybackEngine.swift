@@ -54,6 +54,9 @@ protocol PlaybackEngine: AnyObject {
     var volume: Float { get set }
     /// Where the current song is, if one is loaded.
     var currentTime: Double? { get }
+    /// How long the sound takes from the player to the ears, seconds: the output's latency (the
+    /// audio session's on the iPhone, the output device's on the Mac). 0 where nothing sounds.
+    var outputLatency: Double { get }
 
     /// Plays `item` from `seconds` (or holds it paused there), in place of anything loaded. The
     /// preloaded item, asked for from its start, takes over at once.
@@ -65,4 +68,8 @@ protocol PlaybackEngine: AnyObject {
     func seek(to seconds: Double)
     /// Everything stops and unloads.
     func stop()
+}
+
+extension PlaybackEngine {
+    var outputLatency: Double { 0 }
 }

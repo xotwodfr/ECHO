@@ -50,17 +50,6 @@ enum Demo {
     static var harbour: DemoAlbum { albums[0] }
     static var nowPlaying: DemoSong { harbour.songs[0] }
 
-    /// Placeholder lines written for the preview; the active one is lit word by word.
-    static let lyrics = [
-        "The ferry leaves at six",
-        "and the harbour holds its breath",
-        "Every light along the water calls your name",
-        "I count them from the deck",
-        "until the dark gives way",
-        "to morning on the other side",
-    ]
-    static let activeLine = 2
-
     private static func album(
         _ id: String, _ title: String, _ artist: String, _ year: Int, _ genre: String,
         _ cover: DemoCover, _ songs: [(String, Int)]

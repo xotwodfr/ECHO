@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "trackKey": "fixture:accents-word",
+  "sync": "word",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 150000,
+  "lines": [
+    {
+      "text": "The café’s fluorescent glow — I’m waiting",
+      "start": 7000,
+      "end": 11470,
+      "words": [
+        { "text": "The", "start": 7000, "end": 7350, "isPartOfWord": false },
+        { "text": "ca", "start": 7410, "end": 7730, "isPartOfWord": true },
+        { "text": "fé’s", "start": 7730, "end": 8080, "isPartOfWord": false },
+        { "text": "flu", "start": 8140, "end": 8490, "isPartOfWord": true },
+        { "text": "o", "start": 8490, "end": 8780, "isPartOfWord": true },
+        { "text": "res", "start": 8780, "end": 9130, "isPartOfWord": true },
+        { "text": "cent", "start": 9130, "end": 9510, "isPartOfWord": false },
+        { "text": "glow", "start": 9570, "end": 9950, "isPartOfWord": false },
+        { "text": "—", "start": 10010, "end": 10300, "isPartOfWord": false },
+        { "text": "I’m", "start": 10360, "end": 10680, "isPartOfWord": false },
+        { "text": "wait", "start": 10740, "end": 11120, "isPartOfWord": true },
+        { "text": "ing", "start": 11120, "end": 11470, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "señora, the soufflé is still warm",
+      "start": 12170,
+      "end": 16380,
+      "words": [
+        { "text": "se", "start": 12170, "end": 12490, "isPartOfWord": true },
+        { "text": "ño", "start": 12490, "end": 12810, "isPartOfWord": true },
+        { "text": "ra,", "start": 12810, "end": 13130, "isPartOfWord": false },
+        { "text": "the", "start": 13190, "end": 13540, "isPartOfWord": false },
+        { "text": "souf", "start": 13600, "end": 13980, "isPartOfWord": true },
+        { "text": "flé", "start": 13980, "end": 14330, "isPartOfWord": false },
+        { "text": "is", "start": 14390, "end": 14710, "isPartOfWord": false },
+        { "text": "still", "start": 14770, "end": 15180, "isPartOfWord": false },
+        { "text": "warm", "start": 15240, "end": 16380, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "we’d share smørbrød by the fjord at dawn",
+      "start": 17080,
+      "end": 21560,
+      "words": [
+        { "text": "we’d", "start": 17080, "end": 17430, "isPartOfWord": false },
+        { "text": "share", "start": 17490, "end": 17900, "isPartOfWord": false },
+        { "text": "smør", "start": 17960, "end": 18340, "isPartOfWord": true },
+        { "text": "brød", "start": 18340, "end": 18720, "isPartOfWord": false },
+        { "text": "by", "start": 18780, "end": 19100, "isPartOfWord": false },
+        { "text": "the", "start": 19160, "end": 19510, "isPartOfWord": false },
+        { "text": "fjord", "start": 19570, "end": 19980, "isPartOfWord": false },
+        { "text": "at", "start": 20040, "end": 20360, "isPartOfWord": false },
+        { "text": "dawn", "start": 20420, "end": 21560, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "down the Straße of office lights",
+      "start": 22260,
+      "end": 25450,
+      "words": [
+        { "text": "down", "start": 22260, "end": 22640, "isPartOfWord": false },
+        { "text": "the", "start": 22700, "end": 23050, "isPartOfWord": false },
+        { "text": "Stra", "start": 23110, "end": 23490, "isPartOfWord": true },
+        { "text": "ße", "start": 23490, "end": 23810, "isPartOfWord": false },
+        { "text": "of", "start": 23870, "end": 24190, "isPartOfWord": false },
+        { "text": "of", "start": 24250, "end": 24570, "isPartOfWord": true },
+        { "text": "fice", "start": 24570, "end": 24950, "isPartOfWord": false },
+        { "text": "lights", "start": 25010, "end": 25450, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "baffled, we fly — the waffle stall’s closed",
+      "start": 26150,
+      "end": 30190,
+      "words": [
+        { "text": "baf", "start": 26150, "end": 26500, "isPartOfWord": true },
+        { "text": "fled,", "start": 26500, "end": 26880, "isPartOfWord": false },
+        { "text": "we", "start": 26940, "end": 27260, "isPartOfWord": false },
+        { "text": "fly", "start": 27320, "end": 27670, "isPartOfWord": false },
+        { "text": "—", "start": 27730, "end": 28020, "isPartOfWord": false },
+        { "text": "the", "start": 28080, "end": 28430, "isPartOfWord": false },
+        { "text": "waf", "start": 28490, "end": 28840, "isPartOfWord": true },
+        { "text": "fle", "start": 28840, "end": 29190, "isPartOfWord": false },
+        { "text": "stall’s", "start": 29250, "end": 29690, "isPartOfWord": false },
+        { "text": "closed", "start": 29750, "end": 30190, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "naïve as a first offline night",
+      "start": 30890,
+      "end": 34840,
+      "words": [
+        { "text": "na", "start": 30890, "end": 31210, "isPartOfWord": true },
+        { "text": "ïve", "start": 31210, "end": 31560, "isPartOfWord": false },
+        { "text": "as", "start": 31620, "end": 31940, "isPartOfWord": false },
+        { "text": "a", "start": 32000, "end": 32290, "isPartOfWord": false },
+        { "text": "first", "start": 32350, "end": 32760, "isPartOfWord": false },
+        { "text": "off", "start": 32820, "end": 33170, "isPartOfWord": true },
+        { "text": "line", "start": 33170, "end": 33550, "isPartOfWord": false },
+        { "text": "night", "start": 33610, "end": 34840, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "crème brûlée skies over Malmö",
+      "start": 37840,
+      "end": 42250,
+      "words": [
+        { "text": "crème", "start": 37840, "end": 38250, "isPartOfWord": false },
+        { "text": "brû", "start": 38310, "end": 38660, "isPartOfWord": true },
+        { "text": "lée", "start": 38660, "end": 39010, "isPartOfWord": false },
+        { "text": "skies", "start": 39070, "end": 39480, "isPartOfWord": false },
+        { "text": "o", "start": 39540, "end": 39830, "isPartOfWord": true },
+        { "text": "ver", "start": 39830, "end": 40180, "isPartOfWord": false },
+        { "text": "Mal", "start": 40240, "end": 41290, "isPartOfWord": true },
+        { "text": "mö", "start": 41290, "end": 42250, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "don’t say ‘finally’ — say ‘efflorescent’",
+      "start": 42950,
+      "end": 47010,
+      "words": [
+        { "text": "don’t", "start": 42950, "end": 43330, "isPartOfWord": false },
+        { "text": "say", "start": 43390, "end": 43740, "isPartOfWord": false },
+        { "text": "‘fi", "start": 43800, "end": 44120, "isPartOfWord": true },
+        { "text": "nal", "start": 44120, "end": 44470, "isPartOfWord": true },
+        { "text": "ly’", "start": 44470, "end": 44790, "isPartOfWord": false },
+        { "text": "—", "start": 44850, "end": 45140, "isPartOfWord": false },
+        { "text": "say", "start": 45200, "end": 45550, "isPartOfWord": false },
+        { "text": "‘ef", "start": 45610, "end": 45930, "isPartOfWord": true },
+        { "text": "flo", "start": 45930, "end": 46280, "isPartOfWord": true },
+        { "text": "res", "start": 46280, "end": 46630, "isPartOfWord": true },
+        { "text": "cent’", "start": 46630, "end": 47010, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "the piñata’s afloat in the fjord",
+      "start": 47710,
+      "end": 51950,
+      "words": [
+        { "text": "the", "start": 47710, "end": 48060, "isPartOfWord": false },
+        { "text": "pi", "start": 48120, "end": 48440, "isPartOfWord": true },
+        { "text": "ña", "start": 48440, "end": 48760, "isPartOfWord": true },
+        { "text": "ta’s", "start": 48760, "end": 49110, "isPartOfWord": false },
+        { "text": "a", "start": 49170, "end": 49460, "isPartOfWord": true },
+        { "text": "float", "start": 49460, "end": 49870, "isPartOfWord": false },
+        { "text": "in", "start": 49930, "end": 50250, "isPartOfWord": false },
+        { "text": "the", "start": 50310, "end": 50660, "isPartOfWord": false },
+        { "text": "fjord", "start": 50720, "end": 51950, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Zoë’s cliffs, Øystein’s coffee, Đorđe’s flute",
+      "start": 52650,
+      "end": 56600,
+      "words": [
+        { "text": "Zo", "start": 52650, "end": 52970, "isPartOfWord": true },
+        { "text": "ë’s", "start": 52970, "end": 53290, "isPartOfWord": false },
+        { "text": "cliffs,", "start": 53350, "end": 53790, "isPartOfWord": false },
+        { "text": "Øy", "start": 53850, "end": 54170, "isPartOfWord": true },
+        { "text": "stein’s", "start": 54170, "end": 54610, "isPartOfWord": false },
+        { "text": "cof", "start": 54670, "end": 55020, "isPartOfWord": true },
+        { "text": "fee,", "start": 55020, "end": 55370, "isPartOfWord": false },
+        { "text": "Đor", "start": 55430, "end": 55780, "isPartOfWord": true },
+        { "text": "đe’s", "start": 55780, "end": 56130, "isPartOfWord": false },
+        { "text": "flute", "start": 56190, "end": 56600, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "it’s “déjà vu”, it’s the office’s affluence",
+      "start": 57300,
+      "end": 61450,
+      "words": [
+        { "text": "it’s", "start": 57300, "end": 57650, "isPartOfWord": false },
+        { "text": "“dé", "start": 57710, "end": 58030, "isPartOfWord": true },
+        { "text": "jà", "start": 58030, "end": 58350, "isPartOfWord": false },
+        { "text": "vu”,", "start": 58410, "end": 58730, "isPartOfWord": false },
+        { "text": "it’s", "start": 58790, "end": 59140, "isPartOfWord": false },
+        { "text": "the", "start": 59200, "end": 59550, "isPartOfWord": false },
+        { "text": "of", "start": 59610, "end": 59930, "isPartOfWord": true },
+        { "text": "fice’s", "start": 59930, "end": 60340, "isPartOfWord": false },
+        { "text": "af", "start": 60400, "end": 60720, "isPartOfWord": true },
+        { "text": "flu", "start": 60720, "end": 61070, "isPartOfWord": true },
+        { "text": "ence", "start": 61070, "end": 61450, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "au revoir, Françoise — æther, œuvre, fin",
+      "start": 62150,
+      "end": 67000,
+      "words": [
+        { "text": "au", "start": 62150, "end": 62470, "isPartOfWord": false },
+        { "text": "re", "start": 62530, "end": 62850, "isPartOfWord": true },
+        { "text": "voir,", "start": 62850, "end": 63230, "isPartOfWord": false },
+        { "text": "Fran", "start": 63290, "end": 63670, "isPartOfWord": true },
+        { "text": "çoise", "start": 63670, "end": 64080, "isPartOfWord": false },
+        { "text": "—", "start": 64140, "end": 64430, "isPartOfWord": false },
+        { "text": "æ", "start": 64490, "end": 64780, "isPartOfWord": true },
+        { "text": "ther,", "start": 64780, "end": 65160, "isPartOfWord": false },
+        { "text": "œu", "start": 65220, "end": 65540, "isPartOfWord": true },
+        { "text": "vre,", "start": 65540, "end": 65890, "isPartOfWord": false },
+        { "text": "fin", "start": 65950, "end": 67000, "isPartOfWord": false }
+      ]
+    }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en"
+}

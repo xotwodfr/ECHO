@@ -3,8 +3,11 @@ import SwiftUI
 
 /// The Mac's player at the bottom of the window (the approved preview's glass bar): the song and
 /// where it is from, shuffle, previous, play or pause, next and repeat over the scrubber, then
-/// Lyrics (the lyrics task opens them here), Up next and the volume.
+/// Lyrics (over the window), Up next and the volume.
 struct MacPlayerBar: View {
+    /// The lyrics over the window (the shell's).
+    @Binding var showsLyrics: Bool
+
     @Environment(Player.self) private var player
     @Environment(Library.self) private var library
     @State private var showsQueue = false
@@ -50,7 +53,8 @@ struct MacPlayerBar: View {
                 .frame(maxWidth: .infinity)
 
                 HStack(spacing: 10) {
-                    Button("Lyrics", systemImage: "quote.bubble") {}
+                    Button("Lyrics", systemImage: "quote.bubble") { showsLyrics.toggle() }
+                        .glassToggle(showsLyrics)
                     Button("Up next", systemImage: "list.bullet") { showsQueue.toggle() }
                         .popover(isPresented: $showsQueue, arrowEdge: .top) {
                             QueueList()

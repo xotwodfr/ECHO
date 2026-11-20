@@ -1,5 +1,8 @@
 import AVFoundation
 import Foundation
+#if os(macOS)
+import CoreAudio
+#endif
 
 /// The engine the apps play through: an AVQueuePlayer with the next song queued behind the one
 /// playing, so it starts without a gap where the formats allow (PLAYBACK_ARCHITECTURE.md §5.6; the
@@ -18,6 +21,74 @@ final class AVPlaybackEngine: PlaybackEngine {
         guard current != nil, pendingSeek == nil else { return nil }
         let seconds = player.currentTime().seconds
         return seconds.isFinite ? seconds : nil
+    }
+
+    /// The output's latency, read again at most once a second (a route can change: AirPlay, the
+    /// headphones), so the lyrics show what is heard.
+    var outputLatency: Double {
+        let now = ProcessInfo.processInfo.systemUptime
+        if now - latencyReadAt >= 1 {
+            latency = Self.readLatency()
+            latencyReadAt = now
+        }
+        return latency
+    }
+
+    private var latency: Double = 0
+    private var latencyReadAt: TimeInterval = -1000
+
+    /// The audio session's output latency on the iPhone; on the Mac the default output device's
+    /// (its latency, safety offset, buffer and stream latency, in frames at its rate).
+    private static func readLatency() -> Double {
+        #if os(iOS)
+        let seconds = AVAudioSession.sharedInstance().outputLatency
+        return seconds.isFinite && seconds > 0 ? seconds : 0
+        #else
+        var device = AudioObjectID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &device) == noErr,
+              device != AudioObjectID(kAudioObjectUnknown)
+        else { return 0 }
+        func frames(
+            _ selector: AudioObjectPropertySelector, of object: AudioObjectID,
+            scope: AudioObjectPropertyScope = kAudioObjectPropertyScopeOutput
+        ) -> UInt32 {
+            var value: UInt32 = 0
+            var size = UInt32(MemoryLayout<UInt32>.size)
+            var address = AudioObjectPropertyAddress(mSelector: selector, mScope: scope, mElement: kAudioObjectPropertyElementMain)
+            return AudioObjectGetPropertyData(object, &address, 0, nil, &size, &value) == noErr ? value : 0
+        }
+        var rate: Float64 = 0
+        var rateSize = UInt32(MemoryLayout<Float64>.size)
+        var rateAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyNominalSampleRate, mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectGetPropertyData(device, &rateAddress, 0, nil, &rateSize, &rate) == noErr, rate > 0 else { return 0 }
+        // The first output stream's own latency.
+        var streamFrames: UInt32 = 0
+        var streamsAddress = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyStreams, mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain)
+        var streamsSize: UInt32 = 0
+        if AudioObjectGetPropertyDataSize(device, &streamsAddress, 0, nil, &streamsSize) == noErr,
+           Int(streamsSize) >= MemoryLayout<AudioStreamID>.size
+        {
+            var streams = [AudioStreamID](repeating: 0, count: Int(streamsSize) / MemoryLayout<AudioStreamID>.size)
+            if AudioObjectGetPropertyData(device, &streamsAddress, 0, nil, &streamsSize, &streams) == noErr,
+               let first = streams.first
+            {
+                streamFrames = frames(kAudioStreamPropertyLatency, of: first, scope: kAudioObjectPropertyScopeGlobal)
+            }
+        }
+        let total = Double(frames(kAudioDevicePropertyLatency, of: device))
+            + Double(frames(kAudioDevicePropertySafetyOffset, of: device))
+            + Double(frames(kAudioDevicePropertyBufferFrameSize, of: device, scope: kAudioObjectPropertyScopeGlobal))
+            + Double(streamFrames)
+        return total / rate
+        #endif
     }
 
     /// A song in the player's queue, and what watches it.

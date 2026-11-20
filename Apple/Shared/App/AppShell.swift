@@ -24,9 +24,10 @@ struct ShellStart {
         case playlists, albums, artists, liked, wanted
     }
 
-    /// Now Playing open over it (the iPhone), on the song or on Up next.
+    /// Now Playing open over it (the iPhone), on the song, on Up next or with its lyrics over it;
+    /// on the Mac, the lyrics over the window.
     enum Playing: Hashable {
-        case song, queue
+        case song, queue, lyrics
     }
 
     var page: Page = .home
@@ -53,10 +54,13 @@ struct PhoneShell: View {
     @State private var account = false
     @State private var nowPlaying = false
     @State private var showsQueue = false
+    @State private var showsLyrics = false
     @Namespace private var playerSpace
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(Lyrics.self) private var lyrics
+    @Environment(\.lyricsMenuOnOpen) private var lyricsMenuOnOpen
 
     init(session: Session, start: ShellStart = ShellStart()) {
         self.session = session
@@ -125,16 +129,19 @@ struct PhoneShell: View {
         .modifier(PlayerAccessory(shown: player.track != nil) {
             MiniPlayer {
                 showsQueue = false
+                showsLyrics = false
                 nowPlaying = true
             }
             .matchedTransitionSource(id: "player", in: playerSpace)
         })
         .overlay { ToastLayer(bottom: player.track == nil ? 76 : 136) }
         .fullScreenCover(isPresented: $nowPlaying) {
-            NowPlayingScreen(showsQueue: $showsQueue)
+            NowPlayingScreen(showsQueue: $showsQueue, showsLyrics: $showsLyrics)
                 .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
                 .environment(library)
                 .environment(player)
+                .environment(lyrics)
+                .environment(\.lyricsMenuOnOpen, lyricsMenuOnOpen)
                 .environment(\.navigate, NavigateAction { route in
                     nowPlaying = false
                     go(route)
@@ -144,11 +151,15 @@ struct PhoneShell: View {
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
         .task {
-            // The demo screens that open on Now Playing (`-ECHODemo nowplaying`, `queue`).
+            // The demo screens that open on Now Playing (`-ECHODemo nowplaying`, `queue`, and the
+            // lyrics over it: `lyrics`, `lyrics-interlude`, `lyrics-plain`, `lyrics-menu`).
             guard let playing, player.track != nil else { return }
             try? await Task.sleep(for: .milliseconds(400))
             showsQueue = playing == .queue
             nowPlaying = true
+            guard playing == .lyrics else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            showsLyrics = true
         }
     }
 
@@ -177,6 +188,8 @@ struct MacShell: View {
     @State private var path: [Route]
     @State private var query: String
     @State private var account = false
+    /// The lyrics over the window (the player bar's Lyrics button).
+    @State private var showsLyrics: Bool
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
@@ -199,6 +212,7 @@ struct MacShell: View {
         _selection = State(initialValue: item)
         _path = State(initialValue: start.path)
         _query = State(initialValue: query)
+        _showsLyrics = State(initialValue: start.playing == .lyrics)
     }
 
     var body: some View {
@@ -229,7 +243,7 @@ struct MacShell: View {
             .environment(\.navigate, NavigateAction { path.append($0) })
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if player.track != nil {
-                    MacPlayerBar()
+                    MacPlayerBar(showsLyrics: $showsLyrics)
                         .padding(.horizontal, 16)
                         .padding(.bottom, 14)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -249,6 +263,15 @@ struct MacShell: View {
             if !query.isEmpty, selection != .search { selection = .search }
         }
         .sheet(isPresented: $account) { AccountView(session: session) }
+        // The lyrics over the whole window: no toolbar over them, the room under the title bar.
+        .toolbar(showsLyrics ? .hidden : .automatic, for: .windowToolbar)
+        .overlay {
+            if showsLyrics, player.track != nil {
+                MacLyricsView(shown: $showsLyrics)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.smooth(duration: 0.35), value: showsLyrics)
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
     }

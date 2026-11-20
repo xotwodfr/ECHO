@@ -115,7 +115,7 @@ jobs:
           limit 60 xcrun simctl ui "$dev" appearance dark
           limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           limit 480 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
-          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics signin shell; do
+          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu signin shell; do
             f="Apple/Screenshots/iphone-$s.png"
             limit 180 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             # A slow first frame leaves the shot black (lyrics, run 7): a black PNG is a few dozen KB,

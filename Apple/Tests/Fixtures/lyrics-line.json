@@ -1,0 +1,38 @@
+{
+  "doc": {
+    "version": 1,
+    "trackKey": "navidrome:al-3-t1",
+    "sync": "line",
+    "source": "lrclib",
+    "attribution": {
+      "text": "Lyrics from LRCLIB",
+      "links": [
+        {
+          "label": "LRCLIB",
+          "href": "https://lrclib.net"
+        }
+      ]
+    },
+    "offsetMs": 0,
+    "lines": [
+      {
+        "text": "Glass in the morning, Glass Weather 1",
+        "start": 1000
+      },
+      {
+        "text": "Rain on the window",
+        "start": 5000
+      },
+      {
+        "text": "Light coming through",
+        "start": 9000
+      }
+    ],
+    "fetchedAt": "2027-01-15T08:19:15.000Z",
+    "durationMs": 20000
+  },
+  "override": {
+    "offsetMs": 0,
+    "pinnedSource": null
+  }
+}

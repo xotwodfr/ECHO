@@ -5,15 +5,21 @@ import SwiftUI
 /// Now Playing (the approved preview's): the room lit by the song's cover, where it plays from, the
 /// cover, the title with its heart, the scrubber, the transport in one glass capsule, and Lyrics,
 /// AirPlay, Karaoke and Up next below. Up next takes the cover's place, the song shrinking to a row
-/// above it. Swipe down or the chevron closes it.
+/// above it; Lyrics open over it, growing from their button (swipe down to come back). Swipe down
+/// or the chevron closes it.
 struct NowPlayingScreen: View {
     /// Up next in the cover's place (the shell's, so it opens either way).
     @Binding var showsQueue: Bool
+    /// The lyrics over it (the shell's too).
+    @Binding var showsLyrics: Bool
 
     @Environment(Player.self) private var player
     @Environment(Library.self) private var library
+    @Environment(Lyrics.self) private var lyrics
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.lyricsMenuOnOpen) private var lyricsMenuOnOpen
     @State private var palette: AlbumPalette? = nil
+    @Namespace private var lyricsSpace
 
     var body: some View {
         ZStack {
@@ -31,6 +37,14 @@ struct NowPlayingScreen: View {
         }
         .onChange(of: player.track == nil) {
             if player.track == nil { dismiss() }
+        }
+        .fullScreenCover(isPresented: $showsLyrics) {
+            LyricsScreen()
+                .navigationTransition(.zoom(sourceID: "lyrics", in: lyricsSpace))
+                .environment(library)
+                .environment(player)
+                .environment(lyrics)
+                .environment(\.lyricsMenuOnOpen, lyricsMenuOnOpen)
         }
     }
 
@@ -129,11 +143,12 @@ struct NowPlayingScreen: View {
         .controlSize(.large)
     }
 
-    /// Lyrics (the lyrics task opens them here), AirPlay, Karaoke (the karaoke task's) and Up next.
+    /// Lyrics, AirPlay, Karaoke (the karaoke task's) and Up next.
     private var buttons: some View {
         HStack {
-            Button("Lyrics", systemImage: "quote.bubble") {}
+            Button("Lyrics", systemImage: "quote.bubble") { showsLyrics = true }
                 .roundGlass()
+                .matchedTransitionSource(id: "lyrics", in: lyricsSpace)
             Spacer()
             // The system's AirPlay picker, invisible over a glass button like the others: it takes
             // the tap and shows the places the sound can go.

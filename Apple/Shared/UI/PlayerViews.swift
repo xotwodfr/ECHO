@@ -11,6 +11,8 @@ struct Scrubber: View {
         case stacked
         /// The times either side of it (the Mac's player bar).
         case inline
+        /// The line alone (the lyrics' glass player).
+        case bare
     }
 
     var layout = Layout.stacked
@@ -44,6 +46,8 @@ struct Scrubber: View {
                         Text(total)
                     }
                     .font(.caption2)
+                case .bare:
+                    line(fraction, duration: duration)
                 }
             }
             .foregroundStyle(.secondary)
@@ -73,15 +77,21 @@ struct Scrubber: View {
             .contentShape(.rect)
             .gesture(
                 DragGesture(minimumDistance: 0)
-                    .onChanged { drag in held = min(1, max(0, drag.location.x / width)) }
+                    .onChanged { drag in
+                        let at = min(1, max(0, drag.location.x / width))
+                        held = at
+                        // The lyrics follow the scrubber while it is held (LYRICS_EXPERIENCE.md §9.6).
+                        player.scrub(at * duration)
+                    }
                     .onEnded { drag in
                         player.seek(to: min(1, max(0, drag.location.x / width)) * duration)
+                        player.scrub(nil)
                         held = nil
                     }
             )
             .animation(.smooth(duration: 0.2), value: held == nil)
         }
-        .frame(height: layout == .stacked ? 24 : 16)
+        .frame(height: layout == .inline ? 16 : 24)
     }
 
     private var thickness: CGFloat { layout == .stacked ? 6 : 4 }

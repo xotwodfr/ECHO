@@ -9,7 +9,7 @@ struct EchoApp: App {
             if let screen = demoScreen {
                 DemoRoot(screen: screen)
             } else {
-                RootView(session: Live.session, library: Live.library, player: Live.player)
+                RootView(session: Live.session, library: Live.library, player: Live.player, lyrics: Live.lyrics)
             }
         }
     }

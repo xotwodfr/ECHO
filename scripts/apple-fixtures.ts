@@ -7,20 +7,30 @@
 // they belong to this throwaway server only).
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { lyricFixtures } from '../src/client/fixtures/lyrics.ts';
 import { startSetup } from '../src/server/auth/routes.ts';
 import { fromBase32, hotp, STEP_S, stepAt } from '../src/server/auth/totp.ts';
 import { createApp } from '../src/server/index.ts';
 import { createKaraoke, stemKey } from '../src/server/karaoke.ts';
+import {
+  lrclibSource,
+  navidromePlainSource,
+  navidromeSource,
+} from '../src/server/lyrics/sources.ts';
 import { startMockSubsonic } from '../src/server/navidrome/mock.ts';
 import { navidromeClientFor, navidromeUrlOf } from '../src/server/navidrome/routes.ts';
 import { call, testDeps } from '../src/server/testing.ts';
 
 const OUT = process.argv[2] ?? 'Apple/Tests/Fixtures';
+const LYRICS_OUT = process.argv[3] ?? 'Apple/Shared/Preview/Lyrics';
 const PASSWORD = 'correct horse battery staple';
 const DEVICE = 'ECHO for iPhone';
 const codeAt = (secret: string, t: number) => hotp(fromBase32(secret), stepAt(t));
 
 mkdirSync(OUT, { recursive: true });
+mkdirSync(LYRICS_OUT, { recursive: true });
+for (const [name, doc] of Object.entries(lyricFixtures))
+  writeFileSync(join(LYRICS_OUT, `${name}.json`), `${JSON.stringify(doc)}\n`);
 const mock = await startMockSubsonic({});
 const t = testDeps();
 t.deps.navidrome.defaultUrl = mock.url;
@@ -36,6 +46,17 @@ const karaoke = createKaraoke({
   navidrome: (id) => navidromeClientFor(t.deps.navidrome, id),
   libraries: async () => [],
 });
+// The lyric sources as the server wires them (src/server/index.ts), on the mock Navidrome (word- and
+// line-timed lyrics, plain text from the tags) and the mock's LRCLIB.
+t.deps.lyrics.scopeFor = (id) => navidromeUrlOf(db, id);
+t.deps.lyrics.sourcesFor = (userId) => {
+  const client = () => navidromeClientFor(t.deps.navidrome, userId);
+  return [
+    navidromeSource(client),
+    lrclibSource({ baseUrl: mock.url, userAgent: 'ECHO fixtures' }),
+    navidromePlainSource(client),
+  ];
+};
 const app = createApp({ ...t.deps, karaoke });
 
 // The admin, with two-factor on (the one-time setup).
@@ -253,6 +274,35 @@ await save(
     context: { kind: 'album', id: 'al-1', title: 'Harbour Lights' },
   }),
 );
+
+// Lyrics: word-timed (the library's), line-timed (LRCLIB), plain text from the tags, none; the
+// user's offset and source pin for a track, and one out of range.
+const lyricsOf = (id: string, title: string, artist: string, album: string) =>
+  bearer(
+    `/lyrics?${new URLSearchParams({ trackKey: `navidrome:${id}`, title, artist, album, durationMs: '20000' })}`,
+  );
+await save(
+  'lyrics-word',
+  await lyricsOf('al-1-t1', 'Harbour Lights 1', 'Lowfield', 'Harbour Lights'),
+);
+await save(
+  'lyrics-line',
+  await lyricsOf('al-3-t1', 'Glass Weather 1', 'Mira Sole', 'Glass Weather'),
+);
+await save('lyrics-plain', await lyricsOf('al-2-t1', 'Copper Rain 1', 'Lowfield', 'Copper Rain'));
+await save(
+  'lyrics-not-found',
+  await lyricsOf('al-4-t1', 'Long Exposure 1', 'Field Ensemble', 'Long Exposure'),
+);
+const override = (body: object) => bearer('/me/tracks/navidrome%3Aal-1-t1/override', 'PUT', body);
+await save('lyrics-override-offset', await override({ offsetMs: 150 }));
+await save(
+  'lyrics-word-override',
+  await lyricsOf('al-1-t1', 'Harbour Lights 1', 'Lowfield', 'Harbour Lights'),
+);
+await save('lyrics-override-pin', await override({ pinnedSource: 'lrclib' }));
+await save('lyrics-override-unpin', await override({ pinnedSource: null }));
+await save('lyrics-override-bad', await override({ offsetMs: 20_000 }));
 
 await save('logout', await bearer('/auth/logout', 'POST', {}));
 await save('unauthenticated', await bearer('/me'));

@@ -81,6 +81,25 @@ final class Player {
         return time(at: now())
     }
 
+    /// What the listener hears now (the web's SongClock): the song's time less the output's latency
+    /// (AirPlay's is large), for the lyrics. Not playing, it holds where it was left, the latency it
+    /// had then and all, so a paused field never drifts (LYR-17).
+    var audibleTime: Double {
+        if loaded != nil, status == .playing, let seconds = engine.currentTime {
+            heldLatency = engine.outputLatency
+            return max(0, seconds - heldLatency)
+        }
+        return max(0, time(at: now()) - heldLatency)
+    }
+
+    /// Where the scrubber is held while it is dragged, seconds (the lyrics follow it), else nil.
+    private(set) var scrubbing: Double? = nil
+
+    /// The scrubber is held at `seconds` (nil: let go).
+    func scrub(_ seconds: Double?) {
+        scrubbing = seconds
+    }
+
     /// Whether this album, playlist or mix is what plays.
     func isCurrent(_ context: PlayContext) -> Bool {
         self.context?.kind == context.kind && self.context?.id == context.id && track != nil
@@ -131,6 +150,7 @@ final class Player {
     @ObservationIgnored private var history = PlayHistory()
     @ObservationIgnored private var artwork: (key: String, image: CGImage)? = nil
     @ObservationIgnored private var artworkKey: String? = nil
+    @ObservationIgnored private var heldLatency: Double = 0
     @ObservationIgnored private var resumeAfterInterruption = false
     @ObservationIgnored private var pausedBySystemAt: Date? = nil
 

@@ -10,7 +10,7 @@ struct EchoApp: App {
                 DemoRoot(screen: screen)
                     .frame(minWidth: 1100, minHeight: 720)
             } else {
-                RootView(session: Live.session, library: Live.library, player: Live.player)
+                RootView(session: Live.session, library: Live.library, player: Live.player, lyrics: Live.lyrics)
                     .frame(minWidth: 760, minHeight: 520)
             }
         }

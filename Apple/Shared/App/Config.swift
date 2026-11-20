@@ -25,8 +25,8 @@ enum Config {
     }
 }
 
-/// The app's one session, library and player, made when the real app first needs them (never in
-/// the preview, which has its own: Preview/DemoLibrary.swift).
+/// The app's one session, library, player and lyrics, made when the real app first needs them
+/// (never in the preview, which has its own: Preview/DemoLibrary.swift).
 @MainActor
 enum Live {
     static let session = Session(
@@ -37,5 +37,8 @@ enum Live {
     static let player = Player(
         source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
         images: library.images, settings: { Live.session.settings.playback },
+        notify: { Live.library.show(Toast(message: $0)) })
+    static let lyrics = Lyrics(
+        source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },
         notify: { Live.library.show(Toast(message: $0)) })
 }

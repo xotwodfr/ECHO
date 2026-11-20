@@ -32,10 +32,11 @@ targets:
         # The amber accent (Apple/Shared/Assets.xcassets): the Mac sidebar's selection, menus' tint.
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
   # The Swift tests (Swift Testing, Apple/Tests): the API client, models, sign-in, the library
-  # (hearts, the sorts, Wanted's Undo, the cover cache) and playback (the queue, the saved queue,
-  # scrobbles, the lock screen's info and controls, on a fake engine) against the server's recorded
-  # answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own with the API,
-  # library and playback code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
+  # (hearts, the sorts, Wanted's Undo, the cover cache), playback (the queue, the saved queue,
+  # scrobbles, the lock screen's info and controls, on a fake engine) and the lyrics (the loader,
+  # the field's timing, springs and motion on the web's lyric fixtures, the layout) against the
+  # server's recorded answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own
+  # with that code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
   ECHOTests:
     type: bundle.unit-test
     platform: macOS
@@ -43,6 +44,8 @@ targets:
       - path: ../Apple/Shared/Api
       - path: ../Apple/Shared/Library
       - path: ../Apple/Shared/Playback
+      - path: ../Apple/Shared/Lyrics
+      - path: ../Apple/Shared/Preview/Lyrics
       - path: ../Apple/Tests
     settings:
       base:

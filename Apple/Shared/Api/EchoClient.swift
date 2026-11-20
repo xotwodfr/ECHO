@@ -104,10 +104,12 @@ final class EchoClient: Sendable {
     /// One call to /api/v1: the body of a 2xx answer, or ApiError. A GET over the API budget is
     /// asked again after Retry-After (by default up to 5 s, twice, each wait longer than the last;
     /// `retries` and `waitMax` change that for one call); writes are never repeated, and the sign-in
-    /// limits send no Retry-After.
+    /// limits send no Retry-After. `accepting`: other statuses whose body is the answer too (the
+    /// lyrics' 404, which lists the sources tried).
     func data(
         _ method: String, _ path: String, query: [(String, String)] = [], body: Data? = nil,
-        retries: Int = EchoClient.budgetRetries, waitMax: Int = EchoClient.budgetWaitMax
+        retries: Int = EchoClient.budgetRetries, waitMax: Int = EchoClient.budgetWaitMax,
+        accepting: Set<Int> = []
     ) async throws -> Data {
         var attempt = 0
         while true {
@@ -124,7 +126,7 @@ final class EchoClient: Sendable {
                 try await sleep(.milliseconds(Int((seconds * 1000).rounded())))
                 continue
             }
-            if (200..<300).contains(status) {
+            if (200..<300).contains(status) || accepting.contains(status) {
                 onEvent(.reachable(true))
                 return data
             }
