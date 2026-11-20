@@ -143,8 +143,19 @@ test.describe('with WebGL 2', () => {
       }, hidden);
     const seek = page.getByRole('region', { name: 'Player' }).getByRole('slider', { name: 'Seek' });
     await setHidden(true);
-    await page.waitForTimeout(100); // let an in-flight frame land
-    const hiddenAt = await frames(page);
+    // The frame already requested still lands, once: in CI's image after 50 ms in some runs and
+    // after 100 ms in others (a fixed 100 ms wait counted it as a hidden frame once, 78 → 79). So
+    // the count must first hold still for 300 ms; a Stage that went on drawing never does, and fails
+    // here.
+    let hiddenAt = await frames(page);
+    await expect
+      .poll(async () => {
+        const before = await frames(page);
+        await page.waitForTimeout(300);
+        hiddenAt = await frames(page);
+        return hiddenAt - before;
+      })
+      .toBe(0);
     const posBefore = Number(await seek.getAttribute('aria-valuenow'));
     await page.waitForTimeout(1500);
     expect(await frames(page)).toBe(hiddenAt);
