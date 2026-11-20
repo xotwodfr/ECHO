@@ -318,6 +318,31 @@ jobs:
             sleep 5
           done
 
+      # An unsigned device build for sideloading (Sideloadly signs it with the owner's Apple ID):
+      # Release, arm64, the widget extension inside, no signing here. Uploaded only from a green run.
+      - name: Build for iPhone (device, Release, unsigned)
+        run: >
+          xcodebuild -quiet -project iOS/ECHO.xcodeproj -target ECHO -configuration Release
+          -sdk iphoneos ARCHS=arm64 SYMROOT="$PWD/build/ios-device"
+          CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY=""
+
+      - name: Package ECHO.ipa
+        run: |
+          app=build/ios-device/Release-iphoneos/ECHO.app
+          rm -rf Payload ECHO.ipa && mkdir Payload
+          ditto "$app" Payload/ECHO.app
+          ditto -c -k --keepParent Payload ECHO.ipa
+          ls -la ECHO.ipa
+          unzip -l ECHO.ipa | grep -E "Payload/ECHO.app/(ECHO|Info.plist)$|ECHOWidget.appex/(ECHOWidget|Info.plist)$"
+          lipo -info Payload/ECHO.app/ECHO
+          vtool -show-build Payload/ECHO.app/ECHO | grep -E "platform|minos" | head -2
+
+      - uses: actions/upload-artifact@v4
+        if: steps.mac_tests.outcome == 'success' && steps.ios_tests.outcome == 'success'
+        with:
+          name: ECHO-ipa
+          path: ECHO.ipa
+
       - name: The tests passed
         if: always()
         run: |
