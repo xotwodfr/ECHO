@@ -96,7 +96,11 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
 ## Settings
 
 - **The Settings window** (the app menu's Settings…, ⌘, or the toolbar's gear): groups on glass in
-  the room. **Account**: who is signed in, the server, Sign out. **About**: the version. The
+  the room. **Sign in and guests**: Guests (invite a guest with a QR code in a sheet on glass, 1 hour /
+  1 day / 1 week, the guest joining noticed; the list with the time left, Approve for a request to
+  stay and End now), and a note that a computer is signed in by scanning its code with ECHO on the
+  iPhone (a Mac has no camera to scan with). A guest sees its pass instead and the app listens only
+  (no hearts, no Wanted changes). **Account**: who is signed in, the server, Sign out. **About**: the version. The
   lock screen's animated covers are the iPhone's alone (the owner's decision), so the Mac has
   neither them nor their speed. Nor has it the iPhone's home-screen widget (not asked for on the
   Mac); its views would carry over, but a Mac widget extension runs sandboxed and needs a signed
@@ -128,14 +132,14 @@ widget's tests run here too, the lock screen's keys and the simulator's App Grou
 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, apple run 36): both apps build with no
-Swift warnings, the Swift tests pass on the Mac (261) and in the iOS 26 simulator (261; on both the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, apple run 38): both apps build with no
+Swift warnings, the Swift tests pass on the Mac (293) and in the iOS 26 simulator (293; on both the Keychain's
 data-protection round trip skips, the test host having no entitlement), and the app runs on the
 Mac on its built-in library, a player that never streams and the web's lyric fixtures
 (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `albums`, `album`, `search`, `player`, `lyrics`,
-`settings`, `signin`, `shell`). It has not yet signed in to a real server or played through one.
+`settings`, `signin`, `shell`, `guests` (Settings → Guests in its window)). It has not yet signed in to a real server or played through one.
 
 ## Next
 
 Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
-the menu commands, and the rest; signing and notarization to share it.
+offline downloads (10), the menu commands, and the rest; signing and notarization to share it.

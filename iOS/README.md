@@ -145,13 +145,46 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
   Group container, writable. On a device the app and the widget need the owner's Apple developer
   team and the App Group registered for both (`DEVELOPMENT_TEAM` in `project.yml`).
 
+## Signing a computer in, and guests
+
+- **Sign in a computer** (Settings → Sign in and guests; `Apple/Shared/Guests`, `UI/ScanScreen.swift`):
+  the camera full-bleed (VisionKit's `DataScannerViewController`, QR codes only; the camera asked
+  for with `NSCameraUsageDescription`) under a glass title, ECHO's white frame and a glass card.
+  A scanned `https://echo.folk3s.com/link#<id>` (the web sign-in page's QR code) is peeked
+  (`/auth/qr/peek`): which browser asks and from which network; **Approve** (`/auth/qr/approve`)
+  signs it in, **Deny** sends nothing (the request runs out in two minutes). A code run out or used
+  (404) says to reload the page; a guest pass, another server's code or anything else says what it
+  is; 429 waits for its Retry-After (a minute without one) before checking another code; a refused
+  code is not asked about again for 4 s while the camera keeps seeing it. Writes are never repeated.
+- **Scan a guest pass** (the sign-in page, before anyone is signed in): the same scanner. A scanned
+  `<origin>/guest#<code>` shows whose pass it is and for how long (`/guests/peek`); **Join as guest**
+  redeems it (`/guests/redeem`) and the device token goes in the Keychain as any sign-in's. The
+  session knows its pass (`/guests/me`, kept for the next start), and the app listens only: no
+  hearts (songs, albums, artists, Now Playing), no Wanted changes, no inviting, no signing a computer
+  in (the server's `GUEST_DENY`); the library refuses those itself (the lock screen's Love too).
+  Home shows "You're ada's guest · 18 h left"; Settings shows the pass. When the time is up the
+  server deletes the account, and the sign-in page comes back saying the pass has ended.
+- **Guests** (Settings → Guests): **Invite a guest** shows the code full-screen on glass, a white QR
+  plate (error correction H, the Echo mark in the middle), "Works once, for 9:41", 1 hour / 1 day /
+  1 week (a new code for each), and the guest joining noticed by asking `/guests` every 3 s. The
+  list shows each guest's time left, **Approve** for a request to stay and **End now**. The server
+  has no call to take back a code not yet scanned: it runs out by itself after 10 minutes (at most
+  five wait at once).
+- **Guest links**: `echo://guest#<code>` (also `/<code>` or `?code=`) opens the guest pass on the
+  sign-in page; signed in, the scanner opens and says to sign out first. `https://…/guest#` links
+  (the QR code's own) need Associated Domains, which need a signed build.
+- **What needs a real device**: the camera (the simulator has no data scanner: the demo screens draw
+  a sign-in page in its place); the scan, Approve and Join have only run in tests against the
+  server's recorded answers.
+
 ## Settings
 
 - **One page in the room** from Home's account button: groups on glass, each under its title.
   **Lock screen**: the animated cover as the lock screen shows it (tap it for the whole lock screen
   in a preview) beside its loop speed, Fast, Normal, Slow or Very slow (5, 8, 12 or 15 s, ECHO's
   lengths), kept on this iPhone (the server's preferences have no key for it, and the web no such
-  setting). **Account**: who is signed in, the server, Sign out. **About**: the version. The
+  setting). **Sign in and guests**: Sign in a computer and Guests (a guest sees its pass instead).
+  **Account**: who is signed in, the server, Sign out. **About**: the version. The
   widget has no setting: its size and look are the home screen's.
 
 ## Build and run
@@ -177,7 +210,9 @@ it, the files kept and let go, the version checked, the lock screen's keys, the 
 widget: what the app writes into the App Group and the widget reads back, the cover drawn small,
 the timeline and the progress from the song's start, when the app writes and reloads (and when not),
 its buttons on the player, the link it opens, the folder emptied on signing out, and no App Group
-at all; against the server's recorded answers in `Apple/Tests/Fixtures`, which
+at all; signing a computer in and guest passes: what a scanned code holds, peek, Approve, Deny, a
+code run out or used, 429 and its Retry-After, joining as a guest and its limits, the pass at start
+and its end, inviting, listing and ending guests, and guest links; against the server's recorded answers in `Apple/Tests/Fixtures`, which
 `scripts/apple-fixtures.ts` records from the server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
 `.github/workflows/apple.yml`, or with:
 
@@ -185,8 +220,8 @@ at all; against the server's recorded answers in `Apple/Tests/Fixtures`, which
 xcodebuild test -project iOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, the iOS 26.5 SDK, apple run 36): both apps build with no
-Swift warnings, the Swift tests pass in the iOS 26 simulator (261) and on the Mac (261; on both the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, the iOS 26.5 SDK, apple run 38): both apps build with no
+Swift warnings, the Swift tests pass in the iOS 26 simulator (293) and on the Mac (293; on both the Keychain's
 data-protection round trip skips, the test host having no entitlement), and the app runs in the
 simulator on its built-in library, a player that never streams and the web's lyric fixtures
 (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `album`, `artist`, `playlist`, `mix`, `library`,
@@ -194,13 +229,16 @@ simulator on its built-in library, a player that never streams and the web's lyr
 `lyrics-plain`, `lyrics-menu`, `settings`, `lockcover` (the lock screen preview on a loop made from
 the web fixture's Harbour Lights cover), `widgets`, `widgets-tinted`, `widgets-idle` (the
 widget's own views at their sizes on a home screen like iOS 26's: playing and paused in full
-colour; tinted and clear, drawn as the system draws them; nothing playing), `signin`, `shell`). It
-has not yet signed in to a real server or played through one.
+colour; tinted and clear, drawn as the system draws them; nothing playing), `signin`, `shell`,
+`scan` (the scanner on a drawn camera), `approve` (a computer asking), `guest-pass` (a pass scanned
+from the sign-in page), `guest-invite` (an invite's QR code), `guests` (the list), `guest-home`
+(the app as a guest)). A green run also uploads `ECHO-ipa`, an unsigned Release device build to
+sideload. It has not yet signed in to a real server or played through one.
 
 ## Next
 
-Sign in to a real server and play on a device; then the plan's next tasks
-(`docs/superpowers/plans/2026-11-19-apple-apps.md`): scanning to sign in and guest passes, and the
-rest. The real lock screen's animated cover and the real widget on the home screen are to be seen
+Sign in to a real server and play on a device, and scan a real sign-in page and guest pass with
+the camera; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`): offline
+downloads (10), then Karaoke, Listen together, themes. The real lock screen's animated cover and the real widget on the home screen are to be seen
 on a device, signed (the simulator's lock screen and home screen cannot be screenshotted
 reliably, and an unsigned build has no App Group).

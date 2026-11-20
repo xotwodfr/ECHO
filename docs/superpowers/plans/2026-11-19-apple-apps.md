@@ -51,9 +51,9 @@ Sideloadly) besides the simulator builds and screenshots.
 | 3 Playback | done (apple run 19) |
 | 4 Lyrics | done (apple run 26) |
 | 5 Animated lock-screen covers, Settings | done (apple run 30) |
-| 6 Widget | in progress |
-| 7 Scan to sign in, guests | next |
-| 10 Downloads | then |
+| 6 Widget | done (apple run 36) |
+| 7 Scan to sign in, guests | done (apple run 38) |
+| 10 Downloads | next |
 | 8 Karaoke | then |
 | 9 Listen together | then |
 | 11 Themes (Liquid Glass, ECHO, then Android's) | then |
