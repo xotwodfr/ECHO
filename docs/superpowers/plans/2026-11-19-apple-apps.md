@@ -56,7 +56,7 @@ Sideloadly) besides the simulator builds and screenshots.
 | 11 Settings parity and themes (Liquid Glass, ECHO, then Android's) | next |
 | 8 Karaoke | then |
 | 9 Listen together | then |
-| 10 Downloads | paused: code kept in commits 36116ea, 56c096c, 380d2d6; re-apply with `git revert <the revert's sha>`; unfinished: it did not build yet (run 39's tests failed to type-check a test expression, since fixed in 56c096c; the later fixes were never run through to green) |
+| 10 Downloads | paused: code kept in commits 36116ea, 56c096c, 380d2d6; re-apply with `git revert 6bf75cb`; unfinished: it did not build yet (run 39's tests failed to type-check a test expression, since fixed in 56c096c; the later fixes were never run through to green) |
 | 12 Finish | last |
 | S Server motion covers | done |
 
