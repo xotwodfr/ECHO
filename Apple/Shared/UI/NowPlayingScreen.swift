@@ -8,6 +8,8 @@ import SwiftUI
 /// above it; Lyrics open over it, growing from their button (swipe down to come back). Swipe down
 /// or the chevron closes it.
 struct NowPlayingScreen: View {
+    @Environment(Feedback.self) private var feedback: Feedback?
+    @Environment(\.theme) private var theme
     /// Up next in the cover's place (the shell's, so it opens either way).
     @Binding var showsQueue: Bool
     /// The lyrics over it (the shell's too).
@@ -30,8 +32,7 @@ struct NowPlayingScreen: View {
         }
         // A heart or a queue change says so here too, above the buttons.
         .overlay { ToastLayer(bottom: 92) }
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .themedDark()
         .task(id: player.track?.cover) {
             if let cover = player.track?.cover { palette = await library.images.palette(cover) }
         }
@@ -133,13 +134,14 @@ struct NowPlayingScreen: View {
         return Button(
             liked ? "Remove from Liked Songs" : "Add to Liked Songs", systemImage: liked ? "heart.fill" : "heart"
         ) {
+            feedback?.toggle(!liked)
             Task { await library.setLiked(track, !liked) }
         }
         .labelStyle(.iconOnly)
         .contentTransition(.symbolEffect(.replace))
         .buttonStyle(.glass)
         .buttonBorderShape(.circle)
-        .tint(Color.amber)
+        .tint(theme.forcedDark.highlight)
         .controlSize(.large)
     }
 
@@ -172,6 +174,7 @@ struct NowPlayingScreen: View {
 
 /// Previous, Play or Pause, Next: white in one glass capsule (the preview's), each at least 60 pt.
 struct TransportCapsule: View {
+    @Environment(Feedback.self) private var feedback: Feedback?
     @Environment(Player.self) private var player
 
     var body: some View {
@@ -179,6 +182,7 @@ struct TransportCapsule: View {
             HStack(spacing: 22) {
                 control("backward.fill", "Previous", size: 60) { player.previous() }
                 control(player.isPlaying ? "pause.fill" : "play.fill", player.isPlaying ? "Pause" : "Play", size: 72) {
+                    feedback?.toggle(!player.isPlaying)
                     player.toggle()
                 }
                 control("forward.fill", "Next", size: 60) { player.next() }
@@ -187,7 +191,7 @@ struct TransportCapsule: View {
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 6)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .themedGlass(interactive: true)
         }
     }
 

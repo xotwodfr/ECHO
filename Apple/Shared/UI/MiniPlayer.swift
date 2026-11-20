@@ -5,6 +5,7 @@ import SwiftUI
 /// cover, title and artist, which open Now Playing, and Play or Pause and Next in white. With the tab
 /// bar minimized it sits beside it, Play or Pause alone.
 struct MiniPlayer: View {
+    @Environment(Feedback.self) private var feedback: Feedback?
     let open: () -> Void
 
     @Environment(Player.self) private var player
@@ -28,6 +29,7 @@ struct MiniPlayer: View {
                 .accessibilityLabel("Now Playing, \(track.title), \(track.artist)")
                 .accessibilityHint("Opens Now Playing")
                 Button(player.isPlaying ? "Pause" : "Play", systemImage: player.isPlaying ? "pause.fill" : "play.fill") {
+                    feedback?.toggle(!player.isPlaying)
                     player.toggle()
                 }
                 .contentTransition(.symbolEffect(.replace))
@@ -38,15 +40,15 @@ struct MiniPlayer: View {
             }
             .labelStyle(.iconOnly)
             .font(.title3)
-            .foregroundStyle(.white)
-            .tint(.white)
+            .foregroundStyle(Color.primary)
+            .tint(Color.primary)
             .padding(.horizontal, 14)
         } else {
             // Only on iOS 26.0, which shows the accessory always (26.1 hides it with nothing queued).
             HStack(spacing: 10) {
                 Image(systemName: "music.note")
                     .frame(width: 34, height: 34)
-                    .background(.white.opacity(0.1), in: .rect(cornerRadius: 8))
+                    .background(Color.primary.opacity(0.1), in: .rect(cornerRadius: 8))
                 Text("Not Playing").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
             }

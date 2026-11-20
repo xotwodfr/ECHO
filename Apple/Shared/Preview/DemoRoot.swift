@@ -5,6 +5,8 @@ import SwiftUI
 @MainActor
 final class DemoWorld {
     let screen: String
+    /// The screen it is a theme's look of: `theme-liquid-glass-lyrics` is the lyrics, `themes` the settings.
+    let base: String
     let session: Session
     let library: Library
     let player: Player
@@ -16,12 +18,16 @@ final class DemoWorld {
 
     init(screen: String) {
         self.screen = screen
+        let theme = DemoThemes.of(screen)
+        let screen = theme?.base ?? screen
+        base = screen
         let now = Date.now.timeIntervalSince1970 * 1000
         let guest = screen == "guest-home" ? GuestPass(expiresAt: now + 18.4 * 3_600_000, invitedBy: "ada") : nil
         let session = Session.demo(
             server: Config.server, signedIn: screen != "signin" && screen != "guest-pass", serverAway: screen == "shell",
             guest: guest)
         self.session = session
+        if let appearance = theme?.appearance { session.demoAppearance(appearance) }
         invites = GuestInvites.demo(
             guests: [
                 Guest(
@@ -91,7 +97,7 @@ struct DemoRoot: View {
         if let scan = world.scan {
             ScanScreen(flow: scan, camera: .demo) {}
                 .environment(world.session)
-        } else if world.screen == "guest-invite" {
+        } else if world.base == "guest-invite" {
             InviteSheet {}
                 .environment(world.invites)
         } else {
@@ -105,18 +111,39 @@ struct DemoRoot: View {
     private var root: some View {
         RootView(
             session: world.session, library: world.library, player: world.player, lyrics: world.lyrics,
-            device: world.device, invites: world.invites, start: DemoLibrary.start(world.screen)
+            device: world.device, invites: world.invites, start: DemoLibrary.start(world.base)
         )
-        .environment(\.lyricsMenuOnOpen, world.screen == "lyrics-menu")
+        .environment(\.lyricsMenuOnOpen, world.base == "lyrics-menu")
         .environment(\.motionPreviewFrame, 4)
-        .environment(\.lockPreviewOnOpen, world.screen == "lockcover")
-        .environment(\.settingsScroll, DemoLibrary.settingsScroll(world.screen))
+        .environment(\.lockPreviewOnOpen, world.base == "lockcover")
+        .environment(\.settingsScroll, DemoLibrary.settingsScroll(world.base))
         #if os(macOS)
         .task {
-            guard world.screen.hasPrefix("settings") || world.screen == "guests" else { return }
+            guard world.base.hasPrefix("settings") || world.base == "guests" else { return }
             try? await Task.sleep(for: .milliseconds(800))
             openSettings()
         }
         #endif
+    }
+}
+
+/// The `theme-…` demo screens and `themes`: the app (or Settings) in a theme, over the screen they
+/// are named for: `themes` (Settings with the picker, in Liquid Glass), `theme-liquid-glass-home`,
+/// `-nowplaying` and `-lyrics`, and `theme-light-home` (ECHO in its light variant).
+enum DemoThemes {
+    struct Look {
+        let base: String
+        let appearance: UserSettings.Appearance
+    }
+
+    static func of(_ screen: String) -> Look? {
+        switch screen {
+        case "themes": Look(base: "settings", appearance: .init(theme: .glass, dark: .theme))
+        case "theme-liquid-glass-home": Look(base: "mini", appearance: .init(theme: .glass, dark: .theme))
+        case "theme-liquid-glass-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .glass, dark: .theme))
+        case "theme-liquid-glass-lyrics": Look(base: "lyrics", appearance: .init(theme: .glass, dark: .theme))
+        case "theme-light-home": Look(base: "mini", appearance: .init(theme: .echo, dark: .light))
+        default: nil
+        }
     }
 }

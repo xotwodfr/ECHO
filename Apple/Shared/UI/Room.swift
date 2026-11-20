@@ -65,22 +65,43 @@ struct AlbumLight: View {
 }
 
 /// A page in the room: the album's light at the top, its strength scaled by this device's
-/// background brightness (Settings → Appearance; none set in the preview's windows: as designed).
+/// background brightness (Settings → Appearance; none set in the preview's windows: as designed) and
+/// by the theme's (Liquid Glass lights it more and higher; a light variant washes it with its floor and a
+/// theme with a caustic catches a glow from below). The floor is the album's own in the dark, the theme's
+/// in the light.
 struct RoomModifier: ViewModifier {
     var strength: Double
     var height: CGFloat
     var palette: AlbumPalette?
     var held: Bool
     @Environment(DeviceSettings.self) private var device: DeviceSettings?
+    @Environment(\.theme) private var theme
 
     func body(content: Content) -> some View {
+        let look = theme.palette
+        let lit = min(1, (device?.roomStrength(strength) ?? strength) * look.roomStrength)
         content
             .background(alignment: .top) {
-                AlbumLight(strength: device?.roomStrength(strength) ?? strength, palette: palette).frame(height: height).mask(
+                ZStack {
+                    AlbumLight(strength: lit, palette: palette)
+                    if look.wash > 0 { theme.floor.opacity(look.wash).ignoresSafeArea() }
+                }
+                .frame(height: height * look.roomHeight)
+                .mask(
                     LinearGradient(colors: held ? [.black, .black, .clear] : [.black, .clear], startPoint: .top, endPoint: .bottom))
-                    .ignoresSafeArea()
+                .ignoresSafeArea()
             }
-            .background(palette.map { Color($0.floor) } ?? Color.echoFloor)
+            .background(alignment: .bottom) {
+                if theme.glass.caustic > 0, theme.dark {
+                    RadialGradient(
+                        colors: [(palette.map { Color($0.accent) } ?? theme.tint).opacity(theme.glass.caustic), .clear],
+                        center: .bottom, startRadius: 0, endRadius: 460
+                    )
+                    .frame(height: 460)
+                    .ignoresSafeArea()
+                }
+            }
+            .background(theme.dark ? (palette.map { Color($0.floor) } ?? theme.floor) : theme.floor)
             .animation(.smooth(duration: 0.8), value: palette)
     }
 }
@@ -114,6 +135,7 @@ extension View {
 /// A line under the bars while ECHO cannot be used online: no network, or ECHO not answering.
 struct ConnectionBanner: View {
     let connectivity: Connectivity
+    @Environment(\.theme) private var theme
 
     var body: some View {
         switch connectivity.status {
@@ -128,7 +150,7 @@ struct ConnectionBanner: View {
 
     private func banner(_ icon: String, _ title: String, _ detail: String) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).font(.title3).foregroundStyle(Color.amber)
+            Image(systemName: icon).font(.title3).foregroundStyle(theme.highlight)
             VStack(alignment: .leading, spacing: 1) {
                 Text(title).font(.subheadline.weight(.semibold))
                 Text(detail).font(.footnote).foregroundStyle(.secondary)
@@ -137,7 +159,7 @@ struct ConnectionBanner: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 20))
+        .themedGlass(20)
         .accessibilityElement(children: .combine)
     }
 }
@@ -147,12 +169,13 @@ struct NoteCard: View {
     let icon: String
     let title: String
     let text: String
+    @Environment(\.theme) private var theme
 
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 34, weight: .semibold))
-                .foregroundStyle(Color.amber)
+                .foregroundStyle(theme.highlight)
             Text(title).font(.title3.bold())
             Text(text)
                 .font(.subheadline)
@@ -162,7 +185,7 @@ struct NoteCard: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 24)
         .padding(.vertical, 28)
-        .glassEffect(.regular, in: .rect(cornerRadius: 28))
+        .themedGlass(28)
         .accessibilityElement(children: .combine)
     }
 }

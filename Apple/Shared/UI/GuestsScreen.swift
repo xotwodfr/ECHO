@@ -4,6 +4,7 @@ import SwiftUI
 /// user invited (every guest, for an admin), each with the time left, Approve for a request to
 /// stay, and End now. In the room, white on glass, as Settings.
 struct GuestsScreen: View {
+    @Environment(\.theme) private var theme
     @Environment(GuestInvites.self) private var invites
     @State private var inviting = false
 
@@ -26,11 +27,11 @@ struct GuestsScreen: View {
                         #endif
                 }
                 .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
+                .tint(theme.accent)
                 .controlSize(.large)
                 list
                 if let note = invites.note {
-                    Text(note).font(.subheadline).foregroundStyle(Color.echoWarning)
+                    Text(note).font(.subheadline).foregroundStyle(theme.warning)
                 }
             }
             .padding(.horizontal, pagePadding)
@@ -82,6 +83,7 @@ struct GuestsScreen: View {
 
 /// A guest: who, the time left, and what the inviter can do.
 private struct GuestRow: View {
+    @Environment(\.theme) private var theme
     let guest: Guest
     let now: Date
 
@@ -113,7 +115,7 @@ private struct GuestRow: View {
             Text(String((guest.keep?.username ?? guest.username).prefix(1)).uppercased())
                 .font(.headline)
                 .frame(width: 40, height: 40)
-                .background(Color.echoAccent.opacity(0.55), in: .circle)
+                .background(theme.accent.opacity(0.55), in: .circle)
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(guest.keep.map { "\($0.username) (wants to stay)" } ?? guest.username)
@@ -132,7 +134,7 @@ private struct GuestRow: View {
         if guest.keep != nil {
             Button("Approve") { act { await invites.keep(guest) } }
                 .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
+                .tint(theme.accent)
                 .foregroundStyle(.white)
                 .fixedSize()
                 .disabled(busy)
@@ -140,7 +142,7 @@ private struct GuestRow: View {
         Button {
             act { await invites.end(guest) }
         } label: {
-            Text("End now").foregroundStyle(Color.echoWarning)
+            Text("End now").foregroundStyle(theme.warning)
         }
         .echoGlass()
             .fixedSize()
@@ -160,6 +162,7 @@ private struct GuestRow: View {
 /// gives (an hour, a day, a week), and the guest joining. Full screen on the iPhone; a sheet on the
 /// Mac.
 struct InviteSheet: View {
+    @Environment(\.theme) private var theme
     let close: () -> Void
 
     @Environment(GuestInvites.self) private var invites
@@ -187,8 +190,7 @@ struct InviteSheet: View {
             }
             .scrollBounceBehavior(.basedOnSize)
         }
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .themedDark()
         .animation(.smooth, value: invites.code)
         .animation(.smooth, value: invites.joined)
         .task { if invites.code == nil { await invites.invite(invites.length) } }
@@ -221,12 +223,12 @@ struct InviteSheet: View {
                 if let joined = invites.joined {
                     Image(systemName: "checkmark.circle.fill")
                         .font(.system(size: 64, weight: .semibold))
-                        .foregroundStyle(Color.amber)
+                        .foregroundStyle(theme.forcedDark.highlight)
                     Text("\(joined) joined").font(.title2.bold())
                     Text("They're in. They can listen for \(invites.length.label).")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.75))
-                    Button("Done", action: close).buttonStyle(.glassProminent).tint(Color.echoAccent).controlSize(.large)
+                    Button("Done", action: close).buttonStyle(.glassProminent).tint(theme.forcedDark.accent).controlSize(.large)
                 } else if let code = invites.code, left > 0 {
                     QRCodeView(text: code.url)
                         .frame(maxWidth: 300)
@@ -240,7 +242,7 @@ struct InviteSheet: View {
                 } else if let error = invites.inviteError {
                     Text(error)
                         .font(.subheadline)
-                        .foregroundStyle(Color.echoWarning)
+                        .foregroundStyle(theme.forcedDark.warning)
                         .multilineTextAlignment(.center)
                     Button("Try Again", systemImage: "arrow.clockwise") { Task { await invites.invite(invites.length) } }
                         .buttonStyle(.glass)
@@ -273,7 +275,7 @@ struct InviteSheet: View {
                                 .padding(.vertical, 10)
                         }
                         .buttonStyle(.plain)
-                        .glassEffect(chosen ? .regular.tint(Color.amber) : .regular, in: .capsule)
+                        .glassEffect(chosen ? .regular.tint(theme.forcedDark.highlight) : .regular, in: .capsule)
                         .accessibilityAddTraits(chosen ? .isSelected : [])
                     }
                 }
@@ -285,12 +287,13 @@ struct InviteSheet: View {
 
 /// Home's line for a guest: whose pass, and the time left.
 struct GuestBanner: View {
+    @Environment(\.theme) private var theme
     let pass: GuestPass
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 60)) { context in
             HStack(spacing: 12) {
-                Image(systemName: "ticket.fill").font(.title3).foregroundStyle(Color.amber)
+                Image(systemName: "ticket.fill").font(.title3).foregroundStyle(theme.highlight)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(pass.invitedBy.map { "You're \($0)'s guest" } ?? "You're a guest")
                         .font(.subheadline.weight(.semibold))
@@ -302,7 +305,7 @@ struct GuestBanner: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 20))
+            .themedGlass(20)
             .accessibilityElement(children: .combine)
         }
     }
@@ -311,6 +314,7 @@ struct GuestBanner: View {
 /// Settings → Sign in and guests: scanning a computer's sign-in code (the iPhone's; the Mac says to
 /// use the iPhone) and the guests; for a guest, its pass.
 struct GuestSettings: View {
+    @Environment(\.theme) private var theme
     let session: Session
 
     @State private var scanning: ScanFlow? = nil
@@ -366,7 +370,7 @@ struct GuestSettings: View {
 
     private func row(_ icon: String, _ title: String) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).foregroundStyle(Color.amber).frame(width: 24)
+            Image(systemName: icon).foregroundStyle(theme.highlight).frame(width: 24)
             Text(title)
             Spacer()
             Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.secondary)

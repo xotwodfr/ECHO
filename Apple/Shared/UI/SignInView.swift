@@ -8,6 +8,7 @@ import SwiftUI
 struct SignInView: View {
     let session: Session
     var link: Binding<AppLink?> = .constant(nil)
+    @Environment(\.theme) private var theme
     /// The guest pass's scan, open over the page.
     @State private var scan: ScanFlow? = nil
 
@@ -52,8 +53,7 @@ struct SignInView: View {
             #endif
         }
         .background { AlbumLight() }
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .themedDark()
         #if os(macOS)
         .toolbar(removing: .title)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
@@ -94,7 +94,7 @@ struct SignInView: View {
         VStack(spacing: 10) {
             EchoMark()
                 .frame(width: 92)
-                .shadow(color: Color.amber.opacity(0.35), radius: 24)
+                .shadow(color: theme.forcedDark.highlight.opacity(0.35), radius: 24)
                 .padding(.bottom, 6)
             Text("ECHO")
                 .font(.system(size: 46, weight: .heavy))
@@ -135,14 +135,14 @@ struct SignInView: View {
                 .onSubmit(submit)
                 .overlay {
                     if needsCode && code.isEmpty {
-                        RoundedRectangle(cornerRadius: 14).strokeBorder(Color.echoTint.opacity(0.8), lineWidth: 1.5)
+                        RoundedRectangle(cornerRadius: 14).strokeBorder(theme.forcedDark.tint.opacity(0.8), lineWidth: 1.5)
                     }
                 }
 
             if let message {
                 Text(message)
                     .font(.subheadline)
-                    .foregroundStyle(Color.echoWarning)
+                    .foregroundStyle(theme.forcedDark.warning)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 2)
@@ -165,14 +165,14 @@ struct SignInView: View {
                 #endif
             }
             .buttonStyle(.glassProminent)
-            .tint(Color.echoAccent)
+            .tint(theme.forcedDark.accent)
             .controlSize(.large)
             .font(.headline)
             .keyboardShortcut(.defaultAction)
             .padding(.top, 4)
         }
         .padding(20)
-        .glassEffect(.regular, in: .rect(cornerRadius: 30))
+        .themedGlass(30)
         .animation(.smooth, value: message)
         .animation(.smooth, value: needsCode)
     }

@@ -132,11 +132,11 @@ struct Cover: View {
                 } else {
                     ZStack {
                         LinearGradient(
-                            colors: [.white.opacity(0.13), .white.opacity(0.05)], startPoint: .topLeading,
+                            colors: [Color.primary.opacity(0.13), Color.primary.opacity(0.05)], startPoint: .topLeading,
                             endPoint: .bottomTrailing)
                         Image(systemName: symbol)
                             .font(.title2)
-                            .foregroundStyle(.white.opacity(0.35))
+                            .foregroundStyle(Color.primary.opacity(0.35))
                     }
                 }
             }
@@ -187,13 +187,13 @@ struct WantedArt: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: corner)
-            .fill(.white.opacity(0.1))
+            .fill(Color.primary.opacity(0.1))
             .aspectRatio(1, contentMode: .fit)
             .overlay {
                 GeometryReader { g in
                     Image(systemName: "music.note.list")
                         .font(.system(size: g.size.width * 0.34, weight: .semibold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Color.primary)
                         .frame(width: g.size.width, height: g.size.height)
                 }
             }
@@ -321,9 +321,25 @@ struct ShortcutTile<Art: View>: View {
                 .multilineTextAlignment(.leading)
             Spacer(minLength: 0)
         }
-        .background(.white.opacity(0.08))
-        .clipShape(.rect(cornerRadius: 12))
+        .modifier(ShortcutSurface())
         .contentShape(.rect)
+    }
+}
+
+/// A shortcut tile's ground: a raised strip, or glass in a theme that lays glass under its rows.
+struct ShortcutSurface: ViewModifier {
+    @Environment(\.theme) private var theme
+
+    func body(content: Content) -> some View {
+        if theme.glass.rows {
+            content
+                .clipShape(.rect(cornerRadius: 12))
+                .themedGlass(12)
+        } else {
+            content
+                .background(Color.primary.opacity(0.08))
+                .clipShape(.rect(cornerRadius: 12))
+        }
     }
 }
 
@@ -343,6 +359,7 @@ struct LibraryRow<Art: View>: View {
             Spacer(minLength: 0)
         }
         .frame(height: 64)
+        .themedRow(hPadding: 10)
         .contentShape(.rect)
     }
 }
@@ -374,17 +391,22 @@ struct TrackRow: View {
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(\.theme) private var theme
+    @Environment(Feedback.self) private var feedback: Feedback?
 
     var body: some View {
         let now = player.track?.key == track.key
-        Button(action: play) {
+        Button {
+            feedback?.tap()
+            play()
+        } label: {
             HStack(spacing: 14) {
                 if art {
                     Cover(path: track.cover, corner: 8).frame(width: 48, height: 48)
                 } else if let number {
                     Group {
                         if now {
-                            Image(systemName: "chart.bar.fill").foregroundStyle(Color.amber)
+                            Image(systemName: "chart.bar.fill").foregroundStyle(theme.highlight)
                         } else {
                             Text("\(number)").foregroundStyle(.secondary).monospacedDigit()
                         }
@@ -395,7 +417,7 @@ struct TrackRow: View {
                     Text(track.title)
                         .font(art ? .body.weight(.semibold) : .body)
                         .fontWeight(now ? .semibold : nil)
-                        .foregroundStyle(now ? Color.amber : Color.primary)
+                        .foregroundStyle(now ? theme.highlight : Color.primary)
                         .lineLimit(1)
                     if art || number == nil {
                         Text(track.artist).font(.footnote).foregroundStyle(.secondary).lineLimit(1)
@@ -405,7 +427,7 @@ struct TrackRow: View {
                 if library.isLiked(track) {
                     Image(systemName: "heart.fill")
                         .font(.caption)
-                        .foregroundStyle(Color.amber)
+                        .foregroundStyle(theme.highlight)
                         .accessibilityLabel("Liked")
                 }
                 Text(mmss(track.seconds))
@@ -414,6 +436,7 @@ struct TrackRow: View {
                     .monospacedDigit()
             }
             .frame(minHeight: art ? 64 : 54)
+            .themedRow()
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -430,9 +453,10 @@ struct TrackList: View {
     var showAlbum = true
 
     @Environment(Player.self) private var player
+    @Environment(\.theme) private var theme
 
     var body: some View {
-        LazyVStack(spacing: 0) {
+        LazyVStack(spacing: theme.rowSpacing) {
             ForEach(Array(tracks.enumerated()), id: \.offset) { index, track in
                 TrackRow(track: track, number: numbered ? index + 1 : nil, art: art, showAlbum: showAlbum) {
                     Task { await player.play(tracks, at: index, context: context) }
@@ -529,10 +553,10 @@ struct MacGlassButton: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .foregroundStyle(Color.echoTint)
+            .foregroundStyle(.tint)
             .padding(.horizontal, circle ? 7 : 14)
             .padding(.vertical, 7)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .themedGlass(interactive: true)
             .opacity(configuration.isPressed ? 0.75 : 1)
             .contentShape(.capsule)
     }
@@ -546,16 +570,17 @@ struct PlayButtons: View {
     var disabled = false
     let play: () -> Void
     let shuffle: () -> Void
+    @Environment(\.theme) private var theme
+    @Environment(Feedback.self) private var feedback: Feedback?
 
     var body: some View {
         GlassEffectContainer(spacing: 12) {
             HStack(spacing: 12) {
-                Button(action: play) {
-                    Label("Play", systemImage: "play.fill").frame(maxWidth: playButtonWidth)
-                }
-                .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
-                Button(action: shuffle) {
+                playButton
+                Button {
+                    feedback?.tap()
+                    shuffle()
+                } label: {
                     Label("Shuffle", systemImage: "shuffle").frame(maxWidth: playButtonWidth)
                 }
                 .echoGlass()
@@ -564,6 +589,21 @@ struct PlayButtons: View {
             .font(.headline)
         }
         .disabled(disabled)
+    }
+
+    /// Play: filled with the accent, or in a theme whose buttons refract, glass in the accent.
+    @ViewBuilder private var playButton: some View {
+        let button = Button {
+            feedback?.confirm()
+            play()
+        } label: {
+            Label("Play", systemImage: "play.fill").frame(maxWidth: playButtonWidth)
+        }
+        if theme.glass.refractive {
+            button.buttonStyle(.glass).tint(theme.accent)
+        } else {
+            button.buttonStyle(.glassProminent).tint(theme.accent)
+        }
     }
 }
 
@@ -577,6 +617,7 @@ struct PageHeader<Art: View, Actions: View>: View {
     var artWidth: CGFloat = 250
     @ViewBuilder let art: () -> Art
     @ViewBuilder let actions: () -> Actions
+    @Environment(\.theme) private var theme
 
     var body: some View {
         #if os(macOS)
@@ -611,11 +652,11 @@ struct PageHeader<Art: View, Actions: View>: View {
             if let subtitle, !subtitle.isEmpty {
                 if let subtitleRoute {
                     NavigationLink(value: subtitleRoute) {
-                        Text(subtitle).font(.title3.weight(.medium)).foregroundStyle(Color.amber)
+                        Text(subtitle).font(.title3.weight(.medium)).foregroundStyle(theme.highlight)
                     }
                     .buttonStyle(.plain)
                 } else {
-                    Text(subtitle).font(.title3.weight(.medium)).foregroundStyle(Color.amber)
+                    Text(subtitle).font(.title3.weight(.medium)).foregroundStyle(theme.highlight)
                 }
             }
             if let facts, !facts.isEmpty {
@@ -642,7 +683,7 @@ struct LoadingView: View {
     var body: some View {
         ProgressView()
             .controlSize(.large)
-            .tint(.white)
+            .tint(Color.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 60)
     }
@@ -653,12 +694,13 @@ struct ErrorCard: View {
     let title: String
     let error: ApiError
     let retry: () -> Void
+    @Environment(\.theme) private var theme
 
     var body: some View {
         VStack(spacing: 10) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(Color.amber)
+                .foregroundStyle(theme.highlight)
             Text(title).font(.headline)
             Text(error.userMessage)
                 .font(.subheadline)
@@ -670,7 +712,7 @@ struct ErrorCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .themedGlass(24)
         .accessibilityElement(children: .contain)
     }
 }
@@ -678,23 +720,24 @@ struct ErrorCard: View {
 /// A message for a moment, over the bottom of the screen, with its action (Undo, Open).
 struct ToastView: View {
     let toast: Toast
+    @Environment(\.theme) private var theme
 
     var body: some View {
         HStack(spacing: 16) {
             Text(toast.message)
                 .font(.subheadline.weight(.medium))
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.primary)
                 .lineLimit(2)
             if let action = toast.action, let run = toast.run {
                 Button(action) { run() }
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.amber)
+                    .foregroundStyle(theme.highlight)
                     .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 13)
-        .glassEffect(.regular, in: .capsule)
+        .themedGlass()
     }
 }
 

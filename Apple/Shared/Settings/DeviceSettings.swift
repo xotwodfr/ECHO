@@ -10,6 +10,8 @@ import Observation
 /// - The stream quality (Settings → Playback): what this device's connection and ears want.
 /// - The background brightness and Performance mode (Settings → Appearance): this screen and its
 ///   speed, as the web's `visuals.backdrop` and `visuals.performance`.
+/// - Haptics and Theme sounds (Settings → Appearance): this device's feelings, as Android's
+///   `Prefs.haptics` and `Prefs.themeSounds` (Feedback).
 ///
 /// Crossfade, the equalizer, Karaoke and Autoplay are per device on the web and Android too; they
 /// land here (a property, a key and a setter each) when they are built. Downloads' storage (task 10)
@@ -25,6 +27,10 @@ final class DeviceSettings {
     private(set) var backdrop: Double
     /// Performance mode: the smaller animations, for a slower device.
     private(set) var performance: Bool
+    /// Haptics: a tap for presses, switches and hearts (the iPhone).
+    private(set) var haptics: Bool
+    /// Theme sounds: a theme's own sounds on presses (Android's `themeSounds`).
+    private(set) var themeSounds: Bool
 
     @ObservationIgnored private let defaults: UserDefaults?
 
@@ -32,6 +38,8 @@ final class DeviceSettings {
     static let streamQualityKey = "echo.device.streamQuality"
     static let backdropKey = "echo.device.backdrop"
     static let performanceKey = "echo.device.performance"
+    static let hapticsKey = "echo.device.haptics"
+    static let themeSoundsKey = "echo.device.themeSounds"
     static let defaultBackdrop = 0.5
 
     /// - Parameter defaults: where the choices are kept; nil keeps them in memory (the preview).
@@ -41,6 +49,9 @@ final class DeviceSettings {
         streamQuality = defaults?.string(forKey: Self.streamQualityKey).flatMap(StreamQuality.init(rawValue:)) ?? .auto
         backdrop = (defaults?.object(forKey: Self.backdropKey) as? Double).map { min(1, max(0, $0)) } ?? Self.defaultBackdrop
         performance = defaults?.bool(forKey: Self.performanceKey) ?? false
+        // On unless switched off.
+        haptics = (defaults?.object(forKey: Self.hapticsKey) as? Bool) ?? true
+        themeSounds = (defaults?.object(forKey: Self.themeSoundsKey) as? Bool) ?? true
     }
 
     func setMotionLoop(_ speed: LoopSpeed) {
@@ -63,6 +74,16 @@ extension DeviceSettings {
     func setPerformance(_ on: Bool) {
         performance = on
         defaults?.set(on, forKey: Self.performanceKey)
+    }
+
+    func setHaptics(_ on: Bool) {
+        haptics = on
+        defaults?.set(on, forKey: Self.hapticsKey)
+    }
+
+    func setThemeSounds(_ on: Bool) {
+        themeSounds = on
+        defaults?.set(on, forKey: Self.themeSoundsKey)
     }
 
     /// The album light's strength on a page whose own is `base` (designed at the middle brightness).

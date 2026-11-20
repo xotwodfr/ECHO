@@ -107,6 +107,7 @@ struct AlbumScreen: View {
 /// An artist (Spotify's page, as the web's): their picture, Play and Follow, Popular, the
 /// discography, fans also like, and about them.
 struct ArtistScreen: View {
+    @Environment(\.theme) private var theme
     let id: String
     let name: String?
 
@@ -170,7 +171,7 @@ struct ArtistScreen: View {
                         }
                         .padding(20)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+                        .themedGlass(24)
                     }
                 } else if missing {
                     NoteCard(icon: "music.microphone", title: "Not on your server", text: "This artist isn't in your Navidrome any more.")
@@ -201,7 +202,7 @@ struct ArtistScreen: View {
                     Label("Play", systemImage: "play.fill").frame(maxWidth: playButtonWidth)
                 }
                 .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
+                .tint(theme.accent)
                 .disabled(page == nil)
                 if !library.listensOnly {
                     let following = library.isFollowing(id)

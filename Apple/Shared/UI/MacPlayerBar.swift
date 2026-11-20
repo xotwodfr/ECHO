@@ -5,6 +5,7 @@ import SwiftUI
 /// where it is from, shuffle, previous, play or pause, next and repeat over the scrubber, then
 /// Lyrics (over the window), Up next and the volume.
 struct MacPlayerBar: View {
+    @Environment(Feedback.self) private var feedback: Feedback?
     /// The lyrics over the window (the shell's).
     @Binding var showsLyrics: Bool
 
@@ -35,6 +36,7 @@ struct MacPlayerBar: View {
                             .glassToggle(player.shuffled)
                         Button("Previous", systemImage: "backward.fill") { player.previous() }
                         Button(player.isPlaying ? "Pause" : "Play", systemImage: player.isPlaying ? "pause.fill" : "play.fill") {
+                            feedback?.toggle(!player.isPlaying)
                             player.toggle()
                         }
                         .font(.title2)
@@ -46,7 +48,7 @@ struct MacPlayerBar: View {
                     }
                     .labelStyle(.iconOnly)
                     .buttonStyle(.borderless)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.primary)
                     Scrubber(layout: .inline)
                         .frame(maxWidth: 440)
                 }
@@ -78,11 +80,11 @@ struct MacPlayerBar: View {
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
-                .foregroundStyle(.white)
+                .foregroundStyle(Color.primary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .glassEffect(.regular, in: .rect(cornerRadius: 22))
+            .themedGlass(22)
         }
     }
 

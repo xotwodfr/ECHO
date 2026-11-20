@@ -35,8 +35,7 @@ struct LyricsScreen: View {
             }
         }
         .overlay { ToastLayer(bottom: 132) }
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .themedDark()
         .task(id: player.track?.cover) {
             if let cover = player.track?.cover { palette = await library.images.palette(cover) }
         }
@@ -73,6 +72,8 @@ struct LyricsScreen: View {
 /// the right, the source's credit at the top. The player bar's Lyrics button opens it; the chevron
 /// or Escape closes it; `[` and `]` move this song's lyrics 50 ms earlier or later.
 struct MacLyricsView: View {
+    @Environment(Feedback.self) private var feedback: Feedback?
+    @Environment(\.theme) private var theme
     @Binding var shown: Bool
 
     @Environment(Player.self) private var player
@@ -109,7 +110,7 @@ struct MacLyricsView: View {
                     .frame(width: 34, height: 34)
                     .contentShape(.circle)
                     .buttonStyle(.plain)
-                    .glassEffect(.regular.interactive(), in: .circle)
+                    .themedGlass(interactive: true)
                     .padding(.top, 46)
                     .padding(.leading, 20)
             }
@@ -118,7 +119,7 @@ struct MacLyricsView: View {
         // The timing's toast, and any other, over the lyrics.
         .overlay { ToastLayer(bottom: 28) }
         .background { shortcuts }
-        .preferredColorScheme(.dark)
+        .themedDark()
         .task(id: player.track?.cover) {
             if let cover = player.track?.cover { palette = await library.images.palette(cover) }
         }
@@ -146,11 +147,12 @@ struct MacLyricsView: View {
                     HStack(spacing: 10) {
                         round("backward.fill", "Previous", 48) { player.previous() }
                         round(player.isPlaying ? "pause.fill" : "play.fill", player.isPlaying ? "Pause" : "Play", 60) {
+                            feedback?.toggle(!player.isPlaying)
                             player.toggle()
                         }
                         round("forward.fill", "Next", 48) { player.next() }
                             .disabled(!player.hasNext)
-                        round("quote.bubble.fill", "Close Lyrics", 48, tint: Color.echoTint) { shown = false }
+                        round("quote.bubble.fill", "Close Lyrics", 48, tint: theme.forcedDark.tint) { shown = false }
                         round("list.bullet", "Up next", 48) { showsQueue.toggle() }
                             .popover(isPresented: $showsQueue, arrowEdge: .top) {
                                 QueueList()
@@ -177,7 +179,7 @@ struct MacLyricsView: View {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .themedGlass(interactive: true)
         .accessibilityLabel(label)
     }
 

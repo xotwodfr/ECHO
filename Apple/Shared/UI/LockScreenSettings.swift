@@ -17,6 +17,7 @@ extension EnvironmentValues {
 /// shows it, beside the loop speed (the loop's length asked of the server, kept on this device).
 /// The preview opens full screen as the lock screen looks.
 struct LockScreenSettings: View {
+    @Environment(\.theme) private var theme
     @Environment(DeviceSettings.self) private var device
     @Environment(Player.self) private var player
     @Environment(Library.self) private var library
@@ -80,12 +81,12 @@ struct LockScreenSettings: View {
                 Text("\(speed.seconds) s").font(.footnote).foregroundStyle(.secondary)
                 Spacer(minLength: 4)
                 if chosen {
-                    Image(systemName: "checkmark").font(.footnote.weight(.bold)).foregroundStyle(Color.amber)
+                    Image(systemName: "checkmark").font(.footnote.weight(.bold)).foregroundStyle(theme.highlight)
                 }
             }
             .padding(.horizontal, 12)
             .frame(height: 36)
-            .background(chosen ? Color.white.opacity(0.12) : .clear, in: .capsule)
+            .background(chosen ? Color.primary.opacity(0.12) : .clear, in: .capsule)
             .contentShape(.capsule)
         }
         .buttonStyle(.plain)
@@ -346,7 +347,7 @@ struct LockCoverScreen: View {
                 .padding(.top, 4)
         }
         .gesture(DragGesture(minimumDistance: 30).onEnded { if $0.translation.height > 80 { dismiss() } })
-        .preferredColorScheme(.dark)
+        .themedDark()
     }
 
     /// The player as the lock screen has it, on glass: the song, where it is, and the transport.

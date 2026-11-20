@@ -31,6 +31,7 @@ struct LibraryScreen: View {
     @State private var chip: LibraryChip
 
     @Environment(Library.self) private var library
+    @Environment(\.theme) private var theme
 
     init(session: Session, chip: LibraryChip = .playlists) {
         self.session = session
@@ -39,7 +40,7 @@ struct LibraryScreen: View {
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: theme.rowSpacing) {
                 ConnectionBanner(connectivity: session.connectivity)
                     .padding(.bottom, 12)
                 chips
@@ -62,11 +63,11 @@ struct LibraryScreen: View {
             .padding(.bottom, 32)
         }
         .background(alignment: .top) {
-            LinearGradient(colors: [Color(hex: 0x3A2A80).opacity(0.6), .clear], startPoint: .top, endPoint: .bottom)
+            LinearGradient(colors: [Color(hex: 0x3A2A80).opacity(theme.dark ? 0.6 : 0.22), .clear], startPoint: .top, endPoint: .bottom)
                 .frame(height: 380)
                 .ignoresSafeArea()
         }
-        .background(Color.echoFloor)
+        .background(theme.floor)
         .navigationTitle("Library")
         .clearBars()
         .toolbar {

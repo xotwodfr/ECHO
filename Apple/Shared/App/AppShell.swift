@@ -65,6 +65,7 @@ struct PhoneShell: View {
     @Environment(Player.self) private var player
     @Environment(Lyrics.self) private var lyrics
     @Environment(\.lyricsMenuOnOpen) private var lyricsMenuOnOpen
+    @Environment(Feedback.self) private var feedback: Feedback?
 
     init(session: Session, start: ShellStart = ShellStart(), link: Binding<AppLink?> = .constant(nil)) {
         self.session = session
@@ -155,8 +156,7 @@ struct PhoneShell: View {
         .fullScreenCover(item: $scan) { flow in
             ScanScreen(flow: flow) { scan = nil }
         }
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .onChange(of: tab) { feedback?.tick() }
         .task {
             // The demo screens that open on Now Playing (`-ECHODemo nowplaying`, `queue`, and the
             // lyrics over it: `lyrics`, `lyrics-interlude`, `lyrics-plain`, `lyrics-menu`).
@@ -264,8 +264,6 @@ struct MacShell: View {
             }
         }
         .animation(.smooth(duration: 0.35), value: showsLyrics)
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
     }
 
     private var library: some View {

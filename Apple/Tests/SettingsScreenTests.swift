@@ -26,6 +26,8 @@ struct UserSettingsEditorTests {
         ("lyrics", "showUnsynced", false, { $0.lyrics.showUnsynced = false }),
         ("lyrics", "announceLines", true, { $0.lyrics.announceLines = true }),
         ("visuals", "motion", "reduced", { $0.visuals.motion = .reduced }),
+        ("appearance", "theme", "glass", { $0.appearance.theme = .glass }),
+        ("appearance", "dark", "light", { $0.appearance.dark = .light }),
     ]
 
     @Test("Each setting goes up as its own key and no other")

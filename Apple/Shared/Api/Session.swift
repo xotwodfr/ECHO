@@ -287,4 +287,9 @@ extension Session {
         if serverAway { session.connectivity.serverAnswered(false) }
         return session
     }
+
+    /// The preview's theme and light or dark (the `theme-…` demo screens): shown with no server to save to.
+    func demoAppearance(_ appearance: UserSettings.Appearance) {
+        settings.appearance = appearance
+    }
 }

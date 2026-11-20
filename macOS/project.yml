@@ -51,6 +51,7 @@ targets:
       - path: ../Apple/Shared/Lyrics
       - path: ../Apple/Shared/Motion
       - path: ../Apple/Shared/Settings
+      - path: ../Apple/Shared/Themes
       - path: ../Apple/Shared/Widget
       - path: ../Apple/Shared/Guests
       - path: ../Apple/Shared/App/AppLink.swift

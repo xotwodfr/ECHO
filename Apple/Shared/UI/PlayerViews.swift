@@ -69,8 +69,8 @@ struct Scrubber: View {
         GeometryReader { geo in
             let width = max(1, geo.size.width)
             ZStack(alignment: .leading) {
-                Capsule().fill(.white.opacity(0.22))
-                Capsule().fill(.white).frame(width: width * fraction)
+                Capsule().fill(Color.primary.opacity(0.22))
+                Capsule().fill(Color.primary).frame(width: width * fraction)
             }
             .frame(height: held == nil ? thickness : thickness + 4)
             .frame(maxHeight: .infinity)
@@ -207,17 +207,28 @@ extension View {
             .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
     }
 
-    /// A button that is on or off (shuffle, repeat, the queue): amber glass when on.
-    @ViewBuilder
+    /// A button that is on or off (shuffle, repeat, the queue): the accent's glass when on.
     func glassToggle(_ on: Bool) -> some View {
+        modifier(GlassToggle(on: on))
+    }
+
+}
+
+struct GlassToggle: ViewModifier {
+    let on: Bool
+    @Environment(\.theme) private var theme
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
         #if os(macOS)
-        buttonStyle(.borderless)
-            .foregroundStyle(on ? Color.echoTint : Color.white)
+        content
+            .buttonStyle(.borderless)
+            .foregroundStyle(on ? theme.tint : Color.primary)
         #else
         if on {
-            buttonStyle(.glassProminent).buttonBorderShape(.circle).tint(Color.echoAccent)
+            content.buttonStyle(.glassProminent).buttonBorderShape(.circle).tint(theme.accent)
         } else {
-            buttonStyle(.glass).buttonBorderShape(.circle)
+            content.buttonStyle(.glass).buttonBorderShape(.circle)
         }
         #endif
     }

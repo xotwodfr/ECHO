@@ -15,6 +15,7 @@ struct SettingsScreen: View {
     @Environment(Session.self) private var session
     @Environment(DeviceSettings.self) private var device
     @Environment(\.settingsScroll) private var scrollTo
+    @Environment(\.theme) private var theme
     @State private var editor: SettingsEditor?
 
     var body: some View {
@@ -31,7 +32,7 @@ struct SettingsScreen: View {
                         if let failure = editor.failure {
                             Text(failure)
                                 .font(.footnote)
-                                .foregroundStyle(Color.echoWarning)
+                                .foregroundStyle(theme.warning)
                                 .padding(.horizontal, 4)
                         }
                     }
@@ -74,7 +75,7 @@ struct SettingsGroup<Content: View>: View {
             VStack(alignment: .leading, spacing: 0) { content }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .glassEffect(.regular, in: .rect(cornerRadius: 26))
+                .themedGlass(26)
             if let footer {
                 Text(footer)
                     .font(.footnote)
@@ -109,7 +110,7 @@ struct SettingsRow: View {
 struct SettingsDivider: View {
     var body: some View {
         Rectangle()
-            .fill(.white.opacity(0.12))
+            .fill(Color.primary.opacity(0.12))
             .frame(height: 1)
             .padding(.vertical, 6)
     }
@@ -119,6 +120,7 @@ struct SettingsDivider: View {
 struct AccountSettings: View {
     let session: Session
     @State private var signingOut = false
+    @Environment(\.theme) private var theme
 
     var body: some View {
         SettingsGroup(
@@ -145,7 +147,7 @@ struct AccountSettings: View {
                 .contentShape(.rect)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.echoWarning)
+            .foregroundStyle(theme.warning)
             .disabled(signingOut)
         }
     }
@@ -199,8 +201,7 @@ struct SettingsWindow: View {
         .environment(device)
         .environment(\.settingsScroll, scroll)
         .frame(width: 520, height: guests ? 560 : 640)
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .themed(session.settings.appearance)
     }
 }
 #endif

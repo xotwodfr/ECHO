@@ -113,6 +113,19 @@ struct LyricLook: Sendable {
     var make: @Sendable (AlbumPalette?, Double) -> LyricStyle
 
     static let echo = LyricLook { palette, size in LyricStyle.echo(palette: palette, size: size) }
+
+    /// Liquid Glass's: ECHO's words in a bolder face, cooler and whiter, with a wider glow, the far
+    /// lines held in more frost (Android's Liquid glass lyrics sing the line in a lens and blur the rest).
+    static let glass = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .black
+        style.ink = RGB(0.965, 0.98, 1)
+        style.lit = style.lit.mixed(with: RGB(0.85, 0.93, 1), 0.4)
+        style.edge = style.edge.mixed(with: RGB(0.9, 0.96, 1), 0.5)
+        style.glowScale = 2.1
+        style.depthBlur = 0.95
+        return style
+    }
 }
 
 extension AlbumPalette {

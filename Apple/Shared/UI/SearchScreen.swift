@@ -29,6 +29,7 @@ struct SearchScreen: View {
 /// an album, with Play), songs, artists and albums; asked 250 ms after typing stops, an answer for
 /// an older query dropped. Nothing found offers the Wanted list.
 struct SearchResults: View {
+    @Environment(\.theme) private var theme
     let query: String
 
     @Environment(Library.self) private var library
@@ -111,7 +112,7 @@ struct SearchResults: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(.glassProminent)
                 .buttonBorderShape(.circle)
-                .tint(Color.echoAccent)
+                .tint(theme.accent)
                 .controlSize(.large)
                 .padding(.trailing, 18)
             }
@@ -119,7 +120,7 @@ struct SearchResults: View {
         }
         if !found.tracks.isEmpty {
             SectionTitle("Songs")
-            VStack(spacing: 0) {
+            VStack(spacing: theme.rowSpacing) {
                 ForEach(Array(found.tracks.prefix(4).enumerated()), id: \.offset) { index, track in
                     TrackRow(track: track, art: true) {
                         Task { await player.play(found.tracks, at: index, context: context) }
@@ -164,7 +165,7 @@ struct SearchResults: View {
             Spacer(minLength: 64)
         }
         .padding(14)
-        .background(.white.opacity(0.08), in: .rect(cornerRadius: 18))
+        .background(Color.primary.opacity(0.08), in: .rect(cornerRadius: 18))
         .contentShape(.rect)
     }
 
@@ -173,7 +174,7 @@ struct SearchResults: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 30, weight: .semibold))
-                .foregroundStyle(Color.amber)
+                .foregroundStyle(theme.highlight)
             Text("No results for “\(q)”").font(.headline).multilineTextAlignment(.center)
             if library.listensOnly {
                 Text("Try other words, or another spelling.")
@@ -189,12 +190,12 @@ struct SearchResults: View {
                     Task { await library.addWanted(q) { navigate(.wanted) } }
                 }
                 .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
+                .tint(theme.accent)
                 .padding(.top, 4)
             }
         }
         .frame(maxWidth: .infinity)
         .padding(24)
-        .glassEffect(.regular, in: .rect(cornerRadius: 24))
+        .themedGlass(24)
     }
 }

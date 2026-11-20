@@ -18,6 +18,8 @@ struct RootView: View {
     var start = ShellStart()
 
     @Environment(\.scenePhase) private var scenePhase
+    /// The theme's feel: haptics and sounds (Feedback), told which theme and which device's switches.
+    @State private var feedback = Feedback()
     /// A link the system handed the app, waiting for the shell to open it.
     @State private var link: AppLink? = nil
 
@@ -30,7 +32,7 @@ struct RootView: View {
                 SignInView(session: session, link: $link)
             case .locked:
                 // Launched in the background while locked: the token is read once it unlocks.
-                AlbumLight().overlay { ProgressView().tint(.white) }
+                AlbumLight().overlay { ProgressView().tint(Color.primary) }
             }
         }
         .environment(session)
@@ -39,6 +41,13 @@ struct RootView: View {
         .environment(lyrics)
         .environment(device)
         .environment(invites)
+        .environment(feedback)
+        // The user's theme, with its light or dark, tint and lyric look, for everything below.
+        .themed(session.settings.appearance)
+        .onChange(of: session.settings.appearance.theme, initial: true) {
+            feedback.device = device
+            feedback.sounds = Theme.of(session.settings.appearance.theme).sounds
+        }
         .animation(.smooth, value: session.phase)
         .onChange(of: session.isGuest, initial: true) { library.listensOnly = session.isGuest }
         .onOpenURL { url in link = AppLink(url) }

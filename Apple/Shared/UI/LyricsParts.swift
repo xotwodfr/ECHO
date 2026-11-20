@@ -287,7 +287,7 @@ struct LyricsCredit: View {
                     .contentShape(.capsule)
             }
             .buttonStyle(.plain)
-            .glassEffect(.regular.interactive(), in: .capsule)
+            .themedGlass(interactive: true)
             .accessibilityLabel("Lyrics source: \(Lyrics.sourceName(doc.source)), \(Self.syncName(doc.sync))")
             .accessibilityHint("Shows the source and the timing")
             .popover(isPresented: $menu, arrowEdge: .top) {
@@ -309,6 +309,7 @@ struct LyricsCredit: View {
 /// The lyrics menu (the web's ⓘ, and its `[` / `]` keys): where they come from, the source to use
 /// for this track, and the timing for this track.
 struct LyricsMenu: View {
+    @Environment(\.theme) private var theme
     let close: () -> Void
 
     @Environment(Lyrics.self) private var lyrics
@@ -321,7 +322,7 @@ struct LyricsMenu: View {
                     Text(Self.attributed(doc.attribution))
                         .font(.footnote)
                         .foregroundStyle(.secondary)
-                        .tint(Color.echoTint)
+                        .tint(theme.tint)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -352,7 +353,7 @@ struct LyricsMenu: View {
                     if lyrics.offsetMs != 0 {
                         Button("Back to the song's own timing") { lyrics.resetOffset() }
                             .font(.footnote)
-                            .foregroundStyle(Color.echoTint)
+                            .foregroundStyle(theme.tint)
                             .buttonStyle(.plain)
                     }
                 }
@@ -376,7 +377,7 @@ struct LyricsMenu: View {
                 .contentShape(.circle)
         }
         .buttonStyle(.plain)
-        .glassEffect(.regular.interactive(), in: .circle)
+        .themedGlass(interactive: true)
         .accessibilityLabel(label)
     }
 
@@ -386,7 +387,7 @@ struct LyricsMenu: View {
                 Text(title).font(.subheadline)
                 Spacer(minLength: 8)
                 if on {
-                    Image(systemName: "checkmark").font(.subheadline.weight(.semibold)).foregroundStyle(Color.echoTint)
+                    Image(systemName: "checkmark").font(.subheadline.weight(.semibold)).foregroundStyle(theme.tint)
                 }
             }
             .padding(.vertical, 6)
@@ -444,7 +445,7 @@ struct LyricsPlayerCard: View {
             .padding(.horizontal, 16)
             .padding(.top, 14)
             .padding(.bottom, 6)
-            .glassEffect(.regular, in: .rect(cornerRadius: 30))
+            .themedGlass(30)
         }
     }
 

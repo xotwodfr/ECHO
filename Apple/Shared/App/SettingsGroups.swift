@@ -24,10 +24,12 @@ struct SettingsToggle: View {
     let title: String
     var detail: String? = nil
     @Binding var isOn: Bool
+    @Environment(Feedback.self) private var feedback: Feedback?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Toggle(title, isOn: $isOn).tint(Color.echoTint)
+            Toggle(title, isOn: $isOn)
+                .onChange(of: isOn) { feedback?.toggle(isOn) }
             if let detail { SettingsHint(detail) }
         }
         .padding(.vertical, 4)
@@ -52,7 +54,7 @@ struct SettingsChoice<Value: Hashable>: View {
                 }
                 .labelsHidden()
                 .pickerStyle(.menu)
-                .tint(.white)
+                .tint(Color.primary)
             }
             if let detail { SettingsHint(detail) }
         }
@@ -76,9 +78,9 @@ struct SettingsHint: View {
 
 // MARK: - Appearance
 
-/// Settings → Appearance: how ECHO looks and moves. Themes (task 11b) come first in this group:
-/// a ThemePicker, then the light or dark choice (`UserSettings.appearance`, the user's); what is
-/// here is what the preferences cover already: motion, the background's brightness and Performance mode.
+/// Settings → Appearance: how ECHO looks, sounds and moves. The theme comes first (a ThemePicker),
+/// then light or dark (both `UserSettings.appearance`, the user's, so they follow the account), then
+/// motion, the background's brightness and Performance mode, and this device's haptics and theme sounds.
 struct AppearanceSettings: View {
     let session: Session
     let editor: SettingsEditor
@@ -87,8 +89,18 @@ struct AppearanceSettings: View {
     var body: some View {
         SettingsGroup(
             title: "Appearance",
-            footer: "Motion follows your account. Background brightness and Performance mode are for this device only."
+            footer: "Theme, light or dark and motion follow your account. Background brightness, Performance mode, haptics and theme sounds are for this device only."
         ) {
+            ThemePicker(editor: editor)
+            SettingsDivider()
+            SettingsChoice(
+                title: "Light or dark",
+                detail: "Now Playing and the lyrics are always dark: they sit on the album's colours.",
+                options: UserSettings.DarkMode.allCases, name: { $0.label },
+                selection: Binding(
+                    get: { session.settings.appearance.dark },
+                    set: { value in editor.save { $0.appearance.dark = value } }))
+            SettingsDivider()
             SettingsChoice(
                 title: "Motion",
                 detail: "System follows Reduce Motion in the accessibility settings. Off shows the lyrics as a still sheet.",
@@ -109,11 +121,22 @@ struct AppearanceSettings: View {
                     Text("\(Int((device.backdrop * 100).rounded()))%").foregroundStyle(.secondary).monospacedDigit()
                 }
                 Slider(value: Binding(get: { device.backdrop }, set: { device.setBackdrop($0) }), in: 0...1, step: 0.05)
-                    .tint(Color.echoTint)
                     .accessibilityLabel("Background brightness")
                 SettingsHint("How bright the album's light is behind every page.")
             }
             .padding(.vertical, 4)
+            #if os(iOS)
+            SettingsDivider()
+            SettingsToggle(
+                title: "Haptics",
+                detail: "A tap for presses, switches and hearts.",
+                isOn: Binding(get: { device.haptics }, set: { device.setHaptics($0) }))
+            #endif
+            SettingsDivider()
+            SettingsToggle(
+                title: "Theme sounds",
+                detail: "The theme's own sounds on presses, at the device's sound volume. Themes without sounds stay quiet.",
+                isOn: Binding(get: { device.themeSounds }, set: { device.setThemeSounds($0) }))
         }
     }
 }

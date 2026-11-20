@@ -4,6 +4,7 @@ import SwiftUI
 /// list, newest first. Each item says who added it and when; once the library has it, it opens and
 /// plays from its album. Anyone removes anything, with Undo while the toast shows.
 struct WantedScreen: View {
+    @Environment(\.theme) private var theme
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
     @State private var text = ""
@@ -43,10 +44,10 @@ struct WantedScreen: View {
                 .onSubmit(add)
                 .padding(.horizontal, 18)
                 .frame(height: 46)
-                .glassEffect(.regular, in: .capsule)
+                .themedGlass()
             Button("Add", action: add)
                 .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
+                .tint(theme.accent)
                 .controlSize(.large)
                 .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
@@ -76,7 +77,7 @@ struct WantedScreen: View {
         HStack(spacing: 12) {
             Image(systemName: item.found == nil ? "magnifyingglass" : "checkmark.circle.fill")
                 .font(.title3)
-                .foregroundStyle(item.found == nil ? Color.secondary : Color.amber)
+                .foregroundStyle(item.found == nil ? Color.secondary : theme.highlight)
                 .frame(width: 30)
             if let found = item.found, let albumId = found.album {
                 NavigationLink(
@@ -95,7 +96,7 @@ struct WantedScreen: View {
                 Button("Remove \(item.text) from Wanted", systemImage: "xmark") { library.removeWanted(item) }
                     .labelStyle(.iconOnly)
                     .echoGlass(circle: true)
-                    .tint(.white)
+                    .tint(Color.primary)
             }
         }
         .padding(.vertical, 10)
@@ -112,7 +113,7 @@ struct WantedScreen: View {
             Text(item.text).font(.body.weight(.semibold)).lineLimit(2)
             Text(item.found == nil ? "Not in Navidrome yet" : "In your library")
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(item.found == nil ? Color.secondary : Color.amber)
+                .foregroundStyle(item.found == nil ? Color.secondary : theme.highlight)
             Text("Added by \(item.addedBy ?? "a former user") · \(Self.ago.localizedString(for: item.addedAt, relativeTo: .now))")
                 .font(.footnote)
                 .foregroundStyle(.secondary)

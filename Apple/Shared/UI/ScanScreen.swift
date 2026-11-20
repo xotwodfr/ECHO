@@ -15,6 +15,7 @@ enum ScanCamera: Equatable {
 /// follows the scan (ScanFlow): what to point at and why the last code did not go, which browser
 /// asks (Approve, Deny) or whose guest pass it is (Join), and how it ended.
 struct ScanScreen: View {
+    @Environment(\.theme) private var theme
     @State var flow: ScanFlow
     var camera: ScanCamera = .live
     let close: () -> Void
@@ -52,8 +53,7 @@ struct ScanScreen: View {
                     .padding(.bottom, 12)
             }
         }
-        .preferredColorScheme(.dark)
-        .tint(Color.echoTint)
+        .themedDark()
         .animation(.smooth, value: flow.step)
         .animation(.smooth, value: flow.note)
         .task {
@@ -117,7 +117,7 @@ struct ScanScreen: View {
             if let note = flow.note {
                 Text(note)
                     .font(.subheadline)
-                    .foregroundStyle(Color.echoWarning)
+                    .foregroundStyle(theme.forcedDark.warning)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.updatesFrequently)
             }
@@ -203,7 +203,7 @@ struct ScanScreen: View {
         HStack(alignment: .top, spacing: 14) {
             Image(systemName: icon)
                 .font(.title2.weight(.semibold))
-                .foregroundStyle(Color.amber)
+                .foregroundStyle(theme.forcedDark.highlight)
                 .frame(width: 32)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title).font(.headline)
@@ -222,7 +222,7 @@ struct ScanScreen: View {
         if prominent {
             Button(action: action) { label.foregroundStyle(.white) }
                 .buttonStyle(.glassProminent)
-                .tint(Color.echoAccent)
+                .tint(theme.forcedDark.accent)
                 .controlSize(.large)
         } else {
             Button(action: action) { label }
@@ -235,6 +235,7 @@ struct ScanScreen: View {
 
 /// The frame to aim with: four white corners on the camera, and an amber line while it looks.
 private struct ScanFrame: View {
+    @Environment(\.theme) private var theme
     let lit: Bool
 
     var body: some View {
@@ -244,10 +245,10 @@ private struct ScanFrame: View {
                 .shadow(color: .black.opacity(0.35), radius: 6)
             if lit {
                 Capsule()
-                    .fill(Color.amber)
+                    .fill(theme.forcedDark.highlight)
                     .frame(height: 3)
                     .padding(.horizontal, 26)
-                    .shadow(color: Color.amber.opacity(0.8), radius: 8)
+                    .shadow(color: theme.forcedDark.highlight.opacity(0.8), radius: 8)
             }
         }
     }
