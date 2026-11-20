@@ -113,6 +113,7 @@ struct DemoRoot: View {
         .environment(\.lyricsMenuOnOpen, world.screen == "lyrics-menu")
         .environment(\.motionPreviewFrame, 4)
         .environment(\.lockPreviewOnOpen, world.screen == "lockcover")
+        .environment(\.settingsFocus, world.screen == "downloads-settings" ? "downloads" : nil)
         #if os(macOS)
         .task {
             guard ["settings", "guests", "downloads-settings"].contains(world.screen) else { return }

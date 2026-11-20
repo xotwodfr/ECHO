@@ -37,6 +37,8 @@ final class Downloads {
     /// Whether the fetches the system kept have been taken up (resume()); nothing starts before, so
     /// a fetch still running is never started twice.
     @ObservationIgnored private var resumed = false
+    /// The preview's: it has no files and fetches nothing, so nothing is made right or started.
+    @ObservationIgnored private var previewing = false
 
     /// Fetches at once.
     static let concurrent = 2
@@ -203,6 +205,7 @@ final class Downloads {
     /// The preview's state (`-ECHODemo`): what is downloaded, what is being fetched (song key → how
     /// far) and what failed, with no transport behind it.
     func preview(_ index: DownloadIndex, fetching: [String: Double] = [:], failed: [String: String] = [:]) {
+        previewing = true
         self.index = index
         neededTracks = index.neededTracks
         neededCovers = index.neededCovers
@@ -216,6 +219,7 @@ final class Downloads {
     /// At launch: the index is made right with the files on disk, the fetches the system kept
     /// running (or finished) while the app was away are taken up, and the rest goes on.
     func resume() async {
+        guard !previewing else { return }
         reconcile()
         let running = await transport.running()
         for key in running {

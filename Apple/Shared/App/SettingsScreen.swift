@@ -12,15 +12,17 @@ import SwiftUI
 /// SettingsGroup: Appearance (task 11, the themes; they follow the user, `/me/settings`, Session).
 struct SettingsScreen: View {
     @Environment(Session.self) private var session
+    @Environment(\.settingsFocus) private var focus
 
     var body: some View {
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 #if os(iOS)
                 LockScreenSettings()
                 #endif
                 GuestSettings(session: session)
-                DownloadsSettings()
+                DownloadsSettings().id("downloads")
                 AccountSettings(session: session)
                 AboutSettings()
             }
@@ -28,10 +30,22 @@ struct SettingsScreen: View {
             .padding(.top, 4)
             .padding(.bottom, 40)
         }
+        .task {
+            // The preview's `downloads-settings`: opens scrolled to that group.
+            guard let focus else { return }
+            try? await Task.sleep(for: .milliseconds(500))
+            proxy.scrollTo(focus, anchor: .top)
+        }
+        }
         .echoRoom(strength: 0.5, height: 520)
         .navigationTitle("Settings")
         .clearBars()
     }
+}
+
+extension EnvironmentValues {
+    /// The preview: the group Settings opens scrolled to ("downloads").
+    @Entry var settingsFocus: String? = nil
 }
 
 /// A group of settings: its title, a glass card with its rows, and a line under it.
