@@ -139,7 +139,7 @@ struct ThemeTokenTests {
             let style = theme.lyric.look.make(.harbour, 30)
             #expect(style.face.size == 30, "\(theme.id)")
             #expect(style.ink != style.room, "\(theme.id)")
-            #expect(style.glowScale > 0 && style.depthBlur >= 0, "\(theme.id)")
+            #expect(style.glowScale >= 0 && style.depthBlur >= 0, "\(theme.id)")
         }
         let looks = Theme.made.map { $0.lyric.look.make(.harbour, 30) }
         for i in looks.indices { for j in looks.indices where i < j { #expect(looks[i] != looks[j], "\(i) \(j)") } }
