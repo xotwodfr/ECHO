@@ -44,11 +44,16 @@ struct SettingsChoice<Value: Hashable>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Picker(title, selection: $selection) {
-                ForEach(options, id: \.self) { Text(name($0)).tag($0) }
+            HStack(spacing: 12) {
+                Text(title)
+                Spacer(minLength: 8)
+                Picker(title, selection: $selection) {
+                    ForEach(options, id: \.self) { Text(name($0)).tag($0) }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .tint(.white)
             }
-            .pickerStyle(.menu)
-            .tint(.white)
             if let detail { SettingsHint(detail) }
         }
         .padding(.vertical, 2)
