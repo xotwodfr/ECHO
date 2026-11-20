@@ -32,6 +32,54 @@ defaults:
     shell: bash
 
 jobs:
+  # TEMPORARY (task 6): the iOS 26 SDK's WidgetKit, App Intents and SwiftUI declarations the widget
+  # uses, printed from the SDK's Swift interfaces.
+  sdk:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: WidgetKit, App Intents and SwiftUI in the iOS 26 SDK
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$xc" ]; then sudo xcode-select -s "$xc"; fi
+          xcodebuild -version
+          root=$(xcrun --sdk iphoneos --show-sdk-path)
+          iface() { find "$root/System/Library/Frameworks/$1.framework" -name "arm64e-apple-ios.swiftinterface" | head -1; }
+          wk=$(iface WidgetKit); ai=$(iface AppIntents); ui=$(iface SwiftUI)
+          echo "WidgetKit: $wk"; echo "AppIntents: $ai"; echo "SwiftUI: $ui"
+          ls "$root/System/Library/Frameworks" | grep -i -E "intent|widget" || true
+          echo "=================== WidgetKit"
+          grep -n -E "widgetRenderingMode|enum WidgetRenderingMode|struct WidgetRenderingMode|static (let|var) (fullColor|accented|vibrant)|widgetAccentedRenderingMode|WidgetAccentedRenderingMode|widgetAccentable|containerBackground\\(|containerBackgroundRemovable|showsWidgetContainerBackground|widgetURL|reloadTimelines|reloadAllTimelines|contentMarginsDisabled|widgetContentMargins|supportedFamilies|TimelineReloadPolicy|static (let|var) (never|atEnd)|func after|AppIntentTimelineProvider|protocol TimelineProvider|isPreview|systemSmall|systemMedium" "$wk" | head -120
+          echo "----- WidgetKit, iOS 26 additions"
+          grep -n -A3 -E "@available\\(iOS 26" "$wk" | head -160
+          echo "----- WidgetKit, glass"
+          grep -n -i "glass" "$wk" | head -30
+          echo "----- WidgetKit, rendering mode types in full"
+          awk '/public struct WidgetRenderingMode/,/^}/' "$wk" | head -40
+          awk '/public struct WidgetAccentedRenderingMode/,/^}/' "$wk" | head -40
+          awk '/public enum WidgetAccentedRenderingMode/,/^}/' "$wk" | head -40
+          grep -n -B2 -A6 "var widgetRenderingMode" "$wk" | head -30
+          grep -n -B2 -A6 "var showsWidgetContainerBackground" "$wk" | head -20
+          grep -n -B2 -A4 "func widgetAccentedRenderingMode" "$wk" | head -20
+          grep -n -B2 -A4 "func containerBackground" "$wk" | head -30
+          echo "=================== AppIntents"
+          grep -n -E "protocol AudioPlaybackIntent|protocol AudioStartingIntent|protocol LiveActivityIntent|protocol SystemIntent|protocol ForegroundContinuableIntent|isDiscoverable|openAppWhenRun|supportedModes|struct IntentModes|static var title" "$ai" | head -60
+          grep -n -B4 -A8 "protocol AudioPlaybackIntent" "$ai" | head -40
+          echo "----- Button(intent:), Toggle(isOn:intent:)"
+          for f in $(find "$root/System/Library/Frameworks" -path "*swiftmodule*" -name "arm64e-apple-ios.swiftinterface" | xargs grep -l -E "init<I>\\(intent|intent: I" 2>/dev/null); do
+            echo "## $f"; grep -n -B3 -A3 -E "init<I>\\(intent|intent: I" "$f" | head -40
+          done
+          echo "=================== SwiftUI timers"
+          grep -n -E "init\\(timerInterval" "$ui" | head -20
+          grep -n -B6 -A2 "init(timerInterval: Swift.ClosedRange<Foundation.Date>, pausedAt" "$ui" | head -40
+          echo "=================== Simulator SDK copies"
+          sroot=$(xcrun --sdk iphonesimulator --show-sdk-path)
+          find "$sroot/System/Library/Frameworks/WidgetKit.framework" -name "*.swiftinterface" | head
+          echo "=================== macOS: AudioPlaybackIntent"
+          mroot=$(xcrun --sdk macosx --show-sdk-path)
+          mai=$(find "$mroot/System/Library/Frameworks/AppIntents.framework" -name "arm64e-apple-macos.swiftinterface" | head -1)
+          grep -n -B4 -A2 "protocol AudioPlaybackIntent" "$mai" | head -20
+
   apple:
     runs-on: macos-26
     timeout-minutes: 45
