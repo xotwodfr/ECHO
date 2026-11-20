@@ -7,8 +7,9 @@ import Observation
 /// the rest of the album or playlist, the history), shuffle and repeat, the next song buffered for a
 /// gapless hand-over, signed stream URLs fetched for each song and again before one runs out, a
 /// broken stream asked for again and then skipped, scrobbles and ECHO's play history, the queue that
-/// follows the user (QueueSync), and the lock screen's and Control Center's info and controls
-/// (MediaCenter). The sound itself is the engine's (PlaybackEngine).
+/// follows the user (QueueSync), the lock screen's and Control Center's info and controls
+/// (MediaCenter), and on the iPhone the home-screen widget's (WidgetFeed, its buttons through
+/// perform(_:)). The sound itself is the engine's (PlaybackEngine).
 ///
 /// The library's screens reach it through `play(_:at:context:)` (a row, a Play button, a card),
 /// `shuffle(_:context:)`, `playNext(_:label:)` and `addToQueue(_:label:)` (the song and album menus),
@@ -115,6 +116,9 @@ final class Player {
     static let urlMargin: TimeInterval = 10 * 60
     /// A broken stream is asked for again at its position this many times (0.5, 1, 2 s apart).
     static let streamRetries = 3
+    /// How long a widget's button waits for the saved queue when the app was started for it, and
+    /// then for the song to start.
+    static let restoreLimit: Duration = .seconds(8)
     static let skipped = "This track could not be played. Skipped to the next."
     static let unplayable = "This track could not be played from Navidrome."
 
@@ -127,6 +131,8 @@ final class Player {
     @ObservationIgnored private let images: ImageLoader?
     /// The iPhone's animated lock-screen covers (nil on the Mac, in the tests that leave it out).
     @ObservationIgnored let motion: MotionCovers?
+    /// The iPhone's home-screen widget (nil on the Mac and in the preview).
+    @ObservationIgnored let widget: WidgetFeed?
     @ObservationIgnored private let settings: @MainActor () -> UserSettings.Playback
     @ObservationIgnored private let notify: @MainActor (String) -> Void
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
@@ -161,6 +167,7 @@ final class Player {
     ///   - hearts: the library's Liked Songs, for the heart on the lock screen.
     ///   - images: covers for the lock screen.
     ///   - motion: the lock screen's animated covers (the iPhone's).
+    ///   - widget: the home-screen widget (the iPhone's).
     ///   - follows: whether the queue follows the user (`/me/queue`).
     ///   - settings: the preferences that follow the user (scrobbling, ReplayGain).
     ///   - notify: a short message for the user (a toast).
@@ -171,6 +178,7 @@ final class Player {
         hearts: (any Hearts)? = nil,
         images: ImageLoader? = nil,
         motion: MotionCovers? = nil,
+        widget: WidgetFeed? = nil,
         follows: Bool = true,
         settings: @escaping @MainActor () -> UserSettings.Playback = { UserSettings.Playback() },
         notify: @escaping @MainActor (String) -> Void = { _ in },
@@ -184,6 +192,7 @@ final class Player {
         self.hearts = hearts
         self.images = images
         self.motion = motion
+        self.widget = widget
         self.settings = settings
         self.notify = notify
         self.sleep = sleep
@@ -418,10 +427,11 @@ final class Player {
         engineDuration = nil
         artwork = nil
         artworkKey = nil
-        // The downloaded motion covers go too, as the library's covers do.
+        // The downloaded motion covers go too, as the library's covers do, and the widget's song.
         motion?.clear()
         setPosition(0)
         media?.publish(nil, playing: false)
+        widget?.clear()
     }
 
     /// The lock screen's loop speed changed in Settings: its cover is asked for at the new length.
@@ -430,6 +440,32 @@ final class Player {
     }
 
     // MARK: - Controls from outside the app
+
+    /// A button on the home-screen widget (its App Intent, run in this process). With nothing in the
+    /// queue (the app was started for it, in the background) the saved queue is read first
+    /// (QueueSync), so Play plays on from where the widget showed; given up on after 8 s (no
+    /// network: the button does nothing).
+    func perform(_ command: WidgetCommand) async {
+        if track == nil, let sync {
+            let limit = Self.restoreLimit
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await sync.start() }
+                group.addTask { try? await Task.sleep(for: limit) }
+                _ = await group.next()
+                group.cancelAll()
+            }
+        }
+        switch command {
+        case .toggle: handle(.toggle)
+        case .next: handle(.next)
+        case .previous: handle(.previous)
+        }
+        // Until the song plays (or cannot), so the app is not suspended before the music starts.
+        let deadline = ContinuousClock.now + Self.restoreLimit
+        while status == .loading, ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
 
     /// A control from the lock screen, Control Center, headphones, the Mac's media keys or its Now
     /// Playing; false when there is nothing to do it to.
@@ -780,22 +816,31 @@ final class Player {
         positionAt = now()
     }
 
-    /// Tells the system what plays (NowPlayingInfo.build), and loads the cover for it once; on the
-    /// iPhone the album's animated cover is asked for too, and told once it is downloaded.
+    /// Tells the system what plays (NowPlayingInfo.build) and the iPhone's widget the same (WidgetFeed,
+    /// from the same values at the same moment, so the widget, the lock screen and Control Center
+    /// never disagree), and loads the cover for them once; on the iPhone the album's animated cover
+    /// is asked for too, and told once it is downloaded.
     private func publish() {
-        guard let media else { return }
+        guard media != nil || widget != nil else { return }
         guard let track else {
             motion?.want(nil) {}
-            media.publish(nil, playing: false)
+            media?.publish(nil, playing: false)
+            widget?.showNothing()
             return
         }
         let cover = artwork?.key == track.key ? artwork?.image : nil
-        media.publish(
+        let at = now()
+        let elapsed = time(at: at)
+        let total = duration
+        media?.publish(
             NowPlayingInfo.build(
-                track: track, elapsed: time(at: now()), duration: duration, playing: status == .playing,
+                track: track, elapsed: elapsed, duration: total, playing: status == .playing,
                 index: queue.history.count, count: queue.history.count + 1 + upcoming.count, artwork: cover,
                 animated: motion?.cover(for: track)),
             playing: isPlaying)
+        widget?.show(
+            track: track, elapsed: elapsed, at: at, duration: total, playing: isPlaying, advancing: status == .playing,
+            artwork: cover)
         publishControls()
         motion?.want(track) { [weak self] in self?.publish() }
         guard cover == nil, artworkKey != track.key, let path = track.cover, let images else { return }

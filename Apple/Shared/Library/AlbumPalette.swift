@@ -2,7 +2,7 @@ import CoreGraphics
 import Foundation
 
 /// A colour as the room uses it, each part 0…1.
-struct RGB: Hashable, Sendable {
+struct RGB: Codable, Hashable, Sendable {
     var r: Double
     var g: Double
     var b: Double
@@ -53,7 +53,7 @@ struct RGB: Hashable, Sendable {
 /// server's palette; here the cover is at hand): its colour overall, and its most vivid colour. The
 /// room is drawn from them as the approved preview's Harbour Lights is: the cover's colour dark
 /// above, its vivid colour glowing in the middle, the floor nearly black.
-struct AlbumPalette: Hashable, Sendable {
+struct AlbumPalette: Codable, Hashable, Sendable {
     /// The cover's colour overall (the average of its pixels).
     var base: RGB
     /// Its most vivid colour (saturated and bright).

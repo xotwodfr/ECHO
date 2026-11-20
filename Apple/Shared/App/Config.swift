@@ -1,6 +1,7 @@
 import Foundation
 #if os(iOS)
 import UIKit
+import WidgetKit
 #endif
 
 /// The app's fixed settings: the server, and the name this device signs in with.
@@ -38,6 +39,14 @@ enum Live {
         return nil
         #endif
     }()
+    /// The home-screen widget's song, in the App Group (the iPhone's alone).
+    static let widget: WidgetFeed? = {
+        #if os(iOS)
+        return WidgetFeed(store: .appGroup(), reload: { WidgetCenter.shared.reloadTimelines(ofKind: WidgetShared.kind) })
+        #else
+        return nil
+        #endif
+    }()
     static let session = Session(
         server: Config.server,
         tokens: KeychainTokenStore(account: Config.server.absoluteString),
@@ -45,7 +54,7 @@ enum Live {
     static let library = Library(source: session.client, images: .live(session.client))
     static let player = Player(
         source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
-        images: library.images, motion: motion, settings: { Live.session.settings.playback },
+        images: library.images, motion: motion, widget: widget, settings: { Live.session.settings.playback },
         notify: { Live.library.show(Toast(message: $0)) })
     static let lyrics = Lyrics(
         source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },

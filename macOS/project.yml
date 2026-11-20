@@ -37,7 +37,8 @@ targets:
   # (hearts, the sorts, Wanted's Undo, the cover cache), playback (the queue, the saved queue,
   # scrobbles, the lock screen's info and controls, on a fake engine) and the lyrics (the loader,
   # the field's timing, springs and motion on the web's lyric fixtures, the layout), the animated
-  # lock-screen covers (asking, waiting, the files kept, the loop speed) against the server's recorded
+  # lock-screen covers (asking, waiting, the files kept, the loop speed), the iPhone's home-screen widget
+  # (what the app writes for it, the timeline, the reloads, its buttons) against the server's recorded
   # answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own
   # with that code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
   ECHOTests:
@@ -50,6 +51,8 @@ targets:
       - path: ../Apple/Shared/Lyrics
       - path: ../Apple/Shared/Motion
       - path: ../Apple/Shared/Settings
+      - path: ../Apple/Shared/Widget
+      - path: ../Apple/Shared/App/AppLink.swift
       - path: ../Apple/Shared/Preview/Lyrics
       - path: ../Apple/Tests
     settings:

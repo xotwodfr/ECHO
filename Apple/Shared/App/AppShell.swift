@@ -6,10 +6,12 @@ import SwiftUI
 struct AppShell: View {
     let session: Session
     var start = ShellStart()
+    /// A link into the app to open (the iPhone's widget opens Now Playing); the shell clears it.
+    var link: Binding<AppLink?> = .constant(nil)
 
     var body: some View {
         #if os(iOS)
-        PhoneShell(session: session, start: start)
+        PhoneShell(session: session, start: start, link: link)
         #else
         MacShell(session: session, start: start)
         #endif
@@ -43,6 +45,7 @@ struct PhoneShell: View {
     enum Section: Hashable { case home, library, search }
 
     let session: Session
+    @Binding private var link: AppLink?
     private let chip: LibraryChip
     private let shelf: String?
     private let playing: ShellStart.Playing?
@@ -61,8 +64,9 @@ struct PhoneShell: View {
     @Environment(Lyrics.self) private var lyrics
     @Environment(\.lyricsMenuOnOpen) private var lyricsMenuOnOpen
 
-    init(session: Session, start: ShellStart = ShellStart()) {
+    init(session: Session, start: ShellStart = ShellStart(), link: Binding<AppLink?> = .constant(nil)) {
         self.session = session
+        _link = link
         playing = start.playing
         var tab = Section.home
         var chip = LibraryChip.playlists
@@ -159,6 +163,27 @@ struct PhoneShell: View {
             try? await Task.sleep(for: .milliseconds(900))
             showsLyrics = true
         }
+        .task(id: link) { await open(link) }
+    }
+
+    /// A link into the app: Now Playing (the widget's tap) opens over the page in front, once there
+    /// is a song (launched for the link, the saved queue may take a moment: 5 s at most).
+    private func open(_ link: AppLink?) async {
+        guard let link else { return }
+        switch link {
+        case .nowPlaying:
+            var waited = 0
+            while player.track == nil, waited < 50, !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(100))
+                waited += 1
+            }
+            if player.track != nil {
+                showsQueue = false
+                showsLyrics = false
+                nowPlaying = true
+            }
+        }
+        self.link = nil
     }
 
     /// A page from Now Playing's menu, on the tab in front.

@@ -1,6 +1,8 @@
 # ECHO for iOS (iPhone; iOS 26 for Liquid Glass). XcodeGen makes the Xcode project from this file:
 #   brew install xcodegen && xcodegen && open ECHO.xcodeproj
-# The app's code is shared with macOS/ (Apple/Shared); this folder holds what is iOS's own.
+# The app's code is shared with macOS/ (Apple/Shared); this folder holds what is iOS's own: the app's
+# entry (Sources), the home-screen widget's extension (Widget) and the widget's views, which the app's
+# demo screens draw too (WidgetViews).
 name: ECHO
 options:
   bundleIdPrefix: com.folk3s
@@ -12,11 +14,22 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+      - path: WidgetViews
       - path: ../Apple/Shared
+    dependencies:
+      # The widget extension, embedded in the app (PlugIns).
+      - target: ECHOWidget
+    # The App Group the app writes what plays into for the widget (WidgetStore).
+    entitlements:
+      path: ECHO.entitlements
     info:
       path: Info.plist
       properties:
         CFBundleDisplayName: ECHO
+        # echo://now-playing: the widget's tap opens Now Playing (AppLink).
+        CFBundleURLTypes:
+          - CFBundleURLName: com.folk3s.echo
+            CFBundleURLSchemes: [echo]
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         UILaunchScreen: {}
@@ -38,13 +51,39 @@ targets:
         # The amber accent (Apple/Shared/Assets.xcassets): the Mac sidebar's selection, menus' tint.
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         TARGETED_DEVICE_FAMILY: "1"
-        # Your Apple developer team, to run it on a device (Xcode → Signing & Capabilities):
+        # Your Apple developer team, to run it on a device (Xcode → Signing & Capabilities), with
+        # the App Group group.com.folk3s.echo registered for the app and its widget:
+        # DEVELOPMENT_TEAM: XXXXXXXXXX
+  # The home-screen widget (WidgetKit), small and medium: what plays, from the App Group the app
+  # writes it into (Apple/Shared/Widget), drawn by WidgetViews; its buttons are App Intents the
+  # system runs in the app's process (AudioPlaybackIntent).
+  ECHOWidget:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+      - path: WidgetViews
+      - path: ../Apple/Shared/Widget
+      - path: ../Apple/Shared/Library/AlbumPalette.swift
+      - path: ../Apple/Shared/UI/EchoMark.swift
+      - path: ../Apple/Shared/App/AppLink.swift
+    entitlements:
+      path: ECHOWidget.entitlements
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo.widget
+        INFOPLIST_FILE: ECHOWidget-Info.plist
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
         # DEVELOPMENT_TEAM: XXXXXXXXXX
   # The Swift tests (Swift Testing, Apple/Tests): the API client, models, sign-in, the library
   # (hearts, the sorts, Wanted's Undo, the cover cache), playback (the queue, the saved queue,
   # scrobbles, the lock screen's info and controls, on a fake engine) and the lyrics (the loader,
   # the field's timing, springs and motion on the web's lyric fixtures, the layout), the animated
-  # lock-screen covers (asking, waiting, the files kept, the loop speed) against the server's recorded
+  # lock-screen covers (asking, waiting, the files kept, the loop speed), the home-screen widget (what
+  # the app writes for it, the timeline, the reloads, its buttons, the link it opens) against the server's recorded
   # answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own
   # with that code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
   ECHOTests:
@@ -57,6 +96,8 @@ targets:
       - path: ../Apple/Shared/Lyrics
       - path: ../Apple/Shared/Motion
       - path: ../Apple/Shared/Settings
+      - path: ../Apple/Shared/Widget
+      - path: ../Apple/Shared/App/AppLink.swift
       - path: ../Apple/Shared/Preview/Lyrics
       - path: ../Apple/Tests
     settings:

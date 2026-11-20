@@ -5,6 +5,7 @@ import SwiftUI
 /// out forgets the library (its covers too), stops the music and empties the queue. Signed in, the
 /// queue saved from any device comes back (Player, QueueSync). The playing track's lyrics follow it
 /// (Lyrics). The lock screen's animated cover is asked for again when its speed changes in Settings.
+/// A link into the app (the widget's tap: AppLink) opens what it names once the app is ready for it.
 struct RootView: View {
     let session: Session
     let library: Library
@@ -14,12 +15,14 @@ struct RootView: View {
     var start = ShellStart()
 
     @Environment(\.scenePhase) private var scenePhase
+    /// A link the system handed the app, waiting for the shell to open it.
+    @State private var link: AppLink? = nil
 
     var body: some View {
         Group {
             switch session.phase {
             case .signedIn:
-                AppShell(session: session, start: start)
+                AppShell(session: session, start: start, link: $link)
             case .signedOut:
                 SignInView(session: session)
             case .locked:
@@ -33,6 +36,7 @@ struct RootView: View {
         .environment(lyrics)
         .environment(device)
         .animation(.smooth, value: session.phase)
+        .onOpenURL { url in link = AppLink(url) }
         .onChange(of: device.motionLoop) { player.lockScreenChanged() }
         .task(id: player.track?.key) { lyrics.follow(player.track) }
         .task { await session.refresh() }

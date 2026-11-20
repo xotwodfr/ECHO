@@ -40,45 +40,31 @@ jobs:
     steps:
       - name: WidgetKit, App Intents and SwiftUI in the iOS 26 SDK
         run: |
+          set +e
           xc=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
           if [ -n "$xc" ]; then sudo xcode-select -s "$xc"; fi
           xcodebuild -version
           root=$(xcrun --sdk iphoneos --show-sdk-path)
           iface() { find "$root/System/Library/Frameworks/$1.framework" -name "arm64e-apple-ios.swiftinterface" | head -1; }
-          wk=$(iface WidgetKit); ai=$(iface AppIntents); ui=$(iface SwiftUI)
-          echo "WidgetKit: $wk"; echo "AppIntents: $ai"; echo "SwiftUI: $ui"
-          ls "$root/System/Library/Frameworks" | grep -i -E "intent|widget" || true
-          echo "=================== WidgetKit"
-          grep -n -E "widgetRenderingMode|enum WidgetRenderingMode|struct WidgetRenderingMode|static (let|var) (fullColor|accented|vibrant)|widgetAccentedRenderingMode|WidgetAccentedRenderingMode|widgetAccentable|containerBackground\\(|containerBackgroundRemovable|showsWidgetContainerBackground|widgetURL|reloadTimelines|reloadAllTimelines|contentMarginsDisabled|widgetContentMargins|supportedFamilies|TimelineReloadPolicy|static (let|var) (never|atEnd)|func after|AppIntentTimelineProvider|protocol TimelineProvider|isPreview|systemSmall|systemMedium" "$wk" | head -120
-          echo "----- WidgetKit, iOS 26 additions"
-          grep -n -A3 -E "@available\\(iOS 26" "$wk" | head -160
-          echo "----- WidgetKit, glass"
-          grep -n -i "glass" "$wk" | head -30
-          echo "----- WidgetKit, rendering mode types in full"
-          awk '/public struct WidgetRenderingMode/,/^}/' "$wk" | head -40
-          awk '/public struct WidgetAccentedRenderingMode/,/^}/' "$wk" | head -40
-          awk '/public enum WidgetAccentedRenderingMode/,/^}/' "$wk" | head -40
-          grep -n -B2 -A6 "var widgetRenderingMode" "$wk" | head -30
-          grep -n -B2 -A6 "var showsWidgetContainerBackground" "$wk" | head -20
-          grep -n -B2 -A4 "func widgetAccentedRenderingMode" "$wk" | head -20
-          grep -n -B2 -A4 "func containerBackground" "$wk" | head -30
-          echo "=================== AppIntents"
-          grep -n -E "protocol AudioPlaybackIntent|protocol AudioStartingIntent|protocol LiveActivityIntent|protocol SystemIntent|protocol ForegroundContinuableIntent|isDiscoverable|openAppWhenRun|supportedModes|struct IntentModes|static var title" "$ai" | head -60
-          grep -n -B4 -A8 "protocol AudioPlaybackIntent" "$ai" | head -40
-          echo "----- Button(intent:), Toggle(isOn:intent:)"
-          for f in $(find "$root/System/Library/Frameworks" -path "*swiftmodule*" -name "arm64e-apple-ios.swiftinterface" | xargs grep -l -E "init<I>\\(intent|intent: I" 2>/dev/null); do
-            echo "## $f"; grep -n -B3 -A3 -E "init<I>\\(intent|intent: I" "$f" | head -40
-          done
-          echo "=================== SwiftUI timers"
-          grep -n -E "init\\(timerInterval" "$ui" | head -20
-          grep -n -B6 -A2 "init(timerInterval: Swift.ClosedRange<Foundation.Date>, pausedAt" "$ui" | head -40
-          echo "=================== Simulator SDK copies"
-          sroot=$(xcrun --sdk iphonesimulator --show-sdk-path)
-          find "$sroot/System/Library/Frameworks/WidgetKit.framework" -name "*.swiftinterface" | head
-          echo "=================== macOS: AudioPlaybackIntent"
-          mroot=$(xcrun --sdk macosx --show-sdk-path)
-          mai=$(find "$mroot/System/Library/Frameworks/AppIntents.framework" -name "arm64e-apple-macos.swiftinterface" | head -1)
-          grep -n -B4 -A2 "protocol AudioPlaybackIntent" "$mai" | head -20
+          wk=$(iface WidgetKit); ai=$(iface AppIntents); ui=$(iface SwiftUI); core=$(iface SwiftUICore); ais=$(iface _AppIntents_SwiftUI)
+          echo "=================== Button(intent:) (_AppIntents_SwiftUI)"
+          grep -n -B2 -A2 "intent" "$ais" | grep -v accessibilityAction | head -60
+          echo "=================== containerBackground, ContainerBackgroundPlacement"
+          grep -n -E "containerBackground|ContainerBackgroundPlacement" "$wk" "$ui" "$core" | head -30
+          grep -n -B2 -A3 "static var widget: SwiftUI.ContainerBackgroundPlacement\\|static let widget" "$wk" | head -20
+          echo "=================== Text(timerInterval:) (SwiftUICore)"
+          grep -n -E "init\\(timerInterval" "$core" | head -10
+          echo "=================== Glass"
+          grep -n -E "static (var|let) (regular|clear|identity): SwiftUI.Glass|public struct Glass" "$ui" "$core" | head -10
+          echo "=================== TimelineProvider"
+          awk '/^public protocol TimelineProvider/,/^}/' "$wk" | head -30
+          echo "=================== TimelineEntry"
+          awk '/^public protocol TimelineEntry/,/^}/' "$wk" | head -12
+          echo "=================== WidgetKit iOS 26 lines in full"
+          for n in 122 234 243 1613 1634; do sed -n "${n},$((n+12))p" "$wk"; echo "--"; done
+          echo "=================== AppIntent.perform, IntentResult.result()"
+          grep -n -E "func perform\\(\\) async throws -> Self.PerformResult|static func result\\(\\) -> Self" "$ai" | head -10
+          exit 0
 
   apple:
     runs-on: macos-26
@@ -111,6 +97,26 @@ jobs:
         run: >
           xcodebuild -quiet -project iOS/ECHO.xcodeproj -target ECHO -configuration Debug
           -sdk iphonesimulator ARCHS=arm64 SYMROOT="$PWD/build/ios" CODE_SIGNING_ALLOWED=NO
+
+      - name: The widget extension and its App Group in the build
+        run: |
+          app=build/ios/Debug-iphonesimulator/ECHO.app
+          ls "$app/PlugIns" || echo "no PlugIns"
+          plutil -p "$app/PlugIns/ECHOWidget.appex/Info.plist" | grep -E "CFBundleIdentifier|NSExtension|PointIdentifier|CFBundleShortVersion" || true
+          plutil -p "$app/Info.plist" | grep -A6 CFBundleURLTypes || true
+          # Entitlements: signed in the binary (none, unsigned), or simulated in a __TEXT,__entitlements section.
+          for bin in "$app/ECHO" "$app/PlugIns/ECHOWidget.appex/ECHOWidget"; do
+            echo "== $bin"
+            codesign -d --entitlements - "$bin" 2>&1 | head -12 || true
+            otool -l "$bin" > /tmp/load-commands.txt || true
+            if grep -q "sectname __entitlements" /tmp/load-commands.txt; then
+              otool -X -s __TEXT __entitlements "$bin" | xxd -r -p | head -20 || true
+            else
+              echo "no __entitlements section"
+            fi
+          done
+          find build/ios -name "*.xcent" 2>/dev/null | head -6 || true
+          find "$app" -maxdepth 3 -name "*.appintents" | head -4 || true
 
       - name: Build for Mac (ad-hoc signed, so it runs here)
         run: >
@@ -163,7 +169,7 @@ jobs:
           limit 60 xcrun simctl ui "$dev" appearance dark
           limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           limit 480 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
-          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu settings lockcover signin shell; do
+          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu settings lockcover widgets widgets-tinted widgets-idle signin shell; do
             f="Apple/Screenshots/iphone-$s.png"
             limit 180 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             # A slow first frame leaves the shot black (lyrics, run 7): a black PNG is a few dozen KB,
@@ -178,6 +184,18 @@ jobs:
           set +x
           sips --resampleWidth 804 Apple/Screenshots/iphone-*.png >/dev/null
           echo "$dev" > /tmp/sim-udid
+
+      - name: The App Group in the simulator
+        run: |
+          dev=$(cat /tmp/sim-udid)
+          limit() { local s=$1; shift; perl -e 'alarm shift; exec @ARGV' "$s" "$@"; }
+          # The group containers the simulator made for the app (none: its entitlements were not taken).
+          limit 60 xcrun simctl get_app_container "$dev" com.folk3s.echo groups || echo "no group containers for the app"
+          # What the app was given at launch (WidgetStore.describeAppGroup, logged by each -ECHODemo launch).
+          limit 120 xcrun simctl spawn "$dev" log show --last 30m --style compact \
+            --predicate 'subsystem == "com.folk3s.echo" AND category == "widget"' | tail -8 || true
+          # Whether the system knows the widget extension.
+          limit 60 xcrun simctl spawn "$dev" pluginkit -m -v -p com.apple.widgetkit-extension 2>&1 | grep -i echo || echo "pluginkit lists no ECHO widget"
 
       - name: Icon on the home screen
         run: |

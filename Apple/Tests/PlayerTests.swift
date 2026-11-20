@@ -20,14 +20,20 @@ final class Rig {
     var settings = UserSettings.Playback()
     private(set) var notices: [String] = []
     private(set) var player: Player!
+    /// The home-screen widget's feed, when the rig was given a folder for it (on the rig's clock).
+    private(set) var widget: WidgetFeed? = nil
 
-    init(images: ImageLoader? = nil, motion: MotionCovers? = nil, seed: UInt32 = 7) {
+    init(images: ImageLoader? = nil, motion: MotionCovers? = nil, widget store: WidgetStore? = nil, seed: UInt32 = 7) {
         let clock = TestClock()
         self.clock = clock
         source = FakeSource(clock: clock)
         let random = SeededRandom(seed)
+        let sleep = sleeps.sleep
+        let widget = store.map { WidgetFeed(store: $0, reload: {}, sleep: sleep, now: { clock.now }) }
+        self.widget = widget
         player = Player(
-            source: source, engine: engine, media: media, hearts: hearts, images: images, motion: motion, follows: false,
+            source: source, engine: engine, media: media, hearts: hearts, images: images, motion: motion,
+            widget: widget, follows: false,
             // Weak: a task the player started may outlive the test and its rig.
             settings: { [weak self] in self?.settings ?? UserSettings.Playback() },
             notify: { [weak self] in self?.notices.append($0) },
