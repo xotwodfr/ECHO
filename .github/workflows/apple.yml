@@ -41,28 +41,53 @@ jobs:
         run: |
           xc=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
           if [ -n "$xc" ]; then sudo xcode-select -s "$xc"; fi
-          xcodebuild -version
-          for sdk in iphoneos iphonesimulator macosx; do
+          for sdk in iphoneos macosx; do
             root=$(xcrun --sdk "$sdk" --show-sdk-path)
-            echo "=================== $sdk: $root"
-            fw="$root/System/Library/Frameworks/MediaPlayer.framework"
-            ls "$fw/Headers" | head -80
-            grep -rn -i "AnimatedArtwork" "$fw/Headers" || echo "no AnimatedArtwork in $sdk"
-            for h in "$fw"/Headers/MPMediaItemAnimatedArtwork.h; do
-              [ -f "$h" ] && { echo "----- $h"; cat "$h"; }
-            done
-            grep -n -B3 -A3 -i "animated" "$fw/Headers/MPNowPlayingInfoCenter.h" || true
-            grep -n -B2 -A2 -i "animated" "$fw/Headers/MPNowPlayingInfoCenter.h" "$fw/Headers/MPMediaItem.h" || true
+            fw="$root/System/Library/Frameworks/MediaPlayer.framework/Headers"
+            echo "=================== $sdk MPMediaItem.h 250-350"
+            sed -n 250,350p "$fw/MPMediaItem.h"
+            echo "=================== $sdk apinotes"
+            grep -n -B2 -A6 -i "animated" "$fw/MediaPlayer.apinotes" || echo "nothing in the apinotes"
           done
-          echo "=================== Swift's view (iphoneos)"
-          root=$(xcrun --sdk iphoneos --show-sdk-path)
-          xcrun swift-synthesize-interface -module-name MediaPlayer -sdk "$root" -target arm64-apple-ios26.0 > /tmp/mp.swift 2>/tmp/mp.err || cat /tmp/mp.err
-          grep -n -B4 -A14 -i "animatedartwork" /tmp/mp.swift || echo "nothing in the Swift interface"
-          grep -n -i "supportedAnimated\|3x4\|1x1" /tmp/mp.swift || true
-          echo "=================== Swift's view (macosx)"
-          root=$(xcrun --sdk macosx --show-sdk-path)
-          xcrun swift-synthesize-interface -module-name MediaPlayer -sdk "$root" -target arm64-apple-macos26.0 > /tmp/mpm.swift 2>/tmp/mpm.err || cat /tmp/mpm.err
-          grep -n -B4 -A6 -i "animatedartwork" /tmp/mpm.swift || echo "nothing in the Mac's Swift interface"
+          echo "=================== the Swift names, type-checked"
+          mkdir -p /tmp/probe
+          cat > /tmp/probe/ios.swift <<'SWIFT'
+          import MediaPlayer
+          import UIKit
+          func probe(url: URL, image: UIImage) -> [String: Any] {
+              let art = MPMediaItemAnimatedArtwork(
+                  artworkID: "id",
+                  previewImageRequestHandler: { (size: CGSize) async -> UIImage? in image },
+                  videoAssetFileURLRequestHandler: { (size: CGSize) async -> URL? in url })
+              let keys: [String] = MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys
+              print(keys)
+              return [MPNowPlayingInfoProperty3x4AnimatedArtwork: art, MPNowPlayingInfoProperty1x1AnimatedArtwork: art]
+          }
+          SWIFT
+          cat > /tmp/probe/mac.swift <<'SWIFT'
+          import MediaPlayer
+          import AppKit
+          func probe(url: URL, image: NSImage) -> [String: Any] {
+              let art = MPMediaItemAnimatedArtwork(
+                  artworkID: "id",
+                  previewImageRequestHandler: { (size: CGSize) async -> NSImage? in image },
+                  videoAssetFileURLRequestHandler: { (size: CGSize) async -> URL? in url })
+              let keys: [String] = MPNowPlayingInfoCenter.supportedAnimatedArtworkKeys
+              print(keys)
+              return [MPNowPlayingInfoProperty3x4AnimatedArtwork: art]
+          }
+          SWIFT
+          sed -i '' 's/^          //' /tmp/probe/ios.swift /tmp/probe/mac.swift
+          echo "--- iOS simulator, Swift 6 mode"
+          xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 6 -target arm64-apple-ios26.0-simulator /tmp/probe/ios.swift && echo "iOS probe type-checks" || echo "iOS probe FAILS (6)"
+          echo "--- iOS simulator, Swift 5 mode"
+          xcrun --sdk iphonesimulator swiftc -typecheck -swift-version 5 -target arm64-apple-ios26.0-simulator /tmp/probe/ios.swift && echo "iOS probe type-checks (5)" || echo "iOS probe FAILS (5)"
+          echo "--- macOS"
+          xcrun --sdk macosx swiftc -typecheck -swift-version 5 -target arm64-apple-macos26.0 /tmp/probe/mac.swift && echo "Mac probe type-checks" || echo "Mac probe FAILS"
+          echo "--- the interface, by swift-synthesize-interface"
+          xcrun swift-synthesize-interface --help 2>&1 | head -30 || true
+          xcrun swift-synthesize-interface -module-name MediaPlayer -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" -target arm64-apple-ios26.0-simulator -o /tmp/mp.swift 2>&1 | head -20 || true
+          ls -la /tmp/mp.swift 2>/dev/null && grep -n -B3 -A16 "class MPMediaItemAnimatedArtwork" /tmp/mp.swift || true
 
   apple:
     runs-on: macos-26
