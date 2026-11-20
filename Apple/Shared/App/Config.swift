@@ -51,6 +51,7 @@ enum Live {
         server: Config.server,
         tokens: KeychainTokenStore(account: Config.server.absoluteString),
         deviceName: { Config.deviceName })
+    static let invites = GuestInvites(client: session.client)
     static let library = Library(source: session.client, images: .live(session.client))
     static let player = Player(
         source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,

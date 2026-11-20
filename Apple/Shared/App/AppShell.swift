@@ -57,6 +57,8 @@ struct PhoneShell: View {
     @State private var nowPlaying = false
     @State private var showsQueue = false
     @State private var showsLyrics = false
+    /// A guest link opened while signed in: the scanner says why it cannot be used here.
+    @State private var scan: ScanFlow? = nil
     @Namespace private var playerSpace
 
     @Environment(Library.self) private var library
@@ -150,6 +152,9 @@ struct PhoneShell: View {
                     go(route)
                 })
         }
+        .fullScreenCover(item: $scan) { flow in
+            ScanScreen(flow: flow) { scan = nil }
+        }
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
         .task {
@@ -182,6 +187,11 @@ struct PhoneShell: View {
                 showsLyrics = false
                 nowPlaying = true
             }
+        case .guest:
+            // Signed in already: the scanner, given the pass, says to sign out first.
+            let flow = ScanFlow(purpose: .signInComputer, session: session)
+            scan = flow
+            await flow.scanned(link.url.absoluteString)
         }
         self.link = nil
     }

@@ -5,8 +5,9 @@ import SwiftUI
 /// a glass card (SettingsGroup), as the approved preview's pages are laid out: the album-lit room
 /// under the status bar, no bar backgrounds, white on glass, amber for what is chosen.
 ///
-/// The groups, in order: Lock screen (the iPhone's animated cover and its speed), Account, About.
-/// Later groups go between Lock screen and Account, each a view of its own wrapped in a
+/// The groups, in order: Lock screen (the iPhone's animated cover and its speed), Sign in and
+/// guests (scanning a computer's code, the guests; a guest's own pass), Account, About.
+/// Later groups go between Sign in and guests and Account, each a view of its own wrapped in a
 /// SettingsGroup: Appearance (task 11, the themes; they follow the user, `/me/settings`, Session)
 /// and Downloads (task 10, the storage used and freed; this device's own, DeviceSettings).
 struct SettingsScreen: View {
@@ -18,6 +19,7 @@ struct SettingsScreen: View {
                 #if os(iOS)
                 LockScreenSettings()
                 #endif
+                GuestSettings(session: session)
                 AccountSettings(session: session)
                 AboutSettings()
             }
@@ -148,16 +150,24 @@ struct AboutSettings: View {
 }
 
 #if os(macOS)
-/// The Mac's Settings window: the same groups (the lock screen's is the iPhone's alone).
+/// The Mac's Settings window: the same groups (the lock screen's is the iPhone's alone); `guests`
+/// opens it on Guests (the `-ECHODemo guests` screen).
 struct SettingsWindow: View {
     let session: Session
+    let invites: GuestInvites
+    var guests = false
 
     var body: some View {
         NavigationStack {
-            SettingsScreen()
+            if guests {
+                GuestsScreen()
+            } else {
+                SettingsScreen()
+            }
         }
         .environment(session)
-        .frame(width: 500, height: 430)
+        .environment(invites)
+        .frame(width: 520, height: guests ? 560 : 520)
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
     }

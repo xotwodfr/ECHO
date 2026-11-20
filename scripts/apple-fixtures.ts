@@ -90,11 +90,16 @@ await call(app, 'POST', '/api/v1/setup/totp', {
 t.clock.t += STEP_S * 1000;
 
 const FAKE_TOKEN = 'echo_dt_test_token_not_a_secret';
+/** Random values (a QR request's id, a guest code) and the plain stand-ins written for them. */
+const standIns = new Map<string, string>();
 /** What goes in a fixture: the answer, its token and signatures replaced by plain stand-ins. */
-const scrub = (text: string) =>
-  text
+const scrub = (text: string) => {
+  let out = text
     .replace(/echo_dt_[\w-]+/g, FAKE_TOKEN)
     .replace(/([?&]sig=)[\w-]+/g, '$1test_signature_not_a_secret');
+  for (const [real, plain] of standIns) out = out.split(real).join(plain);
+  return out;
+};
 
 async function save(name: string, res: Response) {
   const text = await res.text();
@@ -390,6 +395,87 @@ await save(
     headers: { host: 'localhost', authorization: `Bearer ${token}` },
   }),
 );
+
+// Sign in a computer by scanning its QR code (src/server/qrlogin.ts): the web sign-in page asks
+// (as Chrome on Windows), the phone peeks and approves, then the same request again is used up; an
+// id that never was. Guest passes (src/server/guests.ts): a code for a day, a length not offered,
+// a peek and a redeem (no sign-in: the code is the secret) giving a guest's device token, the code
+// used up, the guest's own state, what a guest may not do, the inviter's list, ending a guest, and
+// six live codes at once. The random request ids and codes are written as plain stand-ins.
+t.clock.t += 120_000; // the sign-in limits start afresh
+const browser = (path: string, body: unknown) =>
+  app.request(`http://localhost/api/v1${path}`, {
+    method: 'POST',
+    headers: {
+      host: 'localhost',
+      origin: 'http://localhost',
+      'content-type': 'application/json',
+      'user-agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36',
+    },
+    body: JSON.stringify(body),
+  });
+const qr = (await (await browser('/auth/qr', {})).json()) as { id: string; poll: string };
+standIns.set(qr.id, 'qr-request-for-tests-0001');
+standIns.set(qr.poll, 'qr-poll-for-tests-not-a-secret');
+await save('qr-peek', await bearer('/auth/qr/peek', 'POST', { id: qr.id }));
+await save('qr-approve', await bearer('/auth/qr/approve', 'POST', { id: qr.id }));
+await save('qr-peek-used', await bearer('/auth/qr/peek', 'POST', { id: qr.id }));
+await save('qr-approve-used', await bearer('/auth/qr/approve', 'POST', { id: qr.id }));
+await save(
+  'qr-peek-expired',
+  await bearer('/auth/qr/peek', 'POST', { id: 'qr-request-never-made-01' }),
+);
+await save('guest-code-bad-duration', await bearer('/guests/codes', 'POST', { durationMs: 5 }));
+const pass = await save(
+  'guest-code',
+  await bearer('/guests/codes', 'POST', { durationMs: 86_400_000 }),
+);
+const guestCode = String(pass.code);
+standIns.set(guestCode, 'guest-code-for-tests-0001');
+// Saved again now the stand-in is known.
+writeFileSync(
+  join(OUT, 'guest-code.json'),
+  `${JSON.stringify(JSON.parse(scrub(JSON.stringify(pass))), null, 2)}\n`,
+);
+const anyone = (path: string, body: unknown) => call(app, 'POST', `/api/v1${path}`, body);
+await save('guest-peek', await anyone('/guests/peek', { code: guestCode }));
+await save('guest-peek-bad', await anyone('/guests/peek', { code: 'guest-code-never-made-01' }));
+const joined = await save(
+  'guest-redeem',
+  await anyone('/guests/redeem', { code: guestCode, name: 'ECHO guest (iPhone)' }),
+);
+await save('guest-redeem-used', await anyone('/guests/redeem', { code: guestCode }));
+const guestToken = String(joined.token);
+const asGuest = (path: string, method = 'GET', body?: unknown) =>
+  app.request(`http://localhost/api/v1${path}`, {
+    method,
+    headers: {
+      host: 'localhost',
+      authorization: `Bearer ${guestToken}`,
+      ...(body !== undefined && { 'content-type': 'application/json' }),
+    },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
+  });
+await save('guests-me-guest', await asGuest('/guests/me'));
+await save('guests-me-none', await bearer('/guests/me'));
+await save('me-guest', await asGuest('/me'));
+await save('guest-denied-star', await asGuest('/navidrome/rest/star?id=al-1-t1', 'POST', {}));
+await save('guest-denied-qr', await asGuest('/auth/qr/peek', 'POST', { id: qr.id }));
+await save('guest-denied-codes', await asGuest('/guests/codes', 'POST', { durationMs: 3_600_000 }));
+const listed = (await save('guests', await bearer('/guests'))) as unknown as { id: number }[];
+await save('guest-end', await bearer(`/guests/${listed[0]?.id}/end`, 'POST', {}));
+await save('guest-end-not-found', await bearer(`/guests/${listed[0]?.id}/end`, 'POST', {}));
+await save('guests-empty', await bearer('/guests'));
+let tooMany: Response | undefined;
+for (let i = 0; i < 6 && tooMany?.status !== 429; i++)
+  tooMany = await bearer('/guests/codes', 'POST', { durationMs: 3_600_000 });
+if (tooMany) await save('guest-code-too-many', tooMany);
+t.clock.t += 61_000;
+let peekLimited: Response | undefined;
+for (let i = 0; i < 20 && peekLimited?.status !== 429; i++)
+  peekLimited = await anyone('/guests/peek', { code: 'guest-code-never-made-01' });
+if (peekLimited) await save('guest-peek-rate-limited', peekLimited);
 
 await save('logout', await bearer('/auth/logout', 'POST', {}));
 await save('unauthenticated', await bearer('/me'));

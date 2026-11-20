@@ -28,6 +28,7 @@ struct HomeScreen: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 26) {
                     ConnectionBanner(connectivity: session.connectivity)
+                    if let pass = session.guest { GuestBanner(pass: pass) }
                     content
                 }
                 .padding(.horizontal, pagePadding)

@@ -58,7 +58,7 @@ struct NowPlayingScreen: View {
                         .shadow(color: .black.opacity(0.4), radius: 12, y: 8)
                     titles(track, compact: true)
                     Spacer(minLength: 8)
-                    heart(track)
+                    if !library.listensOnly { heart(track) }
                 }
                 QueueList()
                     .frame(maxHeight: .infinity)
@@ -70,7 +70,7 @@ struct NowPlayingScreen: View {
                 HStack {
                     titles(track, compact: false)
                     Spacer(minLength: 12)
-                    heart(track)
+                    if !library.listensOnly { heart(track) }
                 }
             }
             Scrubber()

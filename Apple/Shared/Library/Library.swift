@@ -76,6 +76,11 @@ final class Library {
 
     private(set) var toast: Toast? = nil
 
+    /// Signed in with a guest pass (Session.isGuest): it listens only. The screens hide the hearts
+    /// and the Wanted list's changes, and a change asked for anyway (the lock screen's Love) is
+    /// refused here, without asking the server, which would refuse it too (403 guest).
+    var listensOnly = false
+
     /// The Library's artists: the server's list with the followed artists it lacks, A–Z.
     var artistRows: [ArtistRow] { ArtistRows.merge(server: artists, followed: starred?.artists ?? []) }
 
@@ -178,6 +183,7 @@ final class Library {
 
     /// A heart on or off: here at once, on the server after; back as it was if the server refuses.
     private func change(_ kind: StarKind, id: String, on: Bool, said: String, edit: (inout Starred) -> Void) async {
+        if listensOnly { return refusedForGuest() }
         let before = starred
         var after = starred ?? Starred()
         edit(&after)
@@ -316,12 +322,17 @@ final class Library {
         homeState = .ready
     }
 
+    private func refusedForGuest() {
+        show(Toast(message: ApiError.guestNotAllowed.userMessage))
+    }
+
     // MARK: - Wanted
 
     /// Adds to the Wanted list with a toast that says so (and opens the list, given `open`).
     func addWanted(_ text: String, open: (@MainActor () -> Void)? = nil) async {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        if listensOnly { return refusedForGuest() }
         do {
             let added = try await wanted.add(text)
             show(Toast(message: added.known ? "Already on the Wanted list" : "Added to Wanted", action: open == nil ? nil : "Open", run: open))
@@ -332,6 +343,7 @@ final class Library {
 
     /// Takes an item off the Wanted list, with Undo for as long as the toast shows.
     func removeWanted(_ item: WantedItem) {
+        if listensOnly { return refusedForGuest() }
         let removal = wanted.remove(item.id)
         show(Toast(message: "Removed “\(item.text)” from Wanted", action: "Undo") { [weak self] in
             self?.wanted.undo(item.id)

@@ -18,6 +18,8 @@ enum Route: Hashable {
     case mix(Mix)
     /// Settings (Home's account button on the iPhone).
     case settings
+    /// Settings → Guests.
+    case guests
 }
 
 /// Opens a page on the current stack, from where a NavigationLink cannot be (a menu, a toast).
@@ -60,6 +62,7 @@ struct RouteScreen: View {
         case .wanted: WantedScreen()
         case .mix(let mix): MixScreen(mix: mix)
         case .settings: SettingsScreen()
+        case .guests: GuestsScreen()
         }
     }
 }
@@ -455,9 +458,11 @@ struct TrackMenu: View {
             Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") { player.playNext([track]) }
             Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") { player.addToQueue([track]) }
         }
-        let liked = library.isLiked(track)
-        Button(liked ? "Remove from Liked Songs" : "Add to Liked Songs", systemImage: liked ? "heart.slash" : "heart") {
-            Task { await library.setLiked(track, !liked) }
+        if !library.listensOnly {
+            let liked = library.isLiked(track)
+            Button(liked ? "Remove from Liked Songs" : "Add to Liked Songs", systemImage: liked ? "heart.slash" : "heart") {
+                Task { await library.setLiked(track, !liked) }
+            }
         }
         if let artist = track.artists.first, let id = artist.id {
             Button("Go to Artist", systemImage: "music.microphone") { navigate(.artist(id: id, name: artist.name)) }
@@ -492,9 +497,11 @@ struct AlbumMenu: View {
         Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") {
             Task { if let tracks = await library.tracks(of: album) { player.addToQueue(tracks, label: album.title) } }
         }
-        let saved = library.isSaved(album.id)
-        Button(saved ? "Remove from Your Library" : "Save to Your Library", systemImage: saved ? "heart.slash" : "heart") {
-            Task { await library.setSaved(album, !saved) }
+        if !library.listensOnly {
+            let saved = library.isSaved(album.id)
+            Button(saved ? "Remove from Your Library" : "Save to Your Library", systemImage: saved ? "heart.slash" : "heart") {
+                Task { await library.setSaved(album, !saved) }
+            }
         }
         if let id = album.artistId {
             Button("Go to Artist", systemImage: "music.microphone") { navigate(.artist(id: id, name: album.artist)) }

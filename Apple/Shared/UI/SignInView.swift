@@ -3,9 +3,13 @@ import SwiftUI
 /// Sign in (iOS/README.md): username, password and the authenticator code go to the server in one
 /// request; this device gets its own token, listed in Sessions & devices. With two-factor on and no
 /// code given, the server answers `totp_required` and the code field asks for it. The room lit by
-/// the album behind one glass card, the Echo mark over it, the server named under it.
+/// the album behind one glass card, the Echo mark over it, the server named under it. On the iPhone,
+/// Scan a guest pass under it joins as a guest (ScanScreen), as a guest link does (AppLink.guest).
 struct SignInView: View {
     let session: Session
+    var link: Binding<AppLink?> = .constant(nil)
+    /// The guest pass's scan, open over the page.
+    @State private var scan: ScanFlow? = nil
 
     @State private var username = ""
     @State private var password = ""
@@ -33,6 +37,9 @@ struct SignInView: View {
                 VStack(spacing: 30) {
                     header
                     card
+                    #if os(iOS)
+                    guestPass
+                    #endif
                 }
                 .frame(maxWidth: 400)
                 .padding(.horizontal, 24)
@@ -52,7 +59,36 @@ struct SignInView: View {
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         #endif
         .onAppear { message = message ?? session.notice }
+        #if os(iOS)
+        .fullScreenCover(item: $scan) { flow in
+            ScanScreen(flow: flow) { scan = nil }
+        }
+        .task(id: link.wrappedValue) {
+            // A guest link: its pass is checked as a scanned one would be, the camera behind it.
+            guard case .guest? = link.wrappedValue, let url = link.wrappedValue?.url else { return }
+            link.wrappedValue = nil
+            let flow = ScanFlow(purpose: .joinAsGuest, session: session)
+            scan = flow
+            await flow.scanned(url.absoluteString)
+        }
+        #endif
     }
+
+    #if os(iOS)
+    /// Joining as a guest, with a pass someone shows.
+    private var guestPass: some View {
+        Button {
+            scan = ScanFlow(purpose: .joinAsGuest, session: session)
+        } label: {
+            Label("Scan a guest pass", systemImage: "qrcode.viewfinder")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 8)
+        }
+        .buttonStyle(.glass)
+        .tint(.white)
+        .controlSize(.large)
+    }
+    #endif
 
     private var header: some View {
         VStack(spacing: 10) {

@@ -91,15 +91,19 @@ struct WantedScreen: View {
             } else {
                 texts(item)
             }
-            Button("Remove \(item.text) from Wanted", systemImage: "xmark") { library.removeWanted(item) }
-                .labelStyle(.iconOnly)
-                .echoGlass(circle: true)
-                .tint(.white)
+            if !library.listensOnly {
+                Button("Remove \(item.text) from Wanted", systemImage: "xmark") { library.removeWanted(item) }
+                    .labelStyle(.iconOnly)
+                    .echoGlass(circle: true)
+                    .tint(.white)
+            }
         }
         .padding(.vertical, 10)
         .frame(minHeight: 66)
         .contextMenu {
-            Button("Remove from Wanted", systemImage: "trash", role: .destructive) { library.removeWanted(item) }
+            if !library.listensOnly {
+                Button("Remove from Wanted", systemImage: "trash", role: .destructive) { library.removeWanted(item) }
+            }
         }
     }
 

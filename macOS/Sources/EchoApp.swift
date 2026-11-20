@@ -19,7 +19,7 @@ struct EchoApp: App {
             } else {
                 RootView(
                     session: Live.session, library: Live.library, player: Live.player, lyrics: Live.lyrics,
-                    device: Live.device
+                    device: Live.device, invites: Live.invites
                 )
                 .frame(minWidth: 760, minHeight: 520)
             }
@@ -27,7 +27,9 @@ struct EchoApp: App {
         .defaultSize(width: demoScreen == nil ? 1100 : 1280, height: demoScreen == nil ? 720 : 800)
 
         Settings {
-            SettingsWindow(session: demo?.session ?? Live.session)
+            SettingsWindow(
+                session: demo?.session ?? Live.session, invites: demo?.invites ?? Live.invites,
+                guests: demo?.screen == "guests")
         }
     }
 }

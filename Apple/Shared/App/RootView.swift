@@ -5,13 +5,16 @@ import SwiftUI
 /// out forgets the library (its covers too), stops the music and empties the queue. Signed in, the
 /// queue saved from any device comes back (Player, QueueSync). The playing track's lyrics follow it
 /// (Lyrics). The lock screen's animated cover is asked for again when its speed changes in Settings.
-/// A link into the app (the widget's tap: AppLink) opens what it names once the app is ready for it.
+/// A link into the app (the widget's tap: AppLink) opens what it names once the app is ready for it;
+/// a guest link opens the sign-in page's guest pass. Signed in with a guest pass, the library listens
+/// only (Library.listensOnly).
 struct RootView: View {
     let session: Session
     let library: Library
     let player: Player
     let lyrics: Lyrics
     let device: DeviceSettings
+    let invites: GuestInvites
     var start = ShellStart()
 
     @Environment(\.scenePhase) private var scenePhase
@@ -24,7 +27,7 @@ struct RootView: View {
             case .signedIn:
                 AppShell(session: session, start: start, link: $link)
             case .signedOut:
-                SignInView(session: session)
+                SignInView(session: session, link: $link)
             case .locked:
                 // Launched in the background while locked: the token is read once it unlocks.
                 AlbumLight().overlay { ProgressView().tint(.white) }
@@ -35,7 +38,9 @@ struct RootView: View {
         .environment(player)
         .environment(lyrics)
         .environment(device)
+        .environment(invites)
         .animation(.smooth, value: session.phase)
+        .onChange(of: session.isGuest, initial: true) { library.listensOnly = session.isGuest }
         .onOpenURL { url in link = AppLink(url) }
         .onChange(of: device.motionLoop) { player.lockScreenChanged() }
         .task(id: player.track?.key) { lyrics.follow(player.track) }

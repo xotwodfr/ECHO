@@ -23,7 +23,7 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: ECHO
-        # echo://now-playing: the widget's tap opens Now Playing (AppLink).
+        # echo://now-playing: the widget's tap opens Now Playing; echo://guest#<code>, a guest pass (AppLink).
         CFBundleURLTypes:
           - CFBundleURLName: com.folk3s.echo
             CFBundleURLSchemes: [echo]
@@ -32,6 +32,8 @@ targets:
         UILaunchScreen: {}
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
+        # Settings → Sign in a computer, and the sign-in page's Scan a guest pass (ScanScreen).
+        NSCameraUsageDescription: ECHO uses the camera to scan QR codes, to sign a computer in or to join as a guest.
         # Music plays on with the screen off or another app in front.
         UIBackgroundModes: [audio]
         # Test servers on this network (ECHO_URL=http://…); everything else stays https only.
@@ -97,6 +99,7 @@ targets:
       - path: ../Apple/Shared/Motion
       - path: ../Apple/Shared/Settings
       - path: ../Apple/Shared/Widget
+      - path: ../Apple/Shared/Guests
       - path: ../Apple/Shared/App/AppLink.swift
       - path: ../Apple/Shared/Preview/Lyrics
       - path: ../Apple/Tests

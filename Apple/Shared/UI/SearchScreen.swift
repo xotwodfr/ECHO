@@ -175,16 +175,23 @@ struct SearchResults: View {
                 .font(.system(size: 30, weight: .semibold))
                 .foregroundStyle(Color.amber)
             Text("No results for “\(q)”").font(.headline).multilineTextAlignment(.center)
-            Text("Put it on the Wanted list: everyone on this ECHO sees it, and ECHO looks for it in your library every day.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-            Button("Add to Wanted", systemImage: "plus") {
-                Task { await library.addWanted(q) { navigate(.wanted) } }
+            if library.listensOnly {
+                Text("Try other words, or another spelling.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                Text("Put it on the Wanted list: everyone on this ECHO sees it, and ECHO looks for it in your library every day.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("Add to Wanted", systemImage: "plus") {
+                    Task { await library.addWanted(q) { navigate(.wanted) } }
+                }
+                .buttonStyle(.glassProminent)
+                .tint(Color.echoAccent)
+                .padding(.top, 4)
             }
-            .buttonStyle(.glassProminent)
-            .tint(Color.echoAccent)
-            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity)
         .padding(24)

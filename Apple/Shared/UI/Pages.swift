@@ -43,13 +43,15 @@ struct AlbumScreen: View {
         .pageTitle(shown.title)
         .clearBars()
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                let saved = library.isSaved(start.id)
-                Button(saved ? "Remove from Your Library" : "Save to Your Library", systemImage: saved ? "heart.fill" : "heart") {
-                    Task { await library.setSaved(shown, !saved) }
+            if !library.listensOnly {
+                ToolbarItem(placement: .primaryAction) {
+                    let saved = library.isSaved(start.id)
+                    Button(saved ? "Remove from Your Library" : "Save to Your Library", systemImage: saved ? "heart.fill" : "heart") {
+                        Task { await library.setSaved(shown, !saved) }
+                    }
                 }
+                ToolbarSpacer(.fixed, placement: .primaryAction)
             }
-            ToolbarSpacer(.fixed, placement: .primaryAction)
             ToolbarItem(placement: .primaryAction) {
                 Menu("More", systemImage: "ellipsis") { AlbumMenu(album: shown) }
                     .menuIndicator(.hidden)
@@ -201,14 +203,16 @@ struct ArtistScreen: View {
                 .buttonStyle(.glassProminent)
                 .tint(Color.echoAccent)
                 .disabled(page == nil)
-                let following = library.isFollowing(id)
-                Button {
-                    Task { await library.setFollowing(Artist(id: id, name: title, image: picture), !following) }
-                } label: {
-                    Label(following ? "Following" : "Follow", systemImage: following ? "heart.fill" : "heart")
-                        .frame(maxWidth: playButtonWidth)
+                if !library.listensOnly {
+                    let following = library.isFollowing(id)
+                    Button {
+                        Task { await library.setFollowing(Artist(id: id, name: title, image: picture), !following) }
+                    } label: {
+                        Label(following ? "Following" : "Follow", systemImage: following ? "heart.fill" : "heart")
+                            .frame(maxWidth: playButtonWidth)
+                    }
+                    .echoGlass()
                 }
-                .echoGlass()
             }
             .controlSize(.large)
             .font(.headline)

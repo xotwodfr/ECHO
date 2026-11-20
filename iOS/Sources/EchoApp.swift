@@ -27,7 +27,7 @@ struct EchoApp: App {
             } else {
                 RootView(
                     session: Live.session, library: Live.library, player: Live.player, lyrics: Live.lyrics,
-                    device: Live.device)
+                    device: Live.device, invites: Live.invites)
             }
         }
     }

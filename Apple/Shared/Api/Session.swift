@@ -23,6 +23,8 @@ final class Session {
     private(set) var phase: Phase
     private(set) var account: Account? = nil
     private(set) var settings: UserSettings
+    /// Signed in with a guest pass (Guests/Passes.swift): it listens only, until the pass ends.
+    private(set) var guest: GuestPass? = nil
     /// Why the sign-in page shows, when it is not the first time: the server refused the token.
     var notice: String? = nil
 
@@ -42,6 +44,7 @@ final class Session {
     private static let log = Logger(subsystem: "com.folk3s.echo", category: "session")
     private static let settingsKey = "echo.settings"
     private static let accountKey = "echo.account"
+    private static let guestKey = "echo.guest"
 
     /// - Parameters:
     ///   - cache: where the account's name and preferences are kept for the next start (offline,
@@ -83,6 +86,7 @@ final class Session {
         if phase == .signedIn, let cache = self.cache {
             settings = Session.cached(UserSettings.self, Session.settingsKey, in: cache) ?? UserSettings()
             account = Session.cached(Account.self, Session.accountKey, in: cache)
+            guest = Session.cached(GuestPass.self, Session.guestKey, in: cache)
         }
         events = Task { [weak self] in
             for await event in stream { self?.handle(event) }
@@ -109,6 +113,30 @@ final class Session {
         phase = .signedIn
         await refresh()
     }
+
+    /// Joins with a guest pass (a scanned code, or an `echo://guest` link): a guest account and a
+    /// device token for this device, which listens only until the pass ends. Throws PassError.
+    func joinAsGuest(code: String) async throws {
+        let joined = try await client.redeemGuest(code: code, deviceName: deviceName())
+        do {
+            try tokens.save(joined.token)
+        } catch {
+            Self.log.error("The Keychain did not keep the guest token: \(String(describing: error), privacy: .public)")
+        }
+        client.setToken(joined.token)
+        notice = nil
+        let account = Account(username: joined.username, role: "user")
+        self.account = account
+        guest = joined.pass
+        keep(account, Self.accountKey)
+        keep(joined.pass, Self.guestKey)
+        phase = .signedIn
+        await refresh()
+    }
+
+    /// Whether this device listens with a guest pass: no hearts, playlists, Wanted, inviting or
+    /// signing a computer in (the server's GUEST_DENY, auth/routes.ts).
+    var isGuest: Bool { guest != nil }
 
     /// Signs out here and on the server: this device leaves Sessions & devices. Offline, the token
     /// is forgotten here all the same (it can be ended from Sessions & devices on the web).
@@ -138,8 +166,19 @@ final class Session {
             keep(loaded, Self.settingsKey)
         } catch ApiError.signedOut {
             tokenRefused()
+            return
         } catch {
             Self.log.notice("Could not refresh the account: \(String(describing: error), privacy: .public)")
+        }
+        // A guest pass, or none (one kept since may have been made a normal account). An older
+        // server without guests, or no answer, leaves what was known.
+        do {
+            let pass = try await client.guestPass()
+            guard phase == .signedIn else { return }
+            guest = pass
+            if let pass { keep(pass, Self.guestKey) } else { cache?.removeObject(forKey: Self.guestKey) }
+        } catch {
+            Self.log.notice("Could not read the guest pass: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -182,16 +221,19 @@ final class Session {
     private func tokenRefused() {
         guard phase == .signedIn else { return }
         Self.log.notice("ECHO refused the device token; signing in again")
-        signedOutHere(notice: ApiError.signedOut.userMessage)
+        // A guest's account is deleted when its time is up.
+        signedOutHere(notice: guest == nil ? ApiError.signedOut.userMessage : Self.passEnded)
     }
 
     private func signedOutHere(notice: String?) {
         tokens.delete()
         client.setToken(nil)
         account = nil
+        guest = nil
         settings = UserSettings()
         cache?.removeObject(forKey: Self.settingsKey)
         cache?.removeObject(forKey: Self.accountKey)
+        cache?.removeObject(forKey: Self.guestKey)
         self.notice = notice
         phase = .signedOut
     }
@@ -209,6 +251,8 @@ final class Session {
         }
         #endif
     }
+
+    static let passEnded = "Your guest pass has ended. Ask for a new one, or sign in."
 
     func tokenReadable() {
         guard phase == .locked else { return }
@@ -234,11 +278,12 @@ final class Session {
 
 extension Session {
     /// A session that never calls the server: the preview's sign-in page and the app around it.
-    static func demo(server: URL, signedIn: Bool, serverAway: Bool = false) -> Session {
+    static func demo(server: URL, signedIn: Bool, serverAway: Bool = false, guest: GuestPass? = nil) -> Session {
         let session = Session(
             server: server, tokens: MemoryTokenStore(signedIn ? "echo_dt_demo" : nil), deviceName: { "Preview" },
             cache: nil, watchNetwork: false, demo: true)
-        if signedIn { session.account = Account(username: "ada", role: "user") }
+        if signedIn { session.account = Account(username: guest == nil ? "ada" : "guest-4f1c2a", role: "user") }
+        session.guest = guest
         if serverAway { session.connectivity.serverAnswered(false) }
         return session
     }
