@@ -34,5 +34,8 @@ enum Live {
         tokens: KeychainTokenStore(account: Config.server.absoluteString),
         deviceName: { Config.deviceName })
     static let library = Library(source: session.client, images: .live(session.client))
-    static let player = Player(client: session.client)
+    static let player = Player(
+        source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
+        images: library.images, settings: { Live.session.settings.playback },
+        notify: { Live.library.show(Toast(message: $0)) })
 }

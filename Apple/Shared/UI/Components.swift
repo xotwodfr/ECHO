@@ -436,18 +436,22 @@ struct TrackList: View {
     }
 }
 
-/// A song's menu (the web's and Android's): the queue, the heart, where it came from.
+/// A song's menu (the web's and Android's): the queue, the heart, where it came from. Now Playing's
+/// leaves out the queue (`queueing` false): the song is playing.
 struct TrackMenu: View {
     let track: Track
     var showAlbum = true
+    var queueing = true
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
     @Environment(\.navigate) private var navigate
 
     var body: some View {
-        Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") { player.playNext([track]) }
-        Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") { player.addToQueue([track]) }
+        if queueing {
+            Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") { player.playNext([track]) }
+            Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") { player.addToQueue([track]) }
+        }
         let liked = library.isLiked(track)
         Button(liked ? "Remove from Liked Songs" : "Add to Liked Songs", systemImage: liked ? "heart.slash" : "heart") {
             Task { await library.setLiked(track, !liked) }
@@ -480,10 +484,10 @@ struct AlbumMenu: View {
             Task { if let tracks = await library.tracks(of: album) { await player.shuffle(tracks, context: album.context) } }
         }
         Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") {
-            Task { if let tracks = await library.tracks(of: album) { player.playNext(tracks) } }
+            Task { if let tracks = await library.tracks(of: album) { player.playNext(tracks, label: album.title) } }
         }
         Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") {
-            Task { if let tracks = await library.tracks(of: album) { player.addToQueue(tracks) } }
+            Task { if let tracks = await library.tracks(of: album) { player.addToQueue(tracks, label: album.title) } }
         }
         let saved = library.isSaved(album.id)
         Button(saved ? "Remove from Your Library" : "Save to Your Library", systemImage: saved ? "heart.slash" : "heart") {

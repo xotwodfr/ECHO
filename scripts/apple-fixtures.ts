@@ -192,6 +192,68 @@ for (let i = 0; i < 60 && limited?.status !== 429; i++) limited = await bearer('
 if (limited) await save('rate-limited', limited);
 t.clock.t += 5000;
 
+// The queue that follows the user (src/client/playback/queueSync.ts): none saved yet; one saved as
+// the web saves it (shuffle on, a fraction of a millisecond in its position) and read back; a newer
+// one from another device, as Android saves it (no Next up when empty, no provider on its songs);
+// a save from a device that had not seen that one (refused, with the newer queue); not a queue.
+const harbour = (n: number) => songOf('al-1', n, 'Harbour Lights', 'Lowfield', 'ar-1');
+const webQueue = {
+  provider: 'navidrome',
+  now: {
+    ...harbour(2),
+    contentType: 'audio/flac',
+    suffix: 'flac',
+    replayGain: { trackGain: -6.5, albumGain: -7.25, trackPeak: 0.98, albumPeak: 1 },
+  },
+  nextUp: [songOf('al-3', 1, 'Glass Weather', 'Mira Sole', 'ar-2')],
+  context: [harbour(3), harbour(4)],
+  contextSource: { kind: 'album', id: 'al-1', title: 'Harbour Lights' },
+  history: [harbour(1)],
+  shuffleOrder: [1, 0],
+};
+const { provider: _, ...androidSong } = songOf('al-3', 2, 'Glass Weather', 'Mira Sole', 'ar-2');
+const androidQueue = {
+  provider: 'navidrome',
+  now: androidSong,
+  context: [harbour(3)],
+  contextSource: { kind: 'playlist', id: 'pl-1', title: 'Late Ferries' },
+  history: [],
+};
+await save('me-queue-empty', await bearer('/me/queue'));
+const first = await save(
+  'me-queue-saved',
+  await bearer('/me/queue', 'PUT', { queue: webQueue, positionMs: 12345.678, baseUpdatedAt: 0 }),
+);
+await save('me-queue', await bearer('/me/queue'));
+await bearer('/me/queue', 'PUT', {
+  queue: androidQueue,
+  positionMs: 61000,
+  baseUpdatedAt: first.updatedAt,
+});
+await save(
+  'me-queue-conflict',
+  await bearer('/me/queue', 'PUT', {
+    queue: webQueue,
+    positionMs: 0,
+    baseUpdatedAt: first.updatedAt,
+  }),
+);
+await save('me-queue-newer', await bearer('/me/queue'));
+await save('me-queue-bad', await bearer('/me/queue', 'PUT', { queue: [], baseUpdatedAt: 0 }));
+
+// Navidrome's scrobble (now playing), and a play for ECHO's history.
+await save(
+  'scrobble',
+  await bearer('/navidrome/rest/scrobble?id=al-1-t1&submission=false', 'POST', {}),
+);
+await save(
+  'me-plays',
+  await bearer('/me/plays', 'POST', {
+    track: harbour(1),
+    context: { kind: 'album', id: 'al-1', title: 'Harbour Lights' },
+  }),
+);
+
 await save('logout', await bearer('/auth/logout', 'POST', {}));
 await save('unauthenticated', await bearer('/me'));
 await save(

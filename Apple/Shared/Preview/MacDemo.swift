@@ -1,9 +1,9 @@
 #if os(macOS)
 import SwiftUI
 
-// The approved preview's lyrics window lit by the album, and its glass player bar for the bottom of
-// the page, in macOS 26's Liquid Glass (Demo.swift), until the playback and lyrics tasks build the
-// real ones (the sidebar and its pages are the real app's: DemoRoot). `-ECHODemo lyrics`.
+// The approved preview's lyrics window lit by the album, in macOS 26's Liquid Glass (Demo.swift),
+// until the lyrics task builds the real one (everything else is the real app's: DemoRoot).
+// `-ECHODemo lyrics`.
 
 struct MacDemo: View {
     let screen: String
@@ -11,50 +11,6 @@ struct MacDemo: View {
     var body: some View {
         MacLyrics()
             .preferredColorScheme(.dark)
-    }
-}
-
-struct MacPlayerBar: View {
-    var body: some View {
-        HStack(spacing: 16) {
-            HStack(spacing: 12) {
-                CoverArt(cover: Demo.harbour.cover, corner: 8).frame(width: 48)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(Demo.nowPlaying.title).font(.callout.weight(.semibold))
-                    Text("\(Demo.harbour.artist) · \(Demo.harbour.title)").font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            .frame(width: 250, alignment: .leading)
-            VStack(spacing: 6) {
-                HStack(spacing: 14) {
-                    Button("Shuffle", systemImage: "shuffle") {}
-                    Button("Previous", systemImage: "backward.fill") {}
-                    Button("Pause", systemImage: "pause.fill") {}.font(.title2)
-                    Button("Next", systemImage: "forward.fill") {}
-                    Button("Repeat", systemImage: "repeat") {}
-                }
-                .labelStyle(.iconOnly)
-                .buttonStyle(.borderless)
-                HStack(spacing: 8) {
-                    Text("1:24")
-                    ProgressView(value: 84, total: 221).tint(.white)
-                    Text("3:41")
-                }
-                .font(.caption2).foregroundStyle(.secondary).monospacedDigit()
-                .frame(maxWidth: 440)
-            }
-            .frame(maxWidth: .infinity)
-            HStack(spacing: 10) {
-                Button("Lyrics", systemImage: "quote.bubble") {}
-                Button("Queue", systemImage: "list.bullet") {}
-                Button("Volume", systemImage: "speaker.wave.2.fill") {}
-            }
-            .labelStyle(.iconOnly)
-            .buttonStyle(.borderless)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .glassEffect(.regular, in: .rect(cornerRadius: 22))
     }
 }
 

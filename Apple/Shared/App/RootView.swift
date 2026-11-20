@@ -2,7 +2,8 @@ import SwiftUI
 
 /// The app: the sign-in page until this device has a token, then the app around the library. A
 /// token the server refuses, from anywhere in the app, brings the sign-in back (Session); signing
-/// out forgets the library (its covers too) and stops the music.
+/// out forgets the library (its covers too), stops the music and empties the queue. Signed in, the
+/// queue saved from any device comes back (Player, QueueSync).
 struct RootView: View {
     let session: Session
     let library: Library
@@ -29,7 +30,10 @@ struct RootView: View {
         .task { await session.refresh() }
         .task(id: session.phase) {
             switch session.phase {
-            case .signedIn: await library.start()
+            case .signedIn:
+                async let hearts: Void = library.start()
+                async let queue: Void = player.signedIn()
+                _ = await (hearts, queue)
             case .signedOut:
                 library.reset()
                 player.stop()
@@ -37,8 +41,14 @@ struct RootView: View {
             }
         }
         .onChange(of: scenePhase) {
-            // Leaving the app is not an Undo: a Wanted removal still waiting goes now.
-            if scenePhase == .background { Task { await library.wanted.flush() } }
+            // Leaving the app is not an Undo: a Wanted removal still waiting goes now, and so does a
+            // save of the queue (the web's on leaving the page).
+            if scenePhase == .background {
+                Task {
+                    await library.wanted.flush()
+                    await player.flushQueue()
+                }
+            }
         }
     }
 }

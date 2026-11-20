@@ -102,19 +102,21 @@ final class EchoClient: Sendable {
     // MARK: - Requests
 
     /// One call to /api/v1: the body of a 2xx answer, or ApiError. A GET over the API budget is
-    /// asked again after Retry-After (up to 5 s, twice, the second wait twice as long); writes are
-    /// never repeated, and the sign-in limits send no Retry-After.
+    /// asked again after Retry-After (by default up to 5 s, twice, each wait longer than the last;
+    /// `retries` and `waitMax` change that for one call); writes are never repeated, and the sign-in
+    /// limits send no Retry-After.
     func data(
-        _ method: String, _ path: String, query: [(String, String)] = [], body: Data? = nil
+        _ method: String, _ path: String, query: [(String, String)] = [], body: Data? = nil,
+        retries: Int = EchoClient.budgetRetries, waitMax: Int = EchoClient.budgetWaitMax
     ) async throws -> Data {
         var attempt = 0
         while true {
             let (data, res, sent) = try await exchange(method, path, query, body)
             let status = res.statusCode
-            if status == 429, method == "GET", attempt < Self.budgetRetries,
+            if status == 429, method == "GET", attempt < retries,
                let header = res.value(forHTTPHeaderField: "Retry-After"),
                let wait = Int(header.trimmingCharacters(in: .whitespaces)),
-               wait > 0, wait <= Self.budgetWaitMax
+               wait > 0, wait <= waitMax
             {
                 onEvent(.reachable(true))
                 attempt += 1

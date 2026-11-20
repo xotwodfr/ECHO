@@ -24,11 +24,17 @@ struct ShellStart {
         case playlists, albums, artists, liked, wanted
     }
 
+    /// Now Playing open over it (the iPhone), on the song or on Up next.
+    enum Playing: Hashable {
+        case song, queue
+    }
+
     var page: Page = .home
     /// Pages open on top of it.
     var path: [Route] = []
     /// A Home shelf to open scrolled to.
     var shelf: String? = nil
+    var playing: Playing? = nil
 }
 
 #if os(iOS)
@@ -38,15 +44,23 @@ struct PhoneShell: View {
     let session: Session
     private let chip: LibraryChip
     private let shelf: String?
+    private let playing: ShellStart.Playing?
     @State private var tab: Section
     @State private var homePath: [Route]
     @State private var libraryPath: [Route]
     @State private var searchPath: [Route]
     @State private var query: String
     @State private var account = false
+    @State private var nowPlaying = false
+    @State private var queueFirst = false
+    @Namespace private var playerSpace
+
+    @Environment(Library.self) private var library
+    @Environment(Player.self) private var player
 
     init(session: Session, start: ShellStart = ShellStart()) {
         self.session = session
+        playing = start.playing
         var tab = Section.home
         var chip = LibraryChip.playlists
         var query = ""
@@ -108,11 +122,43 @@ struct PhoneShell: View {
             }
         }
         .tabBarMinimizeBehavior(.onScrollDown)
-        // The playback task puts the mini player here: .tabViewBottomAccessory { MiniPlayer() }.
-        .overlay { ToastLayer(bottom: 76) }
+        .modifier(PlayerAccessory(shown: player.track != nil) {
+            MiniPlayer {
+                queueFirst = false
+                nowPlaying = true
+            }
+            .matchedTransitionSource(id: "player", in: playerSpace)
+        })
+        .overlay { ToastLayer(bottom: player.track == nil ? 76 : 136) }
+        .fullScreenCover(isPresented: $nowPlaying) {
+            NowPlayingScreen(showsQueue: queueFirst)
+                .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
+                .environment(library)
+                .environment(player)
+                .environment(\.navigate, NavigateAction { route in
+                    nowPlaying = false
+                    go(route)
+                })
+        }
         .sheet(isPresented: $account) { AccountView(session: session) }
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
+        .task {
+            // The demo screens that open on Now Playing (`-ECHODemo nowplaying`, `queue`).
+            guard let playing, player.track != nil else { return }
+            try? await Task.sleep(for: .milliseconds(400))
+            queueFirst = playing == .queue
+            nowPlaying = true
+        }
+    }
+
+    /// A page from Now Playing's menu, on the tab in front.
+    private func go(_ route: Route) {
+        switch tab {
+        case .home: homePath.append(route)
+        case .library: libraryPath.append(route)
+        case .search: searchPath.append(route)
+        }
     }
 }
 #endif
@@ -133,6 +179,7 @@ struct MacShell: View {
     @State private var account = false
 
     @Environment(Library.self) private var library
+    @Environment(Player.self) private var player
 
     init(session: Session, start: ShellStart = ShellStart()) {
         self.session = session
@@ -180,7 +227,16 @@ struct MacShell: View {
                     .libraryRoutes()
             }
             .environment(\.navigate, NavigateAction { path.append($0) })
-            .overlay { ToastLayer(bottom: 20) }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if player.track != nil {
+                    MacPlayerBar()
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 14)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(.smooth, value: player.track == nil)
+            .overlay { ToastLayer(bottom: player.track == nil ? 20 : 112) }
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

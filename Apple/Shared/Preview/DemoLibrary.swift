@@ -273,6 +273,9 @@ struct DemoLibrary: LibrarySource {
         case "search": return ShellStart(page: .search("harbour"))
         case "shelves": return ShellStart(page: .home, shelf: "made")
         case "mix": return ShellStart(page: .home, path: mixList.first.map { [Route.mix($0)] } ?? [])
+        case "nowplaying": return ShellStart(page: .home, playing: .song)
+        case "queue": return ShellStart(page: .home, playing: .queue)
+        case "player": return ShellStart(page: .albums)
         default: return ShellStart()
         }
     }
