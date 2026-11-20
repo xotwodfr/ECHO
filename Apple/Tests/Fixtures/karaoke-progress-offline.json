@@ -1,0 +1,9 @@
+{
+  "enabled": true,
+  "online": false,
+  "ready": 2,
+  "queued": 2,
+  "failed": 1,
+  "skipped": 1,
+  "bytes": null
+}

@@ -25,7 +25,7 @@ enum DemoLyrics {
     static func time(for screen: String) -> Double? {
         switch screen {
         // "So call me from the har·bour when it's late": "har", a held syllable, two thirds sung.
-        case "lyrics", "lyrics-menu": 36.2
+        case "lyrics", "lyrics-menu", "karaoke-lyrics": 36.2
         // The 12 s bridge: the dots at their fullest, sung lines above, the next ones below.
         case "lyrics-interlude": 108
         case "lyrics-plain": 30

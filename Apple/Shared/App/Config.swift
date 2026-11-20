@@ -53,9 +53,15 @@ enum Live {
         deviceName: { Config.deviceName })
     static let invites = GuestInvites(client: session.client)
     static let library = Library(source: session.client, images: .live(session.client))
+    /// Karaoke mode's audio: the server's 5.1 versions, fetched with this device's token.
+    static let karaokeEngine = KaraokeAudioEngine(download: { [client = session.client] key, path in
+        try await client.karaokeFile(at: path, key: key)
+    })
+    static let karaoke = Karaoke(device: device, source: session.client, controls: karaokeEngine)
     static let player = Player(
-        source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
-        images: library.images, motion: motion, widget: widget, settings: { Live.session.settings.playback }, quality: { Live.device.streamQuality },
+        source: session.client, engine: RoutedEngine(plain: AVPlaybackEngine(), karaoke: karaokeEngine),
+        media: SystemMediaCenter(), hearts: library,
+        images: library.images, motion: motion, widget: widget, karaoke: karaoke, settings: { Live.session.settings.playback }, quality: { Live.device.streamQuality },
         notify: { Live.library.show(Toast(message: $0)) })
     static let lyrics = Lyrics(
         source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },

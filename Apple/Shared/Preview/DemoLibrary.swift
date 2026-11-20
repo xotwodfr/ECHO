@@ -283,6 +283,13 @@ struct DemoLibrary: LibrarySource {
         case "shelves": return ShellStart(page: .home, shelf: "made")
         case "mix": return ShellStart(page: .home, path: mixList.first.map { [Route.mix($0)] } ?? [])
         case "nowplaying": return ShellStart(page: .home, playing: .song)
+        case "karaoke":
+            #if os(macOS)
+            return ShellStart(page: .albums) // the player bar shows Karaoke
+            #else
+            return ShellStart(page: .home, playing: .song)
+            #endif
+        case "karaoke-shelf": return ShellStart(page: .home, shelf: "karaoke")
         case "queue": return ShellStart(page: .home, playing: .queue)
         case "player": return ShellStart(page: .albums)
         case "guests":
@@ -297,7 +304,7 @@ struct DemoLibrary: LibrarySource {
             #else
             return ShellStart(page: .home, path: [.settings])
             #endif
-        case "lyrics", "lyrics-interlude", "lyrics-plain", "lyrics-menu":
+        case "lyrics", "lyrics-interlude", "lyrics-plain", "lyrics-menu", "karaoke-lyrics":
             #if os(macOS)
             return ShellStart(page: .albums, playing: .lyrics)
             #else

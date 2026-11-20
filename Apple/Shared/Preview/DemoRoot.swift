@@ -58,7 +58,8 @@ final class DemoWorld {
         let device = DeviceSettings(defaults: nil)
         self.library = library
         self.device = device
-        player = Player.demo(library: library, screen: screen, motion: MotionCovers.demo(loop: { device.motionLoop.seconds }))
+        player = Player.demo(
+            library: library, screen: screen, motion: MotionCovers.demo(loop: { device.motionLoop.seconds }), device: device)
         lyrics = Lyrics.demo(screen: screen, library: library)
     }
 }

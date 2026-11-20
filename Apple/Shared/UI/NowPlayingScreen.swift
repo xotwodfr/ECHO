@@ -76,6 +76,7 @@ struct NowPlayingScreen: View {
             }
             Scrubber()
             TransportCapsule()
+            if player.karaoke.isOn { KaraokePanel() }
             if !showsQueue { Spacer(minLength: 0) }
             buttons
         }
@@ -145,7 +146,7 @@ struct NowPlayingScreen: View {
         .controlSize(.large)
     }
 
-    /// Lyrics, AirPlay, Karaoke (the karaoke task's) and Up next.
+    /// Lyrics, AirPlay, Karaoke and Up next.
     private var buttons: some View {
         HStack {
             Button("Lyrics", systemImage: "quote.bubble") { showsLyrics = true }
@@ -159,8 +160,8 @@ struct NowPlayingScreen: View {
                 .accessibilityHidden(true)
                 .overlay { RoutePicker() }
             Spacer()
-            Button("Karaoke", systemImage: "music.mic") {}
-                .roundGlass()
+            KaraokeButton()
+                .controlSize(.extraLarge)
             Spacer()
             Button("Up next", systemImage: "list.bullet") {
                 withAnimation(.smooth) { showsQueue.toggle() }

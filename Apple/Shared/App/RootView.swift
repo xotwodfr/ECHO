@@ -40,6 +40,7 @@ struct RootView: View {
         .environment(session)
         .environment(library)
         .environment(player)
+        .environment(player.karaoke)
         .environment(lyrics)
         .environment(device)
         .environment(invites)
@@ -65,7 +66,8 @@ struct RootView: View {
             case .signedIn:
                 async let hearts: Void = library.start()
                 async let queue: Void = player.signedIn()
-                _ = await (hearts, queue)
+                async let karaoke: Void = player.karaoke.run()
+                _ = await (hearts, queue, karaoke)
             case .signedOut:
                 library.reset()
                 player.stop()

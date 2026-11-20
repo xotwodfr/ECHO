@@ -39,7 +39,7 @@ final class AVPlaybackEngine: PlaybackEngine {
 
     /// The audio session's output latency on the iPhone; on the Mac the default output device's
     /// (its latency, safety offset, buffer and stream latency, in frames at its rate).
-    private static func readLatency() -> Double {
+    static func readLatency() -> Double {
         #if os(iOS)
         let seconds = AVAudioSession.sharedInstance().outputLatency
         return seconds.isFinite && seconds > 0 ? seconds : 0

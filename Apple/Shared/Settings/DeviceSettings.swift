@@ -13,7 +13,7 @@ import Observation
 /// - Haptics and Theme sounds (Settings → Appearance): this device's feelings, as Android's
 ///   `Prefs.haptics` and `Prefs.themeSounds` (Feedback).
 ///
-/// Crossfade, the equalizer, Karaoke and Autoplay are per device on the web and Android too; they
+/// Crossfade, the equalizer and Autoplay are per device on the web and Android too; they
 /// land here (a property, a key and a setter each) when they are built. Downloads' storage (task 10)
 /// keeps its choices here too.
 @MainActor @Observable
@@ -33,6 +33,12 @@ final class DeviceSettings {
     private(set) var themeSounds: Bool
     /// Clay in the dark: "album" (a deep shade of what is playing) or one of `ClayDark.options`' ids.
     private(set) var clayDark: String
+    /// Karaoke mode (docs/KARAOKE.md): songs with a karaoke version play with it. Off until turned on.
+    private(set) var karaoke: Bool
+    /// How much of the voice Karaoke leaves, 0 (the instrumental) to 1 (the song as it was); the web's `vocalLevel`.
+    private(set) var vocalLevel: Double
+    /// Karaoke's key in semitones, −6 to 6; kept while Karaoke is off and applied only while it is on.
+    private(set) var karaokeKey: Int
 
     @ObservationIgnored private let defaults: UserDefaults?
 
@@ -43,6 +49,9 @@ final class DeviceSettings {
     static let hapticsKey = "echo.device.haptics"
     static let themeSoundsKey = "echo.device.themeSounds"
     static let clayDarkKey = "echo.device.clayDark"
+    static let karaokeOnKey = "echo.device.karaoke"
+    static let vocalLevelKey = "echo.device.vocalLevel"
+    static let karaokeShiftKey = "echo.device.karaokeKey"
     static let defaultBackdrop = 0.5
 
     /// - Parameter defaults: where the choices are kept; nil keeps them in memory (the preview).
@@ -56,6 +65,9 @@ final class DeviceSettings {
         haptics = (defaults?.object(forKey: Self.hapticsKey) as? Bool) ?? true
         themeSounds = (defaults?.object(forKey: Self.themeSoundsKey) as? Bool) ?? true
         clayDark = defaults?.string(forKey: Self.clayDarkKey) ?? ClayDark.album
+        karaoke = defaults?.bool(forKey: Self.karaokeOnKey) ?? false
+        vocalLevel = KaraokeMath.clampLevel((defaults?.object(forKey: Self.vocalLevelKey) as? Double) ?? 0)
+        karaokeKey = KaraokeMath.clampKey((defaults?.object(forKey: Self.karaokeShiftKey) as? Int) ?? 0)
     }
 
     func setMotionLoop(_ speed: LoopSpeed) {
@@ -88,6 +100,21 @@ extension DeviceSettings {
     func setClayDark(_ choice: String) {
         clayDark = choice == ClayDark.album || ClayDark.options.contains(where: { $0.id == choice }) ? choice : ClayDark.album
         defaults?.set(clayDark, forKey: Self.clayDarkKey)
+    }
+
+    func setKaraoke(_ on: Bool) {
+        karaoke = on
+        defaults?.set(on, forKey: Self.karaokeOnKey)
+    }
+
+    func setVocalLevel(_ level: Double) {
+        vocalLevel = KaraokeMath.clampLevel(level)
+        defaults?.set(vocalLevel, forKey: Self.vocalLevelKey)
+    }
+
+    func setKaraokeKey(_ key: Int) {
+        karaokeKey = KaraokeMath.clampKey(key)
+        defaults?.set(karaokeKey, forKey: Self.karaokeShiftKey)
     }
 
     func setThemeSounds(_ on: Bool) {

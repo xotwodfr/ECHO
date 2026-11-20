@@ -17,21 +17,29 @@ struct LyricsScreen: View {
 
     /// The active size (the lyric size setting scales it, §4.3).
     static let size = 30.0
+    /// What Karaoke's sliders take above the player card.
+    static let karaokeRoom = 110.0
 
     var body: some View {
         GeometryReader { geo in
             let safe = geo.safeAreaInsets
             let style = look.make(palette, Self.size * lyrics.preferences.lyrics.sizeScale)
+            // Karaoke's sliders sit over the player card, and the lyrics make room for them.
+            let karaoke = player.karaoke.isOn
+            let bottom = safe.bottom + 128 + (karaoke ? Self.karaokeRoom : 0)
             ZStack {
-                LyricsGround(palette: palette, top: safe.top + 64, bottom: safe.bottom + 128)
-                LyricsStage(top: safe.top + 64, bottom: safe.bottom + 128, style: style)
+                LyricsGround(palette: palette, top: safe.top + 64, bottom: bottom)
+                LyricsStage(top: safe.top + 64, bottom: bottom, style: style)
                     .ignoresSafeArea()
             }
             .overlay(alignment: .top) { header }
             .overlay(alignment: .bottom) {
-                LyricsPlayerCard()
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 4)
+                VStack(spacing: 8) {
+                    if karaoke { KaraokePanel(corner: 26) }
+                    LyricsPlayerCard()
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 4)
             }
         }
         .overlay { ToastLayer(bottom: 132) }
@@ -152,6 +160,10 @@ struct MacLyricsView: View {
                         }
                         round("forward.fill", "Next", 48) { player.next() }
                             .disabled(!player.hasNext)
+                        round(
+                            "music.mic", "Karaoke", 48,
+                            tint: player.karaoke.isOn ? theme.forcedDark.tint : .white
+                        ) { withAnimation(.smooth) { player.karaoke.setOn(!player.karaoke.isOn) } }
                         round("quote.bubble.fill", "Close Lyrics", 48, tint: theme.forcedDark.tint) { shown = false }
                         round("list.bullet", "Up next", 48) { showsQueue.toggle() }
                             .popover(isPresented: $showsQueue, arrowEdge: .top) {
@@ -163,6 +175,7 @@ struct MacLyricsView: View {
                             }
                     }
                 }
+                if player.karaoke.isOn { KaraokePanel(corner: 18) }
             }
         }
     }

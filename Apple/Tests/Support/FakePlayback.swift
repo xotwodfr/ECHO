@@ -18,6 +18,9 @@ final class FakeEngine: PlaybackEngine {
     var onEvent: ((EngineEvent) -> Void)?
     var volume: Float = 1
     var currentTime: Double? = nil
+    /// The output's latency, seconds (the lyrics follow what is heard).
+    var latency: Double = 0
+    var outputLatency: Double { latency }
     /// Whether a load says it plays (off: a stream that never gets going).
     var reportsLoads = true
     private(set) var calls: [Call] = []
@@ -229,3 +232,61 @@ func songs(_ range: ClosedRange<Int>, album: String = "al-1", seconds: Int = 200
 }
 
 let albumContext = PlayContext(kind: "album", id: "al-1", title: "Harbour Lights")
+
+/// What Karaoke tells the audio engine, kept.
+@MainActor
+final class FakeControls: KaraokeControls {
+    var vocalLevel: Float = -1
+    var keyShift = -99
+}
+
+/// The server's karaoke answers, scripted per song (each in turn, the last again), with every ask kept.
+final class FakeKaraokeSource: KaraokeSource, @unchecked Sendable {
+    struct Ask: Equatable {
+        var id: String
+        var soon: Bool
+    }
+
+    private let lock = NSLock()
+    private var scripts: [String: [KaraokeAnswer]] = [:]
+    private var _asks: [Ask] = []
+    private var _progress = KaraokeProgress(enabled: true, online: true, ready: 0, queued: 0, failed: 0, skipped: 0, bytes: 0)
+    private var _failing = false
+
+    var asks: [Ask] { lock.withLock { _asks } }
+    var progress: KaraokeProgress {
+        get { lock.withLock { _progress } }
+        set { lock.withLock { _progress = newValue } }
+    }
+    var failing: Bool {
+        get { lock.withLock { _failing } }
+        set { lock.withLock { _failing = newValue } }
+    }
+
+    /// `id` answers with these in turn.
+    func script(_ id: String, _ answers: KaraokeAnswer...) {
+        lock.withLock { scripts[id] = answers }
+    }
+
+    func karaoke(id: String, soon: Bool) async throws -> KaraokeAnswer {
+        try lock.withLock {
+            _asks.append(Ask(id: id, soon: soon))
+            if _failing { throw ApiError.unreachable }
+            guard var list = scripts[id], let first = list.first else {
+                return KaraokeAnswer(status: .queued, ahead: 0, url: nil)
+            }
+            if list.count > 1 {
+                list.removeFirst()
+                scripts[id] = list
+            }
+            return first
+        }
+    }
+
+    func karaokeProgress() async throws -> KaraokeProgress {
+        try lock.withLock {
+            if _failing { throw ApiError.unreachable }
+            return _progress
+        }
+    }
+}

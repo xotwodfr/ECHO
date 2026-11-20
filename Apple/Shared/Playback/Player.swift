@@ -141,6 +141,8 @@ final class Player {
     @ObservationIgnored private let random: () -> Double
     /// The queue that follows the user; nil in the preview.
     @ObservationIgnored let sync: QueueSync?
+    /// Karaoke mode: which songs play as their karaoke version, and its controls.
+    let karaoke: Karaoke
 
     // MARK: - Where it is
 
@@ -181,6 +183,7 @@ final class Player {
         images: ImageLoader? = nil,
         motion: MotionCovers? = nil,
         widget: WidgetFeed? = nil,
+        karaoke: Karaoke? = nil,
         follows: Bool = true,
         settings: @escaping @MainActor () -> UserSettings.Playback = { UserSettings.Playback() },
         quality: @escaping @MainActor () -> StreamQuality = { .auto },
@@ -196,6 +199,7 @@ final class Player {
         self.images = images
         self.motion = motion
         self.widget = widget
+        self.karaoke = karaoke ?? Karaoke(device: DeviceSettings(defaults: nil))
         self.settings = settings
         self.quality = quality
         self.notify = notify
@@ -204,6 +208,7 @@ final class Player {
         self.random = random
         sync = follows ? QueueSync(source: source, sleep: sleep, now: now, notify: notify) : nil
         sync?.player = self
+        self.karaoke.player = self
         engine.onEvent = { [weak self] event in self?.handle(event) }
         media?.onCommand = { [weak self] command in self?.handle(command) ?? false }
     }
@@ -433,6 +438,7 @@ final class Player {
         artworkKey = nil
         // The downloaded motion covers go too, as the library's covers do, and the widget's song.
         motion?.clear()
+        karaoke.clear()
         setPosition(0)
         media?.publish(nil, playing: false)
         widget?.clear()
@@ -441,6 +447,26 @@ final class Player {
     /// The lock screen's loop speed changed in Settings: its cover is asked for at the new length.
     func lockScreenChanged() {
         publish()
+    }
+
+    /// Karaoke was turned on or off, or a version became ready: the song loaded goes on from the same
+    /// place from what suits (its karaoke version, or the original); a song buffered next that would
+    /// play from the wrong one is buffered again.
+    func karaokeChanged() {
+        guard let track, let loaded, loaded.key == track.key else { return }
+        let wants = karaoke.audio(for: track) != nil
+        if wants != loaded.karaoke {
+            let at = engine.currentTime ?? time(at: now())
+            load(queue, autoplay: isPlaying, startAt: at, fresh: false)
+            return
+        }
+        if let preloaded, let next = upcoming.first, preloaded.key == next.key,
+           (karaoke.audio(for: next) != nil) != preloaded.karaoke
+        {
+            self.preloaded = nil
+            engine.preload(nil)
+            schedulePreload()
+        }
     }
 
     // MARK: - Controls from outside the app
@@ -561,9 +587,13 @@ final class Player {
 
     /// A song as the engine plays it: its signed stream URL and its ReplayGain.
     private func item(for track: Track) async throws -> EngineItem {
-        let stream = try await source.streamURL(for: track, quality: quality())
         let gain = ReplayGain.volume(
             track.replayGain, mode: settings().replayGain, inAlbum: queue.contextSource?.kind == "album")
+        // Karaoke mode and the version is ready: the server's audio, not a signed stream.
+        if let path = karaoke.audio(for: track), let url = URL(string: path) {
+            return EngineItem(key: track.key, url: url, gain: gain, expiresAt: .distantFuture, karaoke: true)
+        }
+        let stream = try await source.streamURL(for: track, quality: quality())
         return EngineItem(key: track.key, url: stream.url, gain: gain, expiresAt: stream.expiresAt)
     }
 
@@ -787,10 +817,17 @@ final class Player {
     /// 2 s apart; then it is skipped, saying so, or with nothing after it, what failed is said.
     private func streamFailed(_ key: String) {
         guard key == track?.key else { return }
+        let wasKaraoke = loaded?.karaoke == true
         loaded = nil
         preloaded = nil
         let at = time(at: now())
         let play = isPlaying
+        // The karaoke version would not play: the original does, from the same place.
+        if wasKaraoke, let track {
+            karaoke.unusable(track)
+            load(queue, autoplay: play, startAt: at, fresh: false)
+            return
+        }
         if retries < Self.streamRetries {
             let wait = 0.5 * pow(2, Double(retries))
             retries += 1

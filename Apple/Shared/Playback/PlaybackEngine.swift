@@ -14,6 +14,9 @@ struct EngineItem: Equatable, Sendable {
     var gain: Float
     /// When the signed URL stops working.
     var expiresAt: Date
+    /// Karaoke's version of the song (a 5.1 file the Karaoke engine mixes): the URL is the server's
+    /// audio for it, fetched with the device's token, not a signed stream.
+    var karaoke = false
 }
 
 /// What the engine is doing.

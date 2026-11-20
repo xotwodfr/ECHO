@@ -14,6 +14,7 @@ import SwiftUI
 struct SettingsScreen: View {
     @Environment(Session.self) private var session
     @Environment(DeviceSettings.self) private var device
+    @Environment(Karaoke.self) private var karaoke
     @Environment(\.settingsScroll) private var scrollTo
     @Environment(\.theme) private var theme
     @State private var editor: SettingsEditor?
@@ -27,6 +28,8 @@ struct SettingsScreen: View {
                             .id(SettingsAnchor.appearance)
                         PlaybackSettings(session: session, editor: editor, device: device)
                             .id(SettingsAnchor.playback)
+                        KaraokeSettings(karaoke: karaoke)
+                            .id(SettingsAnchor.karaoke)
                         LyricsSettings(session: session, editor: editor)
                             .id(SettingsAnchor.lyrics)
                         if let failure = editor.failure {
@@ -184,6 +187,7 @@ struct SettingsWindow: View {
     let session: Session
     let invites: GuestInvites
     let device: DeviceSettings
+    let karaoke: Karaoke
     var guests = false
     /// The preview: the group Settings opens scrolled to.
     var scroll: String? = nil
@@ -199,6 +203,7 @@ struct SettingsWindow: View {
         .environment(session)
         .environment(invites)
         .environment(device)
+        .environment(karaoke)
         .environment(\.settingsScroll, scroll)
         .frame(width: 520, height: guests ? 560 : 640)
         .themed(session.settings.appearance)

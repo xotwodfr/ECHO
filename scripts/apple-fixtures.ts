@@ -6,6 +6,8 @@
 // stream URL's signature are written as fixed stand-ins (secret scanners flag the real, random ones;
 // they belong to this throwaway server only).
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { createServer } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { lyricFixtures } from '../src/client/fixtures/lyrics.ts';
@@ -224,6 +226,67 @@ for (const [i, id] of ['al-3-t2', 'al-1-t3'].entries()) {
   ).run(stemKey(scope, id), scope, id, t.clock.t + i, t.clock.t + i);
 }
 await save('karaoke-ready', await bearer('/karaoke/ready?limit=30'));
+
+// A song's karaoke version in each state (docs/KARAOKE.md): the jobs are written as the stem service
+// would leave them (the queue is never worked here: queued ones wait far in the future), then asked
+// for the way the apps ask, now or `?soon=1`. No stem service at all answers "off".
+const farFuture = t.clock.t + 1e12;
+const stemJob = (id: string, status: string, priority: number, at: number, nextAt = 0) =>
+  db
+    .prepare(
+      `INSERT INTO stems_jobs (key, scope, track_id, user_id, status, priority, attempts, next_at, created_at, updated_at)
+       VALUES (?, ?, ?, 1, ?, ?, 0, ?, ?, ?)`,
+    )
+    .run(stemKey(scope, id), scope, id, status, priority, nextAt, t.clock.t + at, t.clock.t + at);
+stemJob('al-1-t1', 'working', 10, 10);
+stemJob('al-1-t2', 'queued', 0, 11, farFuture);
+stemJob('al-2-t1', 'failed', 0, 12);
+stemJob('al-2-t2', 'skipped', 0, 13);
+await save('karaoke-working', await bearer('/karaoke/al-1-t1'));
+await save('karaoke-queued', await bearer('/karaoke/al-1-t2?soon=1'));
+await save('karaoke-song-ready', await bearer('/karaoke/al-1-t3'));
+await save('karaoke-failed', await bearer('/karaoke/al-2-t1'));
+await save('karaoke-skipped', await bearer('/karaoke/al-2-t2'));
+await save('karaoke-bad-track', await bearer('/karaoke/not%20an%20id'));
+const withoutStems = createApp({ ...t.deps, motion });
+await save(
+  'karaoke-off',
+  await withoutStems.request('http://localhost/api/v1/karaoke/al-1-t3', {
+    headers: { host: 'localhost', authorization: `Bearer ${token}` },
+  }),
+);
+await save(
+  'karaoke-progress-off',
+  await withoutStems.request('http://localhost/api/v1/karaoke', {
+    headers: { host: 'localhost', authorization: `Bearer ${token}` },
+  }),
+);
+await save('karaoke-progress-offline', await bearer('/karaoke'));
+// The stem service answering: only its disk count is asked (/stats).
+const stats = createServer((req, res) => {
+  res.writeHead(req.url === '/stats' ? 200 : 404, { 'content-type': 'application/json' });
+  res.end(JSON.stringify({ songs: 2, bytes: 13_400_000, working: null }));
+});
+await new Promise<void>((r) => stats.listen(0, '127.0.0.1', r));
+const karaokeOnline = createKaraoke({
+  db,
+  now: t.deps.auth.now,
+  stemsUrl: `http://127.0.0.1:${(stats.address() as AddressInfo).port}`,
+  maxSeconds: 1200,
+  library: false,
+  scopeFor: (id) => navidromeUrlOf(db, id),
+  navidrome: (id) => navidromeClientFor(t.deps.navidrome, id),
+  libraries: async () => [],
+});
+const withStems = createApp({ ...t.deps, karaoke: karaokeOnline, motion });
+await save(
+  'karaoke-progress',
+  await withStems.request('http://localhost/api/v1/karaoke', {
+    headers: { host: 'localhost', authorization: `Bearer ${token}` },
+  }),
+);
+karaokeOnline.stop();
+stats.close();
 await save('method-not-allowed', await rest('getUsers'));
 mock.faults.down = true;
 await save('navidrome-unreachable', await rest('getAlbumList2', 'type=newest&size=500&offset=0'));
@@ -460,6 +523,8 @@ const asGuest = (path: string, method = 'GET', body?: unknown) =>
 await save('guests-me-guest', await asGuest('/guests/me'));
 await save('guests-me-none', await bearer('/guests/me'));
 await save('me-guest', await asGuest('/me'));
+// A guest listens to Karaoke versions too: asking for one is a read.
+await save('karaoke-guest', await asGuest('/karaoke/al-1-t3'));
 await save('guest-denied-star', await asGuest('/navidrome/rest/star?id=al-1-t1', 'POST', {}));
 await save('guest-denied-qr', await asGuest('/auth/qr/peek', 'POST', { id: qr.id }));
 await save('guest-denied-codes', await asGuest('/guests/codes', 'POST', { durationMs: 3_600_000 }));
@@ -484,5 +549,6 @@ await save(
   await app.request('http://localhost/api/v1/health', { headers: { host: 'localhost' } }),
 );
 motion.stop();
+karaoke.stop();
 motionService.close();
 await mock.close();

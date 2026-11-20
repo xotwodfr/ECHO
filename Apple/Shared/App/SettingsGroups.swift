@@ -15,6 +15,7 @@ enum SettingsAnchor {
     static let appearance = "appearance"
     static let playback = "playback"
     static let lyrics = "lyrics"
+    static let karaoke = "karaoke"
 }
 
 // MARK: - Controls
@@ -180,6 +181,58 @@ struct PlaybackSettings: View {
                     get: { session.settings.playback.scrobble },
                     set: { value in editor.save { $0.playback.scrobble = value } }))
         }
+    }
+}
+
+// MARK: - Karaoke
+
+/// Settings → Karaoke (the web's Settings → Preferences → Karaoke): Karaoke mode, how much of the voice
+/// it leaves and the key, all this device's own (the web keeps them per device too).
+struct KaraokeSettings: View {
+    let karaoke: Karaoke
+
+    var body: some View {
+        SettingsGroup(
+            title: "Karaoke",
+            footer: "Turns the singer down with the Vocals slider in the player. Your ECHO server separates each song once; until a song is ready it plays as usual and switches over by itself."
+        ) {
+            SettingsToggle(
+                title: "Karaoke mode on this device",
+                isOn: Binding(get: { karaoke.isOn }, set: { karaoke.setOn($0) }))
+            SettingsDivider()
+            slider(
+                "Vocals", value: KaraokeMath.percent(karaoke.level),
+                detail: "How much of the singer is left: 0% is the instrumental, 100% the song as recorded."
+            ) {
+                Slider(value: Binding(get: { karaoke.level }, set: { karaoke.setLevel($0) }), in: 0...1)
+                    .accessibilityLabel("Vocals")
+                    .accessibilityValue(KaraokeMath.percent(karaoke.level))
+            }
+            SettingsDivider()
+            slider(
+                "Key", value: KaraokeMath.keyValue(karaoke.key),
+                detail: "Moves the song up or down by up to six semitones at the same tempo, to suit your voice."
+            ) {
+                Slider(
+                    value: Binding(get: { Double(karaoke.key) }, set: { karaoke.setKey(Int($0.rounded())) }),
+                    in: -Double(KaraokeMath.keyRange)...Double(KaraokeMath.keyRange), step: 1
+                )
+                .accessibilityLabel("Key")
+                .accessibilityValue(KaraokeMath.keyText(karaoke.key))
+            }
+        }
+    }
+
+    private func slider(_ title: String, value: String, detail: String, @ViewBuilder _ slider: () -> some View) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 12) {
+                Text(title)
+                slider()
+                Text(value).foregroundStyle(.secondary).monospacedDigit().frame(width: 46, alignment: .trailing)
+            }
+            SettingsHint(detail)
+        }
+        .padding(.vertical, 4)
     }
 }
 

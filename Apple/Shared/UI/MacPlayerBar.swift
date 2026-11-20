@@ -55,6 +55,8 @@ struct MacPlayerBar: View {
                 .frame(maxWidth: .infinity)
 
                 HStack(spacing: 10) {
+                    if player.karaoke.isOn { karaokeControls }
+                    KaraokeButton()
                     Button("Lyrics", systemImage: "quote.bubble") { showsLyrics.toggle() }
                         .glassToggle(showsLyrics)
                     Button("Up next", systemImage: "list.bullet") { showsQueue.toggle() }
@@ -86,6 +88,26 @@ struct MacPlayerBar: View {
             .padding(.vertical, 12)
             .themedGlass(22)
         }
+    }
+
+    /// While Karaoke is on: the Vocals slider and the Key beside its button (the web's player bar).
+    private var karaokeControls: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "music.mic").foregroundStyle(.secondary)
+            Slider(
+                value: Binding(get: { player.karaoke.level }, set: { player.karaoke.setLevel($0) }), in: 0...1
+            )
+            .frame(width: 96)
+            .accessibilityLabel("Vocals")
+            .accessibilityValue(KaraokeMath.percent(player.karaoke.level))
+            Text(KaraokeMath.percent(player.karaoke.level))
+                .font(.caption.weight(.medium))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .frame(width: 36, alignment: .trailing)
+            KaraokeKeyMenu()
+        }
+        .transition(.opacity)
     }
 
     private var volumeIcon: String {

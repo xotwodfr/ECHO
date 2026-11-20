@@ -56,11 +56,23 @@ extension Player {
     /// queued next, on the screens that show playing (`nowplaying`, `queue`, `mini`, `player`, and
     /// `settings` and `lockcover`, whose lock screen preview shows its album's motion cover); on the
     /// lyrics' screens paused where the screen shows (DemoLyrics.time(for:)).
-    static func demo(library: Library, screen: String, motion: MotionCovers? = nil) -> Player {
+    static func demo(library: Library, screen: String, motion: MotionCovers? = nil, device: DeviceSettings? = nil) -> Player {
+        let device = device ?? DeviceSettings(defaults: nil)
+        let karaoke = Karaoke(device: device)
         let player = Player(
             source: DemoPlaybackSource(), engine: DemoEngine(), hearts: library, images: library.images, motion: motion,
-            follows: false, notify: { library.show(Toast(message: $0)) })
-        if ["nowplaying", "queue", "mini", "player", "settings", "settings-playback", "settings-lyrics", "lockcover"].contains(screen) {
+            karaoke: karaoke, follows: false, notify: { library.show(Toast(message: $0)) })
+        // The karaoke screens: Karaoke on, the vocals at 35 % and the key two semitones up.
+        if DemoKaraoke.screens.contains(screen) {
+            device.setKaraoke(true)
+            device.setVocalLevel(0.35)
+            device.setKaraokeKey(2)
+            karaoke.preview(status: .ready)
+        }
+        if [
+            "nowplaying", "queue", "mini", "player", "settings", "settings-playback", "settings-lyrics", "lockcover",
+            "karaoke", "karaoke-shelf",
+        ].contains(screen) {
             player.cue(DemoLibrary.nowPlaying, at: 84)
         } else if let time = DemoLyrics.time(for: screen) {
             player.cue(DemoLibrary.nowPlaying, at: time)
@@ -78,4 +90,10 @@ extension DemoLibrary {
             context: album.songs.indices.dropFirst().map { track(album, $0) },
             contextSource: PlayContext(kind: "album", id: album.id, title: album.title))
     }
+}
+
+/// The karaoke demo screens: `karaoke` (Now Playing, the Mac's player bar), `karaoke-lyrics`, `karaoke-shelf`
+/// (Home scrolled to the shelf).
+enum DemoKaraoke {
+    static let screens = ["karaoke", "karaoke-lyrics", "karaoke-shelf"]
 }

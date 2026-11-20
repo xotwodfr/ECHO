@@ -73,6 +73,7 @@ struct HomeScreen: View {
             }
             if !home.karaoke.isEmpty {
                 karaokeShelf(home.karaoke)
+                    .id("karaoke")
             }
             if !library.playlists.isEmpty {
                 Shelf(title: "Your playlists") {
@@ -147,12 +148,14 @@ struct HomeScreen: View {
         }
     }
 
-    /// Songs whose karaoke version is ready. Playing one plays the shelf (Karaoke mode itself, the
-    /// Vocals slider and the key, is the karaoke task's).
+    /// Songs whose karaoke version is ready. Playing one turns Karaoke on and plays the shelf, each
+    /// song as its version from the first note (the web's shelf).
     private func karaokeShelf(_ tracks: [Track]) -> some View {
         Shelf(title: "Karaoke") {
             ForEach(Array(tracks.enumerated()), id: \.element.key) { index, track in
                 Button {
+                    player.karaoke.markReady(tracks)
+                    player.karaoke.setOn(true)
                     Task { await player.play(tracks, at: index, context: PlayContext(kind: "karaoke", title: "Karaoke")) }
                 } label: {
                     Card(title: track.title, subtitle: track.artist) {

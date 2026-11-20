@@ -29,7 +29,7 @@ struct EchoApp: App {
         Settings {
             SettingsWindow(
                 session: demo?.session ?? Live.session, invites: demo?.invites ?? Live.invites,
-                device: demo?.device ?? Live.device, guests: demo?.base == "guests",
+                device: demo?.device ?? Live.device, karaoke: demo?.player.karaoke ?? Live.karaoke, guests: demo?.base == "guests",
                 scroll: demo.flatMap { DemoLibrary.settingsScroll($0.base) })
         }
     }
