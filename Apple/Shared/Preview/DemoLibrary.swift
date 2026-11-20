@@ -252,7 +252,6 @@ struct DemoLibrary: LibrarySource {
         return Library(source: source, images: ImageLoader(fetch: { try await source.coverBytes($0) }), defaults: nil)
     }
 
-    /// Where `-ECHODemo <screen>` opens the app.
     /// The group a settings screen opens scrolled to.
     static func settingsScroll(_ screen: String) -> String? {
         switch screen {
@@ -262,6 +261,7 @@ struct DemoLibrary: LibrarySource {
         }
     }
 
+    /// Where `-ECHODemo <screen>` opens the app.
     static func start(_ screen: String) -> ShellStart {
         let harbour = album(Demo.harbour)
         switch screen {
