@@ -74,6 +74,13 @@ final class Player {
         return total > 0 ? min(max(0, live), total) : max(0, live)
     }
 
+    /// The song's time for what follows it closely (the lyrics' word sync): the engine's own clock
+    /// while the song is loaded, else where it was left. Read it each frame (a TimelineView).
+    var songTime: Double {
+        if loaded != nil, status == .playing, let seconds = engine.currentTime { return seconds }
+        return time(at: now())
+    }
+
     /// Whether this album, playlist or mix is what plays.
     func isCurrent(_ context: PlayContext) -> Bool {
         self.context?.kind == context.kind && self.context?.id == context.id && track != nil

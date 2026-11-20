@@ -224,7 +224,7 @@ struct QueueSyncTests {
         #expect(notices.all == [QueueSync.changedElsewhere])
         #expect(player.sync?.base == 1_800_001_155_001)
         #expect(player.context == PlayContext(kind: "playlist", id: "pl-1", title: "Late Ferries"))
-        #expect(abs(player.time(at: clock.now) - 61) < 0.001)
+        #expect(abs(player.time(at: clock.now) - 12) < 0.001)
         #expect(player.status == .paused)
         try? await Task.sleep(for: .milliseconds(100))
         #expect(saves.count == 1)

@@ -227,7 +227,7 @@ const first = await save(
 await save('me-queue', await bearer('/me/queue'));
 await bearer('/me/queue', 'PUT', {
   queue: androidQueue,
-  positionMs: 61000,
+  positionMs: 12000,
   baseUpdatedAt: first.updatedAt,
 });
 await save(

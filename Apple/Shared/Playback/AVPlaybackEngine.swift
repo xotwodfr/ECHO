@@ -14,7 +14,8 @@ final class AVPlaybackEngine: PlaybackEngine {
     }
 
     var currentTime: Double? {
-        guard current != nil else { return nil }
+        // An item on its way to its start position is not there yet.
+        guard current != nil, pendingSeek == nil else { return nil }
         let seconds = player.currentTime().seconds
         return seconds.isFinite ? seconds : nil
     }

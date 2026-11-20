@@ -28,8 +28,9 @@ final class Rig {
         let random = SeededRandom(seed)
         player = Player(
             source: source, engine: engine, media: media, hearts: hearts, images: images, follows: false,
-            settings: { [unowned self] in self.settings },
-            notify: { [unowned self] in self.notices.append($0) },
+            // Weak: a task the player started may outlive the test and its rig.
+            settings: { [weak self] in self?.settings ?? UserSettings.Playback() },
+            notify: { [weak self] in self?.notices.append($0) },
             sleep: sleeps.sleep, now: { clock.now }, random: { random.next() })
     }
 
@@ -518,6 +519,18 @@ struct PlayerTests {
         #expect(source.title == "Some list")
         #expect(NowPlayingDisplay.source(nil).label == nil)
         #expect(NowPlayingDisplay.clock(3725) == "1:02:05")
+    }
+
+    @Test("The song's clock for the lyrics: the engine's own while playing, where it stopped while paused")
+    func songTime() async throws {
+        let rig = Rig()
+        let player = try #require(rig.player)
+        await player.play(songs(1...2), at: 0)
+        rig.engine.play(to: 30)
+        rig.engine.currentTime = 30.25
+        #expect(player.songTime == 30.25)
+        player.pause()
+        #expect(player.songTime == 30)
     }
 
     // MARK: ReplayGain, the volume, signing out

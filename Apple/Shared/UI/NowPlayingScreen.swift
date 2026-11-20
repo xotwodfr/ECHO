@@ -7,7 +7,8 @@ import SwiftUI
 /// AirPlay, Karaoke and Up next below. Up next takes the cover's place, the song shrinking to a row
 /// above it. Swipe down or the chevron closes it.
 struct NowPlayingScreen: View {
-    @State var showsQueue: Bool
+    /// Up next in the cover's place (the shell's, so it opens either way).
+    @Binding var showsQueue: Bool
 
     @Environment(Player.self) private var player
     @Environment(Library.self) private var library
@@ -134,9 +135,12 @@ struct NowPlayingScreen: View {
             Button("Lyrics", systemImage: "quote.bubble") {}
                 .roundGlass()
             Spacer()
-            RoutePicker()
-                .frame(width: 60, height: 60)
-                .glassEffect(.regular.interactive(), in: .circle)
+            // The system's AirPlay picker, invisible over a glass button like the others: it takes
+            // the tap and shows the places the sound can go.
+            Button("AirPlay", systemImage: "airplay.audio") {}
+                .roundGlass()
+                .accessibilityHidden(true)
+                .overlay { RoutePicker() }
             Spacer()
             Button("Karaoke", systemImage: "music.mic") {}
                 .roundGlass()
@@ -186,14 +190,16 @@ struct TransportCapsule: View {
     }
 }
 
-/// AirPlay and the other places the sound can go: the system's picker, amber on the glass.
+/// AirPlay and the other places the sound can go: the system's picker, its own glyph hidden (the
+/// glass button under it shows one in the app's style).
 struct RoutePicker: UIViewRepresentable {
     func makeUIView(context: Context) -> AVRoutePickerView {
         let picker = AVRoutePickerView()
         picker.prioritizesVideoDevices = false
-        picker.tintColor = UIColor(Color.echoTint)
-        picker.activeTintColor = UIColor(Color.amber)
+        picker.tintColor = .clear
+        picker.activeTintColor = .clear
         picker.backgroundColor = .clear
+        picker.accessibilityLabel = "AirPlay"
         return picker
     }
 

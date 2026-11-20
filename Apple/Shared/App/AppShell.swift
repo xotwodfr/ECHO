@@ -52,7 +52,7 @@ struct PhoneShell: View {
     @State private var query: String
     @State private var account = false
     @State private var nowPlaying = false
-    @State private var queueFirst = false
+    @State private var showsQueue = false
     @Namespace private var playerSpace
 
     @Environment(Library.self) private var library
@@ -124,14 +124,14 @@ struct PhoneShell: View {
         .tabBarMinimizeBehavior(.onScrollDown)
         .modifier(PlayerAccessory(shown: player.track != nil) {
             MiniPlayer {
-                queueFirst = false
+                showsQueue = false
                 nowPlaying = true
             }
             .matchedTransitionSource(id: "player", in: playerSpace)
         })
         .overlay { ToastLayer(bottom: player.track == nil ? 76 : 136) }
         .fullScreenCover(isPresented: $nowPlaying) {
-            NowPlayingScreen(showsQueue: queueFirst)
+            NowPlayingScreen(showsQueue: $showsQueue)
                 .navigationTransition(.zoom(sourceID: "player", in: playerSpace))
                 .environment(library)
                 .environment(player)
@@ -147,7 +147,7 @@ struct PhoneShell: View {
             // The demo screens that open on Now Playing (`-ECHODemo nowplaying`, `queue`).
             guard let playing, player.track != nil else { return }
             try? await Task.sleep(for: .milliseconds(400))
-            queueFirst = playing == .queue
+            showsQueue = playing == .queue
             nowPlaying = true
         }
     }

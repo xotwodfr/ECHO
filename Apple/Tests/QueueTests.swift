@@ -196,7 +196,7 @@ struct QueueTests {
     func androidQueue() throws {
         let saved = try EchoClient.decode(SavedQueue.self, from: Fixture.data("me-queue-newer"))
         #expect(saved.updatedAt == 1_800_001_155_001)
-        #expect(saved.positionMs == 61000)
+        #expect(saved.positionMs == 12000)
         let q = try #require(saved.queue)
         #expect(q.now?.provider == "navidrome")
         #expect(q.now?.key == "navidrome:al-3-t2")
