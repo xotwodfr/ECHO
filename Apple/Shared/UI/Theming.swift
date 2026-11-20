@@ -9,6 +9,8 @@ import SwiftUI
 extension EnvironmentValues {
     /// The theme in use, in its light or dark variant.
     @Entry var theme: Theme.Resolved = .echoDark
+    /// The colour of what is playing (its cover's most vivid colour): Clay's dark takes it.
+    @Entry var albumTone: RGB? = nil
 }
 
 extension Theme.Resolved {
@@ -29,9 +31,12 @@ struct ThemeProvider: ViewModifier {
     let appearance: UserSettings.Appearance
     /// The system's scheme where the theme leaves it to the system (nothing is asked of it then).
     @Environment(\.colorScheme) private var system
+    @Environment(\.albumTone) private var albumTone
+    @Environment(DeviceSettings.self) private var device: DeviceSettings?
 
     func body(content: Content) -> some View {
-        let resolved = Theme.resolve(appearance, systemDark: system == .dark)
+        let tone = ClayDark.tone(choice: device?.clayDark ?? ClayDark.album, album: albumTone)
+        let resolved = Theme.resolve(appearance, systemDark: system == .dark, tone: tone)
         content
             .environment(\.theme, resolved)
             .environment(\.lyricLook, resolved.theme.lyric.look)
@@ -83,6 +88,14 @@ struct ThemedGlass: ViewModifier {
     func body(content: Content) -> some View {
         let glass = theme.glass
         let shape = radius.map { AnyShape(RoundedRectangle(cornerRadius: $0 * theme.shapes.card, style: .continuous)) } ?? AnyShape(Capsule())
+        if theme.isMaterial {
+            content.background { MaterialSurface(material: theme.material, paper: theme.paper, dark: theme.dark, shape: shape) }
+        } else {
+            glassed(content, shape: shape, glass: glass)
+        }
+    }
+
+    private func glassed(_ content: Content, shape: AnyShape, glass: Theme.Glass) -> some View {
         content
             .glassEffect(style, in: shape)
             .overlay {

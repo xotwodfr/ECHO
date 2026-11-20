@@ -16,12 +16,16 @@ struct LyricStyle: Equatable, Sendable {
     /// height (× the size).
     struct Face: Equatable, Sendable {
         var name: String? = nil
+        /// The system face's design (rounded for Clay, serif for Yarn, monospaced for the hi-fi's display).
+        var design = Design.standard
         var weight: Weight = .heavy
         var size: Double
         var tracking = -0.022
         var lineHeight = 1.12
         var lineHeightCJK = 1.2
     }
+
+    enum Design: Equatable, Sendable { case standard, rounded, serif, mono }
 
     enum Weight: Equatable, Sendable {
         case semibold, bold, heavy, black
@@ -94,7 +98,16 @@ struct LyricStyle: Equatable, Sendable {
         case .heavy: weight = .heavy
         case .black: weight = .black
         }
-        return UIFont.systemFont(ofSize: CGFloat(points), weight: weight) as CTFont
+        let base = UIFont.systemFont(ofSize: CGFloat(points), weight: weight)
+        let design: UIFontDescriptor.SystemDesign
+        switch face.design {
+        case .standard: return base as CTFont
+        case .rounded: design = .rounded
+        case .serif: design = .serif
+        case .mono: design = .monospaced
+        }
+        guard let descriptor = base.fontDescriptor.withDesign(design) else { return base as CTFont }
+        return UIFont(descriptor: descriptor, size: CGFloat(points)) as CTFont
         #else
         let weight: NSFont.Weight
         switch face.weight {
@@ -103,7 +116,16 @@ struct LyricStyle: Equatable, Sendable {
         case .heavy: weight = .heavy
         case .black: weight = .black
         }
-        return NSFont.systemFont(ofSize: CGFloat(points), weight: weight) as CTFont
+        let base = NSFont.systemFont(ofSize: CGFloat(points), weight: weight)
+        let design: NSFontDescriptor.SystemDesign
+        switch face.design {
+        case .standard: return base as CTFont
+        case .rounded: design = .rounded
+        case .serif: design = .serif
+        case .mono: design = .monospaced
+        }
+        guard let descriptor = base.fontDescriptor.withDesign(design) else { return base as CTFont }
+        return (NSFont(descriptor: descriptor, size: CGFloat(points)) ?? base) as CTFont
         #endif
     }
 }
@@ -207,6 +229,75 @@ struct LyricLook: Sendable {
         style.accent = RGB(0.7, 0.7, 0.7)
         style.room = RGB(0.16, 0.16, 0.16)
         style.glowScale = 0.7
+        return style
+    }
+
+    /// Clay: a round, fat face; sung words pale pink on the dark clay slab, a soft warm glow (Android's
+    /// Clay lyrics extrude the sung words in four layers: here the face and the glow carry it).
+    static let clay = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.design = .rounded
+        style.face.weight = .black
+        style.ink = RGB(0.965, 0.933, 0.969)
+        style.room = RGB(0.35, 0.22, 0.3)
+        style.lit = RGB(1, 0.86, 0.9)
+        style.edge = RGB(1, 0.78, 0.86)
+        style.glow = RGB(1, 0.6, 0.7)
+        style.accent = RGB(1, 0.7, 0.78)
+        style.glowScale = 0.8
+        style.depthBlur = 0.35
+        return style
+    }
+
+    /// Yarn (Android's Embroidered): a serif in cream thread on the hoop's green knit, the sung words
+    /// in gold thread, the rest traced faintly.
+    static let yarn = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.design = .serif
+        style.face.weight = .heavy
+        style.ink = RGB(0.96, 0.93, 0.84)
+        style.room = RGB(0.12, 0.3, 0.2)
+        style.lit = RGB(0.99, 0.82, 0.42)
+        style.edge = RGB(1, 0.9, 0.6)
+        style.glow = RGB(0.95, 0.75, 0.3)
+        style.accent = RGB(0.95, 0.6, 0.35)
+        style.glowScale = 0.5
+        style.depthBlur = 0.2
+        return style
+    }
+
+    /// Paper (Android's cut-out): hand-lettered on a notebook page, the sung words cut from coloured
+    /// paper (a warm red), the words to come in pencil.
+    static let paper = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.name = "Noteworthy-Bold"
+        style.face.tracking = 0
+        style.ink = RGB(0.3, 0.3, 0.33)
+        style.room = RGB(0.62, 0.62, 0.66)
+        style.lit = RGB(0.86, 0.38, 0.25)
+        style.edge = RGB(0.95, 0.55, 0.38)
+        style.glow = RGB(0.95, 0.55, 0.38)
+        style.accent = RGB(0.3, 0.45, 0.75)
+        style.glowScale = 0
+        style.depthBlur = 0
+        return style
+    }
+
+    /// Retro hi-fi (Android's display): a monospaced face lit like a teal VFD, the sung words glowing,
+    /// the rest dim segments.
+    static let hifi = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size * 0.9)
+        style.face.design = .mono
+        style.face.weight = .bold
+        style.face.tracking = 0
+        style.ink = RGB(0.22, 0.55, 0.52)
+        style.room = RGB(0.05, 0.14, 0.13)
+        style.lit = RGB(0.6, 1, 0.94)
+        style.edge = RGB(0.85, 1, 0.98)
+        style.glow = RGB(0.2, 0.95, 0.85)
+        style.accent = RGB(1, 0.71, 0.28)
+        style.glowScale = 1.8
+        style.depthBlur = 0.3
         return style
     }
 

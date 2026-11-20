@@ -47,7 +47,6 @@ struct ThemeResolveTests {
             #expect(Theme.of(id).id == .echo, "\(id)")
         }
         #expect(Theme.of(.materialyou).id == .echo)
-        #expect(Theme.of(.clay).id == .echo)
     }
 
     @Test("Now Playing's variant is always the dark one")
@@ -102,8 +101,14 @@ struct ThemeTokenTests {
     @Test("A light variant is lighter than its dark, and washes the album's light; a dark one does not")
     func variantsDiffer() {
         for theme in Theme.made {
-            #expect(luminance(theme.light.floor) > luminance(theme.dark.floor) + 0.4, "\(theme.id)")
-            #expect(theme.light.wash > 0 && theme.dark.wash == 0, "\(theme.id)")
+            if theme.material == .glass {
+                #expect(luminance(theme.light.floor) > luminance(theme.dark.floor) + 0.4, "\(theme.id)")
+                #expect(theme.light.wash > 0 && theme.dark.wash == 0, "\(theme.id)")
+            } else {
+                // A material theme's ground is the material itself: no wash, a lighter light variant.
+                #expect(luminance(theme.light.floor) > luminance(theme.dark.floor), "\(theme.id)")
+                #expect(theme.light.paper != nil && theme.dark.paper != nil, "\(theme.id)")
+            }
             #expect(luminance(theme.light.tint) < 0.6, "\(theme.id): the tint reads on a light ground")
         }
     }
@@ -172,6 +177,56 @@ struct ThemeTokenTests {
                 #expect(size > 1000 && size < 200_000, "\(file) is a short sound")
             }
         }
+    }
+}
+
+@MainActor
+@Suite("Themes: the materials")
+struct MaterialThemeTests {
+    @Test("Clay in the dark is one colour: the album's as clay, or one of Android's eight")
+    func clayTone() {
+        #expect(ClayDark.options.count == 8)
+        #expect(ClayDark.tone(choice: "navy", album: RGB(1, 0, 0)) == ClayDark.options[1].colour)
+        #expect(ClayDark.tone(choice: ClayDark.album, album: nil) == ClayDark.fallback)
+        let album = ClayDark.tone(choice: ClayDark.album, album: RGB(0.2, 0.9, 0.3))
+        #expect(album == ClayDark.clay(RGB(0.2, 0.9, 0.3)))
+        #expect(abs(album.hsb.brightness - 0.74) < 0.01 && abs(album.hsb.saturation - 0.48) < 0.01)
+        #expect(ClayDark.clay(RGB(0.5, 0.5, 0.5)).hsb.saturation < 0.1, "a grey album stays a grey clay")
+    }
+
+    @Test("Clay's dark variant follows the tone: the ground and the clay are deep shades of it")
+    func clayDarkFollowsTone() {
+        let a = Theme.resolve(.init(theme: .clay, dark: .dark), systemDark: false, tone: ClayDark.options[0].colour)
+        let b = Theme.resolve(.init(theme: .clay, dark: .dark), systemDark: false, tone: ClayDark.options[1].colour)
+        #expect(a.palette != b.palette)
+        #expect(a.palette.floor != b.palette.floor)
+        let hi = ClayDark.options[0].colour
+        #expect(a.palette.floor.r + a.palette.floor.g + a.palette.floor.b < hi.r + hi.g + hi.b)
+        #expect(a.forcedDark.palette == a.palette)
+        let light = Theme.resolve(.init(theme: .clay, dark: .light), systemDark: false, tone: hi)
+        #expect(light.palette == Theme.clay.light, "the light variant ignores the tone")
+    }
+
+    @Test("Each material theme is made of something: paper in both variants, glass rows, its own sounds and lyrics")
+    func made() {
+        for theme in [Theme.clay, .yarn, .paper, .hifi] {
+            #expect(theme.material != .glass)
+            #expect(theme.light.paper != nil && theme.dark.paper != nil)
+            #expect(theme.glass.rows)
+            #expect(theme.sounds != .none)
+        }
+        #expect([Theme.clay, .yarn, .paper, .hifi].map(\.defaultDark) == [false, false, false, true])
+    }
+
+    @Test("Clay in the dark is kept on this device and a nonsense choice reads as the album")
+    func kept() {
+        let store = UserDefaults(suiteName: "echo.test.\(UUID().uuidString)")!
+        let a = DeviceSettings(defaults: store)
+        #expect(a.clayDark == ClayDark.album)
+        a.setClayDark("teal")
+        #expect(DeviceSettings(defaults: store).clayDark == "teal")
+        a.setClayDark("not a colour")
+        #expect(a.clayDark == ClayDark.album)
     }
 }
 
@@ -267,6 +322,19 @@ struct FeedbackTests {
         feedback.sounds = sounds
         feedback.device = device
         return (feedback, haptics, output)
+    }
+
+    @Test("Clay pops on a switch, the others click: every material has its own four sounds")
+    func materialSounds() {
+        let (clay, _, clayOut) = make(.clay)
+        clay.tap()
+        clay.toggle(true)
+        clay.confirm()
+        #expect(clayOut.played == ["clay_press", "clay_pop", "clay_yes"])
+        for sounds in [Theme.Sounds.yarn, .paper, .hifi] {
+            #expect(sounds.file(for: .toggle) == "\(sounds.rawValue)_click")
+            #expect(Set(sounds.files).count == 3)
+        }
     }
 
     @Test("The five events make Android's haptics")

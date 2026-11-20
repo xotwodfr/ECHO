@@ -20,6 +20,8 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// The theme's feel: haptics and sounds (Feedback), told which theme and which device's switches.
     @State private var feedback = Feedback()
+    /// The playing album's most vivid colour (Clay in the dark takes it).
+    @State private var albumTone: RGB? = nil
     /// A link the system handed the app, waiting for the shell to open it.
     @State private var link: AppLink? = nil
 
@@ -42,6 +44,7 @@ struct RootView: View {
         .environment(device)
         .environment(invites)
         .environment(feedback)
+        .environment(\.albumTone, albumTone)
         // The user's theme, with its light or dark, tint and lyric look, for everything below.
         .themed(session.settings.appearance)
         .onChange(of: session.settings.appearance.theme, initial: true) {
@@ -53,6 +56,9 @@ struct RootView: View {
         .onOpenURL { url in link = AppLink(url) }
         .onChange(of: device.motionLoop) { player.lockScreenChanged() }
         .task(id: player.track?.key) { lyrics.follow(player.track) }
+        .task(id: player.track?.cover) {
+            if let cover = player.track?.cover { albumTone = await library.images.palette(cover)?.accent } else { albumTone = nil }
+        }
         .task { await session.refresh() }
         .task(id: session.phase) {
             switch session.phase {

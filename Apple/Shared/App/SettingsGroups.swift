@@ -101,6 +101,14 @@ struct AppearanceSettings: View {
                     get: { session.settings.appearance.dark },
                     set: { value in editor.save { $0.appearance.dark = value } }))
             SettingsDivider()
+            if session.settings.appearance.theme == .clay {
+                SettingsChoice(
+                    title: "Clay in the dark",
+                    detail: "The colour of Clay when it is dark: a deep shade of what is playing, or one you pick. This device only.",
+                    options: [ClayDark.album] + ClayDark.options.map(\.id), name: { ClayDark.name($0) },
+                    selection: Binding(get: { device.clayDark }, set: { device.setClayDark($0) }))
+                SettingsDivider()
+            }
             SettingsChoice(
                 title: "Motion",
                 detail: "System follows Reduce Motion in the accessibility settings. Off shows the lyrics as a still sheet.",

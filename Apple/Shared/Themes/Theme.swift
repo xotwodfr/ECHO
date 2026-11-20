@@ -32,6 +32,8 @@ struct Theme: Equatable, Sendable, Identifiable {
         var wash: Double
         /// The picker's miniature: the room at its top, in its middle and at its floor.
         var swatch: [RGB]
+        /// What a material theme's surfaces are made of: clay, wool, card or brushed metal (nil: glass).
+        var paper: RGB? = nil
     }
 
     /// How a theme treats glass: ECHO's is the system's plain glass on its cards; Liquid Glass lights
@@ -61,10 +63,15 @@ struct Theme: Equatable, Sendable, Identifiable {
     }
 
     /// Whose lyric look the theme brings (LyricLook).
-    enum Lyric: Equatable, Sendable { case echo, glass, appleMusic, spotify, soundcloud, deezer, qobuz, tidal, youtube, mono }
+    enum Lyric: Equatable, Sendable {
+        case echo, glass, appleMusic, spotify, soundcloud, deezer, qobuz, tidal, youtube, mono, clay, yarn, paper, hifi
+    }
+
+    /// What the surfaces are made of (Android's `Material`, ui/Matter.kt): flat is glass here.
+    enum Material: String, Equatable, Sendable { case glass, clay, yarn, paper, hifi }
 
     /// Whose UI sounds the theme brings (none: only the haptics).
-    enum Sounds: String, Equatable, Sendable { case none, glass }
+    enum Sounds: String, Equatable, Sendable { case none, glass, clay, yarn, paper, hifi }
 
     let id: UserSettings.ThemeID
     let name: String
@@ -79,6 +86,7 @@ struct Theme: Equatable, Sendable, Identifiable {
     let sounds: Sounds
     /// The room's light is grey: the art is the colour (Monochrome).
     var monochrome = false
+    var material = Material.glass
 
     func palette(dark isDark: Bool) -> Palette { isDark ? dark : light }
 
@@ -224,9 +232,92 @@ struct Theme: Equatable, Sendable, Identifiable {
         onAccent: RGB(0.08, 0.08, 0.08), lightTint: RGB(0.12, 0.12, 0.12), ground: RGB(0.067, 0.067, 0.067),
         light: RGB(0.96, 0.96, 0.96), art: 0.8, card: 0.8, lyric: .mono, roomLight: 0.35, roomDark: 0.6, monochrome: true)
 
+    // MARK: - The material themes (Android's Clay, Yarn, Paper & origami and Retro hi-fi)
+
+    /// Clay: pastel plasticine, shaped by hand. Light is pastel clay on a warm ground; in the dark the clay
+    /// is one colour (the album's, or one chosen: `ClayDark`), see `clayDark(tone:)`.
+    static let clay = Theme(
+        id: .clay, name: "Clay", blurb: "Pastel plasticine, shaped by hand", defaultDark: false,
+        light: Palette(
+            tint: RGB(0.69, 0.31, 0.42), accent: RGB(0.69, 0.31, 0.42), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.69, 0.31, 0.42), warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.953, 0.925, 0.902),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(1, 0.79, 0.69), RGB(0.85, 0.78, 0.96), RGB(0.953, 0.925, 0.902)],
+            paper: RGB(0.984, 0.961, 0.937)),
+        dark: clayDark(tone: ClayDark.fallback),
+        glass: Glass(tint: 0, rim: 0.5, rows: true, refractive: false, caustic: 0, rowRadius: 22),
+        shapes: Shapes(art: 1.4, card: 1.3), lyric: .clay, sounds: .clay, material: .clay)
+
+    /// Clay's dark variant from one colour: the ground and the clay are deep shades of it.
+    static func clayDark(tone: RGB) -> Palette {
+        let black = RGB(0, 0, 0), white = RGB(1, 1, 1)
+        let ground = tone.mixed(with: black, 0.74)
+        let paper = tone.mixed(with: black, 0.42)
+        let strong = tone.mixed(with: white, 0.25)
+        return Palette(
+            tint: strong, accent: tone.mixed(with: black, 0.1), onAccent: white, highlight: strong,
+            warning: RGB(1, 0.706, 0.643), floor: ground, roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [tone, paper, ground], paper: paper)
+    }
+
+    /// Yarn: knitted, cosy autumn colours.
+    static let yarn = Theme(
+        id: .yarn, name: "Yarn", blurb: "Knitted in cosy autumn colours", defaultDark: false,
+        light: Palette(
+            tint: RGB(0.557, 0.184, 0.31), accent: RGB(0.557, 0.184, 0.31), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.557, 0.184, 0.31), warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.914, 0.863, 0.769),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(0.72, 0.34, 0.18), RGB(0.557, 0.184, 0.31), RGB(0.914, 0.863, 0.769)],
+            paper: RGB(0.937, 0.89, 0.8)),
+        dark: Palette(
+            tint: RGB(0.878, 0.682, 0.29), accent: RGB(0.878, 0.682, 0.29), onAccent: RGB(0.14, 0.1, 0.09),
+            highlight: RGB(0.878, 0.682, 0.29), warning: RGB(1, 0.706, 0.643), floor: RGB(0.18, 0.16, 0.145),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(0.72, 0.34, 0.18), RGB(0.29, 0.255, 0.227), RGB(0.18, 0.16, 0.145)],
+            paper: RGB(0.29, 0.255, 0.227)),
+        glass: Glass(tint: 0, rim: 0.3, rows: true, refractive: false, caustic: 0, rowRadius: 18),
+        shapes: Shapes(art: 1.1, card: 1.2), lyric: .yarn, sounds: .yarn, material: .yarn)
+
+    /// Paper & origami: folded card, polaroids and tape.
+    static let paper = Theme(
+        id: .paper, name: "Paper & origami", blurb: "Folded card, polaroids and tape", defaultDark: false,
+        light: Palette(
+            tint: RGB(0.88, 0.49, 0.36), accent: RGB(0.88, 0.49, 0.36), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.80, 0.40, 0.27), warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.937, 0.91, 0.863),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(0.965, 0.79, 0.706), RGB(0.8, 0.89, 0.78), RGB(0.937, 0.91, 0.863)],
+            paper: RGB(0.984, 0.973, 0.949)),
+        dark: Palette(
+            tint: RGB(0.88, 0.49, 0.36), accent: RGB(0.88, 0.49, 0.36), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.95, 0.62, 0.48), warning: RGB(1, 0.706, 0.643), floor: RGB(0.141, 0.129, 0.114),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(0.725, 0.47, 0.37), RGB(0.22, 0.2, 0.17), RGB(0.141, 0.129, 0.114)],
+            paper: RGB(0.22, 0.2, 0.173)),
+        glass: Glass(tint: 0, rim: 0, rows: true, refractive: false, caustic: 0, rowRadius: 3),
+        shapes: Shapes(art: 0.12, card: 0.15), lyric: .paper, sounds: .paper, material: .paper)
+
+    /// Retro hi-fi: wood veneer, brushed aluminium, a teal glow. Dark (walnut) by default.
+    static let hifi = Theme(
+        id: .hifi, name: "Retro hi-fi", blurb: "Wood veneer, brushed aluminium, a teal glow", defaultDark: true,
+        light: Palette(
+            tint: RGB(0.16, 0.16, 0.17), accent: RGB(0.16, 0.16, 0.17), onAccent: RGB(1, 1, 1),
+            highlight: RGB(0.55, 0.32, 0.05), warning: RGB(0.70, 0.15, 0.10), floor: RGB(0.725, 0.541, 0.361),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(0.725, 0.541, 0.361), RGB(0.84, 0.84, 0.855), RGB(0.64, 0.46, 0.3)],
+            paper: RGB(0.84, 0.843, 0.855)),
+        dark: Palette(
+            tint: RGB(1, 0.71, 0.278), accent: RGB(1, 0.71, 0.278), onAccent: RGB(0.12, 0.12, 0.125),
+            highlight: RGB(1, 0.71, 0.278), warning: RGB(1, 0.706, 0.643), floor: RGB(0.42, 0.247, 0.133),
+            roomStrength: 0, roomHeight: 1, wash: 0,
+            swatch: [RGB(0.42, 0.247, 0.133), RGB(0.235, 0.239, 0.255), RGB(0.3, 0.17, 0.09)],
+            paper: RGB(0.235, 0.239, 0.255)),
+        glass: Glass(tint: 0, rim: 0.4, rows: true, refractive: false, caustic: 0, rowRadius: 8),
+        shapes: Shapes(art: 0.2, card: 0.5), lyric: .hifi, sounds: .hifi, material: .hifi)
+
     /// The themes the picker offers, in its order.
     static let made: [Theme] = [
         .echo, .glass, .appleMusic, .spotify, .soundcloud, .deezer, .qobuz, .tidal, .youtube, .monochrome,
+        .clay, .yarn,
     ]
 
     /// The theme an id names; one not made here is ECHO.
@@ -243,22 +334,27 @@ struct Theme: Equatable, Sendable, Identifiable {
         let dark: Bool
         /// The scheme to ask the system for: nil leaves it to the system.
         let preferredDark: Bool?
+        /// Clay in the dark takes its colour from here (the album's, or the one chosen in Settings).
+        var tone: RGB? = nil
 
-        var palette: Palette { theme.palette(dark: dark) }
+        var palette: Palette {
+            theme.id == .clay && dark ? Theme.clayDark(tone: tone ?? ClayDark.fallback) : theme.palette(dark: dark)
+        }
         var glass: Glass { theme.glass }
         var shapes: Shapes { theme.shapes }
         var monochrome: Bool { theme.monochrome }
+        var material: Material { theme.material }
 
         /// The same theme in its dark variant: Now Playing and the lyrics sit on the album's colours and
         /// are always dark (as Android's `forceDark`).
-        var forcedDark: Resolved { Resolved(theme: theme, dark: true, preferredDark: true) }
+        var forcedDark: Resolved { Resolved(theme: theme, dark: true, preferredDark: true, tone: tone) }
 
         static let echoDark = Theme.resolve(UserSettings.Appearance(), systemDark: true)
     }
 
     /// The theme and variant for the user's choice: Light and Dark are fixed, System follows the
     /// device, and "the theme's" is its own default (the system's where it has none).
-    static func resolve(_ appearance: UserSettings.Appearance, systemDark: Bool) -> Resolved {
+    static func resolve(_ appearance: UserSettings.Appearance, systemDark: Bool, tone: RGB? = nil) -> Resolved {
         let theme = Theme.of(appearance.theme)
         let preferred: Bool?
         switch appearance.dark {
@@ -267,7 +363,7 @@ struct Theme: Equatable, Sendable, Identifiable {
         case .system: preferred = nil
         case .theme: preferred = theme.defaultDark
         }
-        return Resolved(theme: theme, dark: preferred ?? systemDark, preferredDark: preferred)
+        return Resolved(theme: theme, dark: preferred ?? systemDark, preferredDark: preferred, tone: tone)
     }
 }
 
@@ -296,6 +392,10 @@ extension Theme.Lyric {
         case .tidal: .tidal
         case .youtube: .youtube
         case .mono: .mono
+        case .clay: .clay
+        case .yarn: .yarn
+        case .paper: .paper
+        case .hifi: .hifi
         }
     }
 }

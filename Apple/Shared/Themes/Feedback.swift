@@ -67,7 +67,8 @@ extension Theme.Sounds {
         guard self != .none else { return nil }
         switch cue {
         case .tap, .no: return "\(rawValue)_press"
-        case .toggle: return "\(rawValue)_click"
+        // Clay's switch is a pop, the others' a click (Android's clay_pop).
+        case .toggle: return self == .clay ? "clay_pop" : "\(rawValue)_click"
         case .yes: return "\(rawValue)_yes"
         }
     }

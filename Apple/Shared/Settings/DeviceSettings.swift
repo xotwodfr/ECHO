@@ -31,6 +31,8 @@ final class DeviceSettings {
     private(set) var haptics: Bool
     /// Theme sounds: a theme's own sounds on presses (Android's `themeSounds`).
     private(set) var themeSounds: Bool
+    /// Clay in the dark: "album" (a deep shade of what is playing) or one of `ClayDark.options`' ids.
+    private(set) var clayDark: String
 
     @ObservationIgnored private let defaults: UserDefaults?
 
@@ -40,6 +42,7 @@ final class DeviceSettings {
     static let performanceKey = "echo.device.performance"
     static let hapticsKey = "echo.device.haptics"
     static let themeSoundsKey = "echo.device.themeSounds"
+    static let clayDarkKey = "echo.device.clayDark"
     static let defaultBackdrop = 0.5
 
     /// - Parameter defaults: where the choices are kept; nil keeps them in memory (the preview).
@@ -52,6 +55,7 @@ final class DeviceSettings {
         // On unless switched off.
         haptics = (defaults?.object(forKey: Self.hapticsKey) as? Bool) ?? true
         themeSounds = (defaults?.object(forKey: Self.themeSoundsKey) as? Bool) ?? true
+        clayDark = defaults?.string(forKey: Self.clayDarkKey) ?? ClayDark.album
     }
 
     func setMotionLoop(_ speed: LoopSpeed) {
@@ -79,6 +83,11 @@ extension DeviceSettings {
     func setHaptics(_ on: Bool) {
         haptics = on
         defaults?.set(on, forKey: Self.hapticsKey)
+    }
+
+    func setClayDark(_ choice: String) {
+        clayDark = choice == ClayDark.album || ClayDark.options.contains(where: { $0.id == choice }) ? choice : ClayDark.album
+        defaults?.set(clayDark, forKey: Self.clayDarkKey)
     }
 
     func setThemeSounds(_ on: Bool) {

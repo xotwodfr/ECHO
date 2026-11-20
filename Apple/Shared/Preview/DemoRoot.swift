@@ -166,6 +166,14 @@ enum DemoThemes {
         case "theme-monochrome-home": Look(base: "mini", appearance: .init(theme: .mono, dark: .theme))
         case "theme-monochrome-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .mono, dark: .theme))
         case "theme-monochrome-lyrics": Look(base: "lyrics", appearance: .init(theme: .mono, dark: .theme))
+        case "theme-clay-home": Look(base: "mini", appearance: .init(theme: .clay, dark: .theme))
+        case "theme-clay-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .clay, dark: .theme))
+        case "theme-clay-lyrics": Look(base: "lyrics", appearance: .init(theme: .clay, dark: .theme))
+        case "theme-yarn-home": Look(base: "mini", appearance: .init(theme: .yarn, dark: .theme))
+        case "theme-yarn-nowplaying": Look(base: "nowplaying", appearance: .init(theme: .yarn, dark: .theme))
+        case "theme-yarn-lyrics": Look(base: "lyrics", appearance: .init(theme: .yarn, dark: .theme))
+        case "theme-clay-dark-home": Look(base: "mini", appearance: .init(theme: .clay, dark: .dark))
+        case "theme-clay-dark-lyrics": Look(base: "lyrics", appearance: .init(theme: .clay, dark: .dark))
         case "theme-light-home": Look(base: "mini", appearance: .init(theme: .echo, dark: .light))
         default: nil
         }

@@ -82,6 +82,15 @@ struct RoomModifier: ViewModifier {
     func body(content: Content) -> some View {
         let look = theme.palette
         let lit = min(1, (device?.roomStrength(strength) ?? strength) * look.roomStrength)
+        if theme.isMaterial {
+            // A material theme's page is the material (clay, wool, card, wood), not the album's light.
+            content.background { MaterialGround(material: theme.material, ground: theme.floor, dark: theme.dark) }
+        } else {
+            litRoom(content, lit: lit, look: look)
+        }
+    }
+
+    private func litRoom(_ content: Content, lit: Double, look: Theme.Palette) -> some View {
         content
             .background(alignment: .top) {
                 ZStack {

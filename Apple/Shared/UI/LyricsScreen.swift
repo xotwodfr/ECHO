@@ -23,7 +23,7 @@ struct LyricsScreen: View {
             let safe = geo.safeAreaInsets
             let style = look.make(palette, Self.size * lyrics.preferences.lyrics.sizeScale)
             ZStack {
-                AlbumLight(palette: palette)
+                LyricsGround(palette: palette, top: safe.top + 64, bottom: safe.bottom + 128)
                 LyricsStage(top: safe.top + 64, bottom: safe.bottom + 128, style: style)
                     .ignoresSafeArea()
             }
@@ -89,7 +89,7 @@ struct MacLyricsView: View {
             // The active size follows the window, as the web's --ly-active does.
             let size = min(46, max(28, Double(geo.size.height) * 0.052)) * lyrics.preferences.lyrics.sizeScale
             ZStack {
-                AlbumLight(palette: palette)
+                LyricsGround(palette: palette, top: 64, bottom: 40, leading: min(360, geo.size.width * 0.3) + 104)
                 HStack(spacing: 0) {
                     side
                         .frame(width: min(360, geo.size.width * 0.3))
