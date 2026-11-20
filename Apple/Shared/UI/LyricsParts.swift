@@ -93,8 +93,9 @@ struct LyricsStage: View {
     }
 
     private func note<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
-        GeometryReader { geo in
-            content()
+        let card = content()
+        return GeometryReader { geo in
+            card
                 .frame(maxWidth: 420)
                 .padding(.horizontal, 24)
                 .frame(maxWidth: .infinity)
