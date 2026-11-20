@@ -36,7 +36,31 @@ sign-in), `Library/`, `Playback/`, `Lyrics/`, `Karaoke/`, `Together/`, `Download
 extension (WidgetKit, App Group) and the lock screen's animated artwork; `macOS/` the menu
 commands. Tests: `Apple/Tests/` (Swift Testing), run on the runner.
 
-## Tasks, in order
+## Status and order (kept current; read this first)
+
+The owner's order from 2026-11-20 (their time is limited): **7, 10, 8, 9, 11, 12**. Themes (11):
+the plain Liquid Glass theme and ECHO first, then as many Android themes as time allows. After
+each task, update this list, `iOS/README.md` and `macOS/README.md`, so another agent can pick up
+where the last one stopped. A green apple run uploads `ECHO-ipa` (unsigned, Release, for
+Sideloadly) besides the simulator builds and screenshots.
+
+| Task | Status |
+| --- | --- |
+| 1 Foundation | done (apple run 12) |
+| 2 Library and search | done (apple run 16) |
+| 3 Playback | done (apple run 19) |
+| 4 Lyrics | done (apple run 26) |
+| 5 Animated lock-screen covers, Settings | done (apple run 30) |
+| 6 Widget | in progress |
+| 7 Scan to sign in, guests | next |
+| 10 Downloads | then |
+| 8 Karaoke | then |
+| 9 Listen together | then |
+| 11 Themes (Liquid Glass, ECHO, then Android's) | then |
+| 12 Finish | last |
+| S Server motion covers | done |
+
+## Tasks (numbered as first planned; built in the order above)
 
 1. **Foundation**: the layout above (moving the baseline and the preview screens into it); the
    API client (device sign-in with the code in one request, the token in the Keychain for this
