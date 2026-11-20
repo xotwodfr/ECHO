@@ -43,6 +43,15 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: xvfb-run -a pnpm test:e2e
+      # A failure's error-context.md holds the page's accessibility tree at the moment it failed:
+      # what a flake that never shows on a local run needs to be understood. Nothing is recorded or
+      # uploaded when every test passes.
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-results
+          path: test-results
+          retention-days: 14
 
   # The motion service's own tests (motion/, docs/MOTION.md): the photo-or-flat rule, seamless loops
   # in the encoded video, uploads and the HTTP service, with real ffmpeg, on the base image of its
