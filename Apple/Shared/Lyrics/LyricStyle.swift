@@ -150,6 +150,66 @@ struct LyricLook: Sendable {
         return style
     }
 
+    /// Deezer style: a bold face with a purple edge and glow.
+    static let deezer = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .bold
+        style.edge = RGB(0.78, 0.55, 1)
+        style.glow = RGB(0.635, 0.22, 1)
+        style.accent = RGB(0.635, 0.22, 1)
+        style.glowScale = 1.3
+        return style
+    }
+
+    /// Qobuz style: a lighter, editorial face, no glow, the sweep a clean white.
+    static let qobuz = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .semibold
+        style.face.tracking = -0.01
+        style.ink = RGB(0.93, 0.94, 0.96)
+        style.edge = RGB(0.7, 0.82, 1)
+        style.glowScale = 0.3
+        style.depthBlur = 0.4
+        return style
+    }
+
+    /// Tidal style: a bold face, a cyan edge and glow.
+    static let tidal = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .heavy
+        style.edge = RGB(0.5, 1, 0.96)
+        style.glow = RGB(0.2, 1, 0.933)
+        style.accent = RGB(0.2, 1, 0.933)
+        style.glowScale = 1.1
+        return style
+    }
+
+    /// YouTube Music style: a red edge and glow on a bold face.
+    static let youtube = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .bold
+        style.lit = RGB(1, 0.94, 0.94)
+        style.edge = RGB(1, 0.45, 0.5)
+        style.glow = RGB(1, 0, 0.2)
+        style.accent = RGB(1, 0, 0.2)
+        style.glowScale = 1.2
+        return style
+    }
+
+    /// Monochrome: greys only, a soft grey glow.
+    static let mono = LyricLook { palette, size in
+        var style = LyricStyle.echo(palette: palette, size: size)
+        style.face.weight = .bold
+        style.ink = RGB(0.9, 0.9, 0.9)
+        style.lit = RGB(1, 1, 1)
+        style.edge = RGB(0.82, 0.82, 0.82)
+        style.glow = RGB(0.55, 0.55, 0.55)
+        style.accent = RGB(0.7, 0.7, 0.7)
+        style.room = RGB(0.16, 0.16, 0.16)
+        style.glowScale = 0.7
+        return style
+    }
+
     /// SoundCloud style: a bold face with an orange edge and glow.
     static let soundcloud = LyricLook { palette, size in
         var style = LyricStyle.echo(palette: palette, size: size)

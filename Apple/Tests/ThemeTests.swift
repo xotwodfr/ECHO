@@ -114,14 +114,18 @@ struct ThemeTokenTests {
             for p in [theme.light, theme.dark] {
                 #expect(abs(luminance(p.onAccent) - luminance(p.accent)) > 0.3, "\(theme.id)")
             }
-            #expect(theme.shapes.art > 0 && theme.shapes.art <= 1 && theme.shapes.card > 0 && theme.shapes.card <= 1)
+            #expect(theme.shapes.art > 0 && theme.shapes.card > 0 && theme.shapes.art <= 40 && theme.shapes.card <= 2)
         }
-        for theme in [Theme.appleMusic, .spotify, .soundcloud] {
+        for theme in [Theme.appleMusic, .spotify, .soundcloud, .deezer, .qobuz, .tidal, .monochrome] {
             #expect(theme.shapes.art < Theme.echo.shapes.art, "\(theme.id)")
             #expect(theme.sounds == .none && theme.sounds.files.isEmpty)
         }
         #expect(Theme.soundcloud.shapes.art < Theme.spotify.shapes.art)
         #expect(Theme.spotify.shapes.art < Theme.appleMusic.shapes.art)
+        #expect(Theme.youtube.shapes.art > 20, "YouTube Music's art is round")
+        #expect(Theme.monochrome.monochrome && !Theme.echo.monochrome)
+        #expect(Theme.monochrome.defaultDark == nil)
+        #expect(Theme.tidal.light.tint != Theme.tidal.dark.tint, "cyan is too pale to read on white")
     }
 
     @Test("Liquid Glass is glassier than ECHO: tinted rimmed cards, rows on glass, refracting buttons")

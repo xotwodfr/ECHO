@@ -61,7 +61,7 @@ struct Theme: Equatable, Sendable, Identifiable {
     }
 
     /// Whose lyric look the theme brings (LyricLook).
-    enum Lyric: Equatable, Sendable { case echo, glass, appleMusic, spotify, soundcloud }
+    enum Lyric: Equatable, Sendable { case echo, glass, appleMusic, spotify, soundcloud, deezer, qobuz, tidal, youtube, mono }
 
     /// Whose UI sounds the theme brings (none: only the haptics).
     enum Sounds: String, Equatable, Sendable { case none, glass }
@@ -77,6 +77,8 @@ struct Theme: Equatable, Sendable, Identifiable {
     let shapes: Shapes
     let lyric: Lyric
     let sounds: Sounds
+    /// The room's light is grey: the art is the colour (Monochrome).
+    var monochrome = false
 
     func palette(dark isDark: Bool) -> Palette { isDark ? dark : light }
 
@@ -171,8 +173,61 @@ struct Theme: Equatable, Sendable, Identifiable {
         shapes: Shapes(art: 0.12, card: 0.25),
         lyric: .soundcloud, sounds: .none)
 
+
+    /// A service-style theme from Android's accent, grounds and squareness: a light and a dark variant,
+    /// the room's light in the accent's family.
+    private static func service(
+        _ id: UserSettings.ThemeID, _ name: String, _ blurb: String, dark defaultDark: Bool?, accent: RGB,
+        onAccent: RGB = RGB(1, 1, 1), lightTint: RGB? = nil, ground dark: RGB, light: RGB, art: Double, card: Double,
+        lyric: Lyric, roomLight: Double = 0.4, roomDark: Double = 0.7, monochrome: Bool = false
+    ) -> Theme {
+        let ink = lightTint ?? accent
+        let warning = RGB(0.70, 0.15, 0.10)
+        return Theme(
+            id: id, name: name, blurb: blurb, defaultDark: defaultDark,
+            light: Palette(
+                tint: ink, accent: accent, onAccent: onAccent, highlight: ink, warning: warning, floor: light,
+                roomStrength: roomLight, roomHeight: 0.85, wash: 0.55,
+                swatch: [accent.mixed(with: RGB(1, 1, 1), 0.7), accent.mixed(with: light, 0.88), light]),
+            dark: Palette(
+                tint: accent, accent: accent, onAccent: onAccent, highlight: accent, warning: RGB(1, 0.706, 0.643),
+                floor: dark, roomStrength: roomDark, roomHeight: 0.85, wash: 0,
+                swatch: [accent.mixed(with: dark, 0.72), accent.mixed(with: dark, 0.9), dark]),
+            glass: Glass(tint: 0, rim: 0, rows: false, refractive: false, caustic: 0, rowRadius: 12 * art),
+            shapes: Shapes(art: art, card: card), lyric: lyric, sounds: .none, monochrome: monochrome)
+    }
+
+    /// Deezer style: purple, dark, rounded.
+    static let deezer = service(
+        .deezer, "Deezer style", "Purple, dark, rounded", dark: true, accent: RGB(0.635, 0.22, 1),
+        ground: RGB(0.059, 0.051, 0.075), light: RGB(0.98, 0.973, 1), art: 0.75, card: 0.7, lyric: .deezer)
+
+    /// Qobuz style: black and white, thin editorial type, square.
+    static let qobuz = service(
+        .qobuz, "Qobuz style", "Black and white, thin editorial type", dark: true, accent: RGB(0.231, 0.549, 1),
+        ground: RGB(0.043, 0.043, 0.047), light: RGB(1, 1, 1), art: 0.001, card: 0.001, lyric: .qobuz)
+
+    /// Tidal style: black, white and cyan, minimal.
+    static let tidal = service(
+        .tidal, "Tidal style", "Black, white and cyan, minimal", dark: true, accent: RGB(0.2, 1, 0.933),
+        onAccent: RGB(0, 0, 0), lightTint: RGB(0, 0.62, 0.58), ground: RGB(0, 0, 0), light: RGB(1, 1, 1),
+        art: 0.35, card: 0.4, lyric: .tidal)
+
+    /// YouTube Music style: red on dark, round art.
+    static let youtube = service(
+        .youtube, "YouTube Music style", "Red, dark, round art", dark: true, accent: RGB(1, 0, 0.2),
+        ground: RGB(0.012, 0.012, 0.012), light: RGB(1, 1, 1), art: 30, card: 1.1, lyric: .youtube)
+
+    /// Monochrome: greys only; the art is the colour. Light or dark with the system.
+    static let monochrome = service(
+        .mono, "Monochrome", "Greys only: the art is the colour", dark: nil, accent: RGB(0.92, 0.92, 0.92),
+        onAccent: RGB(0.08, 0.08, 0.08), lightTint: RGB(0.12, 0.12, 0.12), ground: RGB(0.067, 0.067, 0.067),
+        light: RGB(0.96, 0.96, 0.96), art: 0.8, card: 0.8, lyric: .mono, roomLight: 0.35, roomDark: 0.6, monochrome: true)
+
     /// The themes the picker offers, in its order.
-    static let made: [Theme] = [.echo, .glass, .appleMusic, .spotify, .soundcloud]
+    static let made: [Theme] = [
+        .echo, .glass, .appleMusic, .spotify, .soundcloud, .deezer, .qobuz, .tidal, .youtube, .monochrome,
+    ]
 
     /// The theme an id names; one not made here is ECHO.
     static func of(_ id: UserSettings.ThemeID) -> Theme {
@@ -192,6 +247,7 @@ struct Theme: Equatable, Sendable, Identifiable {
         var palette: Palette { theme.palette(dark: dark) }
         var glass: Glass { theme.glass }
         var shapes: Shapes { theme.shapes }
+        var monochrome: Bool { theme.monochrome }
 
         /// The same theme in its dark variant: Now Playing and the lyrics sit on the album's colours and
         /// are always dark (as Android's `forceDark`).
@@ -235,6 +291,11 @@ extension Theme.Lyric {
         case .appleMusic: .appleMusic
         case .spotify: .spotify
         case .soundcloud: .soundcloud
+        case .deezer: .deezer
+        case .qobuz: .qobuz
+        case .tidal: .tidal
+        case .youtube: .youtube
+        case .mono: .mono
         }
     }
 }

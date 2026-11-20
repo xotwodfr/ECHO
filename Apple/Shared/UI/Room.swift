@@ -83,7 +83,7 @@ struct RoomModifier: ViewModifier {
         content
             .background(alignment: .top) {
                 ZStack {
-                    AlbumLight(strength: lit, palette: palette)
+                    AlbumLight(strength: lit, palette: palette).saturation(theme.monochrome ? 0 : 1)
                     if look.wash > 0 { theme.floor.opacity(look.wash).ignoresSafeArea() }
                 }
                 .frame(height: height * look.roomHeight)

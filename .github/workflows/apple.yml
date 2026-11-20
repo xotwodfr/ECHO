@@ -135,7 +135,7 @@ jobs:
           limit 60 xcrun simctl ui "$dev" appearance dark
           limit 60 xcrun simctl status_bar "$dev" override --time 9:41 --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3 || true
           limit 480 xcrun simctl install "$dev" build/ios/Debug-iphonesimulator/ECHO.app
-          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu settings settings-playback settings-lyrics lockcover widgets widgets-tinted widgets-idle signin shell scan approve guest-pass guest-invite guests guest-home themes theme-liquid-glass-home theme-liquid-glass-nowplaying theme-liquid-glass-lyrics theme-light-home theme-apple-music-home theme-apple-music-nowplaying theme-apple-music-lyrics theme-spotify-home theme-spotify-nowplaying theme-spotify-lyrics theme-soundcloud-home theme-soundcloud-nowplaying theme-soundcloud-lyrics; do
+          for s in home shelves album artist playlist mix library albums search wanted mini nowplaying queue lyrics lyrics-interlude lyrics-plain lyrics-menu settings settings-playback settings-lyrics lockcover widgets widgets-tinted widgets-idle signin shell scan approve guest-pass guest-invite guests guest-home themes theme-liquid-glass-home theme-liquid-glass-nowplaying theme-liquid-glass-lyrics theme-light-home theme-apple-music-home theme-apple-music-nowplaying theme-apple-music-lyrics theme-spotify-home theme-spotify-nowplaying theme-spotify-lyrics theme-soundcloud-home theme-soundcloud-nowplaying theme-soundcloud-lyrics theme-deezer-home theme-deezer-nowplaying theme-deezer-lyrics theme-qobuz-home theme-qobuz-nowplaying theme-qobuz-lyrics theme-tidal-home theme-tidal-nowplaying theme-tidal-lyrics theme-youtube-home theme-youtube-nowplaying theme-youtube-lyrics theme-monochrome-home theme-monochrome-nowplaying theme-monochrome-lyrics; do
             f="Apple/Screenshots/iphone-$s.png"
             limit 180 xcrun simctl launch --terminate-running-process "$dev" com.folk3s.echo -ECHODemo "$s"
             # A slow first frame leaves the shot black (lyrics, run 7): a black PNG is a few dozen KB,
@@ -246,7 +246,7 @@ jobs:
           let pick = CommandLine.arguments.dropFirst().first == "smallest" ? echo.min { area($0) < area($1) } : echo.first
           print(pick?[kCGWindowNumber as String] as? Int ?? 0)
           EOF
-          for s in home shelves albums album search player lyrics settings settings-playback settings-lyrics signin shell guests themes theme-liquid-glass-home theme-liquid-glass-lyrics theme-apple-music-home theme-spotify-home theme-soundcloud-home; do
+          for s in home shelves albums album search player lyrics settings settings-playback settings-lyrics signin shell guests themes theme-liquid-glass-home theme-liquid-glass-lyrics theme-apple-music-home theme-spotify-home theme-soundcloud-home theme-deezer-home theme-qobuz-home theme-tidal-home theme-youtube-home theme-monochrome-home; do
             pkill -x ECHO || true
             open -n "$app" --args -ECHODemo "$s"
             sleep 10
