@@ -9,7 +9,7 @@ import Testing
 @MainActor
 @Suite("Settings: the user's")
 struct UserSettingsEditorTests {
-    func session(_ stub: Stub, token: String? = "echo_dt_test") -> Session {
+    func makeSession(_ stub: Stub, token: String? = "echo_dt_test") -> Session {
         Session(
             server: stub.base, tokens: MemoryTokenStore(token), http: stub.session, deviceName: { "Test" }, cache: nil,
             watchNetwork: false)
@@ -33,7 +33,7 @@ struct UserSettingsEditorTests {
         for c in Self.cases {
             let stub = Stub()
             stub.on("PUT", "/me/settings", .fixture("settings"))
-            let editor = SettingsEditor(session: session(stub))
+            let editor = SettingsEditor(session: makeSession(stub))
             await editor.save(c.change).value
             let sent = try #require(stub.requests("PUT", "/me/settings").first, "\(c.key)")
             #expect(sent.bearer == "echo_dt_test")
@@ -51,7 +51,7 @@ struct UserSettingsEditorTests {
     func sources() async throws {
         let stub = Stub()
         stub.on("PUT", "/me/settings", .fixture("settings"))
-        let editor = SettingsEditor(session: session(stub))
+        let editor = SettingsEditor(session: makeSession(stub))
         await editor.save { $0.lyrics.disabledSources = SettingsText.sources($0.lyrics.disabledSources, .spicy, on: false) }.value
         let json = try #require(stub.requests("PUT", "/me/settings").first?.json)
         #expect((json["lyrics"] as? [String: Any])?["disabledSources"] as? [String] == ["spicy"])
@@ -64,7 +64,7 @@ struct UserSettingsEditorTests {
     func inOrder() async throws {
         let stub = Stub()
         stub.on("PUT", "/me/settings", .fixture("settings"))
-        let session = session(stub)
+        let session = makeSession(stub)
         let editor = SettingsEditor(session: session)
         let a = editor.save { $0.lyrics.globalOffsetMs = 50 }
         let b = editor.save { $0.lyrics.globalOffsetMs = 100 }
@@ -80,7 +80,7 @@ struct UserSettingsEditorTests {
     func refused() async throws {
         let stub = Stub()
         stub.on("PUT", "/me/settings", .fixture("settings-refused", status: 400))
-        let session = session(stub)
+        let session = makeSession(stub)
         let editor = SettingsEditor(session: session)
         await editor.save { $0.lyrics.announceLines = true }.value
         #expect(!session.settings.lyrics.announceLines)
@@ -105,7 +105,7 @@ struct UserSettingsEditorTests {
         let stub = Stub()
         stub.on("GET", "/me", .fixture("me"))
         stub.on("GET", "/me/settings", .fixture("settings-saved"))
-        let session = session(stub, token: "echo_dt_kept")
+        let session = makeSession(stub, token: "echo_dt_kept")
         #expect(session.settings == UserSettings()) // the defaults until the server answers
         await session.refresh()
         #expect(!session.settings.lyrics.showUnsynced)
