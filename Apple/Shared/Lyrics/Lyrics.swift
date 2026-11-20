@@ -36,13 +36,13 @@ final class Lyrics {
     static let offsetMax = 10_000
 
     /// The sources' names (the web's Settings → Lyrics → Sources).
-    static let sourceNames: [(id: String, name: String)] = [
+    nonisolated static let sourceNames: [(id: String, name: String)] = [
         ("navidrome", "Your library"), ("spicy", "Spicy Lyrics"), ("netease", "NetEase Cloud Music"),
         ("lrclib", "LRCLIB"), ("navidrome-plain", "Your library (plain text)"),
     ]
 
     /// What the sources said, in words (the web's `strings.stage.outcomes`).
-    static let outcomes: [String: String] = [
+    nonisolated static let outcomes: [String: String] = [
         "notFound": "not found", "instrumental": "instrumental", "mismatch": "a different song",
         "invalid": "unusable", "error": "failed", "timeout": "too slow", "skipped": "paused for now",
         "found": "found",
@@ -219,18 +219,18 @@ final class Lyrics {
     }
 
     /// The toast's words for a total offset: "Lyrics +150 ms", "Lyrics on time".
-    static func offsetMessage(_ total: Int) -> String {
+    nonisolated static func offsetMessage(_ total: Int) -> String {
         total == 0 ? "Lyrics on time" : "Lyrics \(total > 0 ? "+" : "−")\(abs(total)) ms"
     }
 
     /// A source's name, as the credit and the menu say it.
-    static func sourceName(_ id: String) -> String {
+    nonisolated static func sourceName(_ id: String) -> String {
         if id == "fixture" { return "ECHO's demo" }
         return sourceNames.first { $0.id == id }?.name ?? id
     }
 
     /// The sources tried, in words: "Your library: not found · LRCLIB: too slow".
-    static func triedText(_ tried: [LyricsTried]) -> String {
+    nonisolated static func triedText(_ tried: [LyricsTried]) -> String {
         if tried.isEmpty { return "No source answered in time." }
         return tried.map { "\(sourceName($0.source)): \(outcomes[$0.outcome] ?? $0.outcome)" }.joined(separator: " · ")
     }
