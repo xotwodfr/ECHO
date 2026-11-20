@@ -9,7 +9,8 @@ Code both apps share lives in `Apple/Shared` (the plan's layout,
 the account sheet), `Api/` (the client, models, preferences, the Keychain token, the session and
 the offline state), `Library/` (the library the screens see: hearts, playlists, the album sorts,
 the artists, Home's shelves, the Wanted list and the cover cache), `Playback/` (the player: the
-queue, the engine, the queue that follows you, scrobbles, Now Playing's info), `UI/` (the screens,
+queue, the engine, the queue that follows you, scrobbles, Now Playing's info), `Lyrics/` (the
+lyrics: the loader, the field's model, the layout and the style), `UI/` (the screens,
 their components and the room's look), `Preview/` (the `-ECHODemo` screens on a built-in library),
 `Assets.xcassets` (the amber accent) and `AppIcon.icon`. `Apple/Tests` holds the Swift tests.
 This folder holds what is the Mac's own: the app entry (a window of a laptop's size) and the
@@ -60,10 +61,35 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
 - **Scrobbles** to Navidrome (now playing, then played at half the song or 4 minutes, as Settings
   allows) and ECHO's history (`/me/plays`, for Made For You) at the same point.
 - **The player bar** at the bottom of the window, in glass: the song, shuffle, previous, play or
-  pause, next and repeat over the scrubber, Up next and the volume (Lyrics opens with its task).
+  pause, next and repeat over the scrubber, Lyrics, Up next and the volume.
 - **The keyboard's media keys and macOS's Now Playing**: the song, its cover, length and place
   (`MPNowPlayingInfoCenter`, built in one place, `Playback/NowPlayingInfo.swift`), and play, pause,
   next, previous, seek and the heart (`MPRemoteCommandCenter`).
+
+## Lyrics
+
+- **The server's lyrics** for the playing song (`GET /lyrics`: word-synced, line-synced or plain
+  text), asked for 250 ms after the song changes (skipping through songs costs nothing), an answer
+  for another song dropped, "No lyrics found" with the sources tried after 6 s while a late answer
+  still shows, ECHO not answering said with Try Again, and the next song's lyrics asked ahead.
+- **The lyric field** (`docs/LYRICS_EXPERIENCE.md`, the web's model ported as it is): the column
+  with the line being sung at 40% of its area and the rest one gap apart, dimmer and softer with
+  distance, scrolled by springs in a ripple at each hand-over; the word sweep with its one soft edge
+  along the line, the bright edge in the album's light, the word being sung lifted and swollen, the
+  glow behind it (its alpha never faster than 1.5/s; 60% while paused), held words letter by
+  letter, the interlude dots in gaps of 7 s or more, backing vocals under their line, duets on two
+  sides; line-synced lines lit by one wash, plain lyrics as a still sheet; the scrubber followed
+  while it is held, a tap on a line plays from it, reduced motion (a crossfade in place) and Motion
+  off (a still sheet) as Settings has them. Set with CoreText, drawn in SwiftUI.
+- **On the Mac**: the player bar's Lyrics button opens them in the whole window over the album's
+  light, the song on the left (its cover, the scrubber and the transport on glass), the lyrics on
+  the right; the chevron or Escape goes back, and `[` and `]` move this song's lyrics 50 ms
+  earlier or later (the web's keys).
+- **The source's credit** on glass ("Word-synced · LRCLIB") opens the lyrics menu: the attribution
+  with its links, the source to use for this song (or automatic), and this song's timing in 50 ms
+  steps (`PUT /me/tracks/{trackKey}/override`, saved half a second after the last step), with the
+  total said in a toast; the global offset from Settings is added, and the output's latency
+  (the output device's) is taken off the clock.
 
 ## Build and run
 
@@ -80,24 +106,24 @@ project.
 The Swift tests (Swift Testing, `Apple/Tests`: the API client, models, sign-in, the library, with
 the sorts, Wanted's Undo and the cover cache, and playback on a fake engine: the queue, the gapless
 hand-over, signed URLs, the saved queue with its 429s and conflicts, scrobbles, interruptions, the
-media keys' commands and Now Playing's info, what the player bar shows; against the server's
-recorded answers in `Apple/Tests/Fixtures`, which `scripts/apple-fixtures.ts` records from the
-server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
+media keys' commands and Now Playing's info, what the player bar shows; and the lyrics: the
+loader, and the field's timing, springs, motion and layout on the web's own cases and lyric
+fixtures; against the server's recorded answers in `Apple/Tests/Fixtures`, which
+`scripts/apple-fixtures.ts` records from the server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
 `.github/workflows/apple.yml`, or with:
 
 ```sh
 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26, apple run 19): both apps build with no
-Swift warnings, the Swift tests pass on the Mac (146) and in the iOS 26 simulator (145; the Keychain's
-data-protection round trip skips where the test host has no entitlement), and the app runs on the
-Mac on its built-in library and a player that never streams (`Apple/Screenshots`: `-ECHODemo home`,
-`shelves`, `albums`, `album`, `search`, `player`, `signin`, `shell`). It has not yet signed in to a
-real server or played through one.
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26, apple run 26): both apps build with no
+Swift warnings, the Swift tests pass on the Mac (226) and in the iOS 26 simulator (225; on both the Keychain's
+data-protection round trip skips, the test host having no entitlement), and the app runs on the
+Mac on its built-in library, a player that never streams and the web's lyric fixtures
+(`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `albums`, `album`, `search`, `player`, `lyrics`,
+`signin`, `shell`). It has not yet signed in to a real server or played through one.
 
 ## Next
 
 Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
-lyrics (from the player bar's Lyrics button), the menu commands, and the rest; signing and
-notarization to share it.
+the menu commands, and the rest; signing and notarization to share it.
