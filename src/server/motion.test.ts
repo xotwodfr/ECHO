@@ -250,8 +250,10 @@ describe('motion covers', () => {
     s.clock.t += 1000;
     await s.req('/motion/al-3');
     await until(() => s.status(s.key('al-3')) === 'ready');
-    await until(() => s.service.deleted.includes(s.key('al-2')));
-    expect(s.status(s.key('al-2'))).toBeUndefined();
+    // The service forgets the files first; the row goes once its answer is back (evict), so the
+    // row is what to wait for: the service's own record of the delete can come a moment sooner.
+    await until(() => s.status(s.key('al-2')) === undefined);
+    expect(s.service.deleted).toContain(s.key('al-2'));
     expect(s.status(s.key('al-1'))).toBe('ready');
     expect(s.service.files.has(`${s.key('al-2')}/tall.mp4`)).toBe(false);
     // Asked for again, it is made again.
