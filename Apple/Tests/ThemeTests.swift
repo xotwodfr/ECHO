@@ -173,13 +173,11 @@ struct ThemeSaveTests {
         stub.on("PUT", "/me/settings", .fixture("settings"))
         let editor = SettingsEditor(session: makeSession(stub))
         let a = editor.save { $0.appearance.theme = .glass }
-        let b = editor.save { $0.appearance.theme = .echo }
+        let b = editor.save { $0.appearance.dark = .light }
         await a.value
         await b.value
-        let themes = stub.requests("PUT", "/me/settings").compactMap {
-            ($0.json?["appearance"] as? [String: Any])?["theme"] as? String
-        }
-        #expect(themes == ["glass", "echo"])
+        let sent = stub.requests("PUT", "/me/settings").compactMap { $0.json?["appearance"] as? [String: String] }
+        #expect(sent == [["theme": "glass"], ["dark": "light"]])
     }
 
     @Test("A pick the server refuses is put back, with the reason")

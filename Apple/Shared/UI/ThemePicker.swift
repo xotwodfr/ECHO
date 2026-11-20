@@ -45,7 +45,7 @@ struct ThemeChoice: View {
         Button(action: action) {
             VStack(spacing: 8) {
                 ThemeSwatch(option: option, dark: dark)
-                    .frame(height: 132)
+                    .frame(height: 152)
                     .clipShape(.rect(cornerRadius: 18, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -111,7 +111,7 @@ struct ThemeSwatch: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(glass.rows ? 6 : 2)
+        .padding(glass.rows ? 5 : 2)
         .background {
             if glass.rows {
                 shape.fill(.white.opacity(dark ? 0.16 : 0.5))
