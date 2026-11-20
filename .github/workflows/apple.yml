@@ -32,6 +32,38 @@ defaults:
     shell: bash
 
 jobs:
+  # TEMPORARY (task 5): the iOS 26 SDK's animated-artwork API, printed from its headers.
+  sdk:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - name: MediaPlayer's animated artwork in the SDKs
+        run: |
+          xc=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)
+          if [ -n "$xc" ]; then sudo xcode-select -s "$xc"; fi
+          xcodebuild -version
+          for sdk in iphoneos iphonesimulator macosx; do
+            root=$(xcrun --sdk "$sdk" --show-sdk-path)
+            echo "=================== $sdk: $root"
+            fw="$root/System/Library/Frameworks/MediaPlayer.framework"
+            ls "$fw/Headers" | head -80
+            grep -rn -i "AnimatedArtwork" "$fw/Headers" || echo "no AnimatedArtwork in $sdk"
+            for h in "$fw"/Headers/MPMediaItemAnimatedArtwork.h; do
+              [ -f "$h" ] && { echo "----- $h"; cat "$h"; }
+            done
+            grep -n -B3 -A3 -i "animated" "$fw/Headers/MPNowPlayingInfoCenter.h" || true
+            grep -n -B2 -A2 -i "animated" "$fw/Headers/MPNowPlayingInfoCenter.h" "$fw/Headers/MPMediaItem.h" || true
+          done
+          echo "=================== Swift's view (iphoneos)"
+          root=$(xcrun --sdk iphoneos --show-sdk-path)
+          xcrun swift-synthesize-interface -module-name MediaPlayer -sdk "$root" -target arm64-apple-ios26.0 > /tmp/mp.swift 2>/tmp/mp.err || cat /tmp/mp.err
+          grep -n -B4 -A14 -i "animatedartwork" /tmp/mp.swift || echo "nothing in the Swift interface"
+          grep -n -i "supportedAnimated\|3x4\|1x1" /tmp/mp.swift || true
+          echo "=================== Swift's view (macosx)"
+          root=$(xcrun --sdk macosx --show-sdk-path)
+          xcrun swift-synthesize-interface -module-name MediaPlayer -sdk "$root" -target arm64-apple-macos26.0 > /tmp/mpm.swift 2>/tmp/mpm.err || cat /tmp/mpm.err
+          grep -n -B4 -A6 -i "animatedartwork" /tmp/mpm.swift || echo "nothing in the Mac's Swift interface"
+
   apple:
     runs-on: macos-26
     timeout-minutes: 45
