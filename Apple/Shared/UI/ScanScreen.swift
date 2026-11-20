@@ -94,7 +94,7 @@ struct ScanScreen: View {
             Spacer()
             VStack(spacing: 2) {
                 Text(title).font(.headline)
-                Text(flow.purpose == .signInComputer ? "The QR code on ECHO's web sign-in page" : "The QR code your host shows")
+                Text(flow.purpose == .signInComputer ? "On ECHO's web sign-in page" : "The QR code your host shows")
                     .font(.footnote)
                     .foregroundStyle(.white.opacity(0.75))
             }

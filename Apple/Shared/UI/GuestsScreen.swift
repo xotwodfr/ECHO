@@ -89,6 +89,26 @@ private struct GuestRow: View {
     @State private var busy = false
 
     var body: some View {
+        // On the iPhone the buttons go under the name, so a long one and its time stay on a line.
+        #if os(iOS)
+        VStack(alignment: .leading, spacing: 10) {
+            who
+            HStack(spacing: 10) {
+                Spacer(minLength: 0)
+                actions
+            }
+        }
+        .padding(.vertical, 6)
+        #else
+        HStack(spacing: 12) {
+            who
+            actions
+        }
+        .padding(.vertical, 6)
+        #endif
+    }
+
+    private var who: some View {
         HStack(spacing: 12) {
             Text(String((guest.keep?.username ?? guest.username).prefix(1)).uppercased())
                 .font(.headline)
@@ -102,20 +122,29 @@ private struct GuestRow: View {
                 Text("Guest · \(PassText.left(until: guest.ends, now: now))")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
             Spacer(minLength: 8)
-            if guest.keep != nil {
-                Button("Approve") { act { await invites.keep(guest) } }
-                    .buttonStyle(.glassProminent)
-                    .tint(Color.echoAccent)
-                    .disabled(busy)
-            }
-            Button("End now") { act { await invites.end(guest) } }
-                .buttonStyle(.glass)
-                .foregroundStyle(Color.echoWarning)
+        }
+    }
+
+    @ViewBuilder private var actions: some View {
+        if guest.keep != nil {
+            Button("Approve") { act { await invites.keep(guest) } }
+                .buttonStyle(.glassProminent)
+                .tint(Color.echoAccent)
+                .foregroundStyle(.white)
+                .fixedSize()
                 .disabled(busy)
         }
-        .padding(.vertical, 6)
+        Button {
+            act { await invites.end(guest) }
+        } label: {
+            Text("End now").foregroundStyle(Color.echoWarning)
+        }
+        .echoGlass()
+            .fixedSize()
+            .disabled(busy)
     }
 
     private func act(_ run: @escaping () async -> Void) {
