@@ -29,7 +29,8 @@ struct EchoApp: App {
         Settings {
             SettingsWindow(
                 session: demo?.session ?? Live.session, invites: demo?.invites ?? Live.invites,
-                guests: demo?.screen == "guests")
+                device: demo?.device ?? Live.device, guests: demo?.screen == "guests",
+                scroll: demo.flatMap { DemoLibrary.settingsScroll($0.screen) })
         }
     }
 }

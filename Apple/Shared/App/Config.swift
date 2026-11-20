@@ -55,7 +55,7 @@ enum Live {
     static let library = Library(source: session.client, images: .live(session.client))
     static let player = Player(
         source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
-        images: library.images, motion: motion, widget: widget, settings: { Live.session.settings.playback },
+        images: library.images, motion: motion, widget: widget, settings: { Live.session.settings.playback }, quality: { Live.device.streamQuality },
         notify: { Live.library.show(Toast(message: $0)) })
     static let lyrics = Lyrics(
         source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },

@@ -60,7 +60,7 @@ extension Player {
         let player = Player(
             source: DemoPlaybackSource(), engine: DemoEngine(), hearts: library, images: library.images, motion: motion,
             follows: false, notify: { library.show(Toast(message: $0)) })
-        if ["nowplaying", "queue", "mini", "player", "settings", "lockcover"].contains(screen) {
+        if ["nowplaying", "queue", "mini", "player", "settings", "settings-playback", "settings-lyrics", "lockcover"].contains(screen) {
             player.cue(DemoLibrary.nowPlaying, at: 84)
         } else if let time = DemoLyrics.time(for: screen) {
             player.cue(DemoLibrary.nowPlaying, at: time)

@@ -134,6 +134,7 @@ final class Player {
     /// The iPhone's home-screen widget (nil on the Mac and in the preview).
     @ObservationIgnored let widget: WidgetFeed?
     @ObservationIgnored private let settings: @MainActor () -> UserSettings.Playback
+    @ObservationIgnored private let quality: @MainActor () -> StreamQuality
     @ObservationIgnored private let notify: @MainActor (String) -> Void
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
     @ObservationIgnored private let now: () -> Date
@@ -170,6 +171,7 @@ final class Player {
     ///   - widget: the home-screen widget (the iPhone's).
     ///   - follows: whether the queue follows the user (`/me/queue`).
     ///   - settings: the preferences that follow the user (scrobbling, ReplayGain).
+    ///   - quality: the stream quality this device chose (DeviceSettings).
     ///   - notify: a short message for the user (a toast).
     init(
         source: any PlaybackSource,
@@ -181,6 +183,7 @@ final class Player {
         widget: WidgetFeed? = nil,
         follows: Bool = true,
         settings: @escaping @MainActor () -> UserSettings.Playback = { UserSettings.Playback() },
+        quality: @escaping @MainActor () -> StreamQuality = { .auto },
         notify: @escaping @MainActor (String) -> Void = { _ in },
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
         now: @escaping () -> Date = { Date() },
@@ -194,6 +197,7 @@ final class Player {
         self.motion = motion
         self.widget = widget
         self.settings = settings
+        self.quality = quality
         self.notify = notify
         self.sleep = sleep
         self.now = now
@@ -557,7 +561,7 @@ final class Player {
 
     /// A song as the engine plays it: its signed stream URL and its ReplayGain.
     private func item(for track: Track) async throws -> EngineItem {
-        let stream = try await source.streamURL(for: track)
+        let stream = try await source.streamURL(for: track, quality: quality())
         let gain = ReplayGain.volume(
             track.replayGain, mode: settings().replayGain, inAlbum: queue.contextSource?.kind == "album")
         return EngineItem(key: track.key, url: stream.url, gain: gain, expiresAt: stream.expiresAt)

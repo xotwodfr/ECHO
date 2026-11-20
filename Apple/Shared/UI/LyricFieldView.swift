@@ -177,6 +177,8 @@ struct LyricFieldView: View {
     var reduced: Bool
     /// Animating; false holds the last frame (paused and settled).
     var running = true
+    /// Settings → Lyrics → Announce lyric lines: each line is spoken to VoiceOver as it begins.
+    var announce = false
     let clock: @MainActor () -> LyricClock
     let onLine: @MainActor (LyricLine) -> Void
 
@@ -195,6 +197,11 @@ struct LyricFieldView: View {
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("Lyrics")
                 .accessibilityValue(frame.activeText ?? "")
+                .onChange(of: frame.activeText) { old, new in
+                    if let line = LyricAnnouncement.line(from: old, to: new, enabled: announce) {
+                        AccessibilityNotification.Announcement(line).post()
+                    }
+                }
             }
             .mask { fade(geo.size.height) }
         }
@@ -425,4 +432,13 @@ extension EnvironmentValues {
     @Entry var lyricLook: LyricLook = .echo
     /// The `-ECHODemo lyrics-menu` screen: the lyrics menu opens with the lyrics.
     @Entry var lyricsMenuOnOpen: Bool = false
+}
+
+/// Which line VoiceOver is told about (Settings → Lyrics → Announce lyric lines).
+enum LyricAnnouncement {
+    /// The line that just began, when announcing is on; nil for no line, the same line, or off.
+    static func line(from old: String?, to new: String?, enabled: Bool) -> String? {
+        guard enabled, let new, new != old, !new.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return new
+    }
 }

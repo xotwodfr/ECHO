@@ -81,10 +81,21 @@ extension EchoClient {
     /// A signed stream URL for a song (6 h, this song and user only) that AVPlayer opens without a
     /// header (`/navidrome/stream-url/:id`).
     func streamURL(for track: Track) async throws -> SignedStream {
+        try await streamURL(for: track, quality: .auto)
+    }
+
+    /// What a song is asked for at `quality`: as stored where it plays and the quality is Auto,
+    /// else MP3 at the bit rate (320 kbit/s for Auto).
+    static func streamFormat(for track: Track, quality: StreamQuality) -> [(String, String)] {
+        if quality.bitRate == nil, playsAsStored(track) { return [("format", "raw")] }
+        return [
+            ("format", "mp3"), ("maxBitRate", String(quality.bitRate ?? 320)), ("estimateContentLength", "true"),
+        ]
+    }
+
+    func streamURL(for track: Track, quality: StreamQuality) async throws -> SignedStream {
         let answer: StreamURL = try await get("/navidrome/stream-url/\(Self.encode(track.id))")
-        let format = Self.playsAsStored(track)
-            ? [("format", "raw")]
-            : [("format", "mp3"), ("maxBitRate", "320"), ("estimateContentLength", "true")]
+        let format = Self.streamFormat(for: track, quality: quality)
         let joiner = answer.url.contains("?") ? "&" : "?"
         guard answer.url.hasPrefix("/api/v1/navidrome/stream/"),
               let stream = self.url(answer.url + joiner + Self.formEncoded(format))

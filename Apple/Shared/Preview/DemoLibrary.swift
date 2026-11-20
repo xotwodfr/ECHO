@@ -253,6 +253,15 @@ struct DemoLibrary: LibrarySource {
     }
 
     /// Where `-ECHODemo <screen>` opens the app.
+    /// The group a settings screen opens scrolled to.
+    static func settingsScroll(_ screen: String) -> String? {
+        switch screen {
+        case "settings-playback": SettingsAnchor.playback
+        case "settings-lyrics": SettingsAnchor.lyrics
+        default: nil
+        }
+    }
+
     static func start(_ screen: String) -> ShellStart {
         let harbour = album(Demo.harbour)
         switch screen {
@@ -282,7 +291,7 @@ struct DemoLibrary: LibrarySource {
             #else
             return ShellStart(page: .home, path: [.settings, .guests])
             #endif
-        case "settings", "lockcover":
+        case "settings", "settings-playback", "settings-lyrics", "lockcover":
             #if os(macOS)
             return ShellStart(page: .albums) // Settings opens in its own window
             #else

@@ -18,6 +18,7 @@ final class Rig {
     let sleeps = Sleeps()
     let source: FakeSource
     var settings = UserSettings.Playback()
+    var quality = StreamQuality.auto
     private(set) var notices: [String] = []
     private(set) var player: Player!
     /// The home-screen widget's feed, when the rig was given a folder for it (on the rig's clock).
@@ -36,6 +37,7 @@ final class Rig {
             widget: widget, follows: false,
             // Weak: a task the player started may outlive the test and its rig.
             settings: { [weak self] in self?.settings ?? UserSettings.Playback() },
+            quality: { [weak self] in self?.quality ?? .auto },
             notify: { [weak self] in self?.notices.append($0) },
             sleep: sleeps.sleep, now: { clock.now }, random: { random.next() })
     }

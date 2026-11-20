@@ -181,3 +181,11 @@ extension UserSettings {
         return (try JSONSerialization.jsonObject(with: data) as? [String: [String: Any]]) ?? [:]
     }
 }
+
+extension UserSettings.Visuals {
+    /// The motion that applies: Performance mode (this device's) holds everything to Reduced, and Off
+    /// stays Off (the web's effectiveVisuals).
+    func effectiveMotion(performance: Bool) -> UserSettings.Motion {
+        performance ? (motion == .off ? .off : .reduced) : motion
+    }
+}

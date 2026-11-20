@@ -5,28 +5,54 @@ import SwiftUI
 /// a glass card (SettingsGroup), as the approved preview's pages are laid out: the album-lit room
 /// under the status bar, no bar backgrounds, white on glass, amber for what is chosen.
 ///
-/// The groups, in order: Lock screen (the iPhone's animated cover and its speed), Sign in and
-/// guests (scanning a computer's code, the guests; a guest's own pass), Account, About.
-/// Later groups go between Sign in and guests and Account, each a view of its own wrapped in a
-/// SettingsGroup: Appearance (task 11, the themes; they follow the user, `/me/settings`, Session)
-/// and Downloads (task 10, the storage used and freed; this device's own, DeviceSettings).
+/// The groups, in order: Appearance (motion, the background's brightness, Performance mode; the
+/// themes of task 11b go first in it), Playback, Lyrics, Lock screen (the iPhone's animated cover
+/// and its speed), Sign in and guests (scanning a computer's code, the guests; a guest's own pass),
+/// Account, About. What follows the user is `/me/settings` (UserSettings, Session, changed through
+/// SettingsEditor); what is this device's is DeviceSettings. The table of every setting and where it
+/// is kept: docs/superpowers/plans/apple-settings-parity.md.
 struct SettingsScreen: View {
     @Environment(Session.self) private var session
+    @Environment(DeviceSettings.self) private var device
+    @Environment(\.settingsScroll) private var scrollTo
+    @State private var editor: SettingsEditor?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                #if os(iOS)
-                LockScreenSettings()
-                #endif
-                GuestSettings(session: session)
-                AccountSettings(session: session)
-                AboutSettings()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 28) {
+                    if let editor {
+                        AppearanceSettings(session: session, editor: editor, device: device)
+                            .id(SettingsAnchor.appearance)
+                        PlaybackSettings(session: session, editor: editor, device: device)
+                            .id(SettingsAnchor.playback)
+                        LyricsSettings(session: session, editor: editor)
+                            .id(SettingsAnchor.lyrics)
+                        if let failure = editor.failure {
+                            Text(failure)
+                                .font(.footnote)
+                                .foregroundStyle(Color.echoWarning)
+                                .padding(.horizontal, 4)
+                        }
+                    }
+                    #if os(iOS)
+                    LockScreenSettings()
+                    #endif
+                    GuestSettings(session: session)
+                    AccountSettings(session: session)
+                    AboutSettings()
+                }
+                .padding(.horizontal, pagePadding)
+                .padding(.top, 4)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, pagePadding)
-            .padding(.top, 4)
-            .padding(.bottom, 40)
+            .task {
+                guard let scrollTo else { return }
+                try? await Task.sleep(for: .milliseconds(400))
+                proxy.scrollTo(scrollTo, anchor: .top)
+            }
         }
+        .onAppear { if editor == nil { editor = SettingsEditor(session: session) } }
         .echoRoom(strength: 0.5, height: 520)
         .navigationTitle("Settings")
         .clearBars()
@@ -155,7 +181,10 @@ struct AboutSettings: View {
 struct SettingsWindow: View {
     let session: Session
     let invites: GuestInvites
+    let device: DeviceSettings
     var guests = false
+    /// The preview: the group Settings opens scrolled to.
+    var scroll: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -167,7 +196,9 @@ struct SettingsWindow: View {
         }
         .environment(session)
         .environment(invites)
-        .frame(width: 520, height: guests ? 560 : 520)
+        .environment(device)
+        .environment(\.settingsScroll, scroll)
+        .frame(width: 520, height: guests ? 560 : 640)
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
     }

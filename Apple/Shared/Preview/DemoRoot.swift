@@ -110,9 +110,10 @@ struct DemoRoot: View {
         .environment(\.lyricsMenuOnOpen, world.screen == "lyrics-menu")
         .environment(\.motionPreviewFrame, 4)
         .environment(\.lockPreviewOnOpen, world.screen == "lockcover")
+        .environment(\.settingsScroll, DemoLibrary.settingsScroll(world.screen))
         #if os(macOS)
         .task {
-            guard world.screen == "settings" || world.screen == "guests" else { return }
+            guard world.screen.hasPrefix("settings") || world.screen == "guests" else { return }
             try? await Task.sleep(for: .milliseconds(800))
             openSettings()
         }

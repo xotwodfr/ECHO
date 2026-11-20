@@ -64,17 +64,32 @@ struct AlbumLight: View {
     }
 }
 
+/// A page in the room: the album's light at the top, its strength scaled by this device's
+/// background brightness (Settings → Appearance; none set in the preview's windows: as designed).
+struct RoomModifier: ViewModifier {
+    var strength: Double
+    var height: CGFloat
+    var palette: AlbumPalette?
+    var held: Bool
+    @Environment(DeviceSettings.self) private var device: DeviceSettings?
+
+    func body(content: Content) -> some View {
+        content
+            .background(alignment: .top) {
+                AlbumLight(strength: device?.roomStrength(strength) ?? strength, palette: palette).frame(height: height).mask(
+                    LinearGradient(colors: held ? [.black, .black, .clear] : [.black, .clear], startPoint: .top, endPoint: .bottom))
+                    .ignoresSafeArea()
+            }
+            .background(palette.map { Color($0.floor) } ?? Color.echoFloor)
+            .animation(.smooth(duration: 0.8), value: palette)
+    }
+}
+
 extension View {
     /// A page in the room: the album's light at the top, fading into the floor, under the bars.
     /// `held` keeps the light for longer before it fades (an album's page, as the preview's).
     func echoRoom(strength: Double = 0.55, height: CGFloat = 560, palette: AlbumPalette? = nil, held: Bool = false) -> some View {
-        background(alignment: .top) {
-            AlbumLight(strength: strength, palette: palette).frame(height: height).mask(
-                LinearGradient(colors: held ? [.black, .black, .clear] : [.black, .clear], startPoint: .top, endPoint: .bottom))
-                .ignoresSafeArea()
-        }
-        .background(palette.map { Color($0.floor) } ?? Color.echoFloor)
-        .animation(.smooth(duration: 0.8), value: palette)
+        modifier(RoomModifier(strength: strength, height: height, palette: palette, held: held))
     }
 
     /// No bar backgrounds: the room runs under the status bar and the floating glass.

@@ -106,6 +106,7 @@ final class FakeSource: PlaybackSource, @unchecked Sendable {
     var lifetime: TimeInterval = 6 * 3600
     var streamError: ApiError? = nil
     private var _streams: [String] = []
+    private var _qualities: [StreamQuality] = []
     private var _scrobbles: [String] = []
     private var _plays: [(String, PlayContext?)] = []
 
@@ -118,6 +119,13 @@ final class FakeSource: PlaybackSource, @unchecked Sendable {
     /// "al-1-t1 now", "al-1-t1 played".
     var scrobbles: [String] { lock.withLock { _scrobbles } }
     var plays: [(String, PlayContext?)] { lock.withLock { _plays } }
+    /// The quality each stream URL was asked at.
+    var qualities: [StreamQuality] { lock.withLock { _qualities } }
+
+    func streamURL(for track: Track, quality: StreamQuality) async throws -> SignedStream {
+        lock.withLock { _qualities.append(quality) }
+        return try await streamURL(for: track)
+    }
 
     func streamURL(for track: Track) async throws -> SignedStream {
         let (error, count) = lock.withLock { () -> (ApiError?, Int) in

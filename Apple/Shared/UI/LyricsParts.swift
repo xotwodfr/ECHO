@@ -16,6 +16,7 @@ struct LyricsStage: View {
     @Environment(Player.self) private var player
     @Environment(Lyrics.self) private var lyrics
     @Environment(\.accessibilityReduceMotion) private var systemReduced
+    @Environment(DeviceSettings.self) private var device: DeviceSettings?
     @State private var running = true
 
     var body: some View {
@@ -50,7 +51,7 @@ struct LyricsStage: View {
 
     @ViewBuilder
     private func ready(_ doc: LyricsDoc) -> some View {
-        let motion = lyrics.preferences.visuals.motion
+        let motion = lyrics.preferences.visuals.effectiveMotion(performance: device?.performance ?? false)
         if doc.sync == .plain {
             if lyrics.preferences.lyrics.showUnsynced {
                 LyricSheet(doc: doc, style: style, top: top, bottom: bottom)
@@ -68,6 +69,7 @@ struct LyricsStage: View {
             LyricFieldView(
                 doc: doc, style: style, top: top, bottom: bottom,
                 reduced: motion == .reduced || (motion == .system && systemReduced), running: running,
+                announce: lyrics.preferences.lyrics.announceLines,
                 clock: { LyricClock(player: player, lyrics: lyrics) },
                 onLine: { line in playFrom(line) }
             )

@@ -7,6 +7,8 @@ import Foundation
 protocol PlaybackSource: Sendable {
     /// A stream URL AVPlayer opens without a header, signed for this song for 6 hours.
     func streamURL(for track: Track) async throws -> SignedStream
+    /// The same at the quality chosen in Settings → Playback; a source that has one quality ignores it.
+    func streamURL(for track: Track, quality: StreamQuality) async throws -> SignedStream
     /// Tells Navidrome a song is playing (`submission` false) or was played.
     func scrobble(id: String, submission: Bool) async throws
     /// A play for ECHO's history (Made For You, Jump back in, Wrapped).
@@ -16,6 +18,12 @@ protocol PlaybackSource: Sendable {
     /// Saves the queue over the one last read (`base`, its `updatedAt`); the new `updatedAt`. A newer
     /// queue saved meanwhile by another device refuses it: `.server(status: 409, code: "changed_elsewhere")`.
     func saveQueue(_ queue: QueueState, positionMs: Double, base: Int) async throws -> Int
+}
+
+extension PlaybackSource {
+    func streamURL(for track: Track, quality: StreamQuality) async throws -> SignedStream {
+        try await streamURL(for: track)
+    }
 }
 
 /// `GET /me/queue`: the queue (none yet: nil), where in its song, and when it was saved.
