@@ -238,9 +238,21 @@ sideload. It has not yet signed in to a real server or played through one.
 ## Next
 
 Sign in to a real server and play on a device, and scan a real sign-in page and guest pass with
-the camera; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`): Themes (11b: they go in Settings' Appearance group; Settings parity, 11a, is done, apple run 46), then Karaoke, Listen together, downloads (10), finish. The real lock screen's animated cover and the real widget on the home screen are to be seen
+the camera; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`): the rest of Themes (11b stage 2: the service-style themes, then Clay, Yarn, Paper & origami, Retro hi-fi; stage 1, ECHO and Liquid Glass, is done, apple run 49), then Karaoke, Listen together, downloads (10), finish. The real lock screen's animated cover and the real widget on the home screen are to be seen
 on a device, signed (the simulator's lock screen and home screen cannot be screenshotted
 reliably, and an unsigned build has no App Group). Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by `git revert 6bf75cb`), unfinished, it had not built green yet.
+
+## Themes (11b, stage 1)
+
+ECHO (the default) and **Liquid Glass** are made; the picker is first in Settings → Appearance, with Light or
+dark, **Haptics** and **Theme sounds** (this device's). The choice is the user's (`UserSettings.appearance`,
+saved one key at a time and loaded at sign-in). `Apple/Shared/Themes` holds the model and the feedback
+(haptics and a theme's sounds), `UI/Theming.swift` the environment value every screen reads, `UI/ThemePicker.swift`
+the picker. Liquid Glass: tinted glass cards with a rim of light, every row and tile on glass of its own,
+refracting buttons, a brighter taller room with a glow from below, a bolder lyric look, and Android's glass
+tink and chimes. Now Playing and the lyrics are always dark. Demo screens: `themes`, `theme-liquid-glass-home`,
+`-nowplaying`, `-lyrics`, `theme-light-home` (apple run 49: 330 Swift tests on both platforms). What stage 2
+needs: the plan's "Picking this up". On a device: the haptics and the sounds (the simulator has neither).
 
 ## Settings (11a)
 

@@ -142,7 +142,15 @@ Mac on its built-in library, a player that never streams and the web's lyric fix
 ## Next
 
 Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
-Themes (11b: they go in Settings' Appearance group; Settings parity, 11a, is done, apple run 46), Karaoke, Listen together, downloads (10), the menu commands; signing and notarization to share it. Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by `git revert 6bf75cb`), unfinished, it had not built green yet.
+the rest of Themes (11b stage 2; stage 1, ECHO and Liquid Glass, is done, apple run 49), Karaoke, Listen together, downloads (10), the menu commands; signing and notarization to share it. Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by `git revert 6bf75cb`), unfinished, it had not built green yet.
+
+## Themes (11b, stage 1)
+
+ECHO (the default) and **Liquid Glass** are made, chosen first in Settings → Appearance (the Settings window),
+with Light or dark and **Theme sounds** (the Mac has no haptics; its sounds play as system sounds). The choice
+follows the account. The Mac's main window and Settings window read the theme as the iPhone's screens do
+(`Apple/Shared/Themes`, `UI/Theming.swift`). Demo screens: `themes` (the Settings window), `theme-liquid-glass-home`
+and `theme-liquid-glass-lyrics` (apple run 49: 330 Swift tests). What stage 2 needs: the plan's "Picking this up".
 
 ## Settings (11a)
 

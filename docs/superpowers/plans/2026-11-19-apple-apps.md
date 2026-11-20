@@ -54,7 +54,7 @@ Sideloadly) besides the simulator builds and screenshots.
 | 6 Widget | done (apple run 36) |
 | 7 Scan to sign in, guests | done (apple run 38) |
 | 11a Settings parity with Android | done (apple run 46; the table: [`apple-settings-parity.md`](apple-settings-parity.md)) |
-| 11b Themes (Liquid Glass, ECHO, then Android's) | next: goes in Settings' **Appearance** group (see "Picking this up") |
+| 11b Themes (Liquid Glass, ECHO, then Android's) | **stage 1 done (apple run 49)**: the Theme model, the picker, ECHO and Liquid Glass. **Stage 2 next**: Apple Music, Spotify, SoundCloud, Deezer, Qobuz, Tidal, YouTube Music, Monochrome; then Clay, Yarn, Paper & origami, Retro hi-fi (see "Picking this up") |
 | 8 Karaoke | then |
 | 9 Listen together | then |
 | 10 Downloads | paused: code kept in commits 36116ea, 56c096c, 380d2d6; re-apply with `git revert 6bf75cb`; unfinished: it did not build yet (run 39's tests failed to type-check a test expression, since fixed in 56c096c; the later fixes were never run through to green) |
@@ -111,7 +111,53 @@ Sideloadly) besides the simulator builds and screenshots.
 
 ## Picking this up
 
-**11b, themes** (the next agent):
+**11b, themes: stage 1 is done** (apple run 49, 330 Swift tests on both platforms, `ECHO-ipa` uploaded). Made: **ECHO**
+(default) and **Liquid Glass** (server id `glass`, which is also Android's "Liquid glass": the owner's plain Liquid
+Glass theme takes that id, so the Android one is not a separate theme; its lens-style lyrics and the rest of its
+look can still be added to it). What stage 2 needs to know:
+
+- **The model:** `Apple/Shared/Themes/Theme.swift`: a `Theme` (id, name, blurb, `defaultDark`, a light and a dark
+  `Palette`, a `Glass` treatment, a `Lyric` look, a `Sounds` set). `Theme.made` is the picker's list and
+  `Theme.of(id)` shows any id not made as ECHO. **Add a theme by adding a `static let` and putting it in `made`
+  only when it is whole** (tokens, lyric look, sounds, demo screens). `Theme.resolve(appearance, systemDark:)`
+  gives the `Resolved` one (the variant in use); `ThemeProvider` (UI/Theming.swift, applied in `RootView` and the
+  Mac's Settings window) puts it in `\.theme` with the colour scheme, the tint and `\.lyricLook`.
+- **Every screen reads `@Environment(\.theme)`**: `theme.tint`, `.accent`, `.highlight`, `.warning`, `.floor`
+  (no screen holds a colour; `Color.amber`/`echoTint` etc. remain only for the widget and previews). Surfaces go
+  through `themedGlass(radius)` (cards, bars; tinted, rimmed where the theme says), `themedRow()` (rows and
+  tiles, on glass in Liquid Glass), `PlayButtons` (glassProminent or refracting `.glass`), the room
+  (`RoomModifier`: strength, height, light-variant wash, caustic) and `glassToggle`. A theme with a different
+  material should extend `Theme.Glass`/`Palette` and these few modifiers, not the screens.
+- **Light and dark:** ECHO and Liquid Glass default to dark (Android's ECHO follows the system; here the
+  approved dark look stays the default); "Light or dark" in Appearance overrides. Now Playing, the lyrics, the
+  scanner, the invite sheet, the sign-in page and the lock-cover preview are always dark (`themedDark()`, as
+  Android's `forceDark`); within those, read `theme.forcedDark.x` if the struct applies `themedDark` to itself.
+- **Lyrics:** `Theme.Lyric` names a `LyricLook` (`.echo`, `.glass` in `LyricStyle.swift`). Android's other themes'
+  lyric renderers (`Styled.kt`: Apple Music style, Spicy, Cinema, Colour block, Kinetic, Karaoke, Clay,
+  Embroidered, glass lens, cut-out, display) are column renderers: Stage 2's themes can start with a `LyricStyle`
+  (face, inks, glow) and add a renderer switch in `UI/LyricFieldView.swift` where the style is not enough.
+  Android's per-device "Lyric style" setting and "Clay in the dark" are still to do (Clay's stage).
+- **Sounds and haptics:** `Themes/Feedback.swift`: the five events of Android's `Haptics` (tap, toggle, confirm,
+  reject, tick) become UIKit haptics and a theme's sound (`Theme.Sounds`, `.wav` files in
+  `Apple/Shared/Themes/Sounds`, made by `scripts/apple-sounds.py`, system sounds so they follow the device's
+  volume). Android defines sounds only for Clay, Yarn, Liquid glass, Paper and Retro hi-fi (ECHO and the
+  service-style themes have haptics only): add a set to `Theme.Sounds`, a recipe to the script (see
+  `scripts/android-sounds.py` for the Clay, Yarn, Paper and hi-fi ones), run it and commit the wavs. The device
+  switches **Haptics** (iPhone) and **Theme sounds** are in Appearance (`DeviceSettings`). Hooked up so far:
+  play/pause, the heart, Play and Shuffle, song rows, tab changes and the settings toggles.
+- **Tests:** `Apple/Tests/ThemeTests.swift` (resolution and variants, tokens complete incl. sound files on
+  disk, lyric looks, picker saves one key / ordered / refused put back / loaded at sign-in, the feedback mapping
+  on fakes); the picker's keys are also in `SettingsScreenTests`' table. A new theme is covered by the loops over
+  `Theme.made`; add its sounds to the feedback test.
+- **Demo screens:** `themes` (Settings with the picker, Liquid Glass chosen), `theme-liquid-glass-home`,
+  `-nowplaying`, `-lyrics`, `theme-light-home` (ECHO light), `mac-themes` and the Mac's `theme-liquid-glass-home`
+  and `-lyrics`: `DemoThemes` in `Preview/DemoRoot.swift` maps a name to a base screen and an appearance; add a
+  name there and in the workflow's two screenshot lists.
+- **Known, not done:** the tab bar's bottom accessory (mini player) keeps system-drawn controls that read pale on
+  a light ground (see `iphone-theme-light-home.png`); the widget does not follow themes; a theme the account
+  holds that is not made here (e.g. Android's Clay) shows as ECHO, and picking ECHO then saves `echo`.
+
+(Original notes for 11b, still true:)
 
 - **Where:** `Apple/Shared/App/SettingsGroups.swift`, `AppearanceSettings`: it holds Motion, Performance
   mode and Background brightness now. Put a `ThemePicker` first in that group, then the light or dark
