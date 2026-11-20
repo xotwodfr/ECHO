@@ -135,8 +135,6 @@ final class Player {
     @ObservationIgnored let widget: WidgetFeed?
     @ObservationIgnored private let settings: @MainActor () -> UserSettings.Playback
     @ObservationIgnored private let notify: @MainActor (String) -> Void
-    /// A song's downloaded file, when it has one: played in place of a stream, online or not.
-    @ObservationIgnored private let local: @MainActor (Track) -> URL?
     @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let random: () -> Double
@@ -173,7 +171,6 @@ final class Player {
     ///   - follows: whether the queue follows the user (`/me/queue`).
     ///   - settings: the preferences that follow the user (scrobbling, ReplayGain).
     ///   - notify: a short message for the user (a toast).
-    ///   - local: a song's downloaded file (Downloads.localURL), if it has one.
     init(
         source: any PlaybackSource,
         engine: any PlaybackEngine,
@@ -185,7 +182,6 @@ final class Player {
         follows: Bool = true,
         settings: @escaping @MainActor () -> UserSettings.Playback = { UserSettings.Playback() },
         notify: @escaping @MainActor (String) -> Void = { _ in },
-        local: @escaping @MainActor (Track) -> URL? = { _ in nil },
         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
         now: @escaping () -> Date = { Date() },
         random: @escaping () -> Double = { Double.random(in: 0..<1) }
@@ -199,7 +195,6 @@ final class Player {
         self.widget = widget
         self.settings = settings
         self.notify = notify
-        self.local = local
         self.sleep = sleep
         self.now = now
         self.random = random
@@ -560,15 +555,11 @@ final class Player {
         return task
     }
 
-    /// A song as the engine plays it: its downloaded file, or its signed stream URL, and its ReplayGain.
+    /// A song as the engine plays it: its signed stream URL and its ReplayGain.
     private func item(for track: Track) async throws -> EngineItem {
+        let stream = try await source.streamURL(for: track)
         let gain = ReplayGain.volume(
             track.replayGain, mode: settings().replayGain, inAlbum: queue.contextSource?.kind == "album")
-        // A downloaded song plays from its file, online too (it saves data): no URL to ask for.
-        if let file = local(track) {
-            return EngineItem(key: track.key, url: file, gain: gain, expiresAt: .distantFuture)
-        }
-        let stream = try await source.streamURL(for: track)
         return EngineItem(key: track.key, url: stream.url, gain: gain, expiresAt: stream.expiresAt)
     }
 

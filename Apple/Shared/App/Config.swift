@@ -52,32 +52,11 @@ enum Live {
         tokens: KeychainTokenStore(account: Config.server.absoluteString),
         deviceName: { Config.deviceName })
     static let invites = GuestInvites(client: session.client)
-    /// The downloads on disk and what fetches them (the iPhone's: a background session).
-    static let downloadStore = DownloadStore()
-    static let downloads: Downloads = {
-        #if os(iOS)
-        let background = true
-        #else
-        let background = false
-        #endif
-        return Downloads(
-            store: downloadStore, transport: URLSessionTransport(staging: downloadStore.stagingDirectory, background: background),
-            requests: session.client, wifiOnly: { Live.device.downloadWifiOnly })
-    }()
-    /// Covers come from the downloaded copy first (offline, and no request), else from ECHO.
-    static let library: Library = {
-        let files = downloadStore, client = session.client
-        let images = ImageLoader(
-            fetch: { path in
-                if let saved = files.coverData(path: path) { return saved }
-                return try await client.coverBytes(path)
-            }, disk: DiskCovers())
-        return Library(source: client, images: images)
-    }()
+    static let library = Library(source: session.client, images: .live(session.client))
     static let player = Player(
         source: session.client, engine: AVPlaybackEngine(), media: SystemMediaCenter(), hearts: library,
         images: library.images, motion: motion, widget: widget, settings: { Live.session.settings.playback },
-        notify: { Live.library.show(Toast(message: $0)) }, local: { Live.downloads.localURL($0) })
+        notify: { Live.library.show(Toast(message: $0)) })
     static let lyrics = Lyrics(
         source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },
         notify: { Live.library.show(Toast(message: $0)) })

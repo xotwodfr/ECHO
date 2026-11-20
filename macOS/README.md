@@ -142,4 +142,4 @@ Mac on its built-in library, a player that never streams and the web's lyric fix
 ## Next
 
 Sign in to a real server; then the plan's next tasks (`docs/superpowers/plans/2026-11-19-apple-apps.md`):
-offline downloads (10), the menu commands, and the rest; signing and notarization to share it.
+Settings parity and themes (11), Karaoke, Listen together, downloads (10), the menu commands; signing and notarization to share it. Offline downloads (10) are paused: their code is kept in git history (commits 36116ea, 56c096c, 380d2d6; re-apply by reverting the revert), unfinished, it had not built green yet.

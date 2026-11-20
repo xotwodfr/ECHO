@@ -2,7 +2,7 @@ import SwiftUI
 
 /// The app: the sign-in page until this device has a token, then the app around the library. A
 /// token the server refuses, from anywhere in the app, brings the sign-in back (Session); signing
-/// out forgets the library (its covers and downloads too), stops the music and empties the queue. Signed in, the
+/// out forgets the library (its covers too), stops the music and empties the queue. Signed in, the
 /// queue saved from any device comes back (Player, QueueSync). The playing track's lyrics follow it
 /// (Lyrics). The lock screen's animated cover is asked for again when its speed changes in Settings.
 /// A link into the app (the widget's tap: AppLink) opens what it names once the app is ready for it;
@@ -15,7 +15,6 @@ struct RootView: View {
     let lyrics: Lyrics
     let device: DeviceSettings
     let invites: GuestInvites
-    let downloads: Downloads
     var start = ShellStart()
 
     @Environment(\.scenePhase) private var scenePhase
@@ -40,16 +39,10 @@ struct RootView: View {
         .environment(lyrics)
         .environment(device)
         .environment(invites)
-        .environment(downloads)
         .animation(.smooth, value: session.phase)
         .onChange(of: session.isGuest, initial: true) { library.listensOnly = session.isGuest }
         .onOpenURL { url in link = AppLink(url) }
         .onChange(of: device.motionLoop) { player.lockScreenChanged() }
-        // Downloads wait for Wi-Fi or not; Liked Songs, when downloaded, follows the hearts.
-        .onChange(of: device.downloadWifiOnly) { downloads.networkPolicyChanged() }
-        .onChange(of: library.starred?.tracks.map(\.id) ?? []) {
-            if let tracks = library.starred?.tracks { downloads.sync(.liked(tracks)) }
-        }
         .task(id: player.track?.key) { lyrics.follow(player.track) }
         .task { await session.refresh() }
         .task(id: session.phase) {
@@ -57,11 +50,9 @@ struct RootView: View {
             case .signedIn:
                 async let hearts: Void = library.start()
                 async let queue: Void = player.signedIn()
-                async let fetching: Void = downloads.resume()
-                _ = await (hearts, queue, fetching)
+                _ = await (hearts, queue)
             case .signedOut:
                 library.reset()
-                downloads.reset()
                 player.stop()
             case .locked: break
             }

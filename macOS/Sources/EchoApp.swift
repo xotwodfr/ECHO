@@ -19,7 +19,7 @@ struct EchoApp: App {
             } else {
                 RootView(
                     session: Live.session, library: Live.library, player: Live.player, lyrics: Live.lyrics,
-                    device: Live.device, invites: Live.invites, downloads: Live.downloads
+                    device: Live.device, invites: Live.invites
                 )
                 .frame(minWidth: 760, minHeight: 520)
             }
@@ -29,7 +29,6 @@ struct EchoApp: App {
         Settings {
             SettingsWindow(
                 session: demo?.session ?? Live.session, invites: demo?.invites ?? Live.invites,
-                downloads: demo?.downloads ?? Live.downloads, device: demo?.device ?? Live.device,
                 guests: demo?.screen == "guests")
         }
     }

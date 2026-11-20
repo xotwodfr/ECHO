@@ -11,8 +11,6 @@ final class DemoWorld {
     let lyrics: Lyrics
     let device: DeviceSettings
     let invites: GuestInvites
-    /// What is downloaded, on the screens that show downloads (DemoDownloads).
-    let downloads: Downloads
     /// The scan screens' scan, in the state each shows.
     let scan: ScanFlow?
 
@@ -54,7 +52,6 @@ final class DemoWorld {
         let device = DeviceSettings(defaults: nil)
         self.library = library
         self.device = device
-        downloads = Downloads.demo(screen: screen)
         player = Player.demo(library: library, screen: screen, motion: MotionCovers.demo(loop: { device.motionLoop.seconds }))
         lyrics = Lyrics.demo(screen: screen, library: library)
     }
@@ -108,15 +105,14 @@ struct DemoRoot: View {
     private var root: some View {
         RootView(
             session: world.session, library: world.library, player: world.player, lyrics: world.lyrics,
-            device: world.device, invites: world.invites, downloads: world.downloads, start: DemoLibrary.start(world.screen)
+            device: world.device, invites: world.invites, start: DemoLibrary.start(world.screen)
         )
         .environment(\.lyricsMenuOnOpen, world.screen == "lyrics-menu")
         .environment(\.motionPreviewFrame, 4)
         .environment(\.lockPreviewOnOpen, world.screen == "lockcover")
-        .environment(\.settingsFocus, world.screen == "downloads-settings" ? "downloads" : nil)
         #if os(macOS)
         .task {
-            guard ["settings", "guests", "downloads-settings"].contains(world.screen) else { return }
+            guard world.screen == "settings" || world.screen == "guests" else { return }
             try? await Task.sleep(for: .milliseconds(800))
             openSettings()
         }

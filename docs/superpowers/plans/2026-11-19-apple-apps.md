@@ -38,7 +38,7 @@ commands. Tests: `Apple/Tests/` (Swift Testing), run on the runner.
 
 ## Status and order (kept current; read this first)
 
-The owner's order from 2026-11-20 (their time is limited): **7, 10, 8, 9, 11, 12**. Themes (11):
+The owner's order from 2026-11-20 (their time is limited): **7, 11, 8, 9, 10, 12** (downloads were paused). Themes (11):
 the plain Liquid Glass theme and ECHO first, then as many Android themes as time allows. After
 each task, update this list, `iOS/README.md` and `macOS/README.md`, so another agent can pick up
 where the last one stopped. A green apple run uploads `ECHO-ipa` (unsigned, Release, for
@@ -53,10 +53,10 @@ Sideloadly) besides the simulator builds and screenshots.
 | 5 Animated lock-screen covers, Settings | done (apple run 30) |
 | 6 Widget | done (apple run 36) |
 | 7 Scan to sign in, guests | done (apple run 38) |
-| 10 Downloads | next |
+| 11 Settings parity and themes (Liquid Glass, ECHO, then Android's) | next |
 | 8 Karaoke | then |
 | 9 Listen together | then |
-| 11 Themes (Liquid Glass, ECHO, then Android's) | then |
+| 10 Downloads | paused: code kept in commits 36116ea, 56c096c, 380d2d6; re-apply with `git revert <the revert's sha>`; unfinished: it did not build yet (run 39's tests failed to type-check a test expression, since fixed in 56c096c; the later fixes were never run through to green) |
 | 12 Finish | last |
 | S Server motion covers | done |
 

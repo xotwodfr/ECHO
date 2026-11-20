@@ -20,8 +20,6 @@ enum Route: Hashable {
     case settings
     /// Settings → Guests.
     case guests
-    /// Library → Downloads.
-    case downloads
 }
 
 /// Opens a page on the current stack, from where a NavigationLink cannot be (a menu, a toast).
@@ -65,7 +63,6 @@ struct RouteScreen: View {
         case .mix(let mix): MixScreen(mix: mix)
         case .settings: SettingsScreen()
         case .guests: GuestsScreen()
-        case .downloads: DownloadsScreen()
         }
     }
 }
@@ -377,14 +374,9 @@ struct TrackRow: View {
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
-    @Environment(Downloads.self) private var downloads: Downloads?
-    @Environment(Session.self) private var session: Session?
 
     var body: some View {
         let now = player.track?.key == track.key
-        let mark = downloads?.state(of: track) ?? TrackDownload.none
-        // Offline, a song that is not on the device cannot play: it is dimmed, not hidden.
-        let unavailable = !(downloads?.isPlayable(track, online: session?.connectivity.isOnline ?? true) ?? true)
         Button(action: play) {
             HStack(spacing: 14) {
                 if art {
@@ -416,7 +408,6 @@ struct TrackRow: View {
                         .foregroundStyle(Color.amber)
                         .accessibilityLabel("Liked")
                 }
-                TrackDownloadMark(state: mark)
                 Text(mmss(track.seconds))
                     .font(art ? .footnote : .body)
                     .foregroundStyle(.secondary)
@@ -424,11 +415,8 @@ struct TrackRow: View {
             }
             .frame(minHeight: art ? 64 : 54)
             .contentShape(.rect)
-            .opacity(unavailable ? 0.4 : 1)
         }
         .buttonStyle(.plain)
-        .disabled(unavailable)
-        .accessibilityHint(unavailable ? "Not downloaded. Unavailable offline." : "")
         .contextMenu { TrackMenu(track: track, showAlbum: showAlbum) }
     }
 }
@@ -514,10 +502,6 @@ struct AlbumMenu: View {
             Button(saved ? "Remove from Your Library" : "Save to Your Library", systemImage: saved ? "heart.slash" : "heart") {
                 Task { await library.setSaved(album, !saved) }
             }
-        }
-        DownloadMenuItems(kind: .album, id: album.id) {
-            guard let tracks = await library.tracks(of: album) else { return nil }
-            return DownloadItem(album: album, tracks: tracks)
         }
         if let id = album.artistId {
             Button("Go to Artist", systemImage: "music.microphone") { navigate(.artist(id: id, name: album.artist)) }
