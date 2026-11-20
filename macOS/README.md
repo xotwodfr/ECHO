@@ -98,7 +98,9 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
 - **The Settings window** (the app menu's Settings…, ⌘, or the toolbar's gear): groups on glass in
   the room. **Account**: who is signed in, the server, Sign out. **About**: the version. The
   lock screen's animated covers are the iPhone's alone (the owner's decision), so the Mac has
-  neither them nor their speed.
+  neither them nor their speed. Nor has it the iPhone's home-screen widget (not asked for on the
+  Mac); its views would carry over, but a Mac widget extension runs sandboxed and needs a signed
+  App Group, which the runner's builds cannot show.
 
 ## Build and run
 
@@ -118,16 +120,16 @@ hand-over, signed URLs, the saved queue with its 429s and conflicts, scrobbles, 
 media keys' commands and Now Playing's info, what the player bar shows; and the lyrics: the
 loader, and the field's timing, springs, motion and layout on the web's own cases and lyric
 fixtures; against the server's recorded answers in `Apple/Tests/Fixtures`, which
-`scripts/apple-fixtures.ts` records from the server's own code; the animated covers' tests run here
-too, the lock screen's keys left out on the Mac) run in Xcode (the `ECHOTests` scheme), on every push in
+`scripts/apple-fixtures.ts` records from the server's own code; the animated covers' and the iPhone
+widget's tests run here too, the lock screen's keys and the simulator's App Group left out on the Mac) run in Xcode (the `ECHOTests` scheme), on every push in
 `.github/workflows/apple.yml`, or with:
 
 ```sh
 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, apple run 30): both apps build with no
-Swift warnings, the Swift tests pass on the Mac (249) and in the iOS 26 simulator (248; on both the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, apple run 36): both apps build with no
+Swift warnings, the Swift tests pass on the Mac (261) and in the iOS 26 simulator (261; on both the Keychain's
 data-protection round trip skips, the test host having no entitlement), and the app runs on the
 Mac on its built-in library, a player that never streams and the web's lyric fixtures
 (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `albums`, `album`, `search`, `player`, `lyrics`,

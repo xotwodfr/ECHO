@@ -12,10 +12,13 @@ the artists, Home's shelves, the Wanted list and the cover cache), `Playback/` (
 queue, the engine, the queue that follows you, scrobbles, the lock screen's info), `Lyrics/` (the
 lyrics: the loader, the field's model, the layout and the style), `Motion/` (the lock screen's
 animated covers: asking for them, waiting, the files kept), `Settings/` (the preferences kept on
-this device), `UI/` (the screens,
+this device), `Widget/` (what the app and the home-screen widget share: what plays, its folder in
+the App Group, the widget's timeline and its buttons), `UI/` (the screens,
 their components and the room's look), `Preview/` (the `-ECHODemo` screens on a built-in library),
 `Assets.xcassets` (the amber accent) and `AppIcon.icon`. `Apple/Tests` holds the Swift tests.
-This folder holds what is iOS's own: the app entry and the project.
+This folder holds what is iOS's own: the app entry (`Sources`), the home-screen widget's extension
+(`Widget`) and its views (`WidgetViews`, which the app's demo screens draw too), the entitlements
+(the App Group) and the project.
 
 ## What the baseline does
 
@@ -109,13 +112,47 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
   replaces it). A cover that cannot be made, no motion service, or no network leaves the still
   cover. ECHO picks the motion (Depth for photographs, Living light for flat art).
 
+## The home-screen widget
+
+- **Now Playing, small and medium** (`iOS/Widget`, WidgetKit): the cover, the song and the artist on
+  the album's own light (its colours, as the app's room has them; a pale cover's glow dimmed under
+  the words), and the progress, which runs from the song's start by itself
+  (`ProgressView(timerInterval:)`, no reloads while the song plays) and holds where it is when
+  paused. The small one has play and pause; the medium one the time played and the length, and
+  previous, play or pause and next in one capsule, as Now Playing's transport. Nothing playing:
+  the ECHO mark and "Play something". A tap anywhere else opens Now Playing (`echo://now-playing`,
+  the app's URL scheme). The medium one has the Android widget's buttons.
+- **iOS 26's looks**: full colour on the album's colours; tinted and clear, where the system takes
+  the background away and draws its own glass, the words white, the progress and the buttons in
+  the accent group (`widgetAccentable`), the cover kept a cover in full colour
+  (`widgetAccentedRenderingMode(.fullColor)`).
+- **Through the App Group** `group.com.folk3s.echo`: the player writes a small snapshot (the song,
+  artist and album, the album's colours, playing or not, where in the song and when, its length)
+  and the cover drawn small (a JPEG at most 400 px) from the same values it gives the lock screen at
+  the same moment, so the widget, the lock screen and Control Center never disagree. The widget's
+  timelines are reloaded when the song, play or pause, a seek or the cover change, once a second at
+  most, never as the song plays on; a playing song's timeline also holds it stopped at its end,
+  should the app say nothing more by then. Signing out empties the folder. No container (an
+  unsigned build): nothing is written, the widget shows nothing playing, the music plays on.
+- **The buttons are App Intents** (`AudioPlaybackIntent`), which the system runs in the app's
+  process, starting it in the background when it is not running: the app then reads the saved
+  queue first (8 s at most), and Play plays on from where the widget showed.
+- **What needs a signed build**: unsigned, as the runner builds it, the app and the extension have
+  no entitlements, so the simulator gives the app no App Group container (`containerURL` is nil:
+  the app logs it at launch). The extension is embedded and the simulator's plugin registry lists
+  it, but with no container to read it could only show nothing playing. Signed ad hoc (`CODE_SIGN_IDENTITY=-`, no
+  developer account; a step of the workflow builds it so), the simulator gives the app its App
+  Group container, writable. On a device the app and the widget need the owner's Apple developer
+  team and the App Group registered for both (`DEVELOPMENT_TEAM` in `project.yml`).
+
 ## Settings
 
 - **One page in the room** from Home's account button: groups on glass, each under its title.
   **Lock screen**: the animated cover as the lock screen shows it (tap it for the whole lock screen
   in a preview) beside its loop speed, Fast, Normal, Slow or Very slow (5, 8, 12 or 15 s, ECHO's
   lengths), kept on this iPhone (the server's preferences have no key for it, and the web no such
-  setting). **Account**: who is signed in, the server, Sign out. **About**: the version.
+  setting). **Account**: who is signed in, the server, Sign out. **About**: the version. The
+  widget has no setting: its size and look are the home screen's.
 
 ## Build and run
 
@@ -136,7 +173,11 @@ hand-over, signed URLs, the saved queue with its 429s and conflicts, scrobbles, 
 lock screen's commands and info, what the mini player and Now Playing show; the lyrics: the
 loader, and the field's timing, springs, motion and layout on the web's own cases and lyric
 fixtures; and the animated covers: ECHO's answers, the waits, giving up, another album stopping
-it, the files kept and let go, the version checked, the lock screen's keys, the loop speed; against the server's recorded answers in `Apple/Tests/Fixtures`, which
+it, the files kept and let go, the version checked, the lock screen's keys, the loop speed; and the
+widget: what the app writes into the App Group and the widget reads back, the cover drawn small,
+the timeline and the progress from the song's start, when the app writes and reloads (and when not),
+its buttons on the player, the link it opens, the folder emptied on signing out, and no App Group
+at all; against the server's recorded answers in `Apple/Tests/Fixtures`, which
 `scripts/apple-fixtures.ts` records from the server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
 `.github/workflows/apple.yml`, or with:
 
@@ -144,19 +185,22 @@ it, the files kept and let go, the version checked, the lock screen's keys, the 
 xcodebuild test -project iOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, the iOS 26.5 SDK, apple run 30): both apps build with no
-Swift warnings, the Swift tests pass in the iOS 26 simulator (248) and on the Mac (249; on both the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, the iOS 26.5 SDK, apple run 36): both apps build with no
+Swift warnings, the Swift tests pass in the iOS 26 simulator (261) and on the Mac (261; on both the Keychain's
 data-protection round trip skips, the test host having no entitlement), and the app runs in the
 simulator on its built-in library, a player that never streams and the web's lyric fixtures
 (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `album`, `artist`, `playlist`, `mix`, `library`,
 `albums`, `search`, `wanted`, `mini`, `nowplaying`, `queue`, `lyrics`, `lyrics-interlude`,
 `lyrics-plain`, `lyrics-menu`, `settings`, `lockcover` (the lock screen preview on a loop made from
-the web fixture's Harbour Lights cover), `signin`, `shell`). It has not yet signed in to a real server or
-played through one.
+the web fixture's Harbour Lights cover), `widgets`, `widgets-tinted`, `widgets-idle` (the
+widget's own views at their sizes on a home screen like iOS 26's: playing and paused in full
+colour; tinted and clear, drawn as the system draws them; nothing playing), `signin`, `shell`). It
+has not yet signed in to a real server or played through one.
 
 ## Next
 
 Sign in to a real server and play on a device; then the plan's next tasks
-(`docs/superpowers/plans/2026-11-19-apple-apps.md`): the home-screen widget, and the rest. The
-real lock screen's animated cover is to be seen on a device (the simulator's lock screen cannot be
-screenshotted reliably).
+(`docs/superpowers/plans/2026-11-19-apple-apps.md`): scanning to sign in and guest passes, and the
+rest. The real lock screen's animated cover and the real widget on the home screen are to be seen
+on a device, signed (the simulator's lock screen and home screen cannot be screenshotted
+reliably, and an unsigned build has no App Group).
