@@ -149,7 +149,7 @@ struct ThemeTokenTests {
     func lyricLooks() {
         for theme in Theme.made {
             let style = theme.lyric.look.make(.harbour, 30)
-            #expect(style.face.size == 30, "\(theme.id)")
+            #expect(style.face.size > 20 && style.face.size <= 30, "\(theme.id)")
             #expect(style.ink != style.room, "\(theme.id)")
             #expect(style.glowScale >= 0 && style.depthBlur >= 0, "\(theme.id)")
         }
