@@ -95,7 +95,7 @@ struct SmallNowPlaying: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 8) {
-                WidgetCover(image: cover, side: 62, corner: 13, ink: ink)
+                CoverTile(image: cover, side: 62, corner: 13, ink: ink)
                 Spacer(minLength: 0)
                 PlayPauseButton(playing: snapshot.playing, side: 40, ink: ink)
             }
@@ -124,7 +124,7 @@ struct MediumNowPlaying: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            WidgetCover(image: cover, side: nil, corner: 18, ink: ink)
+            CoverTile(image: cover, side: nil, corner: 18, ink: ink)
             VStack(alignment: .leading, spacing: 0) {
                 Text(snapshot.title)
                     .font(.system(size: 16, weight: .semibold))
@@ -207,7 +207,7 @@ struct NothingPlaying: View {
 
 /// The album's cover, kept a cover in every look (full colour, not tinted); a note on glass until
 /// it has loaded. `side` nil: as tall as there is room for, square.
-struct WidgetCover: View {
+struct CoverTile: View {
     let image: UIImage?
     let side: CGFloat?
     let corner: CGFloat

@@ -163,12 +163,12 @@ struct PhoneShell: View {
             try? await Task.sleep(for: .milliseconds(900))
             showsLyrics = true
         }
-        .task(id: link) { await open(link) }
+        .task(id: link) { await follow(link) }
     }
 
     /// A link into the app: Now Playing (the widget's tap) opens over the page in front, once there
     /// is a song (launched for the link, the saved queue may take a moment: 5 s at most).
-    private func open(_ link: AppLink?) async {
+    private func follow(_ link: AppLink?) async {
         guard let link else { return }
         switch link {
         case .nowPlaying:

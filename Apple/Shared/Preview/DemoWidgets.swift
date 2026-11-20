@@ -10,7 +10,7 @@ import WidgetKit
 // tinted and clear looks are drawn as the system draws them (it takes the widget's background away,
 // puts its own glass there, and colours the content: WidgetInk), the system not being there to.
 // The songs are the web fixtures' (Demo.albums), their covers drawn in code and made small as the app
-// makes them for the widget (WidgetCover); nothing reaches a network.
+// makes them for the widget (WidgetCover.jpeg); nothing reaches a network.
 
 enum WidgetDemo: String {
     /// Small and medium, playing and paused, in full colour.
