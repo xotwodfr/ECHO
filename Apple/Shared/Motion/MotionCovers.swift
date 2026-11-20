@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 
 // The playing album's animated lock-screen cover, as the iPhone asks for it (docs/MOTION.md, the
 // spec's "Animated lock-screen covers"): on the album's first play the server is asked for it,
@@ -21,7 +22,7 @@ struct AnimatedCover: Equatable, Sendable {
     var square: Frame?
 }
 
-@MainActor
+@MainActor @Observable
 final class MotionCovers {
     /// While the server makes a cover, each wait is at least its Retry-After and at least this,
     /// half as long again each time, up to `longestWait`.
@@ -39,6 +40,9 @@ final class MotionCovers {
     /// server lets clients keep it (an admin may have uploaded a video for the album since).
     static let checkAfter: TimeInterval = 86_400
 
+    /// Counts the covers kept and forgotten, so a view showing one (Settings' preview) follows.
+    private(set) var revision = 0
+
     let files: MotionFiles
     private let source: any MotionSource
     private let loop: @MainActor () -> Int
@@ -51,10 +55,10 @@ final class MotionCovers {
     }
 
     /// The album and loop length followed now (asked for, waiting, done or resting).
-    private var current: Asking?
-    private var task: Task<Void, Never>?
-    private var resting: [Asking: Date] = [:]
-    private var offUntil: Date?
+    @ObservationIgnored private var current: Asking?
+    @ObservationIgnored private var task: Task<Void, Never>?
+    @ObservationIgnored private var resting: [Asking: Date] = [:]
+    @ObservationIgnored private var offUntil: Date?
 
     /// - Parameters:
     ///   - loop: the loop length chosen in Settings, in seconds (LoopSpeed).
@@ -105,6 +109,7 @@ final class MotionCovers {
     /// The tall cover downloaded for the track's album, at the loop length in Settings when there
     /// is one, else at another (Settings' preview plays it at the chosen speed).
     func preview(for track: Track?) -> MotionFile? {
+        _ = revision
         guard let track, let album = Self.album(of: track) else { return nil }
         let chosen = loop()
         for length in [chosen] + LoopSpeed.allCases.map(\.seconds).filter({ $0 != chosen }) {
@@ -158,6 +163,7 @@ final class MotionCovers {
         resting = [:]
         offUntil = nil
         files.removeAll()
+        revision += 1
     }
 
     private func key(_ asking: Asking, _ shape: MotionShape) -> MotionKey {
@@ -189,6 +195,7 @@ final class MotionCovers {
                             rest(asking, Self.restAfterError)
                             return
                         }
+                        revision += 1
                         ready()
                         break ask
                     case .pending(let retryAfter, _), .busy(let retryAfter):

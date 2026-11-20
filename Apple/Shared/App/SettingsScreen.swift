@@ -157,7 +157,7 @@ struct SettingsWindow: View {
             SettingsScreen()
         }
         .environment(session)
-        .frame(width: 500, height: 520)
+        .frame(width: 500, height: 430)
         .preferredColorScheme(.dark)
         .tint(Color.echoTint)
     }

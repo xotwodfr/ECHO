@@ -3,7 +3,7 @@ import Foundation
 // The preview's animated lock-screen cover (`-ECHODemo settings`, `lockcover`): Harbour Lights'
 // tall motion cover, made for the preview from the web fixture's cover
 // (src/client/fixtures/covers/harbour-lights.svg) as a Living light loop: the cover still, light in
-// its own colours drifting over it, a soft sweep once per loop; 8 s at 360 × 480, H.264
+// its own colours drifting over it, a soft sweep once per loop; 8 s at 540 × 720, H.264
 // (Preview/Motion/harbour-tall.mp4, its first frame harbour-tall.jpg). It is kept as the motion
 // cover of the preview's album, so Settings shows it as it would a downloaded one; nothing is ever
 // asked of a server.

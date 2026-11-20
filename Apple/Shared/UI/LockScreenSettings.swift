@@ -172,6 +172,32 @@ struct LockCoverMedia: View {
     }
 }
 
+/// Below the tall frame, where the screen is longer than 3:4: the cover's own light, its still
+/// blurred and dimmed, so the frame's foot fades into it.
+struct LockCoverBackdrop: View {
+    let file: MotionFile?
+
+    @Environment(Player.self) private var player
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                if let file {
+                    FileImage(url: file.still)
+                } else if let track = player.track {
+                    Cover(path: track.cover, corner: 0).scaledToFill()
+                } else {
+                    AlbumLight()
+                }
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+            .blur(radius: 48)
+            .overlay(Color.black.opacity(0.3))
+            .clipped()
+        }
+    }
+}
+
 /// An image file shown filling its frame.
 struct FileImage: View {
     let url: URL
@@ -260,8 +286,9 @@ final class LoopingVideoView: UIView {
     }
 }
 
-/// The lock screen as it looks while ECHO plays, full screen in the app: the animated cover, the
-/// date and the time over it, and the player on glass at the bottom. A preview, from Settings;
+/// The lock screen as it looks while ECHO plays, full screen in the app: the whole tall 3:4 frame
+/// moving across the screen's width at the top, its foot fading into its own blurred light below,
+/// the date and the time over it, and the player on glass at the bottom. A preview, from Settings;
 /// swipe down or Done to go back.
 struct LockCoverScreen: View {
     @Environment(Player.self) private var player
@@ -272,9 +299,20 @@ struct LockCoverScreen: View {
     var body: some View {
         let file = player.motion?.preview(for: player.track)
         ZStack {
-            LockCoverMedia(file: file, rate: rate(file), frame: frame)
-                .ignoresSafeArea()
-            LinearGradient(colors: [.black.opacity(0.25), .clear, .clear, .black.opacity(0.35)], startPoint: .top, endPoint: .bottom)
+            GeometryReader { geo in
+                ZStack(alignment: .top) {
+                    LockCoverBackdrop(file: file)
+                    LockCoverMedia(file: file, rate: rate(file), frame: frame)
+                        .frame(width: geo.size.width, height: geo.size.width * 4 / 3)
+                        .mask {
+                            LinearGradient(
+                                stops: [.init(color: .black, location: 0.8), .init(color: .clear, location: 1)],
+                                startPoint: .top, endPoint: .bottom)
+                        }
+                }
+            }
+            .ignoresSafeArea()
+            LinearGradient(colors: [.black.opacity(0.25), .clear, .clear, .black.opacity(0.2)], startPoint: .top, endPoint: .bottom)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
             VStack(spacing: 0) {
