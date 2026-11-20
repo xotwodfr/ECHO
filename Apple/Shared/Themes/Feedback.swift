@@ -101,9 +101,14 @@ final class Feedback {
     @ObservationIgnored private let haptics: HapticOutput?
     @ObservationIgnored private let output: SoundOutput?
 
-    init(haptics: HapticOutput? = SystemHaptics.make(), output: SoundOutput? = SystemSounds()) {
+    init(haptics: HapticOutput?, output: SoundOutput?) {
         self.haptics = haptics
         self.output = output
+    }
+
+    /// The device's own haptics and sound player.
+    convenience init() {
+        self.init(haptics: SystemHaptics.make(), output: SystemSounds())
     }
 
     func tap() { send(.tap) }
