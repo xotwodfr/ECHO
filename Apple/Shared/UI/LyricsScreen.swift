@@ -115,6 +115,8 @@ struct MacLyricsView: View {
             }
         }
         .ignoresSafeArea()
+        // The timing's toast, and any other, over the lyrics.
+        .overlay { ToastLayer(bottom: 28) }
         .background { shortcuts }
         .preferredColorScheme(.dark)
         .task(id: player.track?.cover) {

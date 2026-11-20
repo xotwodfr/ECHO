@@ -27,7 +27,9 @@ struct LyricsFieldTests {
             since = next
             for (i, from) in since where t - from >= 800 {
                 // Still arriving: 2 pt of a slow hand-over (ζ 1) takes up to 0.8 s.
-                #expect(abs((m.insts[i]?.y.x ?? 0) - LyricStage.y0) <= 2, "\(name) line \(i) at \(t)")
+                let y = m.insts[i].map { $0.y.x } ?? 0
+                let off = abs(y - LyricStage.y0)
+                #expect(off <= 2, "\(name) line \(i) at \(t)")
                 checked += 1
             }
         }
@@ -211,7 +213,11 @@ struct LyricsFieldTests {
                 let glowing = v.glow.indices.filter { v.glow[$0] > 0 }
                 // A line that has just left the anchor keeps only the tail of its last glow, fading.
                 if v.rank != 0 && v.rank != 1 {
-                    for k in glowing { #expect(v.glow[k] < (prev[v.serial]?[k] ?? 0)) }
+                    let before = prev[v.serial] ?? []
+                    for k in glowing {
+                        let was = k < before.count ? before[k] : 0
+                        #expect(v.glow[k] < was)
+                    }
                 }
                 #expect(glowing.count <= 2)
                 let words = m.lines[v.i].words ?? []
