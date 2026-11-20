@@ -67,11 +67,16 @@ extension Player {
             device.setKaraoke(true)
             device.setVocalLevel(0.35)
             device.setKaraokeKey(2)
-            karaoke.preview(status: .ready)
+            let making = screen == "karaoke-making"
+            karaoke.preview(
+                status: making ? .preparing : .ready, ahead: making ? 2 : 0,
+                progress: screen == "settings-karaoke"
+                    ? KaraokeProgress(enabled: true, online: true, ready: 126, queued: 214, failed: 2, skipped: 1, bytes: 843_000_000)
+                    : nil)
         }
         if [
             "nowplaying", "queue", "mini", "player", "settings", "settings-playback", "settings-lyrics", "lockcover",
-            "karaoke", "karaoke-shelf",
+            "karaoke", "karaoke-shelf", "karaoke-making", "settings-karaoke",
         ].contains(screen) {
             player.cue(DemoLibrary.nowPlaying, at: 84)
         } else if let time = DemoLyrics.time(for: screen) {
@@ -93,7 +98,8 @@ extension DemoLibrary {
 }
 
 /// The karaoke demo screens: `karaoke` (Now Playing, the Mac's player bar), `karaoke-lyrics`, `karaoke-shelf`
-/// (Home scrolled to the shelf).
+/// (Home scrolled to the shelf), `karaoke-making` (Now Playing while the version is made), `settings-karaoke`
+/// (Settings' Karaoke group with the server's progress).
 enum DemoKaraoke {
-    static let screens = ["karaoke", "karaoke-lyrics", "karaoke-shelf"]
+    static let screens = ["karaoke", "karaoke-lyrics", "karaoke-shelf", "karaoke-making", "settings-karaoke"]
 }

@@ -696,3 +696,61 @@ struct RoutedEngineTests {
         #expect(karaoke.calls.last == .preload(nil))
     }
 }
+
+@MainActor
+@Suite("Karaoke: making a version")
+struct KaraokeMakingTests {
+    let device = DeviceSettings(defaults: nil)
+    let source = FakeKaraokeSource()
+
+    func make() -> Karaoke { Karaoke(device: device, source: source) }
+
+    @Test("Each state has its words", arguments: [
+        (KaraokeAnswer(status: .working, ahead: 0, url: nil), "Making the karaoke version of \u{201C}Song 1\u{201D} now: a few minutes."),
+        (KaraokeAnswer(status: .queued, ahead: 1, url: nil), "\u{201C}Song 1\u{201D} is next in line for karaoke: 1 song before it."),
+        (KaraokeAnswer(status: .queued, ahead: 3, url: nil), "\u{201C}Song 1\u{201D} is next in line for karaoke: 3 songs before it."),
+        (KaraokeAnswer(status: .ready, ahead: 0, url: "/api/v1/karaoke/al-1-t1/audio"), "The karaoke version of \u{201C}Song 1\u{201D} is ready."),
+        (KaraokeAnswer(status: .failed, ahead: 0, url: nil), "The voice couldn't be taken out of \u{201C}Song 1\u{201D}."),
+        (KaraokeAnswer(status: .skipped, ahead: 0, url: nil), "\u{201C}Song 1\u{201D} is too long for Karaoke."),
+        (KaraokeAnswer(status: .off, ahead: 0, url: nil), "Karaoke isn't set up on your ECHO server yet."),
+    ])
+    func words(answer: KaraokeAnswer, words: String) async {
+        source.script("al-1-t1", answer)
+        #expect(await make().request(song(1)) == words)
+        #expect(source.asks == [.init(id: "al-1-t1", soon: false)]) // now, not "soon"
+    }
+
+    @Test("A server that cannot be reached, and a song that is not the library's")
+    func errors() async {
+        source.failing = true
+        #expect(await make().request(song(1)) == "Couldn't reach ECHO. Try again in a moment.")
+        let other = Track(id: "yt1", title: "Elsewhere", artists: [], album: song(1).album, durationMs: 1, provider: "youtube")
+        #expect(await make().request(other) == "Karaoke works with songs from your library.")
+        #expect(source.asks.count == 1)
+    }
+
+    @Test("A version that is ready plays when Karaoke is on")
+    func readyPlays() async {
+        let karaoke = make()
+        source.script("al-1-t1", .init(status: .ready, ahead: 0, url: "/api/v1/karaoke/al-1-t1/audio"))
+        _ = await karaoke.request(song(1))
+        device.setKaraoke(true)
+        #expect(karaoke.audio(for: song(1)) == "/api/v1/karaoke/al-1-t1/audio")
+    }
+
+    @Test("The menu offers it for the library's songs, and not to a guest")
+    func menu() {
+        #expect(Karaoke.offersMaking(song(1), listensOnly: false))
+        #expect(!Karaoke.offersMaking(song(1), listensOnly: true))
+        let other = Track(id: "yt1", title: "x", artists: [], album: song(1).album, durationMs: 1, provider: "youtube")
+        #expect(!Karaoke.offersMaking(other, listensOnly: false))
+    }
+
+    @Test("Settings' line: ready of all, the disk, and what failed")
+    func line() {
+        let p = KaraokeProgress(enabled: true, online: true, ready: 126, queued: 214, failed: 2, skipped: 1, bytes: 843_000_000)
+        #expect(Karaoke.progressLine(p) == "126 of 343 songs ready · 0.8 GB · 2 couldn't be separated")
+        let clean = KaraokeProgress(enabled: true, online: true, ready: 2, queued: 0, failed: 0, skipped: 0, bytes: 13_400_000)
+        #expect(Karaoke.progressLine(clean) == "2 of 2 songs ready · 0.0 GB")
+    }
+}

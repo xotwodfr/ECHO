@@ -217,10 +217,61 @@ final class Karaoke {
     }
 
     /// The preview's state (`-ECHODemo karaoke…`): what the server says about the song playing.
-    func preview(status: Status, ahead: Int = 0) {
+    func preview(status: Status, ahead: Int = 0, progress: KaraokeProgress? = nil) {
         server = true
         self.status = status
         self.ahead = ahead
+        if let progress { self.progress = progress }
+    }
+
+    // MARK: - Make karaoke version
+
+    /// A song's menu → Make karaoke version: the server makes it next (ahead of the library), and the
+    /// notice says where it is (the web's `requestKaraoke`, Android's `Karaoke.request`).
+    func request(_ track: Track) async -> String {
+        guard track.provider == "navidrome" else { return Self.requestWords.unavailable }
+        guard let source, let answer = try? await source.karaoke(id: track.id, soon: false) else {
+            return Self.requestWords.error
+        }
+        switch answer.status {
+        case .ready:
+            ready[track.key] = answer.url ?? Self.audioPath(track.id)
+            settled[track.key] = .ready
+            if player?.track?.key == track.key { player?.karaokeChanged() }
+            return "The karaoke version of \u{201C}\(track.title)\u{201D} is ready."
+        case .failed:
+            settled[track.key] = .failed
+            return "The voice couldn't be taken out of \u{201C}\(track.title)\u{201D}."
+        case .skipped:
+            settled[track.key] = .tooLong
+            return "\u{201C}\(track.title)\u{201D} is too long for Karaoke."
+        case .off:
+            server = false
+            return Self.requestWords.off
+        case .queued, .working:
+            if answer.ahead == 0 { return "Making the karaoke version of \u{201C}\(track.title)\u{201D} now: a few minutes." }
+            let songs = answer.ahead == 1 ? "song" : "songs"
+            return "\u{201C}\(track.title)\u{201D} is next in line for karaoke: \(answer.ahead) \(songs) before it."
+        }
+    }
+
+    /// Whether a song's menu offers Make karaoke version: songs of the library, and not to a guest, who
+    /// only listens (asking costs the host's CPU).
+    static func offersMaking(_ track: Track, listensOnly: Bool) -> Bool {
+        track.provider == "navidrome" && !listensOnly
+    }
+
+    static let requestWords = (
+        unavailable: "Karaoke works with songs from your library.",
+        off: "Karaoke isn't set up on your ECHO server yet.",
+        error: "Couldn't reach ECHO. Try again in a moment."
+    )
+
+    /// The line under Settings → Karaoke: "12 of 340 songs ready · 0.1 GB · 2 couldn't be separated".
+    static func progressLine(_ p: KaraokeProgress) -> String {
+        let gb = String(format: "%.1f", Double(p.bytes) / 1e9)
+        let failed = p.failed > 0 ? " · \(p.failed) couldn't be separated" : ""
+        return "\(p.ready.formatted()) of \(p.total.formatted()) songs ready · \(gb) GB\(failed)"
     }
 
     // MARK: - Settings → Karaoke

@@ -493,6 +493,12 @@ struct TrackMenu: View {
                 Task { await library.setLiked(track, !liked) }
             }
         }
+        // Asking the server to make a version costs the host's CPU: a guest only listens.
+        if Karaoke.offersMaking(track, listensOnly: library.listensOnly) {
+            Button("Make karaoke version", systemImage: "music.mic") {
+                Task { library.show(Toast(message: await player.karaoke.request(track))) }
+            }
+        }
         if let artist = track.artists.first, let id = artist.id {
             Button("Go to Artist", systemImage: "music.microphone") { navigate(.artist(id: id, name: artist.name)) }
         }

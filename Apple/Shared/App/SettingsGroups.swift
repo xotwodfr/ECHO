@@ -220,7 +220,22 @@ struct KaraokeSettings: View {
                 .accessibilityLabel("Key")
                 .accessibilityValue(KaraokeMath.keyText(karaoke.key))
             }
+            if let progress = karaoke.progress, progress.enabled {
+                SettingsDivider()
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("On your server").font(.subheadline.weight(.semibold))
+                    ProgressView(value: Double(progress.ready), total: Double(max(1, progress.total)))
+                        .accessibilityLabel("Songs ready")
+                    Text(Karaoke.progressLine(progress)).font(.footnote).foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+            if let note = karaoke.progressNote {
+                SettingsDivider()
+                SettingsHint(note)
+            }
         }
+        .task { await karaoke.refreshProgress() }
     }
 
     private func slider(_ title: String, value: String, detail: String, @ViewBuilder _ slider: () -> some View) -> some View {

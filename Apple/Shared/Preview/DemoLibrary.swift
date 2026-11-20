@@ -256,6 +256,7 @@ struct DemoLibrary: LibrarySource {
     static func settingsScroll(_ screen: String) -> String? {
         switch screen {
         case "settings-playback": SettingsAnchor.playback
+        case "settings-karaoke": SettingsAnchor.karaoke
         case "settings-lyrics": SettingsAnchor.lyrics
         default: nil
         }
@@ -266,6 +267,12 @@ struct DemoLibrary: LibrarySource {
         let harbour = album(Demo.harbour)
         switch screen {
         case "album":
+            #if os(macOS)
+            return ShellStart(page: .albums, path: [.album(harbour)])
+            #else
+            return ShellStart(page: .home, path: [.album(harbour)])
+            #endif
+        case "karaoke-menu":
             #if os(macOS)
             return ShellStart(page: .albums, path: [.album(harbour)])
             #else
@@ -283,7 +290,7 @@ struct DemoLibrary: LibrarySource {
         case "shelves": return ShellStart(page: .home, shelf: "made")
         case "mix": return ShellStart(page: .home, path: mixList.first.map { [Route.mix($0)] } ?? [])
         case "nowplaying": return ShellStart(page: .home, playing: .song)
-        case "karaoke":
+        case "karaoke", "karaoke-making":
             #if os(macOS)
             return ShellStart(page: .albums) // the player bar shows Karaoke
             #else
@@ -298,7 +305,7 @@ struct DemoLibrary: LibrarySource {
             #else
             return ShellStart(page: .home, path: [.settings, .guests])
             #endif
-        case "settings", "settings-playback", "settings-lyrics", "lockcover":
+        case "settings", "settings-playback", "settings-lyrics", "settings-karaoke", "lockcover":
             #if os(macOS)
             return ShellStart(page: .albums) // Settings opens in its own window
             #else

@@ -81,6 +81,8 @@ final class DemoWorld {
 /// guest: no hearts, the pass on Home).
 struct DemoRoot: View {
     @State private var world: DemoWorld
+    /// `karaoke-menu`: a song's menu, listed in a sheet (a menu cannot be held open for a screenshot).
+    @State private var songMenu = false
     #if os(macOS)
     @Environment(\.openSettings) private var openSettings
     #endif
@@ -118,6 +120,19 @@ struct DemoRoot: View {
         .environment(\.motionPreviewFrame, 4)
         .environment(\.lockPreviewOnOpen, world.base == "lockcover")
         .environment(\.settingsScroll, DemoLibrary.settingsScroll(world.base))
+        .task {
+            guard world.base == "karaoke-menu" else { return }
+            try? await Task.sleep(for: .milliseconds(900))
+            songMenu = true
+        }
+        .sheet(isPresented: $songMenu) {
+            List { TrackMenu(track: DemoLibrary.track(Demo.harbour, 0)) }
+                .environment(world.library)
+                .environment(world.player)
+                .environment(world.player.karaoke)
+                .environment(world.device)
+                .presentationDetents([.medium])
+        }
         #if os(macOS)
         .task {
             guard world.base.hasPrefix("settings") || world.base == "guests" else { return }
