@@ -376,10 +376,27 @@ test('untimed: a static sheet, scrollable, with the note and attribution (LYR-14
   await expect(sheet.locator('.ly-sheet-line')).toHaveCount(
     doc('static').lines.filter((l) => l.text.trim()).length,
   );
+  // Keys scroll the sheet with the browser's smooth scrolling (the sheet is 164 px longer than its
+  // window), so each position is read once the scroll has come to rest: read mid-animation (12 to
+  // 40 px after ArrowDown), or with a PageDown pressed into an unfinished scroll, the run depended on
+  // timing, and CI failed with 40 px left after PageDown.
+  const settled = async () => {
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const now = await sheet.evaluate((el) => el.scrollTop);
+        const rest = now === last;
+        last = now;
+        await page.waitForTimeout(150);
+        return rest;
+      })
+      .toBe(true);
+    return sheet.evaluate((el) => el.scrollTop);
+  };
   await sheet.focus();
   await page.keyboard.press('ArrowDown');
-  await expect.poll(() => sheet.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  const afterArrow = await sheet.evaluate((el) => el.scrollTop);
+  const afterArrow = await settled();
+  expect(afterArrow).toBeGreaterThan(0);
   await page.keyboard.press('PageDown');
   await expect.poll(() => sheet.evaluate((el) => el.scrollTop)).toBeGreaterThan(afterArrow + 50);
   await sheet.evaluate((el) => el.scrollTo(0, 0));
