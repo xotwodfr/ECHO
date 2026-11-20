@@ -255,7 +255,7 @@ jobs:
             id=$(swift /tmp/window.swift "$([ "$s" = settings ] || [ "$s" = settings-playback ] || [ "$s" = settings-lyrics ] || [ "$s" = guests ] && echo smallest)" || true)
             echo "window $id"
             if [ -n "$id" ] && [ "$id" != "0" ]; then
-              screencapture -x -o -l"$id" "Apple/Screenshots/mac-$s.png"
+              screencapture -x -o -l"$id" "Apple/Screenshots/mac-$s.png" || screencapture -x "Apple/Screenshots/mac-$s.png"
             else
               screencapture -x "Apple/Screenshots/mac-$s.png"
             fi
