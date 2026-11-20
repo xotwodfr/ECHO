@@ -99,25 +99,26 @@ struct KnitPattern: View {
     var body: some View {
         Canvas { ctx, size in
             let w = 7.0, h = 6.0
+            // All the stitches in two paths (lit, shaded): a stroke each, not one per stitch.
+            var lit = Path()
+            var shade = Path()
             var y = 0.0
             var row = 0
             while y < size.height {
                 var x = row % 2 == 0 ? 0.0 : -w / 2
                 while x < size.width {
-                    var v = Path()
-                    v.move(to: CGPoint(x: x, y: y))
-                    v.addLine(to: CGPoint(x: x + w / 2, y: y + h))
-                    v.addLine(to: CGPoint(x: x + w, y: y))
-                    ctx.stroke(v, with: .color(.white.opacity(dark ? 0.1 : 0.2)), lineWidth: 1.4)
-                    var shade = Path()
+                    lit.move(to: CGPoint(x: x, y: y))
+                    lit.addLine(to: CGPoint(x: x + w / 2, y: y + h))
+                    lit.addLine(to: CGPoint(x: x + w, y: y))
                     shade.move(to: CGPoint(x: x + 1, y: y + 1.4))
                     shade.addLine(to: CGPoint(x: x + w / 2 + 1, y: y + h + 1.4))
-                    ctx.stroke(shade, with: .color(.black.opacity(dark ? 0.22 : 0.1)), lineWidth: 1)
                     x += w
                 }
                 y += h
                 row += 1
             }
+            ctx.stroke(lit, with: .color(.white.opacity(dark ? 0.1 : 0.2)), lineWidth: 1.4)
+            ctx.stroke(shade, with: .color(.black.opacity(dark ? 0.22 : 0.1)), lineWidth: 1)
         }
         .allowsHitTesting(false)
     }
@@ -271,11 +272,14 @@ struct LyricsGround: View {
         if theme.isMaterial {
             ZStack {
                 MaterialGround(material: theme.material, ground: theme.floor, dark: theme.dark)
-                Color.clear.ignoresSafeArea().overlay {
+                GeometryReader { g in
+                    let width = max(0, g.size.width - leading - 10)
+                    let height = max(0, g.size.height - top - bottom + 16)
                     LyricPlate()
-                        .padding(.top, top - 8).padding(.bottom, bottom - 8)
-                        .padding(.leading, leading).padding(.trailing, 10)
+                        .frame(width: width, height: height)
+                        .position(x: leading + width / 2, y: top - 8 + height / 2)
                 }
+                .ignoresSafeArea()
             }
         } else {
             AlbumLight(palette: palette)

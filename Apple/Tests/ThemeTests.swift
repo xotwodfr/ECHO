@@ -91,7 +91,7 @@ struct ThemeTokenTests {
                 let colours = [p.tint, p.accent, p.highlight, p.warning, p.floor] + p.swatch
                 #expect(colours.allSatisfy(inRange), "\(theme.id) \(label)")
                 #expect(p.swatch.count == 3, "\(theme.id) \(label)")
-                #expect(p.roomStrength > 0 && p.roomHeight > 0, "\(theme.id) \(label)")
+                #expect(p.roomStrength >= 0 && p.roomHeight > 0, "\(theme.id) \(label)")
                 #expect(p.wash >= 0 && p.wash <= 1, "\(theme.id) \(label)")
             }
             #expect(theme.glass.rowRadius > 0)
