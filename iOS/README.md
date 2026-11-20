@@ -6,11 +6,13 @@ the Xcode scheme's environment points it at another.
 
 Code both apps share lives in `Apple/Shared` (the plan's layout,
 `docs/superpowers/plans/2026-11-19-apple-apps.md`): `App/` (entry, routing, the tabs or sidebar,
-the account sheet), `Api/` (the client, models, preferences, the Keychain token, the session and
+Settings), `Api/` (the client, models, preferences, the Keychain token, the session and
 the offline state), `Library/` (the library the screens see: hearts, playlists, the album sorts,
 the artists, Home's shelves, the Wanted list and the cover cache), `Playback/` (the player: the
 queue, the engine, the queue that follows you, scrobbles, the lock screen's info), `Lyrics/` (the
-lyrics: the loader, the field's model, the layout and the style), `UI/` (the screens,
+lyrics: the loader, the field's model, the layout and the style), `Motion/` (the lock screen's
+animated covers: asking for them, waiting, the files kept), `Settings/` (the preferences kept on
+this device), `UI/` (the screens,
 their components and the room's look), `Preview/` (the `-ECHODemo` screens on a built-in library),
 `Assets.xcassets` (the amber accent) and `AppIcon.icon`. `Apple/Tests` holds the Swift tests.
 This folder holds what is iOS's own: the app entry and the project.
@@ -91,6 +93,30 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
   total said in a toast; the global offset from Settings is added, and the output's latency
   (AirPlay's included) is taken off the clock.
 
+## The lock screen's animated cover
+
+- **The playing album's motion cover** (`docs/MOTION.md`): on the album's first play the app asks
+  ECHO for it (`GET /motion/{album}?shape&loop`), tall (3:4) and square, at the loop length chosen
+  in Settings. While ECHO makes it (202) the lock screen keeps the still cover and the app asks
+  again after each Retry-After, never sooner, the waits growing by half to a minute, ten minutes in
+  all; another album playing, or another speed chosen, stops the asking for the one before. Once
+  it is ready, its first frame (`/still`) and its looping video (`/video`) are downloaded into a
+  cache of their own in Caches (64 MB, the least recently used let go first, emptied on sign-out)
+  and the lock screen gets them (`MPMediaItemAnimatedArtwork` under
+  `MPNowPlayingInfoProperty3x4AnimatedArtwork` and `MPNowPlayingInfoProperty1x1AnimatedArtwork`, the
+  first frame as its preview image), the still cover staying under it. The next play of the album
+  shows it at once; a kept cover is checked against ECHO's version once a day (an admin's upload
+  replaces it). A cover that cannot be made, no motion service, or no network leaves the still
+  cover. ECHO picks the motion (Depth for photographs, Living light for flat art).
+
+## Settings
+
+- **One page in the room** from Home's account button: groups on glass, each under its title.
+  **Lock screen**: the animated cover as the lock screen shows it (tap it for the whole lock screen
+  in a preview) beside its loop speed, Fast, Normal, Slow or Very slow (5, 8, 12 or 15 s, ECHO's
+  lengths), kept on this iPhone (the server's preferences have no key for it, and the web no such
+  setting). **Account**: who is signed in, the server, Sign out. **About**: the version.
+
 ## Build and run
 
 On a Mac with Xcode 26 (iOS 26, for Liquid Glass):
@@ -107,9 +133,10 @@ Capabilities (or `DEVELOPMENT_TEAM` in `project.yml`). The generated `ECHO.xcode
 The Swift tests (Swift Testing, `Apple/Tests`: the API client, models, sign-in, the library, with
 the sorts, Wanted's Undo and the cover cache, and playback on a fake engine: the queue, the gapless
 hand-over, signed URLs, the saved queue with its 429s and conflicts, scrobbles, interruptions, the
-lock screen's commands and info, what the mini player and Now Playing show; and the lyrics: the
+lock screen's commands and info, what the mini player and Now Playing show; the lyrics: the
 loader, and the field's timing, springs, motion and layout on the web's own cases and lyric
-fixtures; against the server's recorded answers in `Apple/Tests/Fixtures`, which
+fixtures; and the animated covers: ECHO's answers, the waits, giving up, another album stopping
+it, the files kept and let go, the version checked, the lock screen's keys, the loop speed; against the server's recorded answers in `Apple/Tests/Fixtures`, which
 `scripts/apple-fixtures.ts` records from the server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
 `.github/workflows/apple.yml`, or with:
 
@@ -117,17 +144,19 @@ fixtures; against the server's recorded answers in `Apple/Tests/Fixtures`, which
 xcodebuild test -project iOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26, apple run 26): both apps build with no
-Swift warnings, the Swift tests pass in the iOS 26 simulator (225) and on the Mac (226; on both the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, the iOS 26.5 SDK, apple run 30): both apps build with no
+Swift warnings, the Swift tests pass in the iOS 26 simulator (248) and on the Mac (249; on both the Keychain's
 data-protection round trip skips, the test host having no entitlement), and the app runs in the
 simulator on its built-in library, a player that never streams and the web's lyric fixtures
 (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `album`, `artist`, `playlist`, `mix`, `library`,
 `albums`, `search`, `wanted`, `mini`, `nowplaying`, `queue`, `lyrics`, `lyrics-interlude`,
-`lyrics-plain`, `lyrics-menu`, `signin`, `shell`). It has not yet signed in to a real server or
+`lyrics-plain`, `lyrics-menu`, `settings`, `lockcover` (the lock screen preview on a loop made from
+the web fixture's Harbour Lights cover), `signin`, `shell`). It has not yet signed in to a real server or
 played through one.
 
 ## Next
 
 Sign in to a real server and play on a device; then the plan's next tasks
-(`docs/superpowers/plans/2026-11-19-apple-apps.md`): the animated lock-screen covers, the
-home-screen widget, and the rest.
+(`docs/superpowers/plans/2026-11-19-apple-apps.md`): the home-screen widget, and the rest. The
+real lock screen's animated cover is to be seen on a device (the simulator's lock screen cannot be
+screenshotted reliably).

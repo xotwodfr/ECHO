@@ -6,11 +6,13 @@ scheme's environment points it at another.
 
 Code both apps share lives in `Apple/Shared` (the plan's layout,
 `docs/superpowers/plans/2026-11-19-apple-apps.md`): `App/` (entry, routing, the tabs or sidebar,
-the account sheet), `Api/` (the client, models, preferences, the Keychain token, the session and
+Settings), `Api/` (the client, models, preferences, the Keychain token, the session and
 the offline state), `Library/` (the library the screens see: hearts, playlists, the album sorts,
 the artists, Home's shelves, the Wanted list and the cover cache), `Playback/` (the player: the
 queue, the engine, the queue that follows you, scrobbles, Now Playing's info), `Lyrics/` (the
-lyrics: the loader, the field's model, the layout and the style), `UI/` (the screens,
+lyrics: the loader, the field's model, the layout and the style), `Motion/` (the lock screen's
+animated covers: asking for them, waiting, the files kept), `Settings/` (the preferences kept on
+this device), `UI/` (the screens,
 their components and the room's look), `Preview/` (the `-ECHODemo` screens on a built-in library),
 `Assets.xcassets` (the amber accent) and `AppIcon.icon`. `Apple/Tests` holds the Swift tests.
 This folder holds what is the Mac's own: the app entry (a window of a laptop's size) and the
@@ -91,6 +93,13 @@ The same core on every native client (Android, Linux, Windows, macOS, iOS):
   total said in a toast; the global offset from Settings is added, and the output's latency
   (the output device's) is taken off the clock.
 
+## Settings
+
+- **The Settings window** (the app menu's Settings…, ⌘, or the toolbar's gear): groups on glass in
+  the room. **Account**: who is signed in, the server, Sign out. **About**: the version. The
+  lock screen's animated covers are the iPhone's alone (the owner's decision), so the Mac has
+  neither them nor their speed.
+
 ## Build and run
 
 On a Mac with Xcode 26 (macOS 26, for Liquid Glass):
@@ -109,19 +118,20 @@ hand-over, signed URLs, the saved queue with its 429s and conflicts, scrobbles, 
 media keys' commands and Now Playing's info, what the player bar shows; and the lyrics: the
 loader, and the field's timing, springs, motion and layout on the web's own cases and lyric
 fixtures; against the server's recorded answers in `Apple/Tests/Fixtures`, which
-`scripts/apple-fixtures.ts` records from the server's own code) run in Xcode (the `ECHOTests` scheme), on every push in
+`scripts/apple-fixtures.ts` records from the server's own code; the animated covers' tests run here
+too, the lock screen's keys left out on the Mac) run in Xcode (the `ECHOTests` scheme), on every push in
 `.github/workflows/apple.yml`, or with:
 
 ```sh
 xcodebuild test -project macOS/ECHO.xcodeproj -scheme ECHOTests -destination 'platform=macOS'
 ```
 
-Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26, apple run 26): both apps build with no
-Swift warnings, the Swift tests pass on the Mac (226) and in the iOS 26 simulator (225; on both the Keychain's
+Checked 2026-11-20 on GitHub's macOS 26 runner (Xcode 26.6, apple run 30): both apps build with no
+Swift warnings, the Swift tests pass on the Mac (249) and in the iOS 26 simulator (248; on both the Keychain's
 data-protection round trip skips, the test host having no entitlement), and the app runs on the
 Mac on its built-in library, a player that never streams and the web's lyric fixtures
 (`Apple/Screenshots`: `-ECHODemo home`, `shelves`, `albums`, `album`, `search`, `player`, `lyrics`,
-`signin`, `shell`). It has not yet signed in to a real server or played through one.
+`settings`, `signin`, `shell`). It has not yet signed in to a real server or played through one.
 
 ## Next
 
