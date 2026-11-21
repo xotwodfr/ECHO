@@ -49,6 +49,7 @@ targets:
       - path: ../Apple/Shared/Library
       - path: ../Apple/Shared/Playback
       - path: ../Apple/Shared/Karaoke
+      - path: ../Apple/Shared/Together
       - path: ../Apple/Shared/Lyrics
       - path: ../Apple/Shared/Motion
       - path: ../Apple/Shared/Settings
