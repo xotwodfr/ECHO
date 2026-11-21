@@ -1,4 +1,9 @@
 import SwiftUI
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
 // Listen together's screens (docs/TOGETHER.md; Together/Together.swift): Now Playing's Together
 // button, the sheet (the Mac's too) that joins a session or shows the one this person is in (the
@@ -47,6 +52,9 @@ struct TogetherPanel: View {
     @Environment(Session.self) private var session
     @State private var link = ""
     @State private var linkNote: String? = nil
+    /// The invite and the listeners open over the panel once it has settled (a cover cannot open
+    /// while a sheet is still coming up).
+    @State private var settled = false
 
     var body: some View {
         ScrollView {
@@ -67,6 +75,11 @@ struct TogetherPanel: View {
         .scrollBounceBehavior(.basedOnSize)
         .animation(.smooth, value: together.session)
         .animation(.smooth, value: together.note)
+        .task {
+            try? await Task.sleep(for: .milliseconds(700))
+            settled = true
+        }
+        .modifier(TogetherOverPanel(settled: settled))
     }
 
     private var header: some View {
@@ -111,6 +124,20 @@ struct TogetherPanel: View {
             .foregroundStyle(theme.onAccent)
             .controlSize(.large)
             #endif
+            Button {
+                Task { await together.start() }
+            } label: {
+                Label(together.starting ? "Starting…" : "Start a session", systemImage: "person.2.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+            .disabled(together.starting)
+            Text("A session starts on the song playing, with what is up next. Then show its QR code to whoever should join.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
             pasteLink
             if let note = together.note {
                 Text(note)
@@ -185,6 +212,14 @@ struct TogetherPanel: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        HStack(spacing: 10) {
+            Button("Invite", systemImage: "qrcode") { together.inviteOpen = true }
+                .frame(maxWidth: .infinity)
+            Button("Listeners", systemImage: "person.2") { together.membersOpen = true }
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glass)
+        .controlSize(.large)
         VStack(alignment: .leading, spacing: 8) {
             sectionTitle("Listeners")
             ForEach(state.members) { member in
@@ -492,5 +527,220 @@ extension TogetherOffer {
     var isReady: Bool {
         if case .ready = self { return true }
         return false
+    }
+}
+
+// MARK: - The invite and the listeners
+
+/// The invite and the listener list, over the Together sheet: full-screen on the iPhone, a card in the
+/// panel on the Mac.
+struct TogetherOverPanel: ViewModifier {
+    let settled: Bool
+
+    @Environment(Together.self) private var together
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content
+            .fullScreenCover(isPresented: Binding(get: { settled && together.inviteOpen }, set: { together.inviteOpen = $0 })) {
+                TogetherInvite { together.inviteOpen = false }
+                    .environment(together)
+            }
+            .sheet(isPresented: Binding(get: { settled && together.membersOpen }, set: { together.membersOpen = $0 })) {
+                TogetherMembers { together.membersOpen = false }
+                    .background { AlbumLight(strength: 0.85).ignoresSafeArea() }
+                    .themedDark()
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+                    .presentationBackground { AlbumLight(strength: 0.85) }
+                    .environment(together)
+            }
+        #else
+        content
+            .overlay {
+                if together.inviteOpen {
+                    TogetherInvite { together.inviteOpen = false }
+                        .background { AlbumLight(strength: 0.85) }
+                        .transition(.opacity)
+                } else if together.membersOpen {
+                    TogetherMembers { together.membersOpen = false }
+                        .background { AlbumLight(strength: 0.85) }
+                        .transition(.opacity)
+                }
+            }
+            .animation(.smooth, value: together.inviteOpen)
+            .animation(.smooth, value: together.membersOpen)
+        #endif
+    }
+}
+
+/// The session's QR code as a big plate on glass (the guest invite's look), its link to share or
+/// copy, and who is listening.
+struct TogetherInvite: View {
+    let close: () -> Void
+
+    @Environment(\.theme) private var theme
+    @Environment(Together.self) private var together
+    @State private var copied = false
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            AlbumLight(strength: 0.85).ignoresSafeArea()
+            ScrollView {
+                VStack(spacing: 22) {
+                    HStack {
+                        Button("Close", systemImage: "xmark", action: close)
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.glass)
+                            .buttonBorderShape(.circle)
+                            .controlSize(.large)
+                            .tint(.white)
+                        Spacer()
+                        Text("Invite to listen").font(.headline)
+                        Spacer()
+                        Color.clear.frame(width: 44, height: 44)
+                    }
+                    plate
+                    if let state = together.session {
+                        Label(
+                            state.listeners == 1 ? "Only you so far" : "\(state.listeners) listening",
+                            systemImage: "person.2.fill"
+                        )
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.85))
+                    }
+                    Text("They scan this with ECHO (Now Playing → Together → Scan a code to join), or open the link while signed in to this ECHO. Their music then follows yours.")
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.75))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 12)
+                    if let link = together.inviteLink {
+                        actions(link)
+                    }
+                }
+                .frame(maxWidth: 420)
+                .padding(.horizontal, 20)
+                .padding(.top, 8)
+                .padding(.bottom, 30)
+                .frame(maxWidth: .infinity)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .themedDark()
+        .animation(.smooth, value: together.session?.listeners)
+    }
+
+    private var plate: some View {
+        VStack(spacing: 16) {
+            if let link = together.inviteLink {
+                QRCodeView(text: link.absoluteString, label: "Listen together QR code")
+                    .frame(maxWidth: 300)
+                Text(link.absoluteString)
+                    .font(.footnote)
+                    .foregroundStyle(.white.opacity(0.7))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .textSelection(.enabled)
+            } else {
+                ProgressView().controlSize(.large).tint(.white)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: 340)
+        .padding(22)
+        .glassEffect(.regular, in: .rect(cornerRadius: 34))
+    }
+
+    private func actions(_ link: URL) -> some View {
+        GlassEffectContainer(spacing: 10) {
+            HStack(spacing: 10) {
+                ShareLink(item: link) {
+                    Label("Share link", systemImage: "square.and.arrow.up").frame(maxWidth: .infinity)
+                }
+                Button {
+                    copy(link.absoluteString)
+                    copied = true
+                } label: {
+                    Label(copied ? "Copied" : "Copy link", systemImage: copied ? "checkmark" : "doc.on.doc")
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .buttonStyle(.glass)
+            .controlSize(.large)
+        }
+    }
+
+    private func copy(_ text: String) {
+        #if os(iOS)
+        UIPasteboard.general.string = text
+        #else
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        #endif
+    }
+}
+
+/// Who is in the session: the host, you, anyone away; and what each may do. The server has no way to
+/// remove a listener, so the host's choices are ending the session and who controls (the host alone).
+struct TogetherMembers: View {
+    let close: () -> Void
+
+    @Environment(Together.self) private var together
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Listeners").font(.title2.bold())
+                    if let state = together.session {
+                        Text("· \(state.listeners)").font(.title2).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Close", systemImage: "xmark", action: close)
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.glass)
+                        .buttonBorderShape(.circle)
+                        .controlSize(.large)
+                }
+                if let state = together.session {
+                    ForEach(state.members) { member in
+                        HStack(spacing: 12) {
+                            TogetherAvatar(name: member.username, online: member.online, size: 40)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(member.username).font(.body.weight(.medium))
+                                Text(role(member, state)).font(.footnote).foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            if member.host {
+                                Image(systemName: "crown.fill").foregroundStyle(.secondary).accessibilityHidden(true)
+                            }
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                    Text("The host controls playback; everyone can add songs. Listeners who stop streaming for 30 minutes are dropped.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Button(state.you.host ? "End session for everyone" : "Leave the session", systemImage: "rectangle.portrait.and.arrow.right") {
+                        Task { await together.leave() }
+                    }
+                    .buttonStyle(.glass)
+                    .controlSize(.large)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .frame(maxWidth: 520, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 30)
+            .frame(maxWidth: .infinity)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+    }
+
+    private func role(_ member: TogetherMember, _ state: TogetherState) -> String {
+        let you = member.id == state.you.id ? " · you" : ""
+        let status = member.online ? "" : " · away"
+        return (member.host ? "Host" : "Listener") + you + status
     }
 }

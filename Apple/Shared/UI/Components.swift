@@ -480,12 +480,19 @@ struct TrackMenu: View {
 
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
+    @Environment(Together.self) private var together: Together?
     @Environment(\.navigate) private var navigate
 
     var body: some View {
         if queueing {
-            Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") { player.playNext([track]) }
-            Button("Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") { player.addToQueue([track]) }
+            // In a listening session the queue is the session's, for everyone.
+            let shared = together?.session != nil
+            Button(shared ? "Play Next in Session" : "Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") {
+                player.playNext([track])
+            }
+            Button(shared ? "Add to Session Queue" : "Add to Queue", systemImage: "text.line.last.and.arrowtriangle.forward") {
+                player.addToQueue([track])
+            }
         }
         if !library.listensOnly {
             let liked = library.isLiked(track)

@@ -6,7 +6,10 @@ import Foundation
 // queue), `together-queue` (Now Playing's Up next as the shared queue) and, on the Mac, `together`.
 
 enum DemoTogether {
-    static let screens = ["together-join", "together-session", "together-queue", "together"]
+    static let screens = [
+        "together-join", "together-session", "together-queue", "together", "together-host", "together-members",
+        "together-menu",
+    ]
 
     private static let ada = TogetherPerson(id: 1, username: "ada")
     private static let sam = TogetherPerson(id: 2, username: "sam")
@@ -46,6 +49,19 @@ enum DemoTogether {
         switch screen {
         case "together-join":
             return Together.demo(player: player, server: server, offer: .ready(id: "together-session-for-tests-0001", host: "ada", members: 3))
+        case "together-host":
+            // The host: the sheet, and the invite over it.
+            let together = Together.demo(player: player, server: server, session: session(host: true))
+            together.sheetOpen = true
+            together.inviteOpen = true
+            return together
+        case "together-members":
+            let together = Together.demo(player: player, server: server, session: session())
+            together.sheetOpen = true
+            together.membersOpen = true
+            return together
+        case "together-menu":
+            return Together.demo(player: player, server: server, session: session())
         case "together-session", "together-queue", "together":
             let together = Together.demo(player: player, server: server, session: session())
             together.sheetOpen = screen != "together-queue"

@@ -124,7 +124,7 @@ struct DemoRoot: View {
         .environment(\.lockPreviewOnOpen, world.base == "lockcover")
         .environment(\.settingsScroll, DemoLibrary.settingsScroll(world.base))
         .task {
-            guard world.base == "karaoke-menu" else { return }
+            guard world.base == "karaoke-menu" || world.base == "together-menu" else { return }
             try? await Task.sleep(for: .milliseconds(900))
             songMenu = true
         }
@@ -133,6 +133,7 @@ struct DemoRoot: View {
                 .environment(world.library)
                 .environment(world.player)
                 .environment(world.player.karaoke)
+                .environment(world.together)
                 .environment(world.device)
                 .presentationDetents([.medium])
         }

@@ -680,3 +680,33 @@ struct TogetherPersonalQueueTests {
         #expect(await eventually { saves.count == 2 })
     }
 }
+
+@MainActor
+@Suite("Listen together: hosting")
+struct TogetherHostingTests {
+    @Test("Ending the session closes the invite and the sheets, and tells everyone through the host's leave")
+    func endClosesEverything() async throws {
+        let t = TRig()
+        t.fake.answer("start", .success(t.state(0, host: true, queue: [2])))
+        t.fake.leaveEnds = true
+        await t.together.start()
+        t.together.sheetOpen = true
+        t.together.membersOpen = true
+        #expect(t.together.inviteOpen)
+        await t.together.leave()
+        #expect(t.fake.calls.contains(.leave(sid)))
+        #expect(!t.together.inviteOpen && !t.together.sheetOpen && !t.together.membersOpen)
+        #expect(t.notes.all.last == "The listening session ended.")
+    }
+
+    @Test("Starting twice does not make a second session: the sheet opens on the first")
+    func startOnce() async throws {
+        let t = TRig()
+        t.fake.answer("start", .success(t.state(0, host: true)))
+        await t.together.start()
+        t.together.sheetOpen = false
+        await t.together.start()
+        #expect(t.together.sheetOpen)
+        #expect(t.fake.calls.filter { if case .start = $0 { return true } else { return false } }.count == 1)
+    }
+}
