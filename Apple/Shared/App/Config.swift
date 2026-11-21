@@ -63,6 +63,10 @@ enum Live {
         media: SystemMediaCenter(), hearts: library,
         images: library.images, motion: motion, widget: widget, karaoke: karaoke, settings: { Live.session.settings.playback }, quality: { Live.device.streamQuality },
         notify: { Live.library.show(Toast(message: $0)) })
+    /// Listen together: follows a session's song and position, and takes the player's controls.
+    static let together = Together(
+        source: session.client, player: player, server: Config.server,
+        notify: { Live.library.show(Toast(message: $0)) })
     static let lyrics = Lyrics(
         source: session.client, settings: { Live.session.settings }, upcoming: { Live.player.upcoming.first },
         notify: { Live.library.show(Toast(message: $0)) })

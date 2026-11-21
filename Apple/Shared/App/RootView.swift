@@ -15,6 +15,8 @@ struct RootView: View {
     let lyrics: Lyrics
     let device: DeviceSettings
     let invites: GuestInvites
+    /// Listen together: the session this device follows, if any.
+    let together: Together
     var start = ShellStart()
 
     @Environment(\.scenePhase) private var scenePhase
@@ -24,6 +26,11 @@ struct RootView: View {
     @State private var albumTone: RGB? = nil
     /// A link the system handed the app, waiting for the shell to open it.
     @State private var link: AppLink? = nil
+
+    private func restoreQueueThenSession() async {
+        await player.signedIn()
+        await together.resume()
+    }
 
     var body: some View {
         Group {
@@ -41,6 +48,7 @@ struct RootView: View {
         .environment(library)
         .environment(player)
         .environment(player.karaoke)
+        .environment(together)
         .environment(lyrics)
         .environment(device)
         .environment(invites)
@@ -54,7 +62,14 @@ struct RootView: View {
         }
         .animation(.smooth, value: session.phase)
         .onChange(of: session.isGuest, initial: true) { library.listensOnly = session.isGuest }
-        .onOpenURL { url in link = AppLink(url) }
+        .onOpenURL { url in
+            // An invitation opened while signed out waits for the sign-in; signed in, the shell offers it.
+            if case .together(let id)? = AppLink(url), session.phase != .signedIn {
+                together.holdLink(id)
+            } else {
+                link = AppLink(url)
+            }
+        }
         .onChange(of: device.motionLoop) { player.lockScreenChanged() }
         .task(id: player.track?.key) { lyrics.follow(player.track) }
         .task(id: player.track?.cover) {
@@ -65,11 +80,14 @@ struct RootView: View {
             switch session.phase {
             case .signedIn:
                 async let hearts: Void = library.start()
-                async let queue: Void = player.signedIn()
+                // The saved queue first: a session this person is in (or a link that waited) comes after,
+                // so the queue it keeps is the one just read.
+                async let queue: Void = restoreQueueThenSession()
                 async let karaoke: Void = player.karaoke.run()
                 _ = await (hearts, queue, karaoke)
             case .signedOut:
                 library.reset()
+                together.clear()
                 player.stop()
             case .locked: break
             }

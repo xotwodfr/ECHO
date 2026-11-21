@@ -18,6 +18,9 @@ final class QueueSync {
     /// The saved queue was read: changes are saved from now on (never before, so a queue another
     /// device saved is not written over unread).
     private(set) var following = false
+    /// A Listen together session plays instead of the user's queue: nothing is saved meanwhile
+    /// (Player.beganSession), so `/me/queue` stays what the user made.
+    private(set) var held = false
 
     weak var player: Player?
     private let source: any PlaybackSource
@@ -86,14 +89,20 @@ final class QueueSync {
         pending = nil
     }
 
+    /// A session begins (true: nothing is saved, and a save that waits is dropped) or ends.
+    func hold(_ on: Bool) {
+        held = on
+        if on { cancelPending() }
+    }
+
     /// Something changed: saved 2 s from now, once however many changes come meanwhile.
     func later() {
-        guard following else { return }
+        guard following, !held else { return }
         pending?.cancel()
         pending = Task { [weak self] in
             guard let self else { return }
             try? await self.sleep(Self.debounce)
-            guard !Task.isCancelled, self.following else { return }
+            guard !Task.isCancelled, self.following, !self.held else { return }
             // A save under way is not cancelled by the next change: it would leave its `updatedAt`
             // unread and the next save refused.
             self.pending = nil
@@ -109,7 +118,7 @@ final class QueueSync {
 
     /// While playing, a save every 15 s (the position moves on).
     func tick() {
-        guard following else { return }
+        guard following, !held else { return }
         let date = now()
         guard let last = lastPeriodic else {
             lastPeriodic = date
@@ -123,7 +132,7 @@ final class QueueSync {
 
     /// Leaving the app: a save that waits goes now.
     func flush() async {
-        guard following, pending != nil else { return }
+        guard following, !held, pending != nil else { return }
         cancelPending()
         await save()
     }
@@ -143,7 +152,7 @@ final class QueueSync {
     }
 
     private func saveOnce() async {
-        guard following, let player else { return }
+        guard following, !held, let player else { return }
         let session = self.session
         let playing = player.isPlaying
         var queue = player.queue

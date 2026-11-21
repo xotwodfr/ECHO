@@ -13,6 +13,7 @@ final class DemoWorld {
     let lyrics: Lyrics
     let device: DeviceSettings
     let invites: GuestInvites
+    let together: Together
     /// The scan screens' scan, in the state each shows.
     let scan: ScanFlow?
 
@@ -58,9 +59,11 @@ final class DemoWorld {
         let device = DeviceSettings(defaults: nil)
         self.library = library
         self.device = device
-        player = Player.demo(
+        let player = Player.demo(
             library: library, screen: screen, motion: MotionCovers.demo(loop: { device.motionLoop.seconds }), device: device)
+        self.player = player
         lyrics = Lyrics.demo(screen: screen, library: library)
+        together = DemoTogether.together(for: screen, player: player, server: Config.server)
     }
 }
 
@@ -114,7 +117,7 @@ struct DemoRoot: View {
     private var root: some View {
         RootView(
             session: world.session, library: world.library, player: world.player, lyrics: world.lyrics,
-            device: world.device, invites: world.invites, start: DemoLibrary.start(world.base)
+            device: world.device, invites: world.invites, together: world.together, start: DemoLibrary.start(world.base)
         )
         .environment(\.lyricsMenuOnOpen, world.base == "lyrics-menu")
         .environment(\.motionPreviewFrame, 4)

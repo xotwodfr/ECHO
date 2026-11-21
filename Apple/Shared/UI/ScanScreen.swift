@@ -31,7 +31,21 @@ struct ScanScreen: View {
         }
     }
 
-    private var title: String { flow.purpose == .signInComputer ? "Sign in a computer" : "Scan a guest pass" }
+    private var title: String {
+        switch flow.purpose {
+        case .signInComputer: "Sign in a computer"
+        case .joinAsGuest: "Scan a guest pass"
+        case .joinTogether: "Join a session"
+        }
+    }
+
+    private var subtitle: String {
+        switch flow.purpose {
+        case .signInComputer: "On ECHO's web sign-in page"
+        case .joinAsGuest: "The QR code your host shows"
+        case .joinTogether: "The QR code the host shows"
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -94,7 +108,7 @@ struct ScanScreen: View {
             Spacer()
             VStack(spacing: 2) {
                 Text(title).font(.headline)
-                Text(flow.purpose == .signInComputer ? "On ECHO's web sign-in page" : "The QR code your host shows")
+                Text(subtitle)
                     .font(.footnote)
                     .foregroundStyle(.white.opacity(0.75))
             }
@@ -136,12 +150,20 @@ struct ScanScreen: View {
             if camera == .live, access != .allowed {
                 cameraProblem
             } else {
-                line(
-                    "qrcode.viewfinder",
-                    flow.purpose == .signInComputer ? "Point the camera at the code" : "Point the camera at the guest pass",
-                    flow.purpose == .signInComputer
-                        ? "Open \(flow.session.server) on the computer. Its sign-in page shows a QR code."
-                        : "Whoever invites you shows it in ECHO: Settings → Guests → Invite a guest.")
+                switch flow.purpose {
+                case .signInComputer:
+                    line(
+                        "qrcode.viewfinder", "Point the camera at the code",
+                        "Open \(flow.session.server) on the computer. Its sign-in page shows a QR code.")
+                case .joinAsGuest:
+                    line(
+                        "qrcode.viewfinder", "Point the camera at the guest pass",
+                        "Whoever invites you shows it in ECHO: Settings → Guests → Invite a guest.")
+                case .joinTogether:
+                    line(
+                        "qrcode.viewfinder", "Point the camera at the code",
+                        "The host shows it in ECHO: Now Playing → Together. Your music then follows theirs.")
+                }
             }
         case .checking:
             HStack(spacing: 12) {

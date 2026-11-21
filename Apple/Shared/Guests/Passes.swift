@@ -10,6 +10,8 @@ enum ScanPayload: Equatable, Sendable {
     case signIn(id: String)
     /// A guest pass for this ECHO (`<origin>/guest#<code>`, or `echo://guest#<code>`).
     case guest(code: String)
+    /// A Listen together invitation for this ECHO (`<origin>/together/<id>`, or `echo://together/<id>`).
+    case together(id: String)
     /// A sign-in page or guest pass of another ECHO server.
     case otherServer(host: String)
     /// Anything else: a shop's QR code, a Wi-Fi password, a link with a broken code.
@@ -23,6 +25,15 @@ enum ScanPayload: Equatable, Sendable {
     /// Reads a scanned text against this app's server (`https://echo.folk3s.com`).
     init(_ text: String, server: URL) {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A Listen together invitation holds the session in its path, not after a #.
+        if let id = TogetherLink.id(in: text, server: server) {
+            self = .together(id: id)
+            return
+        }
+        if let host = TogetherLink.host(of: text) {
+            self = .otherServer(host: host)
+            return
+        }
         guard let url = URL(string: text), let scheme = url.scheme?.lowercased(),
               let fragment = url.fragment(percentEncoded: false)
         else {

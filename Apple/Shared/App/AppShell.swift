@@ -64,6 +64,7 @@ struct PhoneShell: View {
     @Environment(Library.self) private var library
     @Environment(Player.self) private var player
     @Environment(Lyrics.self) private var lyrics
+    @Environment(Together.self) private var together
     @Environment(\.lyricsMenuOnOpen) private var lyricsMenuOnOpen
     @Environment(Feedback.self) private var feedback: Feedback?
 
@@ -147,6 +148,8 @@ struct PhoneShell: View {
                 .environment(library)
                 .environment(player)
                 .environment(lyrics)
+                .environment(together)
+                .environment(session)
                 .environment(\.lyricsMenuOnOpen, lyricsMenuOnOpen)
                 .environment(\.navigate, NavigateAction { route in
                     nowPlaying = false
@@ -156,6 +159,8 @@ struct PhoneShell: View {
         .fullScreenCover(item: $scan) { flow in
             ScanScreen(flow: flow) { scan = nil }
         }
+        // A Listen together invitation, scanned or opened: whose session, Join or Not now.
+        .modifier(TogetherSheets(place: .shell))
         .onChange(of: tab) { feedback?.tick() }
         .task {
             // The demo screens that open on Now Playing (`-ECHODemo nowplaying`, `queue`, and the
@@ -192,6 +197,8 @@ struct PhoneShell: View {
             let flow = ScanFlow(purpose: .signInComputer, session: session)
             scan = flow
             await flow.scanned(link.url.absoluteString)
+        case .together(let id):
+            await together.consider(id)
         }
         self.link = nil
     }
@@ -225,6 +232,7 @@ struct MacShell: View {
 
     @Environment(Library.self) private var libraryModel
     @Environment(Player.self) private var player
+    @Environment(Together.self) private var together
     @Environment(\.openSettings) private var openSettings
 
     init(session: Session, start: ShellStart = ShellStart()) {
@@ -264,6 +272,8 @@ struct MacShell: View {
             }
         }
         .animation(.smooth(duration: 0.35), value: showsLyrics)
+        // Listen together: the offer of a pasted link, and its sheet (the player bar's button).
+        .modifier(TogetherSheets(place: .shell))
     }
 
     private var library: some View {

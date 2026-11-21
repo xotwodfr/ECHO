@@ -532,6 +532,171 @@ const listed = (await save('guests', await bearer('/guests'))) as unknown as { i
 await save('guest-end', await bearer(`/guests/${listed[0]?.id}/end`, 'POST', {}));
 await save('guest-end-not-found', await bearer(`/guests/${listed[0]?.id}/end`, 'POST', {}));
 await save('guests-empty', await bearer('/guests'));
+// Listen together (src/server/together.ts): ada hosts a session on a song with two more queued, a
+// guest (who copies ada's library, so may join) looks at it, joins, adds and removes songs, is
+// refused the host's controls, and the host plays, pauses, seeks, skips, goes back and jumps; then
+// the event stream (state, a change, end) and leaving, ending and a session that is gone. The random
+// session id and queue ids are written as plain stand-ins (the order they first appear in).
+const memberCode = (await (
+  await bearer('/guests/codes', 'POST', { durationMs: 3_600_000 })
+).json()) as {
+  code: string;
+};
+const memberJoin = await save(
+  'together-guest-redeem',
+  await anyone('/guests/redeem', { code: memberCode.code, name: 'ECHO guest (iPhone)' }),
+);
+standIns.set(String(memberJoin.username), 'sam');
+const memberToken = String(memberJoin.token);
+const asMember = (path: string, method = 'GET', body?: unknown) =>
+  app.request(`http://localhost/api/v1${path}`, {
+    method,
+    headers: {
+      host: 'localhost',
+      authorization: `Bearer ${memberToken}`,
+      ...(body !== undefined && { 'content-type': 'application/json' }),
+    },
+    ...(body !== undefined && { body: JSON.stringify(body) }),
+  });
+const ref = (album: string, n: number, title: string, artist: string, artistId: string) => ({
+  id: `${album}-t${n}`,
+  title: `${title} ${n}`,
+  artist,
+  artistId,
+  album: title,
+  albumId: album,
+  durationMs: 200_000,
+  cover: `/api/v1/navidrome/cover/${album}?size=600`,
+});
+let itemNo = 0;
+/** Saves a Listen together answer, its session id and queue ids as stand-ins. */
+async function saveT(name: string, res: Response) {
+  const text = await res.clone().text();
+  const doc = text.startsWith('{') ? (JSON.parse(text) as Record<string, unknown>) : {};
+  const found = (doc.session ?? doc) as {
+    id?: unknown;
+    now?: { uid: string } | null;
+    queue?: { uid: string }[];
+  };
+  if (typeof found.id === 'string' && found.id.length > 20 && !standIns.has(found.id))
+    standIns.set(found.id, 'together-session-for-tests-0001');
+  for (const it of [found.now, ...(found.queue ?? [])])
+    if (it && !standIns.has(it.uid)) standIns.set(it.uid, `together-item-${++itemNo}`);
+  return save(name, res);
+}
+await saveT('together-none', await bearer('/together'));
+await saveT('together-bad-track', await bearer('/together', 'POST', { track: { id: 7 } }));
+const started = (await saveT(
+  'together-started',
+  await bearer('/together', 'POST', {
+    track: ref('al-1', 1, 'Harbour Lights', 'Lowfield', 'ar-1'),
+    positionMs: 12_000,
+    playing: true,
+    queue: [
+      ref('al-1', 2, 'Harbour Lights', 'Lowfield', 'ar-1'),
+      ref('al-3', 1, 'Glass Weather', 'Mira Sole', 'ar-2'),
+    ],
+  }),
+)) as unknown as { id: string; queue: { uid: string }[] };
+const tid = started.id;
+await saveT('together-current', await bearer('/together'));
+await saveT('together-not-found', await bearer('/together/never-made-session-id-000001'));
+await saveT('together-peek', await asMember(`/together/${tid}`));
+await saveT(
+  'together-queue-not-member',
+  await asMember(`/together/${tid}/queue`, 'POST', {
+    track: ref('al-2', 1, 'Paper Satellites', 'The Quiet Hours', 'ar-3'),
+  }),
+);
+t.clock.t += 5_000;
+await saveT('together-join', await asMember(`/together/${tid}/join`, 'POST', {}));
+await saveT('together-state-member', await asMember(`/together/${tid}`));
+const addedBy = (await saveT(
+  'together-queue-added',
+  await asMember(`/together/${tid}/queue`, 'POST', {
+    track: ref('al-2', 1, 'Paper Satellites', 'The Quiet Hours', 'ar-3'),
+  }),
+)) as unknown as { queue: { uid: string }[] };
+await saveT('together-queue-bad', await asMember(`/together/${tid}/queue`, 'POST', { track: {} }));
+await saveT(
+  'together-queue-next',
+  await bearer(`/together/${tid}/queue`, 'POST', {
+    track: ref('al-3', 2, 'Glass Weather', 'Mira Sole', 'ar-2'),
+    next: true,
+  }),
+);
+const hostItem = started.queue[0]?.uid ?? '';
+await saveT(
+  'together-remove-denied',
+  await asMember(`/together/${tid}/queue/${hostItem}`, 'DELETE'),
+);
+await saveT(
+  'together-remove-not-found',
+  await asMember(`/together/${tid}/queue/never-queued-0001`, 'DELETE'),
+);
+const mine = addedBy.queue.at(-1)?.uid ?? '';
+await saveT('together-remove', await asMember(`/together/${tid}/queue/${mine}`, 'DELETE'));
+const ctl = (body: unknown) => bearer(`/together/${tid}/control`, 'POST', body);
+await saveT(
+  'together-control-denied',
+  await asMember(`/together/${tid}/control`, 'POST', { action: 'pause' }),
+);
+t.clock.t += 8_000;
+await saveT('together-pause', await ctl({ action: 'pause' }));
+t.clock.t += 2_000;
+await saveT('together-play', await ctl({ action: 'play' }));
+t.clock.t += 1_000;
+await saveT('together-seek', await ctl({ action: 'seek', positionMs: 90_000 }));
+await saveT('together-seek-bad', await ctl({ action: 'seek', positionMs: 'soon' }));
+await saveT('together-bad-action', await ctl({ action: 'rewind' }));
+const upNext = (await (await bearer(`/together/${tid}`)).json()) as {
+  now: { uid: string };
+  queue: { uid: string }[];
+};
+await saveT('together-next-stale', await ctl({ action: 'next', from: 'not-the-song-playing' }));
+t.clock.t += 1_000;
+await saveT('together-next', await ctl({ action: 'next', from: upNext.now.uid }));
+t.clock.t += 6_000;
+await saveT('together-previous', await ctl({ action: 'previous' }));
+const jumpTo = upNext.queue.at(-1)?.uid ?? '';
+await saveT('together-jump', await ctl({ action: 'jump', uid: jumpTo }));
+await saveT('together-jump-not-found', await ctl({ action: 'jump', uid: 'never-queued-0001' }));
+// The event stream: the state it opens with, the next one after a change, the end.
+{
+  const open = await asMember(`/together/${tid}/events`);
+  console.log(`together-events: ${open.status}`);
+  const reader = open.body?.getReader();
+  const decoder = new TextDecoder();
+  const chunks: string[] = [];
+  const next = async () => {
+    const r = await Promise.race([
+      reader?.read(),
+      new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 3000)),
+    ]);
+    if (r && !r.done) chunks.push(decoder.decode(r.value));
+  };
+  await next();
+  await ctl({ action: 'pause' });
+  await next();
+  await bearer(`/together/${tid}/leave`, 'POST', {});
+  await next();
+  await reader?.cancel().catch(() => {});
+  writeFileSync(
+    join(OUT, 'together-events.json'),
+    `${JSON.stringify({ chunks: chunks.map(scrub) }, null, 2)}\n`,
+  );
+}
+await saveT('together-leave-gone', await asMember(`/together/${tid}/leave`, 'POST', {}));
+await saveT('together-ended', await bearer(`/together/${tid}`));
+// A session to leave (a member) and one to end (the host leaving ends it for everyone).
+const second = (await saveT(
+  'together-started-empty',
+  await bearer('/together', 'POST', {}),
+)) as unknown as { id: string };
+await saveT('together-join-empty', await asMember(`/together/${second.id}/join`, 'POST', {}));
+await saveT('together-leave', await asMember(`/together/${second.id}/leave`, 'POST', {}));
+await saveT('together-end', await bearer(`/together/${second.id}/leave`, 'POST', {}));
+
 let tooMany: Response | undefined;
 for (let i = 0; i < 6 && tooMany?.status !== 429; i++)
   tooMany = await bearer('/guests/codes', 'POST', { durationMs: 3_600_000 });

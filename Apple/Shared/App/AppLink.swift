@@ -9,6 +9,9 @@ enum AppLink: Equatable, Sendable {
     /// A guest pass (`echo://guest#<code>`, the web's `/guest#<code>` in the app's scheme): signed
     /// out, the sign-in page checks it and offers to join; signed in, the scanner says why not.
     case guest(code: String)
+    /// A Listen together invitation (`echo://together/<id>`, the web's `/together/<id>` in the app's
+    /// scheme): offered with its host's name once signed in, then Join.
+    case together(id: String)
 
     static let scheme = "echo"
 
@@ -27,6 +30,10 @@ enum AppLink: Equatable, Sendable {
                 ?? parts.dropFirst().first
             guard let code, Self.isCode(code) else { return nil }
             self = .guest(code: code)
+        case "together":
+            let id = url.fragment(percentEncoded: false) ?? parts.dropFirst().first
+            guard let id, Self.isCode(id) else { return nil }
+            self = .together(id: id)
         default: return nil
         }
     }
@@ -40,6 +47,7 @@ enum AppLink: Equatable, Sendable {
         switch self {
         case .nowPlaying: URL(string: "\(Self.scheme)://now-playing")!
         case .guest(let code): URL(string: "\(Self.scheme)://guest#\(code)")!
+        case .together(let id): URL(string: "\(Self.scheme)://together/\(id)")!
         }
     }
 }

@@ -57,6 +57,7 @@ struct MacPlayerBar: View {
                 HStack(spacing: 10) {
                     if player.karaoke.isOn { karaokeControls }
                     KaraokeButton()
+                    TogetherButton()
                     Button("Lyrics", systemImage: "quote.bubble") { showsLyrics.toggle() }
                         .glassToggle(showsLyrics)
                     Button("Up next", systemImage: "list.bullet") { showsQueue.toggle() }

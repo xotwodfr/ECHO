@@ -66,7 +66,10 @@ final class Player {
         return engineDuration ?? 0
     }
     /// Whether Next has somewhere to go: Next up, the context, or repeat-all starting again.
-    var hasNext: Bool { !upcoming.isEmpty || (repeatMode == .all && list != nil) }
+    var hasNext: Bool {
+        if let remote { return remote.canGoNext }
+        return !upcoming.isEmpty || (repeatMode == .all && list != nil)
+    }
 
     /// Where the song is at `date`: moving on from the last position while playing.
     func time(at date: Date = Date()) -> Double {
@@ -92,6 +95,10 @@ final class Player {
         }
         return max(0, time(at: now()) - heldLatency)
     }
+
+    /// How long the sound takes from here to the ears (the output's latency): what Listen together
+    /// adds to the places it asks the engine for, so they are heard when the session gets there.
+    var outputLatency: Double { engine.outputLatency }
 
     /// Where the scrubber is held while it is dragged, seconds (the lyrics follow it), else nil.
     private(set) var scrubbing: Double? = nil
@@ -143,6 +150,14 @@ final class Player {
     @ObservationIgnored let sync: QueueSync?
     /// Karaoke mode: which songs play as their karaoke version, and its controls.
     let karaoke: Karaoke
+    /// Listen together: while a session runs, its transport and shared queue answer the controls in
+    /// this player's place (Together/Together.swift); nil otherwise.
+    @ObservationIgnored weak var remote: (any PlayerRemote)?
+    /// The system paused the sound (the headphones came out, a call) while following a session: the
+    /// session does not play it again until the person does (Together's Play).
+    @ObservationIgnored private(set) var followHeld = false
+    /// What the personal queue held and where, kept while a session replaces it.
+    typealias PersonalQueue = (queue: QueueState, seconds: Double)
 
     // MARK: - Where it is
 
@@ -219,6 +234,10 @@ final class Player {
     /// list in a random order). Songs the user queued stay next.
     func play(_ tracks: [Track], at index: Int, context: PlayContext? = nil) async {
         guard tracks.indices.contains(index) else { return }
+        if let remote {
+            remote.play(tracks, at: index)
+            return
+        }
         list = (tracks, context)
         let q = QueueState.start(
             queue, tracks: tracks, index: index, source: context, provider: tracks[index].provider, shuffle: shuffled,
@@ -237,6 +256,10 @@ final class Player {
     /// by default, an album's name from its menu).
     func playNext(_ tracks: [Track], label: String? = nil) {
         guard !tracks.isEmpty else { return }
+        if let remote {
+            remote.playNext(tracks, label: label)
+            return
+        }
         enqueue(queue.playingNext(tracks))
         notify("Playing “\(label ?? Self.label(tracks))” next")
     }
@@ -244,6 +267,10 @@ final class Player {
     /// Add to Queue: after everything already queued.
     func addToQueue(_ tracks: [Track], label: String? = nil) {
         guard !tracks.isEmpty else { return }
+        if let remote {
+            remote.addToQueue(tracks, label: label)
+            return
+        }
         enqueue(queue.addingToQueue(tracks))
         notify("Added “\(label ?? Self.label(tracks))” to the queue")
     }
@@ -266,11 +293,31 @@ final class Player {
     // MARK: - The transport
 
     func toggle() {
-        if isPlaying { pause() } else { resume() }
+        if let remote {
+            remote.togglePlaying()
+            return
+        }
+        if isPlaying { pauseLocally() } else { resumeLocally() }
     }
 
     /// Plays on from where it is (from the start after the last song ended).
     func resume() {
+        if let remote {
+            remote.setPlaying(true)
+            return
+        }
+        resumeLocally()
+    }
+
+    func pause() {
+        if let remote {
+            remote.setPlaying(false)
+            return
+        }
+        pauseLocally()
+    }
+
+    private func resumeLocally() {
         guard let track, !isPlaying else { return }
         if status == .ended {
             load(queue, autoplay: true, startAt: 0, fresh: false)
@@ -291,7 +338,7 @@ final class Player {
         sync?.later()
     }
 
-    func pause() {
+    private func pauseLocally() {
         guard isPlaying else { return }
         let at = time(at: now())
         status = .paused
@@ -303,6 +350,10 @@ final class Player {
 
     /// The next song: Next up, then the context, then (repeat-all) the list again.
     func next() {
+        if let remote {
+            remote.skipNext()
+            return
+        }
         guard let next = queue.advanced() ?? (repeatMode == .all ? wrap() : nil) else { return }
         load(next, autoplay: isPlaying)
     }
@@ -310,6 +361,10 @@ final class Player {
     /// Past 3 s the song starts again; before that, the song before it.
     func previous() {
         guard track != nil else { return }
+        if let remote {
+            remote.skipPrevious()
+            return
+        }
         if time(at: now()) > Self.restartAfter {
             seek(to: 0)
         } else if let back = queue.back() {
@@ -320,6 +375,15 @@ final class Player {
     }
 
     func seek(to seconds: Double) {
+        guard track != nil else { return }
+        if let remote {
+            remote.seek(to: seconds)
+            return
+        }
+        seekLocally(to: seconds)
+    }
+
+    private func seekLocally(to seconds: Double) {
         guard track != nil else { return }
         let total = duration
         let to = total > 0 ? min(max(0, seconds), total) : max(0, seconds)
@@ -409,6 +473,77 @@ final class Player {
         load(q, autoplay: false, startAt: position)
     }
 
+    // MARK: - Listen together
+
+    /// A session begins: the personal queue (and where it was) is kept to put back, and nothing is
+    /// saved to `/me/queue` while the session plays (the saved queue is the user's, not the session's).
+    func beganSession() -> PersonalQueue {
+        sync?.hold(true)
+        followHeld = false
+        return (queue, time(at: now()))
+    }
+
+    /// The session is over: the personal queue is back, paused where it was (as the web does), or the
+    /// player is empty if it held nothing. The saved queue was never touched, so nothing is saved.
+    func endedSession(restoring personal: PersonalQueue?) {
+        remote = nil
+        followHeld = false
+        generation &+= 1
+        cancelTasks()
+        stopEngine()
+        if let personal, personal.queue.now != nil {
+            shuffled = personal.queue.shuffleOrder != nil
+            list = nil
+            load(personal.queue, autoplay: false, startAt: max(0, personal.seconds))
+        } else {
+            queue = QueueState()
+            list = nil
+            status = .idle
+            error = nil
+            engineDuration = nil
+            setPosition(0)
+            publish()
+        }
+        sync?.cancelPending()
+        sync?.hold(false)
+    }
+
+    /// The session's song, loaded here at `seconds`: playing at once, or (`play` false) cued paused so
+    /// it can start when the session gets there (`followPlay`). The queue is just this song: the
+    /// session's queue is Together's.
+    func followLoad(_ track: Track, at seconds: Double, play: Bool, context: PlayContext?) {
+        var q = QueueState(provider: track.provider)
+        q.now = track
+        q.contextSource = context
+        list = nil
+        load(q, autoplay: true, startAt: max(0, seconds))
+        // The stream URL is on its way: paused now, it loads paused at that place.
+        if !play { pauseLocally() }
+    }
+
+    /// Plays on from where it is (from where a seek put it after the song ended).
+    func followPlay() {
+        guard let track, !isPlaying else { return }
+        if loaded?.key != track.key {
+            load(queue, autoplay: true, startAt: time(at: now()), fresh: false)
+        } else {
+            resumeLocally()
+        }
+    }
+
+    func followPause() {
+        pauseLocally()
+    }
+
+    func followSeek(to seconds: Double) {
+        seekLocally(to: seconds)
+    }
+
+    /// The person plays on after the system paused the sound: the session may play it again.
+    func releaseFollow() {
+        followHeld = false
+    }
+
     // MARK: - Signing in and out
 
     /// Signed in: the saved queue comes back (QueueSync).
@@ -424,6 +559,9 @@ final class Player {
     /// Everything stops and the queue empties (signing out); nothing is saved after.
     func stop() {
         sync?.stop()
+        sync?.hold(false)
+        remote = nil
+        followHeld = false
         generation &+= 1
         cancelTasks()
         stopEngine()
@@ -696,14 +834,20 @@ final class Player {
         case .interruptionBegan:
             let justPaused = pausedBySystemAt.map { now().timeIntervalSince($0) < 2 } ?? false
             resumeAfterInterruption = isPlaying || justPaused
-            pause()
+            if remote != nil { followHeld = true }
+            pauseLocally()
         case .interruptionEnded(let shouldResume):
-            if shouldResume, resumeAfterInterruption { resume() }
+            if shouldResume, resumeAfterInterruption {
+                followHeld = false
+                resumeLocally()
+            }
             resumeAfterInterruption = false
         case .headphonesOut:
-            // Out of the headphones the music stops (it never moves to the speaker by itself).
+            // Out of the headphones the music stops (it never moves to the speaker by itself, and a
+            // session does not play it again until the person does).
             resumeAfterInterruption = false
-            pause()
+            if remote != nil { followHeld = true }
+            pauseLocally()
         }
     }
 
@@ -800,6 +944,14 @@ final class Player {
     private func ended() {
         loaded = nil
         preloaded = nil
+        // In a session the song waits on the session to move on (the host's player says it ended).
+        if let remote {
+            status = .ended
+            setPosition(duration)
+            publish()
+            remote.songEnded()
+            return
+        }
         if repeatMode == .one {
             load(queue, autoplay: true, startAt: 0, fresh: false)
         } else if let next = queue.advanced() ?? (repeatMode == .all ? wrap() : nil) {

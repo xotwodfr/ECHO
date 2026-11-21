@@ -77,7 +77,7 @@ extension Player {
         if [
             "nowplaying", "queue", "mini", "player", "settings", "settings-playback", "settings-lyrics", "lockcover",
             "karaoke", "karaoke-shelf", "karaoke-making", "settings-karaoke",
-        ].contains(screen) {
+        ].contains(screen) || DemoTogether.screens.contains(screen) {
             player.cue(DemoLibrary.nowPlaying, at: 84)
         } else if let time = DemoLyrics.time(for: screen) {
             player.cue(DemoLibrary.nowPlaying, at: time)

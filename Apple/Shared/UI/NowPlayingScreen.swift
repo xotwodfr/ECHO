@@ -18,6 +18,7 @@ struct NowPlayingScreen: View {
     @Environment(Player.self) private var player
     @Environment(Library.self) private var library
     @Environment(Lyrics.self) private var lyrics
+    @Environment(Together.self) private var together
     @Environment(\.dismiss) private var dismiss
     @Environment(\.lyricsMenuOnOpen) private var lyricsMenuOnOpen
     @State private var palette: AlbumPalette? = nil
@@ -33,6 +34,10 @@ struct NowPlayingScreen: View {
         // A heart or a queue change says so here too, above the buttons.
         .overlay { ToastLayer(bottom: 92) }
         .themedDark()
+        // Listen together's sheets open from here while Now Playing is open.
+        .modifier(TogetherSheets(place: .nowPlaying))
+        .onAppear { together.nowPlayingShown = true }
+        .onDisappear { together.nowPlayingShown = false }
         .task(id: player.track?.cover) {
             if let cover = player.track?.cover { palette = await library.images.palette(cover) }
         }
@@ -61,9 +66,12 @@ struct NowPlayingScreen: View {
                     Spacer(minLength: 8)
                     if !library.listensOnly { heart(track) }
                 }
-                QueueList()
-                    .frame(maxHeight: .infinity)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                // In a session Up next is the shared queue.
+                Group {
+                    if together.session != nil { SharedQueueList() } else { QueueList() }
+                }
+                .frame(maxHeight: .infinity)
+                .transition(.opacity.combined(with: .move(edge: .bottom)))
             } else {
                 Cover(path: track.cover, corner: 22)
                     .shadow(color: .black.opacity(0.45), radius: 34, y: 24)
@@ -161,6 +169,9 @@ struct NowPlayingScreen: View {
                 .overlay { RoutePicker() }
             Spacer()
             KaraokeButton()
+                .controlSize(.extraLarge)
+            Spacer()
+            TogetherButton()
                 .controlSize(.extraLarge)
             Spacer()
             Button("Up next", systemImage: "list.bullet") {

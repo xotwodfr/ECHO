@@ -1,0 +1,35 @@
+{
+  "id": "together-session-for-tests-0001",
+  "url": "/together/together-session-for-tests-0001",
+  "host": {
+    "id": 1,
+    "username": "ada"
+  },
+  "you": {
+    "id": 2,
+    "host": false,
+    "member": true
+  },
+  "members": [
+    {
+      "id": 1,
+      "username": "ada",
+      "host": true,
+      "online": true
+    },
+    {
+      "id": 2,
+      "username": "sam",
+      "host": false,
+      "online": true
+    }
+  ],
+  "now": null,
+  "queue": [],
+  "playing": false,
+  "startedAt": null,
+  "positionMs": 0,
+  "serverTime": 1800001318000,
+  "version": 1,
+  "createdAt": 1800001318000
+}

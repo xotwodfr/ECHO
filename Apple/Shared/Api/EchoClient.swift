@@ -210,6 +210,28 @@ final class EchoClient: Sendable {
         return (answer.0, res)
     }
 
+    /// A long-lived GET under /api/v1 whose body is read as it comes (Server-Sent Events): the answer's
+    /// head and the bytes. Not retried and not counted as ECHO answering or not (the caller decides what
+    /// a closed stream means); a refused token still brings the sign-in back. `idle`: how long the
+    /// stream may say nothing (the server pings every 15 s).
+    func open(_ path: String, accept: String, idle: TimeInterval = 45) async throws -> (bytes: URLSession.AsyncBytes, response: HTTPURLResponse) {
+        guard let url = apiURL(path) else { throw ApiError.server(status: 0, code: "bad_url") }
+        var req = URLRequest(url: url, timeoutInterval: idle)
+        req.httpMethod = "GET"
+        req.setValue(accept, forHTTPHeaderField: "Accept")
+        let token = self.token
+        if let token { req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization") }
+        do {
+            let (bytes, response) = try await http.bytes(for: req)
+            guard let res = response as? HTTPURLResponse else { throw ApiError.badResponse }
+            if res.statusCode == 401, let token { onEvent(.tokenRefused(token)) }
+            return (bytes, res)
+        } catch let error as URLError {
+            if error.code == .cancelled { throw CancellationError() }
+            throw ApiError(transport: error)
+        }
+    }
+
     /// A GET whose JSON answer decodes as `T`.
     func get<T: Decodable>(_ path: String, query: [(String, String)] = [], as type: T.Type = T.self) async throws -> T {
         let raw = try await data("GET", path, query: query)

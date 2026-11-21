@@ -19,7 +19,7 @@ struct EchoApp: App {
             } else {
                 RootView(
                     session: Live.session, library: Live.library, player: Live.player, lyrics: Live.lyrics,
-                    device: Live.device, invites: Live.invites
+                    device: Live.device, invites: Live.invites, together: Live.together
                 )
                 .frame(minWidth: 760, minHeight: 520)
             }

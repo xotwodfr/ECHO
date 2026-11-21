@@ -34,6 +34,8 @@ final class ScanFlow {
         case signInComputer
         /// Signed out: a guest pass.
         case joinAsGuest
+        /// Signed in: a Listen together code (Now Playing → Together).
+        case joinTogether
     }
 
     enum Step: Equatable, Sendable {
@@ -61,15 +63,18 @@ final class ScanFlow {
     private(set) var waitUntil: Date? = nil
 
     let session: Session
+    /// Listen together, which a scanned invitation goes to (the iPhone's Now Playing; nil elsewhere).
+    let together: Together?
     private let now: () -> Date
     /// The last code that was refused, not checked again for a few seconds while the camera keeps
     /// seeing it.
     @ObservationIgnored private var refused: (text: String, at: Date)? = nil
     static let refusedFor: TimeInterval = 4
 
-    init(purpose: Purpose, session: Session, now: @escaping () -> Date = Date.init) {
+    init(purpose: Purpose, session: Session, together: Together? = nil, now: @escaping () -> Date = Date.init) {
         self.purpose = purpose
         self.session = session
+        self.together = together
         self.now = now
     }
 
@@ -112,6 +117,22 @@ final class ScanFlow {
                 : "That's a guest pass. To listen as a guest, sign out first, then scan it from the sign-in page.")
         case (.signIn, .joinAsGuest):
             refuse(text, "That's ECHO's sign-in code for a computer. Sign in on this phone first, then scan it from Settings.")
+        case (.together(let id), .joinTogether):
+            // The offer (whose session, Join or Not now) is Together's: the scanner is done.
+            guard let together else {
+                refuse(text, "Listening together isn't available here.")
+                return
+            }
+            step = .joined
+            Task { await together.consider(id) }
+        case (.together, _):
+            refuse(text, "That's a Listen together code. Scan it from Now Playing → Together.")
+        case (.signIn, .joinTogether):
+            refuse(text, "That's ECHO's sign-in code for a computer, not a Listen together code.")
+        case (.guest, .joinTogether):
+            refuse(text, "That's a guest pass, not a Listen together code.")
+        case (.unknown, .joinTogether):
+            refuse(text, "That isn't a Listen together code from \(server).")
         case (.otherServer(let host), _):
             refuse(text, "That code is for \(host), not \(server).")
         case (.unknown, .signInComputer):

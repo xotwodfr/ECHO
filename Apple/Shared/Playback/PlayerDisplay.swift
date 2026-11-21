@@ -59,6 +59,7 @@ struct NowPlayingDisplay: Equatable, Sendable {
         case "artist": kind = "Playing from artist"
         case "mix": kind = "Playing from Made for you"
         case "search": kind = "Playing from search"
+        case "together": kind = "Listening together"
         case "starred": kind = "Playing from your library"
         default: kind = "Playing from"
         }

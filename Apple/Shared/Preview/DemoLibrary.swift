@@ -297,7 +297,10 @@ struct DemoLibrary: LibrarySource {
             return ShellStart(page: .home, playing: .song)
             #endif
         case "karaoke-shelf": return ShellStart(page: .home, shelf: "karaoke")
-        case "queue": return ShellStart(page: .home, playing: .queue)
+        case "queue", "together-queue": return ShellStart(page: .home, playing: .queue)
+        case "together-session": return ShellStart(page: .home, playing: .song)
+        case "together-join": return ShellStart(page: .home)
+        case "together": return ShellStart(page: .albums)
         case "player": return ShellStart(page: .albums)
         case "guests":
             #if os(macOS)
