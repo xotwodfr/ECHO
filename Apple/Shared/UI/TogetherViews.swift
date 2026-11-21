@@ -52,10 +52,6 @@ struct TogetherPanel: View {
     @Environment(Session.self) private var session
     @State private var link = ""
     @State private var linkNote: String? = nil
-    /// The invite and the listeners open over the panel once it has settled (a cover cannot open
-    /// while a sheet is still coming up).
-    @State private var settled = false
-
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -75,11 +71,6 @@ struct TogetherPanel: View {
         .scrollBounceBehavior(.basedOnSize)
         .animation(.smooth, value: together.session)
         .animation(.smooth, value: together.note)
-        .task {
-            try? await Task.sleep(for: .milliseconds(700))
-            settled = true
-        }
-        .modifier(TogetherOverPanel(settled: settled))
     }
 
     private var header: some View {
@@ -472,8 +463,7 @@ struct TogetherSheets: ViewModifier {
             }
             .overlay(alignment: .bottomTrailing) {
                 if here, together.sheetOpen {
-                    TogetherPanel { together.sheetOpen = false }
-                        .padding(.top, 14)
+                    TogetherSheetContent()
                         .frame(width: 420, height: 580)
                         .background { AlbumLight(strength: 0.85) }
                         .themedDark()
@@ -501,8 +491,7 @@ struct TogetherSheets: ViewModifier {
                 }
             }
             .sheet(isPresented: Binding(get: { here && together.sheetOpen }, set: { together.sheetOpen = $0 })) {
-                TogetherPanel { together.sheetOpen = false }
-                    .padding(.top, 14)
+                TogetherSheetContent()
                     .background { AlbumLight(strength: 0.85).ignoresSafeArea() }
                     .themedDark()
                     .presentationDetents([.large])
@@ -532,45 +521,25 @@ extension TogetherOffer {
 
 // MARK: - The invite and the listeners
 
-/// The invite and the listener list, over the Together sheet: full-screen on the iPhone, a card in the
-/// panel on the Mac.
-struct TogetherOverPanel: ViewModifier {
-    let settled: Bool
-
+/// What the Together sheet shows: the invite (a big QR code on glass) or the listeners when one was
+/// asked for, else the panel; closing either goes back to the panel. One sheet, not sheets over a sheet.
+struct TogetherSheetContent: View {
     @Environment(Together.self) private var together
 
-    func body(content: Content) -> some View {
-        #if os(iOS)
-        content
-            .fullScreenCover(isPresented: Binding(get: { settled && together.inviteOpen }, set: { together.inviteOpen = $0 })) {
+    var body: some View {
+        Group {
+            if together.inviteOpen, together.session != nil {
                 TogetherInvite { together.inviteOpen = false }
-                    .environment(together)
-            }
-            .sheet(isPresented: Binding(get: { settled && together.membersOpen }, set: { together.membersOpen = $0 })) {
+            } else if together.membersOpen, together.session != nil {
                 TogetherMembers { together.membersOpen = false }
-                    .background { AlbumLight(strength: 0.85).ignoresSafeArea() }
-                    .themedDark()
-                    .presentationDetents([.medium, .large])
-                    .presentationDragIndicator(.visible)
-                    .presentationBackground { AlbumLight(strength: 0.85) }
-                    .environment(together)
+                    .padding(.top, 14)
+            } else {
+                TogetherPanel { together.sheetOpen = false }
+                    .padding(.top, 14)
             }
-        #else
-        content
-            .overlay {
-                if together.inviteOpen {
-                    TogetherInvite { together.inviteOpen = false }
-                        .background { AlbumLight(strength: 0.85) }
-                        .transition(.opacity)
-                } else if together.membersOpen {
-                    TogetherMembers { together.membersOpen = false }
-                        .background { AlbumLight(strength: 0.85) }
-                        .transition(.opacity)
-                }
-            }
-            .animation(.smooth, value: together.inviteOpen)
-            .animation(.smooth, value: together.membersOpen)
-        #endif
+        }
+        .animation(.smooth, value: together.inviteOpen)
+        .animation(.smooth, value: together.membersOpen)
     }
 }
 
