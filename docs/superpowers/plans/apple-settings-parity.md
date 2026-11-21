@@ -18,7 +18,7 @@ Status: **done** (built, stored, and with its effect), **n/a** (does not apply o
 | Stream quality (auto, 320, 192, 128) | none | yes (also "raw") | device | iPhone, Mac | **done**: Playback; `DeviceSettings.streamQuality`, asked of the stream URL (`EchoClient.streamFormat`). "Raw" is Auto here: a song plays as stored wherever the device can |
 | Crossfade (0 to 12 s) | `playback.crossfadeSec` (unused by every client) | yes | device | iPhone, Mac | **deferred**: needs a second player and an equal-power fade (Android's `Crossfader`); `AVQueuePlayer` cannot overlap two songs. The key is never sent |
 | Equalizer (on, preset, ten bands) | none | yes | device | iPhone, Mac | **deferred**: needs the audio moved onto `AVAudioEngine`; a feature of its own |
-| Karaoke mode, vocal level, key | none | yes | device | iPhone, Mac | **deferred**: task 8 |
+| Karaoke mode, vocal level, key | none | yes | device | iPhone, Mac | done (task 8): Settings → Karaoke |
 | Autoplay (similar songs when the queue ends) | none | yes | device | iPhone, Mac | **deferred**: needs a "similar songs" queue feature the player does not have |
 | Volume | none | yes | device | Mac | **n/a** in Settings: the iPhone uses the hardware keys; the Mac has the slider in its player bar |
 | Lyric size (0.85, 1, 1.15, 1.3) | `lyrics.sizeScale` | yes | user | iPhone, Mac | **done**: Lyrics; scales the field and the sheets |
