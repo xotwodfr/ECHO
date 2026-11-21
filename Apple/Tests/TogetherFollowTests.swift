@@ -74,7 +74,7 @@ final class TRig {
     }
 }
 
-private func seeks(_ engine: FakeEngine) -> [Double] {
+@MainActor private func seeks(_ engine: FakeEngine) -> [Double] {
     engine.calls.compactMap { call in
         if case .seek(let to) = call { return to }
         return nil
