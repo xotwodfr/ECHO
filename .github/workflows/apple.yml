@@ -254,11 +254,21 @@ jobs:
             sleep 2
             id=$(swift /tmp/window.swift "$([ "$s" = settings ] || [ "$s" = settings-playback ] || [ "$s" = settings-lyrics ] || [ "$s" = settings-karaoke ] || [ "$s" = guests ] || [ "$s" = themes ] && echo smallest)" || true)
             echo "window $id"
-            if [ -n "$id" ] && [ "$id" != "0" ]; then
-              screencapture -x -o -l"$id" "Apple/Screenshots/mac-$s.png" || screencapture -x "Apple/Screenshots/mac-$s.png"
-            else
-              screencapture -x "Apple/Screenshots/mac-$s.png"
-            fi
+            # The runner's display sometimes will not give an image (runs 63: "could not create image from
+            # display"): woken and asked again, up to four times, and a shot that never comes is a warning,
+            # not the end of the run.
+            ok=0
+            for attempt in 1 2 3 4; do
+              caffeinate -u -t 3 || true
+              if [ -n "$id" ] && [ "$id" != "0" ]; then
+                screencapture -x -o -l"$id" "Apple/Screenshots/mac-$s.png" || screencapture -x "Apple/Screenshots/mac-$s.png" || continue
+              else
+                screencapture -x "Apple/Screenshots/mac-$s.png" || continue
+              fi
+              ok=1
+              break
+            done
+            [ "$ok" = 1 ] || echo "::warning::no screenshot of mac-$s after 4 tries"
           done
           pkill -x ECHO || true
           for f in Apple/Screenshots/mac-*.png; do
