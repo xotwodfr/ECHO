@@ -1,5 +1,6 @@
 package com.folk3s.echo.ui
 
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -56,11 +57,16 @@ import com.folk3s.echo.Prefs
 import com.folk3s.echo.Quality
 import com.folk3s.echo.VisualMode
 import com.folk3s.echo.echo
+import com.folk3s.echo.playback.AudioMath
+import androidx.compose.ui.semantics.stateDescription
+import kotlin.math.roundToInt
 import com.folk3s.echo.stage.Intensity
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.longOrNull
 
 // Settings (S7; SETTINGS_AND_SECURITY.md §7.1): the web's preferences that matter on a phone, kept
 // on this device, the account, and signing this device out. The rest (connections, two-factor,
@@ -96,12 +102,14 @@ private fun Section(title: String) {
 }
 
 @Composable
-fun SettingsScreen() {
+fun SettingsScreen(onDownloads: (() -> Unit)? = null, onEqualizer: () -> Unit = {}) {
   val app = LocalContext.current.echo
   val scope = rememberCoroutineScope()
   val p by app.prefs.state.collectAsStateWithLifecycle()
   fun set(f: (Prefs) -> Prefs) = app.prefs.update(f)
   var who by remember { mutableStateOf<String?>(null) }
+  var linking by remember { mutableStateOf(false) }
+  if (linking) return LinkScanScreen(onClose = { linking = false })
   LaunchedEffect(Unit) {
     who =
       runCatching {
@@ -116,9 +124,35 @@ fun SettingsScreen() {
 
     Section("Appearance")
     Text("Theme", style = MaterialTheme.typography.titleSmall)
-    ThemePicker(p.theme) { id -> set { it.copy(theme = id) } }
+    // The made themes bring their own lyrics; the style can still be changed after.
+    ThemePicker(p.theme) { id ->
+      set {
+        it.copy(
+          theme = id,
+          lyricStyle = when (id) {
+            "clay" -> LyricStyle.Clay
+            "yarn" -> LyricStyle.Embroidered
+            "glass" -> LyricStyle.Glass
+            "paper" -> LyricStyle.CutOut
+            "hifi" -> LyricStyle.Display
+            else -> it.lyricStyle
+          },
+        )
+      }
+    }
     Choice("Light or dark", "Theme default: each theme's own (Spotify style is dark, Apple Music style light, ECHO follows the system).", DarkMode.entries.map { it to (if (it == DarkMode.Theme) "Theme" else it.label) }, p.darkMode) { v -> set { it.copy(darkMode = v) } }
+    if (p.theme == "clay") ClayDarkPicker(p.clayDark) { v -> set { it.copy(clayDark = v) } }
     Toggle("Haptics (light taps on presses, likes and answers)", p.haptics) { v -> set { it.copy(haptics = v) } }
+    val soundsLabel =
+      when (p.theme) {
+        "clay" -> "Clay sounds (squishes and pops on presses)"
+        "yarn" -> "Yarn sounds (soft thumps and needle clicks)"
+        "glass" -> "Glass sounds (taps and chimes)"
+        "paper" -> "Paper sounds (rustles and folds)"
+        "hifi" -> "Hi-fi sounds (switch thunks and knob clicks)"
+        else -> null
+      }
+    if (soundsLabel != null) Toggle(soundsLabel, p.themeSounds) { v -> set { it.copy(themeSounds = v) } }
 
     Section("Tabs")
     Text("The order of the tabs at the bottom. The first one opens when ECHO starts.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -176,6 +210,62 @@ fun SettingsScreen() {
 
     Section("Playback")
     Toggle("Scrobble plays to Navidrome", p.scrobble) { v -> set { it.copy(scrobble = v) } }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+      Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("Crossfade", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+        Text(if (p.crossfadeSec == 0) "Off" else "${p.crossfadeSec} s", color = MaterialTheme.colorScheme.onSurfaceVariant)
+      }
+      Slider(
+        value = p.crossfadeSec.toFloat(),
+        onValueChange = { v -> set { it.copy(crossfadeSec = v.roundToInt()) } },
+        valueRange = 0f..AudioMath.MAX_CROSSFADE_S.toFloat(),
+        steps = AudioMath.MAX_CROSSFADE_S - 1,
+        modifier = Modifier.semantics {
+          contentDescription = "Crossfade"
+          stateDescription = if (p.crossfadeSec == 0) "Off" else "${p.crossfadeSec} seconds"
+        },
+      )
+      Text(
+        "Each song fades out as the next fades in. Songs from the same album play straight into each other, without a fade.",
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        style = MaterialTheme.typography.bodySmall,
+      )
+    }
+    Row(
+      Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(MaterialTheme.colorScheme.surfaceContainer).clickable(onClick = onEqualizer).padding(horizontal = 16.dp, vertical = 14.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Column(Modifier.weight(1f)) {
+        Text("Equalizer", style = MaterialTheme.typography.bodyLarge)
+        Text(
+          if (p.eqOn) (AudioMath.EQ_PRESETS[p.eqPreset]?.first ?: "Custom") else "Off",
+          color = MaterialTheme.colorScheme.onSurfaceVariant,
+          style = MaterialTheme.typography.bodySmall,
+        )
+      }
+      Icon(EchoIcons.chevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+    Section("Karaoke")
+    Toggle("Karaoke mode", p.karaoke) { v -> set { it.copy(karaoke = v) } }
+    Text(
+      "Turns the singer down with the Vocals slider on Now Playing and in the lyrics. Your ECHO server separates each song once; until a song is ready, it plays as usual and switches over by itself.",
+      color = MaterialTheme.colorScheme.onSurfaceVariant,
+      style = MaterialTheme.typography.bodySmall,
+    )
+    KaraokeProgress()
+
+    Section("Downloads")
+    DownloadsSettings(onDownloads)
+
+    val guest by app.guests.me.collectAsStateWithLifecycle()
+    if (guest == null) {
+      Section("Guests")
+      GuestsSection()
+      Section("Sign in on a computer")
+      Text("Open ECHO in a browser, then scan the QR code on its sign-in page: no password to type.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+      OutlinedButton(onClick = { linking = true }) { Text("Scan the sign-in code") }
+    }
 
     Section("Account")
     Text(who ?: app.api.base.substringAfter("://"), color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -200,9 +290,10 @@ private fun ThemePicker(current: String, onPick: (String) -> Unit) {
     for (t in ThemePreset.entries) {
       val on = t.id == current
       val dark = t.dark ?: systemDark
-      val ground = (if (dark) t.darkGround else t.lightGround) ?: if (dark) Color(0xFF16141A) else Color(0xFFF6F4F8)
-      val ink = if (dark) Color.White else Color(0xFF16141A)
-      val accent = t.accent ?: when (t) {
+      val made = if (t.look.material != Material.Flat) matterColors(t, dark, "album", albumAccent()) else null
+      val ground = made?.ground ?: (if (dark) t.darkGround else t.lightGround) ?: if (dark) Color(0xFF16141A) else Color(0xFFF6F4F8)
+      val ink = made?.ink ?: if (dark) Color.White else Color(0xFF16141A)
+      val accent = made?.strong ?: t.accent ?: when (t) {
         ThemePreset.Monochrome -> ink
         ThemePreset.MaterialYou -> MaterialTheme.colorScheme.primary
         else -> albumAccent()
@@ -228,4 +319,57 @@ private fun ThemePicker(current: String, onPick: (String) -> Unit) {
       }
     }
   }
+}
+
+/** Clay in the dark: a deep shade of the album that's playing, or one fixed colour. */
+@Composable
+private fun ClayDarkPicker(value: String, onPick: (String) -> Unit) {
+  Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Text("Clay in the dark", style = MaterialTheme.typography.titleSmall)
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+      SegmentedButton(selected = value == "album", onClick = { onPick("album") }, shape = SegmentedButtonDefaults.itemShape(0, 2), label = { Text("From the album") })
+      SegmentedButton(selected = value != "album", onClick = { if (value == "album") onPick(com.folk3s.echo.CLAY_DARK.first().first) }, shape = SegmentedButtonDefaults.itemShape(1, 2), label = { Text("Pick a colour") })
+    }
+    if (value == "album")
+      Text("A deep shade of what's playing, changing with each song.", color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+    else
+      Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        for ((id, name, argb) in com.folk3s.echo.CLAY_DARK) {
+          val on = id == value
+          Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(64.dp).bouncy(label = name) { onPick(id) }.semantics { selected = on }) {
+            Box(
+              Modifier.size(48.dp).border(if (on) 3.dp else 0.dp, if (on) MaterialTheme.colorScheme.primary else Color.Transparent, androidx.compose.foundation.shape.CircleShape).padding(4.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape).background(Brush.radialGradient(listOf(Color(argb).copy(alpha = 1f).let { androidx.compose.ui.graphics.lerp(it, Color.White, 0.3f) }, Color(argb), androidx.compose.ui.graphics.lerp(Color(argb), Color.Black, 0.35f)), androidx.compose.ui.geometry.Offset(30f, 26f), 90f)),
+            )
+            Text(name, style = MaterialTheme.typography.labelSmall, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+          }
+        }
+      }
+  }
+}
+
+/** The server's progress through the library, asked for when Settings opens. */
+@Composable
+private fun KaraokeProgress() {
+  val app = LocalContext.current.echo
+  var line by remember { mutableStateOf<String?>(null) }
+  LaunchedEffect(Unit) {
+    line =
+      runCatching {
+          val o = app.api.get("/karaoke").jsonObject
+          fun n(k: String) = o[k]?.jsonPrimitive?.longOrNull ?: 0L
+          when {
+            o["enabled"]?.jsonPrimitive?.booleanOrNull != true -> "Not set up on your server yet: it needs the stem service (docs/KARAOKE.md)."
+            o["online"]?.jsonPrimitive?.booleanOrNull != true -> "The server's stem service isn't answering right now."
+            else -> {
+              val ready = n("ready")
+              val total = ready + n("queued") + n("failed") + n("skipped")
+              val gb = n("bytes") / 1e9
+              "$ready of $total songs ready · ${"%.1f".format(gb)} GB" + if (n("failed") > 0) " · ${n("failed")} couldn't be separated" else ""
+            }
+          }
+        }
+        .getOrNull()
+  }
+  line?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
 }

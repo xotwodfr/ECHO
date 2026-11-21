@@ -23,6 +23,7 @@ import { collections, setStar } from './collections.ts';
 import { useCompact, useWide } from './compact.ts';
 import { dropTracks } from './drag.ts';
 import { HeartButton } from './hearts.tsx';
+import { KaraokeControl } from './Karaoke.tsx';
 import { Link, useView } from './link.tsx';
 import { panels, toggleRight } from './panels.ts';
 import { QueueSheet } from './Queue.tsx';
@@ -193,6 +194,7 @@ export function Dock({ stage }: { stage: boolean }) {
           pressed={stage}
           onClick={toggleListen}
         />
+        <KaraokeControl />
         <IconButton
           label={strings.dock.queue}
           icon="queue"

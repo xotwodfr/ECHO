@@ -1,0 +1,537 @@
+/* The themes' materials (DESIGN_SYSTEM.md §15; Android's ui/Matter.kt): <html data-material>
+   clay, yarn, glass, paper or hifi paints the ground, the panels and the pieces: cards, shortcuts,
+   buttons, chips, the search field, the floating player and the tab bar. Colours, light, shade and
+   textures are tokens.css's; each piece's colour is --mat-c, so one rule draws them all. Every
+   look is layered backgrounds and box shadows, composited by the browser: no filters and nothing
+   drawn per frame. The lyrics view keeps its own room. */
+
+/* ---- What each piece is made of ---- */
+:root[data-material] {
+  & :is(.tile, .shortcut a, .rp-card) {
+    --mat-c: var(--mat-card);
+  }
+
+  &
+    :is(
+      .btn:not(.btn--primary, .btn--tertiary, .btn--destructive),
+      .chip,
+      .round-btn,
+      .search-field input,
+      .lp-search
+    ) {
+    --mat-c: var(--mat-control);
+  }
+
+  & :is(.btn--primary, .play-btn, .tile-play, .chip[aria-pressed="true"]) {
+    --mat-c: var(--green);
+  }
+
+  & :is(.dock, .tabbar) {
+    --mat-c: var(--th-float);
+  }
+
+  /* Cards stand apart: each is its own piece. */
+  & .album-grid {
+    column-gap: var(--sp-3);
+  }
+
+  & .album-grid:not(.card-row) {
+    row-gap: var(--sp-3);
+  }
+
+  /* A shelf clips its second row: room above for a card lifting on hover (the shadows below are
+     clipped with that row, or it would show). */
+  & .card-row {
+    padding-top: var(--sp-2);
+  }
+}
+
+/* Glass floats over the page without blurring it (DESIGN_SYSTEM.md §7.11): the player and the tab
+   bar are nearly opaque panes, so the words on them keep their contrast over anything. */
+:root[data-material="glass"] :is(.dock, .tabbar) {
+  --mat-c: var(--glass-dock);
+}
+
+/* Clay and Yarn: the cards in the palette's accents, one after another, as a hand would mix them. */
+:root:is([data-material="clay"], [data-material="yarn"], [data-material="paper"]) {
+  & :is(.tile, .shortcut):nth-child(6n + 1) {
+    --mat-card: var(--mat-a1);
+  }
+  & :is(.tile, .shortcut):nth-child(6n + 2) {
+    --mat-card: var(--mat-a2);
+  }
+  & :is(.tile, .shortcut):nth-child(6n + 3) {
+    --mat-card: var(--mat-a3);
+  }
+  & :is(.tile, .shortcut):nth-child(6n + 4) {
+    --mat-card: var(--mat-a4);
+  }
+  & :is(.tile, .shortcut):nth-child(6n + 5) {
+    --mat-card: var(--mat-a5);
+  }
+  & :is(.tile, .shortcut):nth-child(6n + 6) {
+    --mat-card: var(--mat-a6);
+  }
+}
+
+/* Paper's cards are polaroids: white card, the colour only on the shortcuts' slips. */
+:root[data-material="paper"] .tile:nth-child(n) {
+  --mat-card: var(--th-float);
+}
+
+/* Yarn's knitting is dark-on-light words in the light and light-on-dark on the deep yarns. */
+:root[data-material="yarn"][data-scheme="light"]
+:is(.tile, .shortcut):is(
+  :nth-child(6n + 1),
+  :nth-child(6n + 2),
+  :nth-child(6n + 3),
+  :nth-child(6n + 5)
+) {
+  --text: var(--th-float);
+  --muted: color-mix(in srgb, var(--th-float), transparent 22%);
+  --green: var(--mat-a4);
+  color: var(--text);
+}
+
+/* ---- The ground under the frame ---- */
+:root[data-material="clay"] .mica {
+  background:
+    var(--tex-grain),
+    radial-gradient(
+      farthest-corner at 40% 30%,
+      transparent,
+      color-mix(in srgb, var(--th-ink) 12%, transparent)
+    ),
+    var(--th-frame);
+}
+
+:root[data-material="yarn"] .mica {
+  background:
+    radial-gradient(
+      farthest-corner at 50% 35%,
+      transparent,
+      color-mix(in srgb, var(--th-ink) 20%, transparent)
+    ),
+    var(--tex-knit-soft), var(--th-frame);
+  background-size: auto, var(--tex-knit-size), auto;
+}
+
+/* Glass: the album's colours as light behind the panes, three glows on a deep ground. */
+:root[data-material="glass"] .mica {
+  background:
+    radial-gradient(
+      farthest-side at 20% 12%,
+      color-mix(in srgb, var(--mat-a1) 62%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      farthest-side at 92% 45%,
+      color-mix(in srgb, var(--mat-a2) 55%, transparent),
+      transparent
+    ),
+    radial-gradient(
+      farthest-side at 25% 95%,
+      color-mix(in srgb, var(--mat-a3) 55%, transparent),
+      transparent
+    ),
+    var(--th-frame);
+}
+
+:root[data-material="paper"] .mica {
+  background:
+    radial-gradient(
+      farthest-corner at 50% 40%,
+      transparent,
+      color-mix(in srgb, var(--th-ink) 10%, transparent)
+    ),
+    var(--tex-fibre), var(--th-frame);
+}
+
+/* Hi-fi: a wood-veneer cabinet, darker toward the bottom. */
+:root[data-material="hifi"] .mica {
+  background: var(--hifi-shade), var(--tex-wood), var(--th-frame);
+}
+
+/* ---- The panels: Your Library, the page, Now Playing ---- */
+:root[data-material] :is(.library-panel, .shell:not([data-view="listen"]) .canvas, .right-panel) {
+  background-color: var(--th-panel);
+}
+
+:root[data-material="clay"]
+  :is(.library-panel, .shell:not([data-view="listen"]) .canvas, .right-panel) {
+  background-image: var(--clay-face), var(--tex-grain);
+  box-shadow: var(--shadow-claypanel);
+}
+
+:root[data-material="yarn"]
+  :is(.library-panel, .shell:not([data-view="listen"]) .canvas, .right-panel) {
+  background-image: var(--yarn-puff), var(--tex-knit-soft);
+  background-size: auto, var(--tex-knit-size);
+  box-shadow: var(--shadow-yarn);
+}
+
+:root[data-material="glass"]
+  :is(.library-panel, .shell:not([data-view="listen"]) .canvas, .right-panel) {
+  background-image: var(--glass-frost);
+  box-shadow: var(--shadow-glass);
+}
+
+:root[data-material="paper"]
+  :is(.library-panel, .shell:not([data-view="listen"]) .canvas, .right-panel) {
+  background-image: var(--tex-fibre);
+  box-shadow: var(--shadow-paper);
+}
+
+:root[data-material="hifi"]
+  :is(.library-panel, .shell:not([data-view="listen"]) .canvas, .right-panel) {
+  background-image: var(--hifi-face), var(--tex-brushed);
+  box-shadow: var(--shadow-hifi);
+}
+
+/* ---- The pieces ---- */
+:root[data-material]
+:is(
+  .tile:not(.tile--loading),
+  .shortcut a,
+  .rp-card,
+  .btn:not(.btn--tertiary, .btn--destructive),
+  .chip,
+  .round-btn,
+  .search-field input,
+  .play-btn,
+  .tile-play,
+  .shell:not([data-view="listen"]) .dock,
+  .tabbar
+) {
+  border-color: transparent;
+  background-color: var(--mat-c);
+}
+
+:root[data-material] :is(.tile:not(.tile--loading), .shortcut a, .rp-card) {
+  transition:
+    background-color var(--dur-hover) ease,
+    translate var(--spring),
+    box-shadow var(--dur-hover) ease;
+}
+
+:root[data-material] :is(.tile:not(.tile--loading), .shortcut a):hover {
+  translate: 0 calc(-1 * var(--sp-1));
+}
+
+/* Clay: puffy and matte, lit at the top left, sinking when pressed. */
+:root[data-material="clay"]
+:is(
+  .tile:not(.tile--loading),
+  .shortcut a,
+  .rp-card,
+  .btn:not(.btn--tertiary, .btn--destructive),
+  .chip,
+  .round-btn,
+  .search-field input,
+  .play-btn,
+  .tile-play,
+  .shell:not([data-view="listen"]) .dock,
+  .tabbar
+) {
+  background-image: var(--clay-gloss), var(--clay-face), var(--tex-grain);
+  box-shadow: var(--shadow-clay);
+}
+
+:root[data-material="clay"]
+  :is(.tile, .shortcut a, .btn, .chip, .round-btn, .play-btn, .tile-play):active {
+  background-image: var(--clay-face), var(--tex-grain);
+  box-shadow: var(--shadow-claypress);
+}
+
+/* Yarn: knitted, puffed like a cushion, its edge rolled; seams stitched round the bigger pieces. */
+:root[data-material="yarn"]
+:is(
+  .tile:not(.tile--loading),
+  .shortcut a,
+  .rp-card,
+  .btn:not(.btn--tertiary, .btn--destructive),
+  .chip,
+  .round-btn,
+  .search-field input,
+  .play-btn,
+  .tile-play,
+  .shell:not([data-view="listen"]) .dock,
+  .tabbar
+) {
+  background-image: var(--yarn-puff), var(--tex-knit);
+  background-size: auto, var(--tex-knit-size);
+  box-shadow: var(--shadow-yarn);
+}
+
+:root[data-material="yarn"]
+  :is(.tile:not(.tile--loading), .rp-card, .shell:not([data-view="listen"]) .dock) {
+  outline: var(--yarn-seam-w) dashed var(--yarn-seam);
+  outline-offset: calc(-1 * var(--yarn-seam-inset));
+}
+
+/* What carries small words (the player, the tab bar, the search field) is knitted finer. */
+:root[data-material="yarn"]
+:is(.shell:not([data-view="listen"]) .dock, .tabbar, .search-field input) {
+  background-image: var(--yarn-puff), var(--tex-knit-soft);
+}
+
+:root[data-material="yarn"]
+  :is(.tile, .shortcut a, .btn, .chip, .round-btn, .play-btn, .tile-play):active {
+  box-shadow: var(--shadow-yarnpress);
+}
+
+/* Liquid glass: a tint in a frosted pane, its rim catching the light, a reflection slanting across. */
+:root[data-material="glass"]
+:is(
+  .tile:not(.tile--loading),
+  .shortcut a,
+  .rp-card,
+  .btn:not(.btn--tertiary, .btn--destructive),
+  .chip,
+  .round-btn,
+  .search-field input,
+  .shell:not([data-view="listen"]) .dock,
+  .tabbar
+) {
+  background-image: var(--glass-sheen), var(--glass-frost);
+  box-shadow: var(--shadow-glass);
+}
+
+:root[data-material="glass"] :is(.play-btn, .tile-play, .btn--primary) {
+  background-image: var(--glass-frost);
+  box-shadow: var(--shadow-glass);
+}
+
+:root[data-material="glass"]
+  :is(.tile, .shortcut a, .btn, .chip, .round-btn, .play-btn, .tile-play):active {
+  background-image: var(--glass-frost);
+  box-shadow: var(--shadow-glasspress);
+}
+
+/* Paper: card with its fibres and layered cut-paper shadows; pressed, it lies flat. */
+:root[data-material="paper"]
+:is(
+  .tile:not(.tile--loading),
+  .shortcut a,
+  .rp-card,
+  .btn:not(.btn--tertiary, .btn--destructive),
+  .chip,
+  .round-btn,
+  .search-field input,
+  .play-btn,
+  .tile-play,
+  .shell:not([data-view="listen"]) .dock,
+  .tabbar
+) {
+  background-image: var(--tex-fibre);
+  box-shadow: var(--shadow-paper);
+}
+
+:root[data-material="paper"]
+  :is(.tile, .shortcut a, .btn, .chip, .round-btn, .play-btn, .tile-play):active {
+  box-shadow: var(--shadow-paperpress);
+}
+
+/* A fold opened again on every other card; a strip of tape holding every third. */
+:root[data-material="paper"] :is(.tile:nth-child(2n), .rp-card) {
+  background-image: var(--paper-crease), var(--tex-fibre);
+}
+
+:root[data-material="paper"] .tile:nth-child(3n + 1)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  z-index: 2;
+  width: var(--paper-tape-w);
+  height: var(--paper-tape-h);
+  translate: -50% 0;
+  rotate: -3deg;
+  background: var(--paper-tape);
+  pointer-events: none;
+}
+
+/* A dog-eared corner on the others: the corner folded down, the panel showing where it was. */
+:root[data-material="paper"] .tile:nth-child(3n + 2)::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
+  width: var(--paper-dog);
+  height: var(--paper-dog);
+  background: linear-gradient(
+    to bottom left,
+    var(--th-panel) 50%,
+    color-mix(in srgb, var(--mat-c), white 55%) 50%,
+    color-mix(in srgb, var(--mat-c), black 8%)
+  );
+  box-shadow: var(--shadow-paperpress);
+  pointer-events: none;
+}
+
+/* Retro hi-fi: brushed aluminium with a bevel, screws in the panels' corners. */
+:root[data-material="hifi"]
+:is(
+  .tile:not(.tile--loading),
+  .shortcut a,
+  .rp-card,
+  .btn:not(.btn--tertiary, .btn--destructive),
+  .chip,
+  .round-btn,
+  .search-field input,
+  .play-btn,
+  .tile-play,
+  .shell:not([data-view="listen"]) .dock,
+  .tabbar
+) {
+  background-image: var(--hifi-face), var(--tex-brushed);
+  box-shadow: var(--shadow-hifi);
+}
+
+:root[data-material="hifi"] :is(.rp-card, .shell:not([data-view="listen"]) .dock, .library-panel) {
+  background-image:
+    var(--hifi-screw), var(--hifi-screw), var(--hifi-screw), var(--hifi-screw), var(--hifi-face),
+    var(--tex-brushed);
+  background-position:
+    left var(--hifi-screw-in) top var(--hifi-screw-in),
+    right var(--hifi-screw-in) top var(--hifi-screw-in),
+    left var(--hifi-screw-in) bottom var(--hifi-screw-in),
+    right var(--hifi-screw-in) bottom var(--hifi-screw-in),
+    0 0,
+    0 0;
+  background-size:
+    var(--hifi-screw-size), var(--hifi-screw-size), var(--hifi-screw-size), var(--hifi-screw-size),
+    auto, auto;
+  background-repeat: no-repeat, no-repeat, no-repeat, no-repeat, repeat, repeat;
+}
+
+:root[data-material="hifi"]
+  :is(.tile, .shortcut a, .btn, .chip, .round-btn, .play-btn, .tile-play):active {
+  background-image: var(--hifi-press), var(--tex-brushed);
+  box-shadow: var(--shadow-hifipress);
+}
+
+/* The teal glow: the playing song's name and the progress, lit like a tuner's display. */
+:root[data-material="hifi"] :is(.dock-title, .shortcut-title[data-playing]) {
+  color: var(--hifi-glow);
+}
+
+:root[data-material="hifi"] .dock .slider-fill {
+  background: var(--hifi-glow);
+  box-shadow: var(--shadow-hifiglow);
+}
+
+/* The amber buttons stay amber: the accent's own words on them. */
+:root[data-material] :is(.btn--primary, .play-btn, .tile-play) {
+  color: var(--on-green);
+}
+
+/* ---- The picker (Settings → Preferences → Appearance) ---- */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(var(--swatch-w), 1fr));
+  gap: var(--sp-3);
+}
+
+.theme-pick {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  transition: scale var(--spring);
+}
+
+.theme-pick:active {
+  scale: 0.96;
+}
+
+.theme-pick-name {
+  font: var(--fl-type-caption-strong) var(--font-ui);
+  text-align: center;
+}
+
+.theme-pick[aria-pressed="true"] .theme-pick-name {
+  color: var(--accent-text);
+}
+
+.theme-swatch {
+  display: grid;
+  align-content: start;
+  gap: var(--sp-2);
+  box-sizing: border-box;
+  width: var(--swatch-w);
+  height: var(--swatch-h);
+  padding: var(--sp-3);
+  border: var(--rule) solid var(--line);
+  border-radius: var(--swatch-r);
+  background-color: var(--th-frame);
+  color: var(--th-ink);
+}
+
+.theme-pick[aria-pressed="true"] .theme-swatch {
+  border: var(--swatch-ring) solid var(--green);
+}
+
+.theme-swatch-aa {
+  font: var(--th-weight) var(--swatch-aa) / 1 var(--th-font);
+}
+
+.theme-swatch-art {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.theme-swatch-art span {
+  width: var(--swatch-art);
+  height: var(--swatch-art);
+  border-radius: var(--r-art);
+  background: var(--swatch-art-1);
+}
+
+.theme-swatch-art span + span {
+  background: var(--swatch-art-2);
+}
+
+.theme-swatch[data-material] .theme-swatch-art span {
+  background: var(--mat-a1);
+  box-shadow: var(--shadow-matswatch);
+}
+
+.theme-swatch[data-material] .theme-swatch-art span + span {
+  background: var(--mat-a2);
+}
+
+.theme-swatch-button {
+  width: var(--swatch-btn-w);
+  height: var(--swatch-btn-h);
+  border-radius: min(var(--r-button), var(--sp-3));
+  background: var(--green);
+}
+
+.theme-swatch[data-material="clay"] {
+  background-image: var(--clay-face), var(--tex-grain);
+}
+
+.theme-swatch[data-material="yarn"] {
+  background-image: var(--yarn-puff), var(--tex-knit);
+  background-size: auto, var(--tex-knit-size);
+}
+
+.theme-swatch[data-material="glass"] {
+  background-image:
+    radial-gradient(farthest-side at 20% 12%, var(--mat-a1), transparent),
+    radial-gradient(farthest-side at 92% 70%, var(--mat-a2), transparent);
+}
+
+.theme-swatch[data-material="paper"] {
+  background-image: var(--tex-fibre);
+}
+
+.theme-swatch[data-material="hifi"] {
+  background-image: var(--hifi-shade), var(--tex-wood);
+}

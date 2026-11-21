@@ -45,7 +45,10 @@ test('Reverb on the stress fixture stays under the flash limit', async ({ page }
       )
         worst = Math.max(worst, Math.abs((at30[b]?.[r] ?? 0) - (at30[a]?.[r] ?? 0)));
   console.log(`A11Y-08 worst regional change in 333 ms: ${worst.toFixed(4)}`);
-  expect(worst).toBeLessThanOrEqual(0.08);
+  // The limit is unchanged. The message says how many frames were really drawn in the 10 s: in CI
+  // one run read 0.0845 (16 runs here: 0.011-0.021), and a run that drew very few frames measures
+  // each of its jumps over a longer step, so the next failure should say whether that was it.
+  expect(worst, `${frames.length} frames drawn in 10 s`).toBeLessThanOrEqual(0.08);
   // And something moved: the rings and breathing are there.
   let moved = 0;
   for (let r = 0; r < 16; r++)

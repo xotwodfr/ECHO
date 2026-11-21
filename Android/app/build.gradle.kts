@@ -14,12 +14,15 @@ android {
     applicationId = "com.folk3s.echo"
     minSdk = 29
     targetSdk = 36
-    versionCode = 6
-    versionName = "0.3.3"
+    versionCode = 12
+    versionName = "0.8.0"
     // Fixed to the owner's server (2026-10-29). Debug builds may point at a test server instead:
     // ./gradlew assembleDebug -Pecho.devUrl=http://10.0.2.2:18797
     buildConfigField("String", "ECHO_URL", "\"https://echo.folk3s.com\"")
     manifestPlaceholders["cleartext"] = "false"
+    // Listen together links open in the app (AndroidManifest.xml): the server's scheme and host.
+    manifestPlaceholders["echoScheme"] = "https"
+    manifestPlaceholders["echoHost"] = "echo.folk3s.com"
   }
 
   // A release key from the environment when there is one (CI: the ECHO_KEYSTORE_* secrets), so every
@@ -40,6 +43,10 @@ android {
   buildTypes {
     debug {
       devUrl?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      devUrl?.let {
+        manifestPlaceholders["echoScheme"] = it.substringBefore("://")
+        manifestPlaceholders["echoHost"] = it.substringAfter("://").substringBefore("/").substringBefore(":")
+      }
       manifestPlaceholders["cleartext"] = "true"
     }
     release {
@@ -53,6 +60,10 @@ android {
     create("qa") {
       initWith(getByName("release"))
       devUrl?.let { buildConfigField("String", "ECHO_URL", "\"$it\"") }
+      devUrl?.let {
+        manifestPlaceholders["echoScheme"] = it.substringBefore("://")
+        manifestPlaceholders["echoHost"] = it.substringAfter("://").substringBefore("/").substringBefore(":")
+      }
       manifestPlaceholders["cleartext"] = "true"
     }
   }
@@ -81,5 +92,9 @@ dependencies {
   implementation(libs.serialization.json)
   implementation(libs.materialkolor)
   implementation(libs.haze)
+  implementation(libs.work.runtime.ktx)
+  // Guest codes: scanning (the camera view) and drawing the QR code.
+  implementation(libs.zxing.embedded) { isTransitive = false }
+  implementation(libs.zxing.core)
   testImplementation(libs.junit)
 }

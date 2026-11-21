@@ -1,4 +1,5 @@
 import type React from 'react';
+import { useEffect } from 'react';
 import type { Album, AlbumListKind } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { strings } from '../strings.ts';
@@ -12,10 +13,12 @@ import { AccountMenu } from './AccountMenu.tsx';
 import { usePlaylists, useStarredAll } from './collections.ts';
 import { useCompact } from './compact.ts';
 import { useFresh } from './fresh.ts';
+import { KaraokeShelf } from './Karaoke.tsx';
 import { useAlbumMenu } from './LibraryViews.tsx';
 import { Link } from './link.tsx';
 import { MixArt, WrappedArt } from './MixViews.tsx';
 import { trackOf, useJumpBackIn, useMixes } from './mixes.ts';
+import { saveWall } from './wall.ts';
 
 // Home (Spotify's): a grid of shortcuts to what was played last, then shelves of covers: recently
 // played, new in the library, most played, something different, the user's playlists and the
@@ -274,6 +277,11 @@ export function HomeView() {
     frequent: retryFrequent,
     random: retryRandom,
   };
+  // The sign-in page's wall: this account's covers, kept in this browser (shell/wall.ts).
+  useEffect(() => {
+    if (Array.isArray(recent) && Array.isArray(random))
+      void saveWall([...recent, ...random].map((a) => a.cover));
+  }, [recent, random]);
   const shortcutsFrom =
     Array.isArray(recent) && recent.length ? recent : Array.isArray(newest) ? newest : [];
   return (
@@ -301,6 +309,7 @@ export function HomeView() {
         <>
           <Shortcuts recent={shortcutsFrom} />
           <MadeForYouShelf />
+          <KaraokeShelf />
           <JumpBackInShelf />
           {SHELVES.slice(0, 2).map((s) => (
             <AlbumShelf key={s.kind} shelf={s} albums={lists[s.kind]} retry={retries[s.kind]} />

@@ -1,0 +1,22 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2",
+    "openSubsonic": true,
+    "playlists": {
+      "playlist": [
+        {
+          "id": "pl-1",
+          "name": "Evening",
+          "comment": "",
+          "owner": "ada",
+          "songCount": 3,
+          "duration": 75,
+          "coverArt": "pl-pl-1"
+        }
+      ]
+    }
+  }
+}

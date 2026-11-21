@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { fakeMotionService } from '../motion-fake.ts';
 import { fixtureCover } from '../palette/covers.ts';
 
 // A mock Subsonic/Navidrome server (IMPLEMENTATION_PLAN.md M5 task 6) for unit and E2E tests: token
@@ -172,6 +173,8 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
   const audio = new Map<string, Buffer>();
   /** Test switches: what a cover claims to be, and a giant JSON reply. */
   const state = { coverType: 'image/png', hugeJson: false };
+  /** A stand-in motion service under /motion-service (E2E: ECHO_MOTION_URL), whatever the faults. */
+  const motion = fakeMotionService();
 
   const authed = (q: URLSearchParams) => {
     if (q.has('apiKey'))
@@ -201,6 +204,11 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
   });
 
   const server = http.createServer(async (req, res) => {
+    if (req.url?.startsWith('/motion-service/')) {
+      if (await motion.handle(req, res, req.url.slice('/motion-service'.length))) return;
+      res.writeHead(404);
+      return res.end();
+    }
     // Test control, before any fault applies: /__faults?down=1&slowMs=…&breakStreamAt=… (E2E).
     if (req.url?.startsWith('/__faults')) {
       const q = new URL(req.url, 'http://mock').searchParams;
@@ -638,6 +646,7 @@ export async function startMockSubsonic(opts: MockOptions = {}) {
       state.hugeJson = v;
     },
     url: `http://127.0.0.1:${port}`,
+    motion,
     username,
     password,
     apiKey,

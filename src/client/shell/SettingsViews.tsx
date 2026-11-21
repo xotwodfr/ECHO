@@ -1,6 +1,11 @@
-import { useId, useRef } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useStore } from 'zustand';
+import { api } from '../api.ts';
+import { THEMES, themeOf } from '../appearance.ts';
+import { MAX_CROSSFADE_S } from '../playback/crossfade.ts';
+import { EQ_BANDS, EQ_MAX_DB, EQ_PRESET_IDS, eqGains } from '../playback/eq.ts';
 import { type Prefs, prefsStore, setPref } from '../prefs.ts';
+import { sessionStore } from '../session.ts';
 import { webgl2Supported } from '../stage/status.ts';
 import { strings } from '../strings.ts';
 import { Pill, Toggle } from '../ui/controls.tsx';
@@ -61,11 +66,68 @@ function save<S extends keyof Prefs, K extends keyof Prefs[S]>(s: S, k: K, v: Pr
   setPref(s, k, v).catch(() => toastStore.getState().show(t.notSaved));
 }
 
+/** Settings → Appearance: the themes as swatches (Android's ThemePicker), each drawn in its own
+ * ground, face, corners and accent by tokens.css (`.theme-swatch[data-theme]`). */
+function ThemePicker(p: { value: string; onChange: (id: (typeof THEMES)[number]['id']) => void }) {
+  const hintId = useId();
+  const current = themeOf(p.value).id;
+  const systemDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  return (
+    <fieldset className="pref-choice" aria-describedby={hintId}>
+      <legend className="pref-label">{t.theme}</legend>
+      <div className="theme-picker">
+        {THEMES.map((th) => (
+          <button
+            key={th.id}
+            type="button"
+            className="theme-pick"
+            aria-pressed={th.id === current}
+            title={th.blurb}
+            onClick={() => p.onChange(th.id)}
+          >
+            <span
+              className="theme-swatch"
+              data-theme={th.id}
+              data-scheme={(th.dark ?? systemDark) ? 'dark' : 'light'}
+              data-material={th.material}
+              aria-hidden="true"
+            >
+              <span className="theme-swatch-aa">Aa</span>
+              <span className="theme-swatch-art">
+                <span />
+                <span />
+              </span>
+              <span className="theme-swatch-button" />
+            </span>
+            <span className="theme-pick-name">{th.label}</span>
+          </button>
+        ))}
+      </div>
+      <p className="field-hint" id={hintId}>
+        {t.themeHint}
+      </p>
+    </fieldset>
+  );
+}
+
 export function PreferencesSection() {
   const p = useStore(prefsStore);
   const perf = p.visuals.performance; // it decides the room and the motion while it is on
   return (
     <div className="prefs">
+      <section className="pref-group" aria-labelledby="pref-appearance">
+        <h3 id="pref-appearance">{t.appearance}</h3>
+        <ThemePicker value={p.appearance.theme} onChange={(v) => save('appearance', 'theme', v)} />
+        <Choice
+          label={t.dark}
+          value={p.appearance.dark}
+          options={['theme', 'system', 'light', 'dark'] as const}
+          names={(v) => t.darkNames[v]}
+          hint={t.darkHint}
+          onChange={(v) => save('appearance', 'dark', v)}
+        />
+      </section>
+
       <section className="pref-group" aria-labelledby="pref-playback">
         <h3 id="pref-playback">{t.playback}</h3>
         <Choice
@@ -95,13 +157,38 @@ export function PreferencesSection() {
           onChange={(v) => save('playback', 'autoplay', v)}
         />
         <p className="field-hint">{t.autoplayHint}</p>
+        <div className="pref-slider">
+          <p className="pref-label" aria-hidden="true">
+            {t.crossfade}{' '}
+            <span className="num field-hint">{t.crossfadeText(p.playback.crossfadeSec)}</span>
+          </p>
+          <Slider
+            label={t.crossfade}
+            value={p.playback.crossfadeSec}
+            min={0}
+            max={MAX_CROSSFADE_S}
+            step={1}
+            bigStep={3}
+            variant="volume"
+            valueText={(v) => t.crossfadeText(Math.round(v))}
+            bubble={(v) => t.crossfadeText(Math.round(v))}
+            onChange={(v) => save('playback', 'crossfadeSec', Math.round(v))}
+          />
+          <p className="field-hint">{t.crossfadeHint}</p>
+        </div>
+      </section>
+
+      <EqualizerSection />
+
+      <section className="pref-group" aria-labelledby="pref-karaoke">
+        <h3 id="pref-karaoke">{strings.karaoke.progress.title}</h3>
         <Toggle
-          label={t.crossfade}
-          checked={p.playback.crossfadeSec > 0}
-          onChange={() => {}}
-          disabled
-          disabledReason={t.later}
+          label={strings.karaoke.progress.toggle}
+          checked={p.playback.karaoke}
+          onChange={(v) => save('playback', 'karaoke', v)}
         />
+        <p className="field-hint">{strings.karaoke.progress.blurb}</p>
+        <KaraokeProgress />
       </section>
 
       <section className="pref-group" aria-labelledby="pref-lyrics">
@@ -250,4 +337,89 @@ export function PreferencesSection() {
       </section>
     </div>
   );
+}
+
+/** Settings → Playback → Equalizer: on or off, a preset, and the ten bands (eq.ts). */
+function EqualizerSection() {
+  const p = useStore(prefsStore, (s) => s.playback);
+  const gains = eqGains(p.eqPreset, p.eqGains);
+  const setBand = (i: number, db: number) => {
+    const next = gains.slice();
+    next[i] = Math.round(db);
+    save('playback', 'eqGains', next);
+    if (p.eqPreset !== 'custom') save('playback', 'eqPreset', 'custom');
+    if (!p.eq) save('playback', 'eq', true);
+  };
+  return (
+    <section className="pref-group" aria-labelledby="pref-eq">
+      <h3 id="pref-eq">{t.equalizer}</h3>
+      <Toggle label={t.eqOn} checked={p.eq} onChange={(v) => save('playback', 'eq', v)} />
+      <p className="field-hint">{t.eqHint}</p>
+      <Choice
+        label={t.eqPreset}
+        value={p.eqPreset}
+        options={EQ_PRESET_IDS}
+        names={(v) => t.eqPresetNames[v]}
+        onChange={(v) => {
+          save('playback', 'eqPreset', v);
+          if (!p.eq) save('playback', 'eq', true);
+        }}
+      />
+      <div className="pref-eq" data-off={!p.eq || undefined}>
+        {EQ_BANDS.map((hz, i) => (
+          <div className="pref-eq-band" key={hz}>
+            <span className="pref-eq-hz">{t.eqBand(hz)}</span>
+            <Slider
+              label={t.eqBand(hz)}
+              value={gains[i] ?? 0}
+              min={-EQ_MAX_DB}
+              max={EQ_MAX_DB}
+              step={1}
+              bigStep={3}
+              variant="volume"
+              valueText={(v) => t.eqGainText(Math.round(v))}
+              bubble={(v) => t.eqGainText(Math.round(v))}
+              onChange={(v) => setBand(i, v)}
+            />
+            <span className="pref-eq-db num">{t.eqGainText(gains[i] ?? 0)}</span>
+          </div>
+        ))}
+      </div>
+      <p className="field-hint">{t.eqBandsHint}</p>
+    </section>
+  );
+}
+
+/** The server's progress through the library (docs/KARAOKE.md), asked for when Settings opens. */
+function KaraokeProgress() {
+  const [line, setLine] = useState<string | null>(null);
+  // Signed out (the fixture library), there is no server to ask: a 401 would only log an error.
+  const signedIn = useStore(sessionStore, (x) => x.status === 'signedIn');
+  useEffect(() => {
+    if (!signedIn) return;
+    let live = true;
+    const k = strings.karaoke.progress;
+    api<{
+      enabled: boolean;
+      online?: boolean;
+      ready?: number;
+      queued?: number;
+      failed?: number;
+      skipped?: number;
+      bytes?: number | null;
+    }>('/karaoke')
+      .then((r) => {
+        if (!live) return;
+        if (!r.enabled) return setLine(k.notSetUp);
+        if (!r.online) return setLine(k.offline);
+        const ready = r.ready ?? 0;
+        const total = ready + (r.queued ?? 0) + (r.failed ?? 0) + (r.skipped ?? 0);
+        setLine(k.line(ready, total, ((r.bytes ?? 0) / 1e9).toFixed(1), r.failed ?? 0));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [signedIn]);
+  return line ? <p className="pref-label">{line}</p> : null;
 }

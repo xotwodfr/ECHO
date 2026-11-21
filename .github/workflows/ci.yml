@@ -43,6 +43,28 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: xvfb-run -a pnpm test:e2e
+      # A failure's error-context.md holds the page's accessibility tree at the moment it failed:
+      # what a flake that never shows on a local run needs to be understood. Nothing is recorded or
+      # uploaded when every test passes.
+      - if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-results
+          path: test-results
+          retention-days: 14
+
+  # The motion service's own tests (motion/, docs/MOTION.md): the photo-or-flat rule, seamless loops
+  # in the encoded video, uploads and the HTTP service, with real ffmpeg, on the base image of its
+  # Dockerfile (digest-pinned); a stand-in depth map takes the model's place.
+  motion:
+    runs-on: ubuntu-24.04
+    container:
+      image: python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: apt-get update && apt-get install -y --no-install-recommends ffmpeg
+      - run: pip install --no-cache-dir -r motion/requirements-dev.txt
+      - run: python -m pytest -q -p no:cacheprovider motion
 
   security:
     runs-on: ubuntu-24.04

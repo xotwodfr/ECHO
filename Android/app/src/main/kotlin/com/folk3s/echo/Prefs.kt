@@ -27,9 +27,26 @@ enum class LyricStyle(val label: String, val blurb: String) {
   Cinema("Cinema", "Centred and full screen, three lines at a time."),
   ColourBlock("Colour block", "A solid album-coloured card, line by line, no blur."),
   Kinetic("Kinetic", "One huge line at a time; words pop in as they're sung."),
+  Clay("Clay", "Sung words puff up out of the clay; the rest are stamped into it."),
+  Embroidered("Embroidered", "Words traced on a hoop, stitched in thread as they're sung."),
+  Glass("Glass", "The line being sung in a moving glass lens; the rest frosted behind."),
+  CutOut("Cut-out", "A notebook page; sung words cut out of coloured paper and stuck on, crooked."),
+  Display("Display", "A glowing teal hi-fi display; sung letters light up."),
   Karaoke("Karaoke", "Two centred lines; the sung part changes colour."),
   Classic("ECHO classic", "ECHO's own: glow, depth and duets over the visualizer."),
 }
+
+/** Clay's deep colours for the dark (v0.4): id, name, and the clay's main colour. */
+val CLAY_DARK = listOf(
+  Triple("red", "Dark red", 0xFFC4525E),
+  Triple("navy", "Navy", 0xFF5C7BD1),
+  Triple("aubergine", "Aubergine", 0xFF9B6FC4),
+  Triple("forest", "Forest", 0xFF5AA77B),
+  Triple("teal", "Teal", 0xFF4FB3B0),
+  Triple("rust", "Rust", 0xFFD07A4F),
+  Triple("plum", "Plum", 0xFFC26AA2),
+  Triple("charcoal", "Charcoal", 0xFFA49FAE),
+)
 
 /** The bottom tabs, in their default order; the user can reorder them in Settings. */
 val DEFAULT_TABS = listOf("home", "mixes", "games", "library", "search")
@@ -51,6 +68,25 @@ data class Prefs(
   val lyricStyle: LyricStyle = LyricStyle.Apple,
   val lyricVisualizer: Boolean = false,
   val haptics: Boolean = true,
+  /** Clay in the dark: "album" (a deep shade of what's playing) or one of [CLAY_DARK]'s ids. */
+  val clayDark: String = "album",
+  /** Squishes and needle clicks on presses in the Clay and Yarn themes. */
+  val themeSounds: Boolean = true,
+  /** Karaoke mode (docs/KARAOKE.md): the server's karaoke version of each song, when it has one. */
+  val karaoke: Boolean = false,
+  /** How much of the voice Karaoke mode leaves, 0 to 1. */
+  val vocalLevel: Float = 0f,
+  /** Downloads (v0.8) wait for Wi-Fi (an unmetered network) unless this is off. */
+  val downloadWifiOnly: Boolean = true,
+  /** Karaoke's key in semitones, −6 to 6: kept while Karaoke is off, applied only while it's on. */
+  val karaokeKey: Int = 0,
+  /** Crossfade between songs in seconds, 0 (off) to 12; never within an album (playback/Crossfader.kt). */
+  val crossfadeSec: Int = 0,
+  /** The equalizer: on or off, a preset id (playback/AudioMath.kt), and the custom curve as points. */
+  val eqOn: Boolean = false,
+  val eqPreset: String = "flat",
+  val eqCustomHz: List<Int> = emptyList(),
+  val eqCustom: List<Float> = emptyList(),
 ) {
   /** The tabs in the user's order: every known tab once, whatever an older save holds. */
   val tabOrder: List<String> get() = (tabs.filter { it in DEFAULT_TABS } + DEFAULT_TABS).distinct()

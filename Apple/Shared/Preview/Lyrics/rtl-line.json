@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "trackKey": "fixture:rtl-line",
+  "sync": "line",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 90000,
+  "lines": [
+    { "text": "האור נשאר בחלון", "start": 6000, "end": 6945 },
+    { "text": "אני שומע את הים", "start": 7395, "end": 8535 },
+    { "text": "הלילה עוד ארוך", "start": 8985, "end": 9905 },
+    { "text": "שירו לי לאט", "start": 10355, "end": 11200 },
+    { "text": "רדיו FM בלילה", "start": 11650, "end": 12545 },
+    { "text": "הגשם יורד על העיר", "start": 12995, "end": 14185 },
+    { "text": "ואני מחכה לך", "start": 14635, "end": 15505 },
+    { "text": "עד שיגיע הבוקר", "start": 15955, "end": 16875 }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "he"
+}

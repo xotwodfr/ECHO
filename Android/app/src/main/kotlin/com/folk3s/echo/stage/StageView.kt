@@ -120,6 +120,8 @@ class StageView(context: Context, initialTier: Tier, private val manualTier: Boo
       val bmp =
         url?.let {
           runCatching {
+              // A downloaded cover (v0.8) from its file, so the Stage has it offline too.
+              app.downloads.coverUri(it)?.let { f -> return@runCatching BitmapFactory.decodeFile(android.net.Uri.parse(f).path)?.let(::coverBitmap) }
               app.api.http.newCall(Request.Builder().url(app.api.url(it)).build()).execute().use { r ->
                 if (r.isSuccessful) BitmapFactory.decodeStream(r.body.byteStream())?.let(::coverBitmap) else null
               }

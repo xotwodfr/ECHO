@@ -1,0 +1,28 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2",
+    "openSubsonic": true,
+    "genres": {
+      "genre": [
+        {
+          "value": "Ambient",
+          "albumCount": 2,
+          "songCount": 7
+        },
+        {
+          "value": "Folk",
+          "albumCount": 1,
+          "songCount": 3
+        },
+        {
+          "value": "Electronic",
+          "albumCount": 1,
+          "songCount": 5
+        }
+      ]
+    }
+  }
+}

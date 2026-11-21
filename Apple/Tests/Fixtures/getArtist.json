@@ -1,0 +1,37 @@
+{
+  "subsonic-response": {
+    "status": "ok",
+    "version": "1.16.1",
+    "type": "navidrome",
+    "serverVersion": "0.64.2",
+    "openSubsonic": true,
+    "artist": {
+      "id": "ar-1",
+      "name": "Lowfield",
+      "album": [
+        {
+          "id": "al-1",
+          "name": "Harbour Lights",
+          "artist": "Lowfield",
+          "artistId": "ar-1",
+          "coverArt": "al-1",
+          "songCount": 4,
+          "duration": 110,
+          "year": 2019,
+          "genre": "Ambient"
+        },
+        {
+          "id": "al-2",
+          "name": "Copper Rain",
+          "artist": "Lowfield",
+          "artistId": "ar-1",
+          "coverArt": "al-2",
+          "songCount": 3,
+          "duration": 75,
+          "year": 2015,
+          "genre": "Folk"
+        }
+      ]
+    }
+  }
+}

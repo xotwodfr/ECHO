@@ -33,7 +33,7 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 | **People** | A11Y-04 M (Orca), A11Y-09 M (200 % zoom by eye; E passes). DS-05 passed by three model reviews on 2026-10-28 (`reviews/M9.md`); a human five-second test is still worth doing |
 | **A 10-bit capture setup** | VIS-09 M (the dither test passes; the criterion asks for a 10-bit capture, which Playwright cannot make) |
 | **The owner's look in motion** (then V baselines, `reviews/M3.md`) | the V parts of LYR-02, LYR-03, LYR-05, LYR-07, LYR-08, LYR-11, LYR-20, LYR-21; M6 task 7 real-song tuning |
-| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | SRCH-01's keyboard part (arrows, Enter, Shift+Enter, →); LIB-01's Artists as a server list (artist pages are built; the list is derived from the albums); crossfade (no criterion requires it, PLAY-04 assumes 0) |
+| **Code not built yet** (`reviews/M5.md`; QA 2026-10-28) | None since 2026-11-19: SRCH-01's keys and LIB-01's Artists list are built, and crossfade (`33e9acd`; no criterion requires it, PLAY-04 assumes 0) |
 | **A hosted CI run** (no remote, by the owner's choice) | None of the criteria themselves: DS-06's baselines and VIS-07's Firefox context loss pass in CI's own image locally (`scripts/e2e-container.sh`, 2026-10-28). Only the GitHub Actions run itself is unproven |
 
 ---
@@ -82,11 +82,11 @@ https://echo.folk3s.com. **Still open**, grouped by what they wait for:
 
 | ID | Criterion | Method | MS |
 |---|---|---|---|
-| LIB-01 | Albums grid with 4 sorts, Artists, Playlists, Starred and Album detail render from the mock server. Grid edges land on both gutters at 1024, 1440 and 2560 widths | E + V | M5 |
+| LIB-01 | Albums grid with 4 sorts, Artists (the server's own list, `getArtists`, with album counts and Retry), Playlists, Starred and Album detail render from the mock server. Grid edges land on both gutters at 1024, 1440 and 2560 widths | U (`artists.test.ts`) + E + V | M5; Artists 2026-11-19 |
 | LIB-02 | A library of 5,000 albums scrolls at ≥ 55 fps (virtualised, ≤ 150 album tiles in the DOM) | P | M9 |
 | LIB-03 | Covers show the cached dominant colour (or `--surface-2`) until loaded, with no layout shift (CLS 0) | E | M5 |
-| SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | E | M5 |
-| WNT-01 | The Wanted list (Your Library → Wanted, one for everyone on the server): items added on its page or from a search that finds nothing (a toast with Open), each with who added it and when; the same words are one item; an item the server's own library has (an album, else a song, with every word in its artist and title) is marked and plays from its album, else it links to YouTube Music; anyone removes anything; a user on another Navidrome server never marks items found; at most 200 items each | U (`wanted.test.ts`) + E (`wanted.spec.ts`) | 2026-11-03 |
+| SRCH-01 | `/` and `Ctrl/⌘+K` open search. Results appear ≤ 200 ms after typing stops on the mock server. Arrow keys move the highlight, `Enter` plays, `Shift+Enter` queues, `→` opens the album | U (`searchKeys.test.ts`) + E (`shell.spec.ts`) | M5; keys 2026-11-19 |
+| WNT-01 | The Wanted list (Your Library → Wanted, one for everyone on the server): items added on its page or from a search that finds nothing (a toast with Open), each with who added it and when; the same words are one item; an item the server's own library has (an album, else a song, with every word in its artist and title) is marked and plays from its album, else it links to YouTube Music; anyone removes anything, with Undo while its toast is up (the server is told only then, or as the page closes); a user on another Navidrome server never marks items found; at most 200 items each | U (`wanted.test.ts`) + E (`wanted.spec.ts`) | 2026-11-03 |
 | SRCH-02 | Search finds the library's tracks, albums and artists; with nothing found it offers the same search on YouTube Music, in a new tab. *Changed 2026-11-03: was the active source only (Spotify ≤ 10 per type)* | E (`pages.spec.ts`: a search with no result offers…) | 2026-11-03 |
 | SRC-01 | **Removed 2026-11-03** with Spotify. | — | — |
 
@@ -297,6 +297,23 @@ through the album; sign out ending the device's session on the server.
 | NAT-03 | Windows (`Windows/`, WPF): the baseline, the token in DPAPI | I (builds without warnings) + M (`Api.cs` against a test server) | open: the window on Windows |
 | NAT-04 | macOS (`macOS/`, SwiftUI): the baseline, the token in the Keychain | I (parses, Swift 6.2) + M (`Api.swift` on Linux against a test server) | open: needs a Mac |
 | NAT-05 | iOS (`iOS/`, SwiftUI): the baseline, the token in the Keychain (this device only), playing on with the screen off | as NAT-04 | open: needs a Mac |
+
+## 10f. Animated lock-screen covers (server, 2026-11-19)
+
+The server side of the iPhone's animated lock-screen covers (`docs/MOTION.md`); the app's side is
+the Apple plan's task 5. Tests use a stand-in motion service (`src/server/motion-fake.ts`) in Vitest
+and E2E, and the real renderer in `motion/test_motion.py`.
+
+| ID | Criterion | Method | Added |
+|---|---|---|---|
+| MOT-01 | An album's motion cover is made on its first request from its still cover, for the caller's own Navidrome server: 202 with `Retry-After` and the covers ahead until ready (the app keeps the still cover), then the tall (1080 × 1440) or square (1080 × 1080) MP4 and its first frame as a JPEG, for a session or a device token; failed or off leaves the still cover | U (`motion.test.ts`) + U (`test_motion.py`: shapes, the still is the first frame) | 2026-11-19 |
+| MOT-02 | One cover at a time: uploads first, then in the order asked for; a passing failure is tried again after 10 and 20 minutes, one the service refuses fails at once; an offline service is waited for; one user has at most 20 waiting | U (`motion.test.ts`) | 2026-11-19 |
+| MOT-03 | Served with Range, `Cache-Control: private, max-age=86400` and an ETag (304 on `If-None-Match`), sandboxed, outside the API budget; a cover gone from the service's disk is made again; generated covers over `ECHO_MOTION_CACHE_MB` go, the one asked for longest ago first, uploads never | U (`motion.test.ts`) | 2026-11-19 |
+| MOT-04 | Only an admin uploads or removes a video (album menu in the web app): MP4, M4V or QuickTime by type and by first bytes, at most 50 MB (Content-Length or counted as it arrives; the only route past the 64 KB limit), Origin-checked; kept in `/data/motion`, recorded, audited (`admin.motion_uploaded`, `admin.motion_removed`), converted first and served in place of the generated cover to everyone on that Navidrome server; a video the service refuses (ffprobe: over 60 s, unreadable) is shown to the admin and leaves a generated cover meanwhile | U (`motion.test.ts`) + E (`motion-cover.spec.ts`) | 2026-11-19 |
+| MOT-05 | Depth for photographs, Living light for flat or text-heavy art, by the rule in `motion.py` (even areas, tonal range, hard edges, depth spread), on synthetic posters, type, text pages and photographs in colour and black and white | U (`test_motion.py`) | 2026-11-19 |
+| MOT-06 | A loop has no seam: the frame after the last is the first, and in the encoded video the last frame leads into the first as any frame into the next; loop lengths 5, 8, 12 and 15 s only; HEVC tagged `hvc1` | U (`test_motion.py`) | 2026-11-19 |
+| MOT-07 | The motion service is hardened like the stem service (non-root, read-only, no capabilities, internal network only), its model pinned by revision and SHA-256, its Python dependencies exact; the cost per album measured on four cores (`docs/MOTION.md`) | I (`compose.test.ts`) + P | 2026-11-19; on the OptiPlex: open |
+| MOT-08 | `docs/api/openapi.yaml` documents the motion routes, off and on (contract test) | U (`contract.test.ts`) | 2026-11-19 |
 
 ## 11. Reliability
 

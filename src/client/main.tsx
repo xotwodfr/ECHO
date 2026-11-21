@@ -5,21 +5,27 @@ import './tokens.css';
 import './main.css';
 import './ui/ui.css';
 import './stage/stage.css';
+import './themes.css';
+import { applyAppearance } from './appearance.ts';
 import { createNavidromeLibrary } from './library-navidrome.ts';
 import { startLyricsLoader } from './lyrics/loader.ts';
 import { startPalette } from './palette/live.ts';
 import { createPlaybackController } from './playback/controller.ts';
+import { startEffects } from './playback/effects.ts';
+import { karaokeSrc, startKaraoke } from './playback/karaoke.ts';
 import { NavidromeProvider } from './playback/navidrome.ts';
 import { startQueueSync } from './playback/queueSync.ts';
 import { effectiveVisuals, loadPrefs, prefsStore, setPref } from './prefs.ts';
 import { loadSession } from './session.ts';
 import { startCollections } from './shell/collections.ts';
+import { GuestLanding } from './shell/Guests.tsx';
 import { startHistory } from './shell/mixes.ts';
 import { pageTransition } from './shell/page-transition.ts';
 import { startAutoplay } from './shell/radio.ts';
 import { Shell } from './shell/Shell.tsx';
 import { loadWanted } from './shell/wanted.ts';
 import { lyricPrefs, lyricsStore } from './stage/status.ts';
+import { startTogether, takeTogetherLink } from './together/session.ts';
 import { toastStore } from './ui/logic.ts';
 import { motionLevel } from './ui/motion.ts';
 import { AppErrorBoundary, ServerUnreachable } from './ui/states.tsx';
@@ -32,6 +38,8 @@ import { startYtPrepare } from './youtube/radio.ts';
 // other failure stands: offline, or a navigation cutting the request off (Firefox aborts the old
 // page's imports), where a reload would fight the navigation. The new build is the page's own
 // after one reload, so this cannot loop.
+// A guest link opened in a browser (`/guest#<code>`): the pass is for the app (shell/Guests.tsx).
+const guestLink = window.location.pathname === '/guest';
 const build = document.querySelector<HTMLScriptElement>('script[type="module"][src]')?.src;
 addEventListener('vite:preloadError', () => {
   if (!build) return;
@@ -56,6 +64,17 @@ markMotion();
 prefsStore.subscribe((s, prev) => s.visuals !== prev.visuals && markMotion());
 reducedQuery.addEventListener('change', markMotion);
 
+// The theme (Settings → Preferences → Appearance) as <html data-theme>, data-scheme and
+// data-material (appearance.ts): this browser's copy at once, the server's when it answers.
+const darkQuery = matchMedia('(prefers-color-scheme: dark)');
+const markAppearance = () =>
+  applyAppearance(document.documentElement, prefsStore.getState().appearance, darkQuery.matches);
+markAppearance();
+prefsStore.subscribe((s, prev) => s.appearance !== prev.appearance && markAppearance());
+darkQuery.addEventListener('change', markAppearance);
+
+// A Listen together link (`/together/<id>`): offered once signed in (together/session.ts).
+takeTogetherLink(window.location, window.history);
 const store = createViewStore(window, pageTransition);
 
 // Deterministic mode (VISUALIZER_SPEC.md §10): `fixture` supplies Features (a lyric fixture's name
@@ -123,12 +142,22 @@ const controller = createPlaybackController({
         get quality() {
           return prefs().playback.quality;
         },
+        get crossfadeSec() {
+          return prefs().playback.crossfadeSec;
+        },
+        karaokeSrc,
       })
     : (fixtures?.createFixtureProvider() ?? null),
   replayGain: () => prefs().playback.replayGain,
   notify: (message) => toastStore.getState().show(message),
   features,
 });
+
+// Karaoke mode (docs/KARAOKE.md): follows the player, for a signed-in user's own library.
+if (signedIn && controller.provider instanceof NavidromeProvider)
+  startKaraoke(controller, controller.provider, (m) => toastStore.getState().show(m));
+// The equalizer and Karaoke's key, from this device's preferences.
+if (controller.provider instanceof NavidromeProvider) startEffects(controller.provider);
 
 // The volume is this device's, kept between visits (PLAYBACK_ARCHITECTURE.md §3).
 controller.setVolume(prefs().playback.volume);
@@ -157,6 +186,9 @@ if ('mediaSession' in navigator) {
 
 // The queue follows a signed-in user across sessions and devices (M5).
 if (signedIn) void startQueueSync(controller, (m) => toastStore.getState().show(m));
+// Listen together: a session this user is in, or the link they opened (docs/TOGETHER.md).
+if (signedIn && controller.provider instanceof NavidromeProvider)
+  startTogether(controller, (m) => toastStore.getState().show(m));
 // YouTube Music: the next songs' audio resolved while this one plays (youtube/radio.ts).
 if (youtube) startYtPrepare(controller);
 
@@ -186,7 +218,9 @@ const root = document.getElementById('root');
 if (root)
   createRoot(root).render(
     <AppErrorBoundary>
-      {unreachable ? (
+      {guestLink ? (
+        <GuestLanding />
+      ) : unreachable ? (
         <ServerUnreachable />
       ) : (
         <Shell store={store} controller={controller} library={library} />

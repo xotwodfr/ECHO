@@ -1,0 +1,71 @@
+{
+  "doc": {
+    "version": 1,
+    "trackKey": "navidrome:al-1-t1",
+    "sync": "word",
+    "source": "navidrome",
+    "attribution": {
+      "text": "Lyrics from your library"
+    },
+    "offsetMs": 0,
+    "lines": [
+      {
+        "text": "First line here",
+        "start": 1000,
+        "words": [
+          {
+            "text": "First",
+            "start": 1000,
+            "end": 1800,
+            "isPartOfWord": false
+          },
+          {
+            "text": "line",
+            "start": 1900,
+            "end": 2700,
+            "isPartOfWord": false
+          },
+          {
+            "text": "here",
+            "start": 2800,
+            "end": 3600,
+            "isPartOfWord": false
+          }
+        ],
+        "end": 3600
+      },
+      {
+        "text": "Second line here",
+        "start": 5000,
+        "words": [
+          {
+            "text": "Second",
+            "start": 5000,
+            "end": 5800,
+            "isPartOfWord": false
+          },
+          {
+            "text": "line",
+            "start": 5900,
+            "end": 6700,
+            "isPartOfWord": false
+          },
+          {
+            "text": "here",
+            "start": 6800,
+            "end": 7600,
+            "isPartOfWord": false
+          }
+        ],
+        "end": 7600
+      }
+    ],
+    "fetchedAt": "2027-01-15T08:19:15.000Z",
+    "language": "eng",
+    "durationMs": 20000
+  },
+  "override": {
+    "offsetMs": 150,
+    "pinnedSource": null
+  }
+}

@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "trackKey": "fixture:duet-word",
+  "sync": "word",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 120000,
+  "lines": [
+    {
+      "text": "Meet me where the tram lines cross",
+      "start": 6000,
+      "end": 9020,
+      "words": [
+        { "text": "Meet", "start": 6000, "end": 6380, "isPartOfWord": false },
+        { "text": "me", "start": 6440, "end": 6760, "isPartOfWord": false },
+        { "text": "where", "start": 6820, "end": 7230, "isPartOfWord": false },
+        { "text": "the", "start": 7290, "end": 7640, "isPartOfWord": false },
+        { "text": "tram", "start": 7700, "end": 8080, "isPartOfWord": false },
+        { "text": "lines", "start": 8140, "end": 8550, "isPartOfWord": false },
+        { "text": "cross", "start": 8610, "end": 9020, "isPartOfWord": false }
+      ],
+      "agent": "v1"
+    },
+    {
+      "text": "I’ll be the one in the yellow coat",
+      "start": 9720,
+      "end": 13260,
+      "words": [
+        { "text": "I’ll", "start": 9720, "end": 10070, "isPartOfWord": false },
+        { "text": "be", "start": 10130, "end": 10450, "isPartOfWord": false },
+        { "text": "the", "start": 10510, "end": 10860, "isPartOfWord": false },
+        { "text": "one", "start": 10920, "end": 11270, "isPartOfWord": false },
+        { "text": "in", "start": 11330, "end": 11650, "isPartOfWord": false },
+        { "text": "the", "start": 11710, "end": 12060, "isPartOfWord": false },
+        { "text": "yel", "start": 12120, "end": 12470, "isPartOfWord": true },
+        { "text": "low", "start": 12470, "end": 12820, "isPartOfWord": false },
+        { "text": "coat", "start": 12880, "end": 13260, "isPartOfWord": false }
+      ],
+      "agent": "v2",
+      "oppositeAligned": true
+    },
+    {
+      "text": "Bring the map we never used (never used)",
+      "start": 13960,
+      "end": 17910,
+      "words": [
+        { "text": "Bring", "start": 13960, "end": 14370, "isPartOfWord": false },
+        { "text": "the", "start": 14430, "end": 14780, "isPartOfWord": false },
+        { "text": "map", "start": 14840, "end": 15190, "isPartOfWord": false },
+        { "text": "we", "start": 15250, "end": 15570, "isPartOfWord": false },
+        { "text": "nev", "start": 15630, "end": 15980, "isPartOfWord": true },
+        { "text": "er", "start": 15980, "end": 16300, "isPartOfWord": false },
+        { "text": "used", "start": 16360, "end": 16740, "isPartOfWord": false },
+        { "text": "(nev", "start": 16800, "end": 17150, "isPartOfWord": true },
+        { "text": "er", "start": 17150, "end": 17470, "isPartOfWord": false },
+        { "text": "used)", "start": 17530, "end": 17910, "isPartOfWord": false }
+      ],
+      "agent": "v1"
+    },
+    {
+      "text": "I’ll bring the songs we didn’t lose",
+      "start": 18610,
+      "end": 21860,
+      "words": [
+        { "text": "I’ll", "start": 18610, "end": 18960, "isPartOfWord": false },
+        { "text": "bring", "start": 19020, "end": 19430, "isPartOfWord": false },
+        { "text": "the", "start": 19490, "end": 19840, "isPartOfWord": false },
+        { "text": "songs", "start": 19900, "end": 20310, "isPartOfWord": false },
+        { "text": "we", "start": 20370, "end": 20690, "isPartOfWord": false },
+        { "text": "did", "start": 20750, "end": 21100, "isPartOfWord": true },
+        { "text": "n’t", "start": 21100, "end": 21420, "isPartOfWord": false },
+        { "text": "lose", "start": 21480, "end": 21860, "isPartOfWord": false }
+      ],
+      "agent": "v2",
+      "oppositeAligned": true,
+      "background": [
+        {
+          "text": "didn’t lose",
+          "start": 20235,
+          "end": 21345,
+          "words": [
+            { "text": "did", "start": 20235, "end": 20585, "isPartOfWord": true },
+            { "text": "n’t", "start": 20585, "end": 20905, "isPartOfWord": false },
+            { "text": "lose", "start": 20965, "end": 21345, "isPartOfWord": false }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "Harbour lights are coming on",
+      "start": 22560,
+      "end": 25340,
+      "words": [
+        { "text": "Har", "start": 22560, "end": 22910, "isPartOfWord": true },
+        { "text": "bour", "start": 22910, "end": 23290, "isPartOfWord": false },
+        { "text": "lights", "start": 23350, "end": 23790, "isPartOfWord": false },
+        { "text": "are", "start": 23850, "end": 24200, "isPartOfWord": false },
+        { "text": "com", "start": 24260, "end": 24610, "isPartOfWord": true },
+        { "text": "ing", "start": 24610, "end": 24960, "isPartOfWord": false },
+        { "text": "on", "start": 25020, "end": 25340, "isPartOfWord": false }
+      ],
+      "agent": "v1",
+      "background": [
+        {
+          "text": "coming on",
+          "start": 23950,
+          "end": 25030,
+          "words": [
+            { "text": "com", "start": 23950, "end": 24300, "isPartOfWord": true },
+            { "text": "ing", "start": 24300, "end": 24650, "isPartOfWord": false },
+            { "text": "on", "start": 24710, "end": 25030, "isPartOfWord": false }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "every window, one by one",
+      "start": 26040,
+      "end": 28670,
+      "words": [
+        { "text": "ev", "start": 26040, "end": 26360, "isPartOfWord": true },
+        { "text": "ery", "start": 26360, "end": 26710, "isPartOfWord": false },
+        { "text": "win", "start": 26770, "end": 27120, "isPartOfWord": true },
+        { "text": "dow,", "start": 27120, "end": 27470, "isPartOfWord": false },
+        { "text": "one", "start": 27530, "end": 27880, "isPartOfWord": false },
+        { "text": "by", "start": 27940, "end": 28260, "isPartOfWord": false },
+        { "text": "one", "start": 28320, "end": 28670, "isPartOfWord": false }
+      ],
+      "agent": "v2",
+      "oppositeAligned": true
+    },
+    {
+      "text": "We were never far apart",
+      "start": 29370,
+      "end": 33340,
+      "words": [
+        { "text": "We", "start": 29370, "end": 29690, "isPartOfWord": false },
+        { "text": "were", "start": 29750, "end": 30130, "isPartOfWord": false },
+        { "text": "nev", "start": 30190, "end": 30540, "isPartOfWord": true },
+        { "text": "er", "start": 30540, "end": 30860, "isPartOfWord": false },
+        { "text": "far", "start": 30920, "end": 31270, "isPartOfWord": false },
+        { "text": "a", "start": 31330, "end": 32200, "isPartOfWord": true },
+        { "text": "part", "start": 32200, "end": 33340, "isPartOfWord": false }
+      ],
+      "agent": "v3"
+    },
+    {
+      "text": "Wait for me beneath the clock",
+      "start": 37340,
+      "end": 40180,
+      "words": [
+        { "text": "Wait", "start": 37340, "end": 37720, "isPartOfWord": false },
+        { "text": "for", "start": 37780, "end": 38130, "isPartOfWord": false },
+        { "text": "me", "start": 38190, "end": 38510, "isPartOfWord": false },
+        { "text": "be", "start": 38570, "end": 38890, "isPartOfWord": true },
+        { "text": "neath", "start": 38890, "end": 39300, "isPartOfWord": false },
+        { "text": "the", "start": 39360, "end": 39710, "isPartOfWord": false },
+        { "text": "clock", "start": 39770, "end": 40180, "isPartOfWord": false }
+      ],
+      "agent": "v1"
+    },
+    {
+      "text": "I’ll be running (running) all the way",
+      "start": 40880,
+      "end": 44420,
+      "words": [
+        { "text": "I’ll", "start": 40880, "end": 41230, "isPartOfWord": false },
+        { "text": "be", "start": 41290, "end": 41610, "isPartOfWord": false },
+        { "text": "run", "start": 41670, "end": 42020, "isPartOfWord": true },
+        { "text": "ning", "start": 42020, "end": 42400, "isPartOfWord": false },
+        { "text": "(run", "start": 42460, "end": 42810, "isPartOfWord": true },
+        { "text": "ning)", "start": 42810, "end": 43190, "isPartOfWord": false },
+        { "text": "all", "start": 43250, "end": 43600, "isPartOfWord": false },
+        { "text": "the", "start": 43660, "end": 44010, "isPartOfWord": false },
+        { "text": "way", "start": 44070, "end": 44420, "isPartOfWord": false }
+      ],
+      "agent": "v2",
+      "oppositeAligned": true
+    },
+    {
+      "text": "Keep the last seat on the tram",
+      "start": 45120,
+      "end": 48020,
+      "words": [
+        { "text": "Keep", "start": 45120, "end": 45500, "isPartOfWord": false },
+        { "text": "the", "start": 45560, "end": 45910, "isPartOfWord": false },
+        { "text": "last", "start": 45970, "end": 46350, "isPartOfWord": false },
+        { "text": "seat", "start": 46410, "end": 46790, "isPartOfWord": false },
+        { "text": "on", "start": 46850, "end": 47170, "isPartOfWord": false },
+        { "text": "the", "start": 47230, "end": 47580, "isPartOfWord": false },
+        { "text": "tram", "start": 47640, "end": 48020, "isPartOfWord": false }
+      ],
+      "agent": "v1",
+      "background": [
+        {
+          "text": "last seat",
+          "start": 46570,
+          "end": 47390,
+          "words": [
+            { "text": "last", "start": 46570, "end": 46950, "isPartOfWord": false },
+            { "text": "seat", "start": 47010, "end": 47390, "isPartOfWord": false }
+          ]
+        }
+      ]
+    },
+    {
+      "text": "I’ll be there before the rain",
+      "start": 48720,
+      "end": 51530,
+      "words": [
+        { "text": "I’ll", "start": 48720, "end": 49070, "isPartOfWord": false },
+        { "text": "be", "start": 49130, "end": 49450, "isPartOfWord": false },
+        { "text": "there", "start": 49510, "end": 49920, "isPartOfWord": false },
+        { "text": "be", "start": 49980, "end": 50300, "isPartOfWord": true },
+        { "text": "fore", "start": 50300, "end": 50680, "isPartOfWord": false },
+        { "text": "the", "start": 50740, "end": 51090, "isPartOfWord": false },
+        { "text": "rain", "start": 51150, "end": 51530, "isPartOfWord": false }
+      ],
+      "agent": "v2",
+      "oppositeAligned": true
+    },
+    {
+      "text": "We were never far apart",
+      "start": 52230,
+      "end": 56200,
+      "words": [
+        { "text": "We", "start": 52230, "end": 52550, "isPartOfWord": false },
+        { "text": "were", "start": 52610, "end": 52990, "isPartOfWord": false },
+        { "text": "nev", "start": 53050, "end": 53400, "isPartOfWord": true },
+        { "text": "er", "start": 53400, "end": 53720, "isPartOfWord": false },
+        { "text": "far", "start": 53780, "end": 54130, "isPartOfWord": false },
+        { "text": "a", "start": 54190, "end": 55060, "isPartOfWord": true },
+        { "text": "part", "start": 55060, "end": 56200, "isPartOfWord": false }
+      ],
+      "agent": "v3",
+      "background": [
+        {
+          "text": "never far",
+          "start": 54215,
+          "end": 55295,
+          "words": [
+            { "text": "nev", "start": 54215, "end": 54565, "isPartOfWord": true },
+            { "text": "er", "start": 54565, "end": 54885, "isPartOfWord": false },
+            { "text": "far", "start": 54945, "end": 55295, "isPartOfWord": false }
+          ]
+        }
+      ]
+    }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en",
+  "agents": [
+    { "id": "v1", "name": "First voice", "kind": "person" },
+    { "id": "v2", "name": "Second voice", "kind": "person" },
+    { "id": "v3", "kind": "group" }
+  ]
+}

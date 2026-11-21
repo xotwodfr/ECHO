@@ -1,0 +1,4 @@
+{
+  "error": "bad_offset",
+  "detail": "whole ms within ±10000"
+}

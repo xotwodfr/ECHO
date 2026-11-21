@@ -53,6 +53,8 @@ object EchoIcons {
   val chevronRight = icon("chevronRight", P("m9 6 6 6-6 6"))
   val disc = icon("disc", P(circle(12f, 12f, 8.5f)), P(circle(12f, 12f, 2.5f)))
   val playlist = icon("playlist", P("M4 6h11"), P("M4 11h11"), P("M4 16h7"), P("M17 18.5V8l4-1"), P(circle(15.5f, 18.5f, 1.8f)))
+  // A QR code: three finder squares and a few modules.
+  val qr = icon("qr", P("M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4z"), P("M14 14h2.5v2.5H14zM17.5 17.5H20V20h-2.5zM14 20h1M20 14v1"))
   val mic = icon("mic", P("M12 3a3 3 0 0 1 3 3v5a3 3 0 0 1-6 0V6a3 3 0 0 1 3-3z"), P("M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"))
   val radio = icon("radio", P(circle(12f, 12f, 2f)), P("M8.2 8.2a5.4 5.4 0 0 0 0 7.6M15.8 15.8a5.4 5.4 0 0 0 0-7.6M5.3 5.3a9.5 9.5 0 0 0 0 13.4M18.7 18.7a9.5 9.5 0 0 0 0-13.4"))
   val user = icon("user", P(circle(12f, 8.5f, 4f)), P("M4.5 20c1.4-3.6 4.2-5.5 7.5-5.5s6.1 1.9 7.5 5.5"))
@@ -89,6 +91,9 @@ object EchoIcons {
       P("m7 21-3-3 3-3"),
       P("M11 10.5 12.5 9.5v5"),
     )
+  // Offline downloads (v0.8): an arrow into a tray; a cloud struck through.
+  val download = icon("download", P("M12 4.5v10"), P("m7.5 10.5 4.5 4.5 4.5-4.5"), P("M5 19.5h14"))
+  val offline = icon("offline", P("M7 18.5h10.5a3.5 3.5 0 0 0 .9-6.9A6 6 0 0 0 7.1 9.6 4.5 4.5 0 0 0 7 18.5z"), P("M4 4l16 16"))
   val queue = icon("queue", P("M4 6h16"), P("M4 12h16"), P("M4 18h10"))
   val settings =
     icon(

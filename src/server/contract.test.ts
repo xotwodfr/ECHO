@@ -1,8 +1,16 @@
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { startSetup } from './auth/routes.ts';
+import { createSession } from './auth/sessions.ts';
 import { fromBase32, hotp, STEP_S, stepAt } from './auth/totp.ts';
+import { createApp } from './index.ts';
+import { createMotion } from './motion.ts';
+import { startFakeMotion } from './motion-fake.ts';
+import { startMockSubsonic } from './navidrome/mock.ts';
+import { navidromeClientFor, navidromeUrlOf } from './navidrome/routes.ts';
 import { call, cookieOf, testDeps } from './testing.ts';
 
 // API-01 (IMPLEMENTATION_PLAN.md M8 task 5): responses match docs/api/openapi.yaml. A scripted
@@ -185,5 +193,147 @@ describe('API-01: responses match the OpenAPI document', () => {
 
     expect(problems).toEqual([]);
     expect(seen.size).toBeGreaterThanOrEqual(40);
+  });
+
+  it('animated lock-screen covers, off and on: every status documented, every JSON body valid', async () => {
+    const problems: string[] = [];
+    const seen = new Set<string>();
+    const req = async (
+      app: ReturnType<typeof createApp>,
+      method: string,
+      path: string,
+      init: { cookie: string; body?: BodyInit; headers?: Record<string, string> },
+    ) => {
+      const res = await app.request(`http://localhost${path}`, {
+        method,
+        body: init.body,
+        headers: {
+          host: 'localhost',
+          origin: 'http://localhost',
+          cookie: init.cookie,
+          ...init.headers,
+        },
+      });
+      const found = operation(method, path);
+      if (!found?.op) {
+        problems.push(`${method} ${path}: not documented`);
+        return res;
+      }
+      seen.add(`${found.key} ${res.status}`);
+      const doc = found.op.responses?.[String(res.status)];
+      if (!doc) problems.push(`${found.key} → ${res.status}: status not documented`);
+      const schema = (doc?.content as Record<string, { schema?: Schema }> | undefined)?.[
+        'application/json'
+      ]?.schema;
+      if (schema && res.headers.get('content-type')?.includes('application/json'))
+        for (const e of check(schema, await res.clone().json()))
+          problems.push(`${found.key} → ${res.status}: ${e}`);
+      return res;
+    };
+    const mp4 = Buffer.concat([
+      Buffer.from('\0\0\0\x18ftypmp42\0\0\0\0isommp42'),
+      Buffer.alloc(64),
+    ]);
+
+    // Off: no motion service.
+    const off = testDeps();
+    off.deps.auth.db
+      .prepare(
+        "INSERT INTO users (username, password_hash, role, created_at) VALUES ('ada', 'x', 'admin', 0)",
+      )
+      .run();
+    const offCookie = `__Host-echo_session=${createSession(off.deps.auth.db, 1, 'web', off.clock.t)}`;
+    for (const p of [
+      '/motion',
+      '/motion/al-1',
+      '/motion/al-1/video',
+      '/motion/al-1/still',
+      '/motion/al-1/upload',
+    ])
+      await req(off.app, 'GET', `/api/v1${p}`, { cookie: offCookie });
+    await req(off.app, 'PUT', '/api/v1/motion/al-1/upload', {
+      cookie: offCookie,
+      body: mp4,
+      headers: { 'content-type': 'video/mp4' },
+    });
+    await req(off.app, 'DELETE', '/api/v1/motion/al-1/upload', { cookie: offCookie });
+
+    // On: a stand-in motion service and the mock Navidrome.
+    const mock = await startMockSubsonic({});
+    const service = await startFakeMotion();
+    const t = testDeps();
+    t.deps.navidrome.defaultUrl = mock.url;
+    const db = t.deps.auth.db;
+    const motion = createMotion({
+      db,
+      now: t.deps.auth.now,
+      motionUrl: service.url,
+      dir: mkdtempSync(join(tmpdir(), 'echo-motion-')),
+      cacheBytes: 1e9,
+      uploadMax: 4096,
+      scopeFor: (id) => navidromeUrlOf(db, id),
+      navidrome: (id) => navidromeClientFor(t.deps.navidrome, id),
+    });
+    const app = createApp({ ...t.deps, motion });
+    for (const [name, role] of [
+      ['ada', 'admin'],
+      ['bo', 'user'],
+    ])
+      db.prepare(
+        'INSERT INTO users (username, password_hash, role, created_at) VALUES (?, ?, ?, 0)',
+      ).run(name, 'x', role);
+    const admin = `__Host-echo_session=${createSession(db, 1, 'web', t.clock.t)}`;
+    const bo = `__Host-echo_session=${createSession(db, 2, 'web', t.clock.t)}`;
+    await req(app, 'GET', '/api/v1/motion/al-1', { cookie: bo }); // 409: no Navidrome yet
+    for (const cookie of [admin, bo])
+      await call(
+        app,
+        'PUT',
+        '/api/v1/me/connections/navidrome',
+        { username: 'ada', password: 'navidrome-pass' },
+        cookie,
+      );
+    await req(app, 'GET', '/api/v1/motion', { cookie: bo });
+    await req(app, 'GET', '/api/v1/motion/al-1?loop=7', { cookie: bo });
+    await req(app, 'GET', '/api/v1/motion/al-1/video', { cookie: bo });
+    for (let i = 0; i < 1000 && (await motion.jobFor(2, 'al-1', 8))?.status !== 'ready'; i++)
+      await new Promise((r) => setTimeout(r, 10));
+    await req(app, 'GET', '/api/v1/motion/al-1?shape=square', { cookie: bo });
+    const video = await req(app, 'GET', '/api/v1/motion/al-1/video', {
+      cookie: bo,
+      headers: { range: 'bytes=0-3' },
+    });
+    await req(app, 'GET', '/api/v1/motion/al-1/video', {
+      cookie: bo,
+      headers: { 'if-none-match': video.headers.get('etag') ?? '' },
+    });
+    await req(app, 'GET', '/api/v1/motion/al-1/still', { cookie: bo });
+    await req(app, 'GET', '/api/v1/motion/al-1/upload', { cookie: bo });
+    await req(app, 'DELETE', '/api/v1/motion/al-1/upload', { cookie: bo });
+    await req(app, 'GET', '/api/v1/motion/al%20one/still', { cookie: bo });
+    await req(app, 'PUT', '/api/v1/motion/al-1/upload', {
+      cookie: admin,
+      body: 'x',
+      headers: { 'content-type': 'text/html' },
+    });
+    await req(app, 'PUT', '/api/v1/motion/al-1/upload', {
+      cookie: admin,
+      body: Buffer.alloc(5000),
+      headers: { 'content-type': 'video/mp4' },
+    });
+    await req(app, 'PUT', '/api/v1/motion/al-1/upload', {
+      cookie: admin,
+      body: mp4,
+      headers: { 'content-type': 'video/mp4' },
+    });
+    await req(app, 'GET', '/api/v1/motion/al-1/upload', { cookie: admin });
+    await req(app, 'DELETE', '/api/v1/motion/al-1/upload', { cookie: admin });
+    await req(app, 'DELETE', '/api/v1/motion/al-1/upload', { cookie: admin });
+    motion.stop();
+    mock.close();
+    service.close();
+
+    expect(problems).toEqual([]);
+    expect(seen.size).toBeGreaterThanOrEqual(20);
   });
 });

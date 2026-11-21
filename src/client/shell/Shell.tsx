@@ -1,11 +1,20 @@
-import { lazy, Suspense, type UIEvent, useCallback, useEffect, useRef } from 'react';
+import {
+  lazy,
+  type KeyboardEvent as ReactKeyboardEvent,
+  Suspense,
+  type UIEvent,
+  useCallback,
+  useEffect,
+  useRef,
+} from 'react';
 import { useStore } from 'zustand';
 import type { Library } from '../library.ts';
-import { PlaybackContext, usePlayer } from '../playback/context.tsx';
+import { PlaybackContext, usePlayback, usePlayer } from '../playback/context.tsx';
 import type { PlaybackController } from '../playback/controller.ts';
 import { sessionStore } from '../session.ts';
 import { stageChrome } from '../stage/status.ts';
 import { strings } from '../strings.ts';
+import { TogetherRoot } from '../together/Together.tsx';
 import { buttonClass } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
 import { useSlide } from '../ui/motion.ts';
@@ -48,6 +57,7 @@ import { RightPanel } from './RightPanel.tsx';
 import { PreferencesSection } from './SettingsViews.tsx';
 import { Stage } from './Stage.tsx';
 import { StageChrome, StageContent } from './StageViews.tsx';
+import { searchKeyFor, searchRowId, searchSongs } from './searchKeys.ts';
 
 // The frame (DESIGN_SYSTEM.md §5), after Spotify's: a top bar, Your Library on the left, the page
 // in the middle, Now Playing or the queue on the right, and the player floating over the page as
@@ -66,7 +76,27 @@ const isTextField = (el: Element | null) =>
 function SearchField({ className }: { className: string }) {
   const route = useView((s) => s.route);
   const navigate = useView((s) => s.navigate);
+  const c = usePlayback();
   const q = route.view === 'search' ? route.q : '';
+  const { tracks, context, active } = useStore(searchSongs);
+  // SRCH-01: the arrows move over the songs in the results, focus staying here (searchKeys.ts).
+  const onKey = (e: ReactKeyboardEvent<HTMLInputElement>) => {
+    if (route.view !== 'search') return;
+    const act = searchKeyFor(e, active, tracks.length);
+    if (!act) return;
+    e.preventDefault();
+    if (act.kind === 'move') {
+      searchSongs.setState({ active: act.to });
+      if (act.to >= 0)
+        document.getElementById(searchRowId(act.to))?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    const t = tracks[act.at];
+    if (!t) return;
+    if (act.kind === 'play') c.playList(tracks, act.at, context ?? { kind: 'search', title: q });
+    else if (act.kind === 'queue') c.addToQueue([t], t.title);
+    else if (t.album.id) navigate({ view: 'album', id: t.album.id });
+  };
   return (
     <label className={`search-field ${className}`}>
       <Icon name="search" />
@@ -75,6 +105,8 @@ function SearchField({ className }: { className: string }) {
         type="search"
         value={q}
         placeholder={strings.search.placeholder}
+        aria-keyshortcuts="ArrowDown ArrowUp Enter Shift+Enter ArrowRight"
+        onKeyDown={onKey}
         // Spotify opens Browse on the first click into the box.
         onFocus={() => route.view !== 'search' && navigate({ view: 'search', q: '' })}
         // Typing refines one history entry instead of adding one per keystroke.
@@ -433,6 +465,7 @@ function Frame() {
       <ToastRegion />
       <PlaylistPicker />
       <SessionExpiredSheet />
+      <TogetherRoot />
     </div>
   );
 }

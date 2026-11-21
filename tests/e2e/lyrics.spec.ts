@@ -376,10 +376,27 @@ test('untimed: a static sheet, scrollable, with the note and attribution (LYR-14
   await expect(sheet.locator('.ly-sheet-line')).toHaveCount(
     doc('static').lines.filter((l) => l.text.trim()).length,
   );
+  // Keys scroll the sheet with the browser's smooth scrolling (the sheet is 164 px longer than its
+  // window), so each position is read once the scroll has come to rest: read mid-animation (12 to
+  // 40 px after ArrowDown), or with a PageDown pressed into an unfinished scroll, the run depended on
+  // timing, and CI failed with 40 px left after PageDown.
+  const settled = async () => {
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const now = await sheet.evaluate((el) => el.scrollTop);
+        const rest = now === last;
+        last = now;
+        await page.waitForTimeout(150);
+        return rest;
+      })
+      .toBe(true);
+    return sheet.evaluate((el) => el.scrollTop);
+  };
   await sheet.focus();
   await page.keyboard.press('ArrowDown');
-  await expect.poll(() => sheet.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-  const afterArrow = await sheet.evaluate((el) => el.scrollTop);
+  const afterArrow = await settled();
+  expect(afterArrow).toBeGreaterThan(0);
   await page.keyboard.press('PageDown');
   await expect.poll(() => sheet.evaluate((el) => el.scrollTop)).toBeGreaterThan(afterArrow + 50);
   await sheet.evaluate((el) => el.scrollTo(0, 0));
@@ -448,6 +465,10 @@ test('pause freezes the sweep and dims the glow to 60%; resume restores it (LYR-
   await page.waitForTimeout(800);
   expect(await sweeping(page)).toEqual(frozen); // t is frozen: same word, same --p, same glow
   await dock(page).getByRole('button', { name: 'Play', exact: true }).click();
+  // Seeked while paused, playback starts again once the audio at the new place is ready: on a busy
+  // runner that took most of the glow's 2 s (0.244 at the end: the restore's first frame). The
+  // restore starts when playback does, so it gets its 2 s from there.
+  await expect(dock(page)).toHaveAttribute('data-status', 'playing');
   await expect
     .poll(() => sweeping(page).then((s) => (s?.text === held.text ? s.glow : 1)), {
       timeout: 2000,

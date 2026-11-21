@@ -136,8 +136,18 @@ test('REL-05: someone else signing in on the sheet starts afresh, with nothing o
   const other = await (await browser.newContext()).newPage();
   const name = await signedIn(other, 'st2');
   await other.context().close();
-  await page.goto('/library/album/al-1');
+  // The page restores the first user's queue (paused) and asks for that song's lyrics on its own,
+  // 250 ms after. The session ends once it has: a lyric request answered 401 opens the sheet too,
+  // and Play's click then waited behind it until the test timed out. (Waited for from the new
+  // page's commit, so no answer to the page before it counts.)
+  await page.goto('/library/album/al-1', { waitUntil: 'commit' });
+  const lyrics = page.waitForResponse((r) => new URL(r.url()).pathname === '/api/v1/lyrics');
   await expect(page.getByRole('heading', { name: 'Harbour Lights' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Player' })).toHaveAttribute(
+    'data-status',
+    'paused',
+  );
+  await lyrics;
   await page.context().clearCookies(); // the first session ends
   await page
     .locator('.action-bar')

@@ -8,6 +8,8 @@ const DAY = 24 * 60 * MIN;
 /** §5.6: bursts of 50 requests, refilled at 10 a second (600 a minute). */
 const API_BURST = 50;
 const API_PER_S = 10;
+/** QR sign-in requests per address a minute: a page renews its code every 2 min; reloads add some. */
+const QR_PER_MIN = 30;
 
 export function createLoginLimiter() {
   const ips = new Map<string, number[]>();
@@ -17,6 +19,7 @@ export function createLoginLimiter() {
   >();
   // One token bucket per signed-in user: bounded by the number of accounts.
   const api = new Map<number, { tokens: number; at: number }>();
+  const qrs = new Map<string, number[]>();
   const account = (username: string) => {
     const key = username.toLowerCase();
     let a = accounts.get(key);
@@ -43,6 +46,22 @@ export function createLoginLimiter() {
       }
       recent.push(now);
       ips.set(ip, recent);
+      return true;
+    },
+    /**
+     * Sign in with your phone: asking for a QR code guesses nothing (the code is 128 random bits,
+     * and the pending requests are capped), so it has its own budget, apart from the login
+     * attempts above. It spent those at first: a sign-in page left open renews its code every two
+     * minutes, and ran its address (a household's, or the e2e suite's) out of sign-ins for a day.
+     */
+    qrAllows(ip: string, now: number) {
+      const recent = (qrs.get(ip) ?? []).filter((t) => now - t < MIN);
+      if (recent.length >= QR_PER_MIN) {
+        qrs.set(ip, recent);
+        return false;
+      }
+      recent.push(now);
+      qrs.set(ip, recent);
       return true;
     },
     /** ms until the account unlocks, or 0. */
@@ -91,6 +110,7 @@ export function createLoginLimiter() {
           ips.delete(ip);
           n++;
         }
+      for (const [ip, times] of qrs) if (!times.some((t) => now - t < MIN)) qrs.delete(ip);
       return n;
     },
     /** True if this user may make an API request now (§5.6); spends one from their budget. */

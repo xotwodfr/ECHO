@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "trackKey": "fixture:static",
+  "sync": "none",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 150000,
+  "lines": [
+    { "text": "The tide comes in the way it always does", "start": 0 },
+    { "text": "and leaves the harbour quieter than before", "start": 0 },
+    { "text": "the gulls are counting boats along the pier", "start": 0 },
+    { "text": "the lighthouse keeps a promise to the shore", "start": 0 },
+    { "text": "I wrote your name in salt upon the glass", "start": 0 },
+    { "text": "the morning came and wiped it clean again", "start": 0 },
+    { "text": "but every wave remembers what it carried", "start": 0 },
+    { "text": "and every echo finds its way back home", "start": 0 }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en"
+}

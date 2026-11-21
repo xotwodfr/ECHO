@@ -1,0 +1,9 @@
+{
+  "subsonic-response": {
+    "status": "failed",
+    "error": {
+      "code": 70,
+      "message": "not found"
+    }
+  }
+}

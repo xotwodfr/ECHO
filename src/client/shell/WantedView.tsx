@@ -106,9 +106,11 @@ function WantedRow({ item }: { item: WantedItem }) {
       <IconButton
         label={t.remove(item.text)}
         icon="close"
-        onClick={() =>
-          void removeWanted(item.id).then((ok) => ok || toastStore.getState().show(t.failed))
-        }
+        onClick={() => {
+          const r = removeWanted(item.id);
+          toastStore.getState().show(t.removed(item.text), { label: t.undo, run: r.undo });
+          void r.done.then((how) => how === 'failed' && toastStore.getState().show(t.failed));
+        }}
       />
     </li>
   );

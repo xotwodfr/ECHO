@@ -18,6 +18,8 @@ import { Sheet } from '../ui/overlays.tsx';
 import { SectionLoading } from '../ui/states.tsx';
 import { YouTubeConnection } from '../youtube/Connection.tsx';
 import { AccountBlocks } from './AccountViews.tsx';
+import { GuestsBlock } from './Guests.tsx';
+import { SignInStage } from './SignIn.tsx';
 
 // Sign-in, first-start setup and the Account section (SETTINGS_AND_SECURITY.md §4, §6.1, §7.3). A
 // successful sign-in or connection reloads the page: the playback provider is chosen at start.
@@ -65,45 +67,46 @@ export function LoginView({ onDone = home }: { onDone?: () => void } = {}) {
   }
 
   return (
-    <form className="auth" onSubmit={submit}>
-      <p className="signin-mark">{strings.app}</p>
-      <h1 tabIndex={-1}>{s.signIn}</h1>
-      {!step ? (
-        <>
+    <SignInStage>
+      <form className="auth auth--signin" onSubmit={submit}>
+        <h1 tabIndex={-1}>{step ? s.verify : s.signIn}</h1>
+        {!step ? (
+          <>
+            <Field
+              label={s.username}
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              required
+            />
+            <Field
+              label={s.password}
+              secret
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              error={error ?? undefined}
+              required
+            />
+          </>
+        ) : (
           <Field
-            label={s.username}
-            autoComplete="username"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
-            required
-          />
-          <Field
-            label={s.password}
-            secret
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            label={s.code}
+            hint={s.codeHint}
+            autoComplete="one-time-code"
+            inputMode="text"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
             error={error ?? undefined}
+            autoFocus
             required
           />
-        </>
-      ) : (
-        <Field
-          label={s.code}
-          hint={s.codeHint}
-          autoComplete="one-time-code"
-          inputMode="text"
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          error={error ?? undefined}
-          autoFocus
-          required
-        />
-      )}
-      <Button variant="primary" type="submit" disabled={busy}>
-        {step ? s.verify : s.signIn}
-      </Button>
-    </form>
+        )}
+        <Button variant="primary" type="submit" disabled={busy}>
+          {step ? s.verify : s.signIn}
+        </Button>
+      </form>
+    </SignInStage>
   );
 }
 
@@ -243,6 +246,7 @@ export function AccountSection() {
         </p>
       )}
       <AccountBlocks />
+      {!session.guest && <GuestsBlock />}
       <NavidromeConnection />
       {session.youtube?.enabled && <YouTubeConnection />}
     </>

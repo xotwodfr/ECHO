@@ -1,10 +1,13 @@
 import type { Track } from '../../shared/types.ts';
 import { type Album, createLibrary } from '../library.ts';
-import glassWeather from './covers/glass-weather.svg';
-import harbourLights from './covers/harbour-lights.svg';
-import longExposure from './covers/long-exposure.svg';
-import paperSatellites from './covers/paper-satellites.svg';
-import signalNoise from './covers/signal-noise.svg';
+// Served as files, like a real library's covers (same origin): inlined as data: URLs (they are
+// small), an <img> rendered while the page navigates away is checked against connect-src, which
+// refuses data: (SEC-08 failed at random in CI when Home's shelves arrived mid-navigation).
+import glassWeather from './covers/glass-weather.svg?no-inline';
+import harbourLights from './covers/harbour-lights.svg?no-inline';
+import longExposure from './covers/long-exposure.svg?no-inline';
+import paperSatellites from './covers/paper-satellites.svg?no-inline';
+import signalNoise from './covers/signal-noise.svg?no-inline';
 import { GUIDE_ALBUM_ID, guideNames } from './guide.ts';
 import { lyricFixtures } from './lyrics.ts';
 

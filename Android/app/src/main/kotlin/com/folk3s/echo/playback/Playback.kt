@@ -23,6 +23,10 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
+import com.folk3s.echo.offline.chooseSource
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonObject
@@ -70,6 +74,21 @@ private const val SAVE_DEBOUNCE_MS = 2000L
 private const val SAVE_EVERY_MS = 15_000L
 private const val HISTORY = 50
 
+/**
+ * Listen together (together/Together.kt): while one is set, the transport and the queue go to the
+ * shared session; the player only follows it ([Playback.follow]).
+ */
+interface RemoteQueue {
+  fun toggle()
+  fun next()
+  fun previous()
+  fun seek(ms: Long)
+  fun add(t: Track, next: Boolean)
+  fun play(list: List<Track>, index: Int)
+  /** The song ended here; the session decides what comes next. */
+  fun ended()
+}
+
 /** The saved queue's position: any JSON number, as the web writes a fraction of a ms (QueueTest). */
 internal fun savedPositionMs(saved: JsonObject): Long = saved["positionMs"]?.jsonPrimitive?.doubleOrNull?.toLong() ?: 0
 
@@ -85,6 +104,10 @@ class Playback(private val app: EchoApp) {
   private var c: MediaController? = null
   private val pending = mutableListOf<(MediaController) -> Unit>()
   private val tracks = HashMap<String, Track>()
+  /** Karaoke versions the server has ready, by track key (their audio path). */
+  private val karaokeAudio = HashMap<String, String>()
+  /** The URI each item was given, by track key (a controller's items don't carry it back). */
+  private val uris = HashMap<String, String>()
   private var nextUp = 0 // items right after the current one that the user added
   private val _context = MutableStateFlow<PlayContext?>(null)
   /** Where the music plays from (an album, a playlist, Liked Songs, a radio): pages mark it. */
@@ -100,6 +123,8 @@ class Playback(private val app: EchoApp) {
   private var recorded = false
   private var queueBase = 0L
   private var saveJob: Job? = null
+  /** Listen together's session, while in one: commands go there. */
+  var remote: RemoteQueue? = null
 
   init {
     val token = SessionToken(app, ComponentName(app, PlaybackService::class.java))
@@ -118,6 +143,10 @@ class Playback(private val app: EchoApp) {
       ContextCompat.getMainExecutor(app),
     )
     app.scope.launch { ticker() }
+    // v0.8: queued songs move to their downloaded files as they finish (or back to the stream when
+    // removed); offline or online again, karaoke versions step aside or come back.
+    app.scope.launch { app.downloads.index.map { it.files.keys }.distinctUntilChanged().drop(1).collect { refreshSources(includeCurrent = false) } }
+    app.scope.launch { app.network.online.drop(1).collect { refreshSources() } }
   }
 
   private fun run(block: (MediaController) -> Unit) {
@@ -125,28 +154,82 @@ class Playback(private val app: EchoApp) {
     if (mc != null) block(mc) else pending += block
   }
 
+  /**
+   * Where a track plays from (chooseSource): the karaoke version while Karaoke mode is on, it is
+   * ready and ECHO can be reached; else the downloaded file (v0.8); else the stream.
+   */
+  private fun uriOf(t: Track): String =
+    chooseSource(
+      stream = app.api.url("/api/v1/navidrome/stream/${URLEncoder.encode(t.id, "UTF-8")}?format=raw"),
+      karaoke = karaokeAudio[t.key]?.let(app.api::url),
+      karaokeOn = app.prefs.state.value.karaoke,
+      local = app.downloads.localUri(t),
+      online = app.network.online.value,
+    )
+
+  /** Whether the item now playing is a karaoke version. */
+  fun playingKaraoke(): Boolean {
+    val key = _state.value.track?.key ?: return false
+    return uris[key]?.contains("/api/v1/karaoke/") == true
+  }
+
   private fun item(t: Track): MediaItem {
     tracks[t.key] = t
-    val id = URLEncoder.encode(t.id, "UTF-8")
+    val uri = uriOf(t)
+    uris[t.key] = uri
     return MediaItem.Builder()
       .setMediaId(t.key)
-      .setUri(app.api.url("/api/v1/navidrome/stream/$id?format=raw"))
+      .setUri(uri)
       .setMediaMetadata(
         MediaMetadata.Builder()
           .setTitle(t.title)
           .setArtist(t.artist)
           .setAlbumTitle(t.album.title)
-          .setArtworkUri(t.cover?.let { Uri.parse(app.api.url(it)) })
+          .setArtworkUri(t.cover?.let { Uri.parse(app.downloads.coverUri(it) ?: app.api.url(it)) })
           .setDurationMs(t.durationMs.takeIf { it > 0 })
+          // The crossfade stays out of an album (Crossfader.albumOf).
+          .setExtras(android.os.Bundle().apply { putString(Crossfader.ALBUM_KEY, t.album.id ?: t.album.key) })
           .build(),
       )
       .build()
+  }
+
+  // ---- Karaoke mode ----
+
+  /** The server has the song's karaoke version: used now if Karaoke mode is on. */
+  fun karaokeReady(key: String, audioPath: String) {
+    if (karaokeAudio[key] == audioPath) return
+    karaokeAudio[key] = audioPath
+    refreshSources()
+  }
+
+  /**
+   * Every queued item gets the source it should have now: the karaoke version while Karaoke mode
+   * is on and the server has one, the song otherwise. The item playing is swapped at the same
+   * position, so the music goes on where it was. A download finishing leaves the item playing
+   * alone ([includeCurrent] false); losing or finding ECHO swaps it too.
+   */
+  fun refreshSources(includeCurrent: Boolean = true) = run { mc ->
+    for (i in 0 until mc.mediaItemCount) {
+      val key = mc.getMediaItemAt(i).mediaId
+      val t = tracks[key] ?: continue
+      if (uris[key] == uriOf(t)) continue
+      if (i == mc.currentMediaItemIndex && !includeCurrent) continue
+      val next = item(t)
+      if (i == mc.currentMediaItemIndex) {
+        val at = mc.currentPosition
+        mc.replaceMediaItem(i, next)
+        mc.seekTo(i, at)
+      } else mc.replaceMediaItem(i, next)
+    }
+    KaraokeMix.active = playingKaraoke()
   }
 
   // ---- commands ----
 
   fun playList(list: List<Track>, index: Int, ctx: PlayContext) {
     if (list.isEmpty()) return
+    remote?.let { return it.play(list, index.coerceIn(0, list.lastIndex)) }
     run { mc ->
       nextUp = 0
       source = ctx
@@ -156,7 +239,7 @@ class Playback(private val app: EchoApp) {
     }
   }
 
-  fun toggle() = run { mc ->
+  fun toggle() = remote?.toggle() ?: run { mc ->
     when {
       mc.isPlaying -> mc.pause()
       mc.playbackState == Player.STATE_ENDED -> {
@@ -170,12 +253,38 @@ class Playback(private val app: EchoApp) {
     }
   }
 
-  fun next() = run { if (it.hasNextMediaItem()) it.seekToNextMediaItem() }
+  fun next() = remote?.next() ?: run { if (it.hasNextMediaItem()) it.seekToNextMediaItem() }
 
   /** Restart past 3 s, else the track before (the web's Previous). */
-  fun previous() = run { it.seekToPrevious() }
+  fun previous() = remote?.previous() ?: run { it.seekToPrevious() }
 
-  fun seek(ms: Long) = run { it.seekTo(ms.coerceAtLeast(0)) }
+  fun seek(ms: Long) = remote?.seek(ms) ?: run { it.seekTo(ms.coerceAtLeast(0)) }
+
+  // ---- following a Listen together session (together/Together.kt) ----
+
+  /** The session's song, alone in the queue, from [startMs]. */
+  fun follow(t: Track, startMs: Long, play: Boolean, ctx: PlayContext) = run { mc ->
+    nextUp = 0
+    source = ctx
+    mc.setMediaItems(listOf(item(t)), 0, startMs.coerceAtLeast(0))
+    mc.prepare()
+    mc.playWhenReady = play
+  }
+
+  fun followPlay() = run { mc ->
+    if (mc.playbackState == Player.STATE_IDLE) mc.prepare()
+    mc.play()
+  }
+
+  fun followPause() = run { it.pause() }
+
+  fun followSeek(ms: Long) = run { it.seekTo(ms.coerceAtLeast(0)) }
+
+  /** The player's state for following: the song (its Navidrome id), playing, loading, where. */
+  fun followState(): Triple<String?, Boolean, Boolean> {
+    val s = _state.value
+    return Triple(s.track?.id, s.playing, s.buffering)
+  }
 
   fun toggleShuffle() = run { it.shuffleModeEnabled = !it.shuffleModeEnabled }
 
@@ -193,7 +302,7 @@ class Playback(private val app: EchoApp) {
 
   fun addToQueue(t: Track) = enqueue(t, first = false)
 
-  private fun enqueue(t: Track, first: Boolean) = run { mc ->
+  private fun enqueue(t: Track, first: Boolean) = remote?.add(t, first) ?: run { mc ->
     if (mc.mediaItemCount == 0) return@run playList(listOf(t), 0, PlayContext("search", title = t.title))
     val at = mc.currentMediaItemIndex + 1 + if (first) 0 else nextUp
     mc.addMediaItem(at.coerceAtMost(mc.mediaItemCount), item(t))
@@ -233,9 +342,17 @@ class Playback(private val app: EchoApp) {
     mc.stop()
     mc.clearMediaItems()
     tracks.clear()
+    karaokeAudio.clear()
+    uris.clear()
     nextUp = 0
     source = null
     queueBase = 0
+  }
+
+  /** Another controller (Android Auto) replaced the queue: where it plays from, none of it added. */
+  fun playingFrom(ctx: PlayContext) {
+    nextUp = 0
+    source = ctx
   }
 
   fun dismissNotice() {
@@ -276,7 +393,11 @@ class Playback(private val app: EchoApp) {
     return out.reversed()
   }
 
-  private fun trackAt(mc: Player, i: Int) = tracks[mc.getMediaItemAt(i).mediaId]
+  /** What the app queued, or what the library session queued (Android Auto): see KnownTracks. */
+  private fun trackAt(mc: Player, i: Int): Track? {
+    val id = mc.getMediaItemAt(i).mediaId
+    return tracks[id] ?: KnownTracks[id]?.also { tracks[id] = it }
+  }
 
   private fun publish() {
     val mc = c ?: return
@@ -290,6 +411,7 @@ class Playback(private val app: EchoApp) {
     lastIndex = index
     val up = upcomingIndices(mc).mapNotNull { trackAt(mc, it) }
     val now = if (mc.mediaItemCount > 0 && index != C.INDEX_UNSET) trackAt(mc, index) else null
+    KaraokeMix.active = now != null && uris[now.key]?.contains("/api/v1/karaoke/") == true
     _state.value =
       _state.value.copy(
         connected = true,
@@ -322,6 +444,7 @@ class Playback(private val app: EchoApp) {
       override fun onEvents(player: Player, events: Player.Events) {
         val before = _state.value
         publish()
+        if (events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED) && player.playbackState == Player.STATE_ENDED) remote?.ended()
         val after = _state.value
         val jumped = kotlin.math.abs(after.positionNow() - before.positionNow()) > 2000
         if (
@@ -350,7 +473,10 @@ class Playback(private val app: EchoApp) {
       val s = _state.value
       val t = s.track ?: continue
       if (!s.playing) continue
-      publish()
+      // Screens extrapolate the position between updates; publish (and rebuild the queue) only
+      // when that estimate has drifted, not every second, so the app doesn't redraw each tick.
+      val real = c?.currentPosition
+      if (real == null || kotlin.math.abs(real - s.positionNow()) > 250) publish()
       scrobble(t, _state.value.positionNow())
       record(t, _state.value.positionNow())
       sinceSave += 1000

@@ -41,7 +41,7 @@ Out of scope: an attacker with root on the OptiPlex, and DDoS (handled, if at al
 
 | Role | Can |
 |---|---|
-| **admin** (exactly one at setup; more can be promoted) | Everything a user can, plus: server settings (public origin display, Spicy Lyrics key, library matching, the TOTP policy), invite/disable/delete users, view the audit log, see per-user connection *status* (never secrets) |
+| **admin** (exactly one at setup; more can be promoted) | Everything a user can, plus: server settings (public origin display, Spicy Lyrics key, library matching, the TOTP policy), invite/disable/delete users, view the audit log, see per-user connection *status* (never secrets), upload and remove an album's motion-cover video (`docs/MOTION.md`) |
 | **user** | Own account (password, TOTP, sessions), own Navidrome connection, own settings, queue and lyric overrides |
 
 ### 2.2 What is per-user vs server-wide
@@ -244,8 +244,17 @@ URLs (`TECHNICAL_ARCHITECTURE.md` §6.5). Everything else → `401`.
 
 ### 5.6 Limits
 
-Request bodies ≤ 64 KB (no uploads in MVP). Per-user API rate limit: 50 req/s burst, 600/min (streams,
-covers and YouTube thumbnails excluded). Lyric and palette routes are server-cached, so they can't amplify outbound
+Request bodies ≤ 64 KB, with one exception: an admin's motion-cover video (`PUT
+/motion/{album}/upload`, `docs/MOTION.md`, 2026-11-19). That route skips the global limit only for
+itself, and reads the body only once the session is an admin's (and, for a cookie, the Origin
+checked): at most 50 MB (a larger Content-Length is refused before anything is read, a body without
+one is counted as it arrives and cut off), `video/mp4`, `video/quicktime` or `video/x-m4v`, and its
+first bytes must be an MP4/QuickTime container with a video brand (HEIF images and M4A audio share
+the format and are refused). It is written under a random name in `/data/motion` (mode 600), never
+served as uploaded: the motion service, on an internal network, checks it with ffprobe and converts
+it, and only the conversion reaches clients, sandboxed. Uploads and removals are audited
+(`admin.motion_uploaded`, `admin.motion_removed`). Per-user API rate limit: 50 req/s burst, 600/min (streams,
+covers, motion covers' videos and stills, and YouTube thumbnails excluded). Lyric and palette routes are server-cached, so they can't amplify outbound
 traffic beyond one upstream call per key and TTL.
 
 ---
@@ -331,6 +340,8 @@ redistribution) is shown next to the field.
 | | `visuals.pointerParallax` | bool | true |
 | | `visuals.backdrop` | 0–1, the blurred cover's brightness (the Stage's brightness control, 2026-10-28) | 0.5 (**per device**) |
 | | `visuals.performance` | bool: Performance mode, for a slow computer (2026-11-04) | false (**per device**) |
+| Appearance | `appearance.theme` | one of Android's themes: `echo` \| `apple` \| `spotify` \| `soundcloud` \| `deezer` \| `qobuz` \| `tidal` \| `youtube` \| `clay` \| `yarn` \| `glass` \| `paper` \| `hifi` \| `materialyou` \| `mono` (`src/shared/themes.ts`; the web shows `materialyou` as ECHO) | `echo` |
+| | `appearance.dark` | `theme` (the theme's own) \| `system` \| `light` \| `dark` | `theme` |
 
 `visuals.quality`, `visuals.backdrop`, `visuals.performance`, `playback.quality` and the volume are
 stored in `localStorage` per device. A gaming PC and a laptop need different values, and screens

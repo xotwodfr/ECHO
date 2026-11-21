@@ -8,6 +8,7 @@ import { NavidromeProvider } from './navidrome.ts';
 
 class FakeAudio extends EventTarget {
   preload = '';
+  readyState = 0;
   currentTime = 0;
   duration = Number.NaN;
   paused = true;
@@ -54,8 +55,29 @@ class FakeAudio extends EventTarget {
   }
 }
 
+/** Every gain change, for the crossfade's ramps: `curve:in`, `curve:out`, `set:1`. */
+const ramps: string[] = [];
+
 class FakeNode {
-  gain = { value: 1 };
+  gain = {
+    value: 1,
+    setTargetAtTime(v: number) {
+      this.value = v;
+    },
+    setValueCurveAtTime(c: Float32Array) {
+      this.value = c[c.length - 1] as number;
+      ramps.push(`curve:${(c[0] as number) < 0.5 ? 'in' : 'out'}`);
+    },
+    setValueAtTime(v: number) {
+      this.value = v;
+      ramps.push(`set:${v}`);
+    },
+    cancelScheduledValues() {},
+  };
+  channelInterpretation = 'speakers';
+  channelCount = 2;
+  channelCountMode = 'max';
+  getFloatTimeDomainData() {}
   fftSize = 0;
   smoothingTimeConstant = 0;
   minDecibels = 0;
@@ -103,6 +125,9 @@ describe('NavidromeProvider', () => {
         createAnalyser = () => new FakeNode();
         createGain = () => new FakeNode();
         createMediaElementSource = () => new FakeNode();
+        createChannelSplitter = () => new FakeNode();
+        createChannelMerger = () => new FakeNode();
+        currentTime = 0;
         resume = async () => {};
       },
     );
@@ -258,5 +283,169 @@ describe('NavidromeProvider', () => {
     expect(errors.map((e) => e.code)).toEqual(['youtube.bot_check']);
     expect(errors[0]?.userMessage).toMatch(/bot/);
     expect(urls.some((u) => u.includes('navidrome'))).toBe(false);
+  });
+});
+
+describe('Karaoke mode (docs/KARAOKE.md)', () => {
+  it('a karaoke file keeps its vocals at the slider level; anything else plays whole', async () => {
+    const { vocalGains } = await import('./audio.ts');
+    // A karaoke file: no centre (it is silent), the rear vocals at the level.
+    expect(vocalGains(true, 0)).toEqual({ centre: 0, rear: 0 });
+    expect(vocalGains(true, 0.3)).toEqual({ centre: 0, rear: 0.3 });
+    expect(vocalGains(true, 7)).toEqual({ centre: 0, rear: 1 });
+    // Not a karaoke file: a mono song's centre whole, a 5.1 song's rears as a downmix.
+    expect(vocalGains(false, 0)).toEqual({ centre: 1, rear: Math.SQRT1_2 });
+  });
+
+  it('a browser that downmixed the 5.1 shows as empty rears while the fronts play', async () => {
+    const { looksDownmixed } = await import('./audio.ts');
+    const front = new Float32Array([0, 0.2, -0.3]);
+    expect(looksDownmixed(front, new Float32Array(3))).toBe(true);
+    // A faint residue (an instrumental passage) is not a downmix; nor is silence all round.
+    expect(looksDownmixed(front, new Float32Array([0, 1e-6, 0]))).toBe(false);
+    expect(looksDownmixed(new Float32Array(3), new Float32Array(3))).toBe(false);
+  });
+
+  it('plays the karaoke file instead of the song while Karaoke is on and it is ready', async () => {
+    vi.stubGlobal('fetch', async () => new Response('{}', { status: 200 }));
+    const el = new FakeAudio();
+    const els = [el, new FakeAudio()] as unknown as [HTMLAudioElement, HTMLAudioElement];
+    let karaoke: string | null = null;
+    const p = new NavidromeProvider(els, {
+      transcodeOffset: true,
+      scrobble: false,
+      karaokeSrc: () => karaoke,
+    });
+    const loaded = async (run: Promise<void>) => {
+      await flush();
+      el.dispatchEvent(new Event('loadedmetadata'));
+      await run;
+    };
+    await loaded(p.load(track(1), { autoplay: false }));
+    expect(el.src).toContain('/api/v1/navidrome/stream/t1');
+    expect(p.playingKaraoke).toBe(false);
+    // Ready: the same song switches to its karaoke file, at the same place.
+    karaoke = '/api/v1/karaoke/t1/audio';
+    el.currentTime = 42;
+    await loaded(p.refreshSource());
+    expect(el.src).toBe('/api/v1/karaoke/t1/audio');
+    expect(p.playingKaraoke).toBe(true);
+    expect(el.currentTime).toBe(42);
+    // Off again: back to the song.
+    karaoke = null;
+    await loaded(p.refreshSource());
+    expect(el.src).toContain('/api/v1/navidrome/stream/t1');
+  });
+});
+
+describe('Crossfade (§5.6)', () => {
+  let a: FakeAudio;
+  let b: FakeAudio;
+  let p: NavidromeProvider;
+  let ended: number;
+  const other = (n: number): Track => ({
+    ...track(n),
+    album: { id: `b${n}`, title: 'Other', key: `navidrome:b${n}` },
+  });
+
+  beforeEach(async () => {
+    ramps.length = 0;
+    vi.stubGlobal(
+      'AudioContext',
+      class {
+        state = 'running';
+        destination = new FakeNode();
+        createAnalyser = () => new FakeNode();
+        createGain = () => new FakeNode();
+        createMediaElementSource = () => new FakeNode();
+        createChannelSplitter = () => new FakeNode();
+        createChannelMerger = () => new FakeNode();
+        currentTime = 0;
+        sampleRate = 48_000;
+        resume = async () => {};
+      },
+    );
+    vi.stubGlobal('fetch', async () => new Response('{}', { status: 200 }));
+    a = new FakeAudio();
+    b = new FakeAudio();
+    p = new NavidromeProvider([a, b] as unknown as [HTMLAudioElement, HTMLAudioElement], {
+      transcodeOffset: true,
+      scrobble: false,
+      crossfadeSec: 6,
+    });
+    ended = 0;
+    p.on('ended', () => ended++);
+    const run = p.load(track(1), { autoplay: true });
+    await flush();
+    a.dispatchEvent(new Event('loadedmetadata'));
+    await flush();
+    a.duration = 200;
+    vi.useFakeTimers();
+    void run;
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('starts the next song under this one, hands over, then stops the old one', async () => {
+    await p.preload(other(2), { crossfade: () => true });
+    b.readyState = 4;
+    a.currentTime = 190; // 10 s left: not yet
+    a.fire('timeupdate');
+    expect(ended).toBe(0);
+    a.currentTime = 194.5; // 5.5 s left, within the 6 s fade
+    a.fire('timeupdate');
+    expect(ended).toBe(1);
+    expect(b.paused).toBe(false);
+    expect(a.paused).toBe(false);
+    expect(ramps).toEqual(['curve:out', 'curve:in']);
+    // The queue moved on: the hand-over keeps the old voice fading out.
+    void p.load(other(2), { autoplay: true });
+    expect(a.paused).toBe(false);
+    expect(p.audioClock()?.positionMs).toBe(0);
+    vi.advanceTimersByTime(5_800);
+    expect(a.paused).toBe(true);
+    expect(ramps.filter((r) => r === 'set:1')).toHaveLength(2);
+  });
+
+  it('not when the controller says no (repeat-one, the same album), nor when nothing is buffered', async () => {
+    let allowed = false;
+    await p.preload(other(2), { crossfade: () => allowed });
+    b.readyState = 4;
+    a.currentTime = 196;
+    a.fire('timeupdate');
+    expect(ended).toBe(0);
+    allowed = true;
+    b.readyState = 1; // not enough buffered: the gapless hand-over at the end instead
+    a.fire('timeupdate');
+    expect(ended).toBe(0);
+    expect(b.paused).toBe(true);
+  });
+
+  it('a pause during the fade stops the old song at once', async () => {
+    await p.preload(other(2), { crossfade: () => true });
+    b.readyState = 4;
+    a.currentTime = 196;
+    a.fire('timeupdate');
+    void p.load(other(2), { autoplay: true });
+    await p.pause();
+    expect(a.paused).toBe(true);
+    expect(b.paused).toBe(true);
+  });
+
+  it('a preload during the fade waits for the old voice to be free', async () => {
+    await p.preload(other(2), { crossfade: () => true });
+    b.readyState = 4;
+    a.currentTime = 196;
+    a.fire('timeupdate');
+    void p.load(other(2), { autoplay: true });
+    const before = a.srcSets;
+    await p.preload(other(3));
+    expect(a.srcSets).toBe(before);
+    vi.advanceTimersByTime(5_000);
+    expect(a.srcSets).toBe(before + 1);
+    expect(a.src).toContain('/t3');
   });
 });

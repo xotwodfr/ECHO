@@ -1,0 +1,680 @@
+{
+  "version": 1,
+  "trackKey": "fixture:rap-word",
+  "sync": "word",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 170000,
+  "lines": [
+    {
+      "text": "Clock in at the station where the signal gets thin",
+      "start": 10000,
+      "end": 11563,
+      "words": [
+        { "text": "Clock", "start": 10000, "end": 10138, "isPartOfWord": false },
+        { "text": "in", "start": 10153, "end": 10255, "isPartOfWord": false },
+        { "text": "at", "start": 10270, "end": 10372, "isPartOfWord": false },
+        { "text": "the", "start": 10387, "end": 10501, "isPartOfWord": false },
+        { "text": "sta", "start": 10516, "end": 10630, "isPartOfWord": true },
+        { "text": "tion", "start": 10630, "end": 10756, "isPartOfWord": false },
+        { "text": "where", "start": 10771, "end": 10909, "isPartOfWord": false },
+        { "text": "the", "start": 10924, "end": 11038, "isPartOfWord": false },
+        { "text": "sig", "start": 11053, "end": 11167, "isPartOfWord": true },
+        { "text": "nal", "start": 11167, "end": 11281, "isPartOfWord": false },
+        { "text": "gets", "start": 11296, "end": 11422, "isPartOfWord": false },
+        { "text": "thin", "start": 11437, "end": 11563, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "got a pocket full of static and a city wired in",
+      "start": 11683,
+      "end": 13369,
+      "words": [
+        { "text": "got", "start": 11683, "end": 11797, "isPartOfWord": false },
+        { "text": "a", "start": 11812, "end": 11902, "isPartOfWord": false },
+        { "text": "pock", "start": 11917, "end": 12043, "isPartOfWord": true },
+        { "text": "et", "start": 12043, "end": 12145, "isPartOfWord": false },
+        { "text": "full", "start": 12160, "end": 12286, "isPartOfWord": false },
+        { "text": "of", "start": 12301, "end": 12403, "isPartOfWord": false },
+        { "text": "stat", "start": 12418, "end": 12544, "isPartOfWord": true },
+        { "text": "ic", "start": 12544, "end": 12646, "isPartOfWord": false },
+        { "text": "and", "start": 12661, "end": 12775, "isPartOfWord": false },
+        { "text": "a", "start": 12790, "end": 12880, "isPartOfWord": false },
+        { "text": "ci", "start": 12895, "end": 12997, "isPartOfWord": true },
+        { "text": "ty", "start": 12997, "end": 13099, "isPartOfWord": false },
+        { "text": "wired", "start": 13114, "end": 13252, "isPartOfWord": false },
+        { "text": "in", "start": 13267, "end": 13369, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every streetlight on the corner is a metronome",
+      "start": 13489,
+      "end": 15076,
+      "words": [
+        { "text": "ev", "start": 13489, "end": 13591, "isPartOfWord": true },
+        { "text": "ery", "start": 13591, "end": 13705, "isPartOfWord": false },
+        { "text": "street", "start": 13720, "end": 13870, "isPartOfWord": true },
+        { "text": "light", "start": 13870, "end": 14008, "isPartOfWord": false },
+        { "text": "on", "start": 14023, "end": 14125, "isPartOfWord": false },
+        { "text": "the", "start": 14140, "end": 14254, "isPartOfWord": false },
+        { "text": "cor", "start": 14269, "end": 14383, "isPartOfWord": true },
+        { "text": "ner", "start": 14383, "end": 14497, "isPartOfWord": false },
+        { "text": "is", "start": 14512, "end": 14614, "isPartOfWord": false },
+        { "text": "a", "start": 14629, "end": 14719, "isPartOfWord": false },
+        { "text": "met", "start": 14734, "end": 14848, "isPartOfWord": true },
+        { "text": "ro", "start": 14848, "end": 14950, "isPartOfWord": true },
+        { "text": "nome", "start": 14950, "end": 15076, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "counting down the minutes till the last train home",
+      "start": 15196,
+      "end": 16678,
+      "words": [
+        { "text": "count", "start": 15196, "end": 15334, "isPartOfWord": true },
+        { "text": "ing", "start": 15334, "end": 15448, "isPartOfWord": false },
+        { "text": "down", "start": 15463, "end": 15589, "isPartOfWord": false },
+        { "text": "the", "start": 15604, "end": 15718, "isPartOfWord": false },
+        { "text": "min", "start": 15733, "end": 15847, "isPartOfWord": true },
+        { "text": "utes", "start": 15847, "end": 15973, "isPartOfWord": false },
+        { "text": "till", "start": 15988, "end": 16114, "isPartOfWord": false },
+        { "text": "the", "start": 16129, "end": 16243, "isPartOfWord": false },
+        { "text": "last", "start": 16258, "end": 16384, "isPartOfWord": false },
+        { "text": "train", "start": 16399, "end": 16537, "isPartOfWord": false },
+        { "text": "home", "start": 16552, "end": 16678, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Yo",
+      "start": 16798,
+      "end": 16900,
+      "words": [{ "text": "Yo", "start": 16798, "end": 16900, "isPartOfWord": false }]
+    },
+    {
+      "text": "I keep it tight, keep it moving, keep it all in check",
+      "start": 16960,
+      "end": 18619,
+      "words": [
+        { "text": "I", "start": 16960, "end": 17050, "isPartOfWord": false },
+        { "text": "keep", "start": 17065, "end": 17191, "isPartOfWord": false },
+        { "text": "it", "start": 17206, "end": 17308, "isPartOfWord": false },
+        { "text": "tight,", "start": 17323, "end": 17461, "isPartOfWord": false },
+        { "text": "keep", "start": 17476, "end": 17602, "isPartOfWord": false },
+        { "text": "it", "start": 17617, "end": 17719, "isPartOfWord": false },
+        { "text": "mov", "start": 17734, "end": 17848, "isPartOfWord": true },
+        { "text": "ing,", "start": 17848, "end": 17962, "isPartOfWord": false },
+        { "text": "keep", "start": 17977, "end": 18103, "isPartOfWord": false },
+        { "text": "it", "start": 18118, "end": 18220, "isPartOfWord": false },
+        { "text": "all", "start": 18235, "end": 18349, "isPartOfWord": false },
+        { "text": "in", "start": 18364, "end": 18466, "isPartOfWord": false },
+        { "text": "check", "start": 18481, "end": 18619, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every word is on the beat like a stamp on a cheque",
+      "start": 18739,
+      "end": 20386,
+      "words": [
+        { "text": "ev", "start": 18739, "end": 18841, "isPartOfWord": true },
+        { "text": "ery", "start": 18841, "end": 18955, "isPartOfWord": false },
+        { "text": "word", "start": 18970, "end": 19096, "isPartOfWord": false },
+        { "text": "is", "start": 19111, "end": 19213, "isPartOfWord": false },
+        { "text": "on", "start": 19228, "end": 19330, "isPartOfWord": false },
+        { "text": "the", "start": 19345, "end": 19459, "isPartOfWord": false },
+        { "text": "beat", "start": 19474, "end": 19600, "isPartOfWord": false },
+        { "text": "like", "start": 19615, "end": 19741, "isPartOfWord": false },
+        { "text": "a", "start": 19756, "end": 19846, "isPartOfWord": false },
+        { "text": "stamp", "start": 19861, "end": 19999, "isPartOfWord": false },
+        { "text": "on", "start": 20014, "end": 20116, "isPartOfWord": false },
+        { "text": "a", "start": 20131, "end": 20221, "isPartOfWord": false },
+        { "text": "cheque", "start": 20236, "end": 20386, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "paper satellites are drifting over neon and rain",
+      "start": 20506,
+      "end": 22195,
+      "words": [
+        { "text": "pa", "start": 20506, "end": 20608, "isPartOfWord": true },
+        { "text": "per", "start": 20608, "end": 20722, "isPartOfWord": false },
+        { "text": "sat", "start": 20737, "end": 20851, "isPartOfWord": true },
+        { "text": "el", "start": 20851, "end": 20953, "isPartOfWord": true },
+        { "text": "lites", "start": 20953, "end": 21091, "isPartOfWord": false },
+        { "text": "are", "start": 21106, "end": 21220, "isPartOfWord": false },
+        { "text": "drift", "start": 21235, "end": 21373, "isPartOfWord": true },
+        { "text": "ing", "start": 21373, "end": 21487, "isPartOfWord": false },
+        { "text": "ov", "start": 21502, "end": 21604, "isPartOfWord": true },
+        { "text": "er", "start": 21604, "end": 21706, "isPartOfWord": false },
+        { "text": "ne", "start": 21721, "end": 21823, "isPartOfWord": true },
+        { "text": "on", "start": 21823, "end": 21925, "isPartOfWord": false },
+        { "text": "and", "start": 21940, "end": 22054, "isPartOfWord": false },
+        { "text": "rain", "start": 22069, "end": 22195, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I can map the whole skyline by the sound of the train",
+      "start": 22315,
+      "end": 23998,
+      "words": [
+        { "text": "I", "start": 22315, "end": 22405, "isPartOfWord": false },
+        { "text": "can", "start": 22420, "end": 22534, "isPartOfWord": false },
+        { "text": "map", "start": 22549, "end": 22663, "isPartOfWord": false },
+        { "text": "the", "start": 22678, "end": 22792, "isPartOfWord": false },
+        { "text": "whole", "start": 22807, "end": 22945, "isPartOfWord": false },
+        { "text": "sky", "start": 22960, "end": 23074, "isPartOfWord": true },
+        { "text": "line", "start": 23074, "end": 23200, "isPartOfWord": false },
+        { "text": "by", "start": 23215, "end": 23317, "isPartOfWord": false },
+        { "text": "the", "start": 23332, "end": 23446, "isPartOfWord": false },
+        { "text": "sound", "start": 23461, "end": 23599, "isPartOfWord": false },
+        { "text": "of", "start": 23614, "end": 23716, "isPartOfWord": false },
+        { "text": "the", "start": 23731, "end": 23845, "isPartOfWord": false },
+        { "text": "train", "start": 23860, "end": 23998, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "rooftop antennas catching every frequency loose",
+      "start": 24118,
+      "end": 25711,
+      "words": [
+        { "text": "roof", "start": 24118, "end": 24244, "isPartOfWord": true },
+        { "text": "top", "start": 24244, "end": 24358, "isPartOfWord": false },
+        { "text": "an", "start": 24373, "end": 24475, "isPartOfWord": true },
+        { "text": "ten", "start": 24475, "end": 24589, "isPartOfWord": true },
+        { "text": "nas", "start": 24589, "end": 24703, "isPartOfWord": false },
+        { "text": "catch", "start": 24718, "end": 24856, "isPartOfWord": true },
+        { "text": "ing", "start": 24856, "end": 24970, "isPartOfWord": false },
+        { "text": "ev", "start": 24985, "end": 25087, "isPartOfWord": true },
+        { "text": "ery", "start": 25087, "end": 25201, "isPartOfWord": false },
+        { "text": "fre", "start": 25216, "end": 25330, "isPartOfWord": true },
+        { "text": "quen", "start": 25330, "end": 25456, "isPartOfWord": true },
+        { "text": "cy", "start": 25456, "end": 25558, "isPartOfWord": false },
+        { "text": "loose", "start": 25573, "end": 25711, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I’m a radio that never learned the meaning of snooze",
+      "start": 25831,
+      "end": 27562,
+      "words": [
+        { "text": "I’m", "start": 25831, "end": 25933, "isPartOfWord": false },
+        { "text": "a", "start": 25948, "end": 26038, "isPartOfWord": false },
+        { "text": "ra", "start": 26053, "end": 26155, "isPartOfWord": true },
+        { "text": "di", "start": 26155, "end": 26257, "isPartOfWord": true },
+        { "text": "o", "start": 26257, "end": 26347, "isPartOfWord": false },
+        { "text": "that", "start": 26362, "end": 26488, "isPartOfWord": false },
+        { "text": "nev", "start": 26503, "end": 26617, "isPartOfWord": true },
+        { "text": "er", "start": 26617, "end": 26719, "isPartOfWord": false },
+        { "text": "learned", "start": 26734, "end": 26896, "isPartOfWord": false },
+        { "text": "the", "start": 26911, "end": 27025, "isPartOfWord": false },
+        { "text": "mean", "start": 27040, "end": 27166, "isPartOfWord": true },
+        { "text": "ing", "start": 27166, "end": 27280, "isPartOfWord": false },
+        { "text": "of", "start": 27295, "end": 27397, "isPartOfWord": false },
+        { "text": "snooze", "start": 27412, "end": 27562, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "turn the dial to the left and you can hear me again",
+      "start": 27682,
+      "end": 29419,
+      "words": [
+        { "text": "turn", "start": 27682, "end": 27808, "isPartOfWord": false },
+        { "text": "the", "start": 27823, "end": 27937, "isPartOfWord": false },
+        { "text": "di", "start": 27952, "end": 28054, "isPartOfWord": true },
+        { "text": "al", "start": 28054, "end": 28156, "isPartOfWord": false },
+        { "text": "to", "start": 28171, "end": 28273, "isPartOfWord": false },
+        { "text": "the", "start": 28288, "end": 28402, "isPartOfWord": false },
+        { "text": "left", "start": 28417, "end": 28543, "isPartOfWord": false },
+        { "text": "and", "start": 28558, "end": 28672, "isPartOfWord": false },
+        { "text": "you", "start": 28687, "end": 28801, "isPartOfWord": false },
+        { "text": "can", "start": 28816, "end": 28930, "isPartOfWord": false },
+        { "text": "hear", "start": 28945, "end": 29071, "isPartOfWord": false },
+        { "text": "me", "start": 29086, "end": 29188, "isPartOfWord": false },
+        { "text": "a", "start": 29203, "end": 29293, "isPartOfWord": true },
+        { "text": "gain", "start": 29293, "end": 29419, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "one more verse for the night shift and the overtime men",
+      "start": 29539,
+      "end": 31243,
+      "words": [
+        { "text": "one", "start": 29539, "end": 29653, "isPartOfWord": false },
+        { "text": "more", "start": 29668, "end": 29794, "isPartOfWord": false },
+        { "text": "verse", "start": 29809, "end": 29947, "isPartOfWord": false },
+        { "text": "for", "start": 29962, "end": 30076, "isPartOfWord": false },
+        { "text": "the", "start": 30091, "end": 30205, "isPartOfWord": false },
+        { "text": "night", "start": 30220, "end": 30358, "isPartOfWord": false },
+        { "text": "shift", "start": 30373, "end": 30511, "isPartOfWord": false },
+        { "text": "and", "start": 30526, "end": 30640, "isPartOfWord": false },
+        { "text": "the", "start": 30655, "end": 30769, "isPartOfWord": false },
+        { "text": "ov", "start": 30784, "end": 30886, "isPartOfWord": true },
+        { "text": "er", "start": 30886, "end": 30988, "isPartOfWord": true },
+        { "text": "time", "start": 30988, "end": 31114, "isPartOfWord": false },
+        { "text": "men", "start": 31129, "end": 31243, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Signal, noise, signal, noise, signal, noise",
+      "start": 32743,
+      "end": 33916,
+      "words": [
+        { "text": "Sig", "start": 32743, "end": 32857, "isPartOfWord": true },
+        { "text": "nal,", "start": 32857, "end": 32971, "isPartOfWord": false },
+        { "text": "noise,", "start": 32986, "end": 33124, "isPartOfWord": false },
+        { "text": "sig", "start": 33139, "end": 33253, "isPartOfWord": true },
+        { "text": "nal,", "start": 33253, "end": 33367, "isPartOfWord": false },
+        { "text": "noise,", "start": 33382, "end": 33520, "isPartOfWord": false },
+        { "text": "sig", "start": 33535, "end": 33649, "isPartOfWord": true },
+        { "text": "nal,", "start": 33649, "end": 33763, "isPartOfWord": false },
+        { "text": "noise", "start": 33778, "end": 33916, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "we’re the sound between the stations on the dial",
+      "start": 34036,
+      "end": 35482,
+      "words": [
+        { "text": "we’re", "start": 34036, "end": 34162, "isPartOfWord": false },
+        { "text": "the", "start": 34177, "end": 34291, "isPartOfWord": false },
+        { "text": "sound", "start": 34306, "end": 34444, "isPartOfWord": false },
+        { "text": "be", "start": 34459, "end": 34561, "isPartOfWord": true },
+        { "text": "tween", "start": 34561, "end": 34699, "isPartOfWord": false },
+        { "text": "the", "start": 34714, "end": 34828, "isPartOfWord": false },
+        { "text": "sta", "start": 34843, "end": 34957, "isPartOfWord": true },
+        { "text": "tions", "start": 34957, "end": 35095, "isPartOfWord": false },
+        { "text": "on", "start": 35110, "end": 35212, "isPartOfWord": false },
+        { "text": "the", "start": 35227, "end": 35341, "isPartOfWord": false },
+        { "text": "dial", "start": 35356, "end": 35482, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "signal, noise, signal, noise, signal, noise",
+      "start": 35602,
+      "end": 36775,
+      "words": [
+        { "text": "sig", "start": 35602, "end": 35716, "isPartOfWord": true },
+        { "text": "nal,", "start": 35716, "end": 35830, "isPartOfWord": false },
+        { "text": "noise,", "start": 35845, "end": 35983, "isPartOfWord": false },
+        { "text": "sig", "start": 35998, "end": 36112, "isPartOfWord": true },
+        { "text": "nal,", "start": 36112, "end": 36226, "isPartOfWord": false },
+        { "text": "noise,", "start": 36241, "end": 36379, "isPartOfWord": false },
+        { "text": "sig", "start": 36394, "end": 36508, "isPartOfWord": true },
+        { "text": "nal,", "start": 36508, "end": 36622, "isPartOfWord": false },
+        { "text": "noise", "start": 36637, "end": 36775, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "turning all the static into patience for a while",
+      "start": 36895,
+      "end": 38509,
+      "words": [
+        { "text": "turn", "start": 36895, "end": 37021, "isPartOfWord": true },
+        { "text": "ing", "start": 37021, "end": 37135, "isPartOfWord": false },
+        { "text": "all", "start": 37150, "end": 37264, "isPartOfWord": false },
+        { "text": "the", "start": 37279, "end": 37393, "isPartOfWord": false },
+        { "text": "stat", "start": 37408, "end": 37534, "isPartOfWord": true },
+        { "text": "ic", "start": 37534, "end": 37636, "isPartOfWord": false },
+        { "text": "in", "start": 37651, "end": 37753, "isPartOfWord": true },
+        { "text": "to", "start": 37753, "end": 37855, "isPartOfWord": false },
+        { "text": "pa", "start": 37870, "end": 37972, "isPartOfWord": true },
+        { "text": "tience", "start": 37972, "end": 38122, "isPartOfWord": false },
+        { "text": "for", "start": 38137, "end": 38251, "isPartOfWord": false },
+        { "text": "a", "start": 38266, "end": 38356, "isPartOfWord": false },
+        { "text": "while", "start": 38371, "end": 38509, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Second verse and the tempo’s running faster than me",
+      "start": 46509,
+      "end": 48147,
+      "words": [
+        { "text": "Sec", "start": 46509, "end": 46623, "isPartOfWord": true },
+        { "text": "ond", "start": 46623, "end": 46737, "isPartOfWord": false },
+        { "text": "verse", "start": 46752, "end": 46890, "isPartOfWord": false },
+        { "text": "and", "start": 46905, "end": 47019, "isPartOfWord": false },
+        { "text": "the", "start": 47034, "end": 47148, "isPartOfWord": false },
+        { "text": "tem", "start": 47163, "end": 47277, "isPartOfWord": true },
+        { "text": "po’s", "start": 47277, "end": 47391, "isPartOfWord": false },
+        { "text": "run", "start": 47406, "end": 47520, "isPartOfWord": true },
+        { "text": "ning", "start": 47520, "end": 47646, "isPartOfWord": false },
+        { "text": "fast", "start": 47661, "end": 47787, "isPartOfWord": true },
+        { "text": "er", "start": 47787, "end": 47889, "isPartOfWord": false },
+        { "text": "than", "start": 47904, "end": 48030, "isPartOfWord": false },
+        { "text": "me", "start": 48045, "end": 48147, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "got a heartbeat like a hi-hat at a hundred and three",
+      "start": 48267,
+      "end": 49923,
+      "words": [
+        { "text": "got", "start": 48267, "end": 48381, "isPartOfWord": false },
+        { "text": "a", "start": 48396, "end": 48486, "isPartOfWord": false },
+        { "text": "heart", "start": 48501, "end": 48639, "isPartOfWord": true },
+        { "text": "beat", "start": 48639, "end": 48765, "isPartOfWord": false },
+        { "text": "like", "start": 48780, "end": 48906, "isPartOfWord": false },
+        { "text": "a", "start": 48921, "end": 49011, "isPartOfWord": false },
+        { "text": "hi-hat", "start": 49026, "end": 49164, "isPartOfWord": false },
+        { "text": "at", "start": 49179, "end": 49281, "isPartOfWord": false },
+        { "text": "a", "start": 49296, "end": 49386, "isPartOfWord": false },
+        { "text": "hun", "start": 49401, "end": 49515, "isPartOfWord": true },
+        { "text": "dred", "start": 49515, "end": 49641, "isPartOfWord": false },
+        { "text": "and", "start": 49656, "end": 49770, "isPartOfWord": false },
+        { "text": "three", "start": 49785, "end": 49923, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Go",
+      "start": 50043,
+      "end": 50145,
+      "words": [{ "text": "Go", "start": 50043, "end": 50145, "isPartOfWord": false }]
+    },
+    {
+      "text": "every syllable’s a footstep on the stairwell of sound",
+      "start": 50205,
+      "end": 51945,
+      "words": [
+        { "text": "ev", "start": 50205, "end": 50307, "isPartOfWord": true },
+        { "text": "ery", "start": 50307, "end": 50421, "isPartOfWord": false },
+        { "text": "syl", "start": 50436, "end": 50550, "isPartOfWord": true },
+        { "text": "la", "start": 50550, "end": 50652, "isPartOfWord": true },
+        { "text": "ble’s", "start": 50652, "end": 50778, "isPartOfWord": false },
+        { "text": "a", "start": 50793, "end": 50883, "isPartOfWord": false },
+        { "text": "foot", "start": 50898, "end": 51024, "isPartOfWord": true },
+        { "text": "step", "start": 51024, "end": 51150, "isPartOfWord": false },
+        { "text": "on", "start": 51165, "end": 51267, "isPartOfWord": false },
+        { "text": "the", "start": 51282, "end": 51396, "isPartOfWord": false },
+        { "text": "stair", "start": 51411, "end": 51549, "isPartOfWord": true },
+        { "text": "well", "start": 51549, "end": 51675, "isPartOfWord": false },
+        { "text": "of", "start": 51690, "end": 51792, "isPartOfWord": false },
+        { "text": "sound", "start": 51807, "end": 51945, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I keep climbing till the echo doesn’t come back round",
+      "start": 52065,
+      "end": 53730,
+      "words": [
+        { "text": "I", "start": 52065, "end": 52155, "isPartOfWord": false },
+        { "text": "keep", "start": 52170, "end": 52296, "isPartOfWord": false },
+        { "text": "climb", "start": 52311, "end": 52449, "isPartOfWord": true },
+        { "text": "ing", "start": 52449, "end": 52563, "isPartOfWord": false },
+        { "text": "till", "start": 52578, "end": 52704, "isPartOfWord": false },
+        { "text": "the", "start": 52719, "end": 52833, "isPartOfWord": false },
+        { "text": "ech", "start": 52848, "end": 52962, "isPartOfWord": true },
+        { "text": "o", "start": 52962, "end": 53052, "isPartOfWord": false },
+        { "text": "does", "start": 53067, "end": 53193, "isPartOfWord": true },
+        { "text": "n’t", "start": 53193, "end": 53295, "isPartOfWord": false },
+        { "text": "come", "start": 53310, "end": 53436, "isPartOfWord": false },
+        { "text": "back", "start": 53451, "end": 53577, "isPartOfWord": false },
+        { "text": "round", "start": 53592, "end": 53730, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "windows flicker like a ticker tape of everyone’s dreams",
+      "start": 53850,
+      "end": 55614,
+      "words": [
+        { "text": "win", "start": 53850, "end": 53964, "isPartOfWord": true },
+        { "text": "dows", "start": 53964, "end": 54090, "isPartOfWord": false },
+        { "text": "flick", "start": 54105, "end": 54243, "isPartOfWord": true },
+        { "text": "er", "start": 54243, "end": 54345, "isPartOfWord": false },
+        { "text": "like", "start": 54360, "end": 54486, "isPartOfWord": false },
+        { "text": "a", "start": 54501, "end": 54591, "isPartOfWord": false },
+        { "text": "tick", "start": 54606, "end": 54732, "isPartOfWord": true },
+        { "text": "er", "start": 54732, "end": 54834, "isPartOfWord": false },
+        { "text": "tape", "start": 54849, "end": 54975, "isPartOfWord": false },
+        { "text": "of", "start": 54990, "end": 55092, "isPartOfWord": false },
+        { "text": "ev", "start": 55107, "end": 55209, "isPartOfWord": true },
+        { "text": "ery", "start": 55209, "end": 55323, "isPartOfWord": true },
+        { "text": "one’s", "start": 55323, "end": 55449, "isPartOfWord": false },
+        { "text": "dreams", "start": 55464, "end": 55614, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "nothing’s ever quiet, it’s just quieter than it seems",
+      "start": 55734,
+      "end": 57450,
+      "words": [
+        { "text": "noth", "start": 55734, "end": 55860, "isPartOfWord": true },
+        { "text": "ing’s", "start": 55860, "end": 55986, "isPartOfWord": false },
+        { "text": "ev", "start": 56001, "end": 56103, "isPartOfWord": true },
+        { "text": "er", "start": 56103, "end": 56205, "isPartOfWord": false },
+        { "text": "qui", "start": 56220, "end": 56334, "isPartOfWord": true },
+        { "text": "et,", "start": 56334, "end": 56436, "isPartOfWord": false },
+        { "text": "it’s", "start": 56451, "end": 56565, "isPartOfWord": false },
+        { "text": "just", "start": 56580, "end": 56706, "isPartOfWord": false },
+        { "text": "qui", "start": 56721, "end": 56835, "isPartOfWord": true },
+        { "text": "et", "start": 56835, "end": 56937, "isPartOfWord": true },
+        { "text": "er", "start": 56937, "end": 57039, "isPartOfWord": false },
+        { "text": "than", "start": 57054, "end": 57180, "isPartOfWord": false },
+        { "text": "it", "start": 57195, "end": 57297, "isPartOfWord": false },
+        { "text": "seems", "start": 57312, "end": 57450, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I can rhyme it in the dark, I can rhyme it in the day",
+      "start": 57570,
+      "end": 59325,
+      "words": [
+        { "text": "I", "start": 57570, "end": 57660, "isPartOfWord": false },
+        { "text": "can", "start": 57675, "end": 57789, "isPartOfWord": false },
+        { "text": "rhyme", "start": 57804, "end": 57942, "isPartOfWord": false },
+        { "text": "it", "start": 57957, "end": 58059, "isPartOfWord": false },
+        { "text": "in", "start": 58074, "end": 58176, "isPartOfWord": false },
+        { "text": "the", "start": 58191, "end": 58305, "isPartOfWord": false },
+        { "text": "dark,", "start": 58320, "end": 58446, "isPartOfWord": false },
+        { "text": "I", "start": 58461, "end": 58551, "isPartOfWord": false },
+        { "text": "can", "start": 58566, "end": 58680, "isPartOfWord": false },
+        { "text": "rhyme", "start": 58695, "end": 58833, "isPartOfWord": false },
+        { "text": "it", "start": 58848, "end": 58950, "isPartOfWord": false },
+        { "text": "in", "start": 58965, "end": 59067, "isPartOfWord": false },
+        { "text": "the", "start": 59082, "end": 59196, "isPartOfWord": false },
+        { "text": "day", "start": 59211, "end": 59325, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I can rhyme till morning when the static fades away",
+      "start": 59445,
+      "end": 61098,
+      "words": [
+        { "text": "I", "start": 59445, "end": 59535, "isPartOfWord": false },
+        { "text": "can", "start": 59550, "end": 59664, "isPartOfWord": false },
+        { "text": "rhyme", "start": 59679, "end": 59817, "isPartOfWord": false },
+        { "text": "till", "start": 59832, "end": 59958, "isPartOfWord": false },
+        { "text": "morn", "start": 59973, "end": 60099, "isPartOfWord": true },
+        { "text": "ing", "start": 60099, "end": 60213, "isPartOfWord": false },
+        { "text": "when", "start": 60228, "end": 60354, "isPartOfWord": false },
+        { "text": "the", "start": 60369, "end": 60483, "isPartOfWord": false },
+        { "text": "stat", "start": 60498, "end": 60624, "isPartOfWord": true },
+        { "text": "ic", "start": 60624, "end": 60726, "isPartOfWord": false },
+        { "text": "fades", "start": 60741, "end": 60879, "isPartOfWord": false },
+        { "text": "a", "start": 60894, "end": 60984, "isPartOfWord": true },
+        { "text": "way", "start": 60984, "end": 61098, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "remember when the signal drops and nothing comes through",
+      "start": 61218,
+      "end": 62928,
+      "words": [
+        { "text": "re", "start": 61218, "end": 61320, "isPartOfWord": true },
+        { "text": "mem", "start": 61320, "end": 61434, "isPartOfWord": true },
+        { "text": "ber", "start": 61434, "end": 61548, "isPartOfWord": false },
+        { "text": "when", "start": 61563, "end": 61689, "isPartOfWord": false },
+        { "text": "the", "start": 61704, "end": 61818, "isPartOfWord": false },
+        { "text": "sig", "start": 61833, "end": 61947, "isPartOfWord": true },
+        { "text": "nal", "start": 61947, "end": 62061, "isPartOfWord": false },
+        { "text": "drops", "start": 62076, "end": 62214, "isPartOfWord": false },
+        { "text": "and", "start": 62229, "end": 62343, "isPartOfWord": false },
+        { "text": "noth", "start": 62358, "end": 62484, "isPartOfWord": true },
+        { "text": "ing", "start": 62484, "end": 62598, "isPartOfWord": false },
+        { "text": "comes", "start": 62613, "end": 62751, "isPartOfWord": false },
+        { "text": "through", "start": 62766, "end": 62928, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "there’s a voice inside the noise and it’s talking to you",
+      "start": 63048,
+      "end": 64740,
+      "words": [
+        { "text": "there’s", "start": 63048, "end": 63198, "isPartOfWord": false },
+        { "text": "a", "start": 63213, "end": 63303, "isPartOfWord": false },
+        { "text": "voice", "start": 63318, "end": 63456, "isPartOfWord": false },
+        { "text": "in", "start": 63471, "end": 63573, "isPartOfWord": true },
+        { "text": "side", "start": 63573, "end": 63699, "isPartOfWord": false },
+        { "text": "the", "start": 63714, "end": 63828, "isPartOfWord": false },
+        { "text": "noise", "start": 63843, "end": 63981, "isPartOfWord": false },
+        { "text": "and", "start": 63996, "end": 64110, "isPartOfWord": false },
+        { "text": "it’s", "start": 64125, "end": 64239, "isPartOfWord": false },
+        { "text": "talk", "start": 64254, "end": 64380, "isPartOfWord": true },
+        { "text": "ing", "start": 64380, "end": 64494, "isPartOfWord": false },
+        { "text": "to", "start": 64509, "end": 64611, "isPartOfWord": false },
+        { "text": "you", "start": 64626, "end": 64740, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Signal, noise, signal, noise, signal, noise",
+      "start": 66240,
+      "end": 67413,
+      "words": [
+        { "text": "Sig", "start": 66240, "end": 66354, "isPartOfWord": true },
+        { "text": "nal,", "start": 66354, "end": 66468, "isPartOfWord": false },
+        { "text": "noise,", "start": 66483, "end": 66621, "isPartOfWord": false },
+        { "text": "sig", "start": 66636, "end": 66750, "isPartOfWord": true },
+        { "text": "nal,", "start": 66750, "end": 66864, "isPartOfWord": false },
+        { "text": "noise,", "start": 66879, "end": 67017, "isPartOfWord": false },
+        { "text": "sig", "start": 67032, "end": 67146, "isPartOfWord": true },
+        { "text": "nal,", "start": 67146, "end": 67260, "isPartOfWord": false },
+        { "text": "noise", "start": 67275, "end": 67413, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "we’re the sound between the stations on the dial",
+      "start": 67533,
+      "end": 68979,
+      "words": [
+        { "text": "we’re", "start": 67533, "end": 67659, "isPartOfWord": false },
+        { "text": "the", "start": 67674, "end": 67788, "isPartOfWord": false },
+        { "text": "sound", "start": 67803, "end": 67941, "isPartOfWord": false },
+        { "text": "be", "start": 67956, "end": 68058, "isPartOfWord": true },
+        { "text": "tween", "start": 68058, "end": 68196, "isPartOfWord": false },
+        { "text": "the", "start": 68211, "end": 68325, "isPartOfWord": false },
+        { "text": "sta", "start": 68340, "end": 68454, "isPartOfWord": true },
+        { "text": "tions", "start": 68454, "end": 68592, "isPartOfWord": false },
+        { "text": "on", "start": 68607, "end": 68709, "isPartOfWord": false },
+        { "text": "the", "start": 68724, "end": 68838, "isPartOfWord": false },
+        { "text": "dial", "start": 68853, "end": 68979, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "signal, noise, signal, noise, signal, noise",
+      "start": 69099,
+      "end": 70272,
+      "words": [
+        { "text": "sig", "start": 69099, "end": 69213, "isPartOfWord": true },
+        { "text": "nal,", "start": 69213, "end": 69327, "isPartOfWord": false },
+        { "text": "noise,", "start": 69342, "end": 69480, "isPartOfWord": false },
+        { "text": "sig", "start": 69495, "end": 69609, "isPartOfWord": true },
+        { "text": "nal,", "start": 69609, "end": 69723, "isPartOfWord": false },
+        { "text": "noise,", "start": 69738, "end": 69876, "isPartOfWord": false },
+        { "text": "sig", "start": 69891, "end": 70005, "isPartOfWord": true },
+        { "text": "nal,", "start": 70005, "end": 70119, "isPartOfWord": false },
+        { "text": "noise", "start": 70134, "end": 70272, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "turning all the static into patience for a while",
+      "start": 70392,
+      "end": 72006,
+      "words": [
+        { "text": "turn", "start": 70392, "end": 70518, "isPartOfWord": true },
+        { "text": "ing", "start": 70518, "end": 70632, "isPartOfWord": false },
+        { "text": "all", "start": 70647, "end": 70761, "isPartOfWord": false },
+        { "text": "the", "start": 70776, "end": 70890, "isPartOfWord": false },
+        { "text": "stat", "start": 70905, "end": 71031, "isPartOfWord": true },
+        { "text": "ic", "start": 71031, "end": 71133, "isPartOfWord": false },
+        { "text": "in", "start": 71148, "end": 71250, "isPartOfWord": true },
+        { "text": "to", "start": 71250, "end": 71352, "isPartOfWord": false },
+        { "text": "pa", "start": 71367, "end": 71469, "isPartOfWord": true },
+        { "text": "tience", "start": 71469, "end": 71619, "isPartOfWord": false },
+        { "text": "for", "start": 71634, "end": 71748, "isPartOfWord": false },
+        { "text": "a", "start": 71763, "end": 71853, "isPartOfWord": false },
+        { "text": "while", "start": 71868, "end": 72006, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Signal, noise, signal, noise, signal, noise",
+      "start": 80006,
+      "end": 81179,
+      "words": [
+        { "text": "Sig", "start": 80006, "end": 80120, "isPartOfWord": true },
+        { "text": "nal,", "start": 80120, "end": 80234, "isPartOfWord": false },
+        { "text": "noise,", "start": 80249, "end": 80387, "isPartOfWord": false },
+        { "text": "sig", "start": 80402, "end": 80516, "isPartOfWord": true },
+        { "text": "nal,", "start": 80516, "end": 80630, "isPartOfWord": false },
+        { "text": "noise,", "start": 80645, "end": 80783, "isPartOfWord": false },
+        { "text": "sig", "start": 80798, "end": 80912, "isPartOfWord": true },
+        { "text": "nal,", "start": 80912, "end": 81026, "isPartOfWord": false },
+        { "text": "noise", "start": 81041, "end": 81179, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "we’re the sound between the stations on the dial",
+      "start": 81299,
+      "end": 82745,
+      "words": [
+        { "text": "we’re", "start": 81299, "end": 81425, "isPartOfWord": false },
+        { "text": "the", "start": 81440, "end": 81554, "isPartOfWord": false },
+        { "text": "sound", "start": 81569, "end": 81707, "isPartOfWord": false },
+        { "text": "be", "start": 81722, "end": 81824, "isPartOfWord": true },
+        { "text": "tween", "start": 81824, "end": 81962, "isPartOfWord": false },
+        { "text": "the", "start": 81977, "end": 82091, "isPartOfWord": false },
+        { "text": "sta", "start": 82106, "end": 82220, "isPartOfWord": true },
+        { "text": "tions", "start": 82220, "end": 82358, "isPartOfWord": false },
+        { "text": "on", "start": 82373, "end": 82475, "isPartOfWord": false },
+        { "text": "the", "start": 82490, "end": 82604, "isPartOfWord": false },
+        { "text": "dial", "start": 82619, "end": 82745, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "signal, noise, signal, noise, signal, noise",
+      "start": 82865,
+      "end": 84038,
+      "words": [
+        { "text": "sig", "start": 82865, "end": 82979, "isPartOfWord": true },
+        { "text": "nal,", "start": 82979, "end": 83093, "isPartOfWord": false },
+        { "text": "noise,", "start": 83108, "end": 83246, "isPartOfWord": false },
+        { "text": "sig", "start": 83261, "end": 83375, "isPartOfWord": true },
+        { "text": "nal,", "start": 83375, "end": 83489, "isPartOfWord": false },
+        { "text": "noise,", "start": 83504, "end": 83642, "isPartOfWord": false },
+        { "text": "sig", "start": 83657, "end": 83771, "isPartOfWord": true },
+        { "text": "nal,", "start": 83771, "end": 83885, "isPartOfWord": false },
+        { "text": "noise", "start": 83900, "end": 84038, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "turning all the static into patience for a while",
+      "start": 84158,
+      "end": 85772,
+      "words": [
+        { "text": "turn", "start": 84158, "end": 84284, "isPartOfWord": true },
+        { "text": "ing", "start": 84284, "end": 84398, "isPartOfWord": false },
+        { "text": "all", "start": 84413, "end": 84527, "isPartOfWord": false },
+        { "text": "the", "start": 84542, "end": 84656, "isPartOfWord": false },
+        { "text": "stat", "start": 84671, "end": 84797, "isPartOfWord": true },
+        { "text": "ic", "start": 84797, "end": 84899, "isPartOfWord": false },
+        { "text": "in", "start": 84914, "end": 85016, "isPartOfWord": true },
+        { "text": "to", "start": 85016, "end": 85118, "isPartOfWord": false },
+        { "text": "pa", "start": 85133, "end": 85235, "isPartOfWord": true },
+        { "text": "tience", "start": 85235, "end": 85385, "isPartOfWord": false },
+        { "text": "for", "start": 85400, "end": 85514, "isPartOfWord": false },
+        { "text": "a", "start": 85529, "end": 85619, "isPartOfWord": false },
+        { "text": "while", "start": 85634, "end": 85772, "isPartOfWord": false }
+      ]
+    }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en"
+}
