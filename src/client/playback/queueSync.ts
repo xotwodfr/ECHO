@@ -75,8 +75,10 @@ const forSlot = (q: QueueState, slot: Slot): QueueState =>
 
 export async function startQueueSync(c: PlaybackController, notify: (message: string) => void) {
   const base: Record<Slot, number> = { '/me/queue': 0, '/me/queue/youtube': 0 };
-  // An unreachable server (a restart) is asked again, 1, 2, 4 … 30 s apart; a refusal (not signed
-  // in) means the queue does not follow this session. Both slots are read; the newer one plays.
+  // An unreachable server (a restart) is asked again, 1, 2, 4 … 30 s apart, and so is one that says
+  // to slow down (429, the per-user API budget: a page that starts with many requests at once);
+  // another refusal (not signed in) means the queue does not follow this session. Both slots are
+  // read; the newer one plays.
   for (let wait = 1000; ; wait = Math.min(30_000, wait * 2)) {
     try {
       const [nav, yt] = await Promise.all([
@@ -90,7 +92,7 @@ export async function startQueueSync(c: PlaybackController, notify: (message: st
         c.restore(savedQueue(saved.queue), saved.positionMs);
       break;
     } catch (err) {
-      if (err instanceof ApiError && err.status < 500) return;
+      if (err instanceof ApiError && err.status < 500 && err.status !== 429) return;
       await new Promise((r) => setTimeout(r, wait));
     }
   }

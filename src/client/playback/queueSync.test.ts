@@ -118,6 +118,59 @@ describe('queue sync start', () => {
     expect(puts.map((p) => p.baseUpdatedAt)).toEqual([5]);
   });
 
+  // A page that starts with many requests at once can be told to slow down (429, the per-user API
+  // budget): that is "later", not "this session is not signed in", and the queue must still follow.
+  it('asks again after a 429 at start, and then saves changes against its answer', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    let refused = 2;
+    const puts: { baseUpdatedAt: number }[] = [];
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/health')) return new Response('{}');
+      if (init?.method === 'PUT') {
+        puts.push(JSON.parse(String(init.body)));
+        return Response.json({ updatedAt: 6 });
+      }
+      // No Retry-After: the API client does not wait and ask again by itself.
+      if (refused > 0) {
+        if (url.endsWith('/me/queue')) refused--;
+        return Response.json({ error: 'rate_limited' }, { status: 429 });
+      }
+      return Response.json({ queue: null, positionMs: 0, updatedAt: 5 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    void startQueueSync(c, () => {});
+    await vi.advanceTimersByTimeAsync(3500); // tries at 0, 1 and 3 s
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    await vi.advanceTimersByTimeAsync(2500); // the save's debounce
+    expect(puts.map((p) => p.baseUpdatedAt)).toEqual([5]);
+  });
+
+  it('does not ask again when the server refuses the session (401): the queue does not follow', async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal('addEventListener', () => {});
+    let reads = 0;
+    let puts = 0;
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (url.endsWith('/health')) return new Response('{}');
+      if (init?.method === 'PUT') {
+        puts++;
+        return Response.json({ updatedAt: 6 });
+      }
+      reads++;
+      return Response.json({ error: 'unauthenticated' }, { status: 401 });
+    });
+    const clock = new ManualClock();
+    const c = createPlaybackController({ provider: new FakeProvider({ clock, loadMs: 0 }), clock });
+    void startQueueSync(c, () => {});
+    await vi.advanceTimersByTimeAsync(20_000);
+    c.playList([track(1), track(2)], 0, { kind: 'album', id: 'al', title: 'Al' });
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(reads).toBe(2); // both slots, once
+    expect(puts).toBe(0);
+  });
+
   // QA 2026-10-28 (QUE-05): pause and seek change the position, not the queue, so nothing was saved
   // and a reload came back wherever the last queue change had left it.
   it('a pause or a seek saves the position', async () => {
