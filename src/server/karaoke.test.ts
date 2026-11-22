@@ -67,8 +67,10 @@ async function startFakeStems() {
   return { url, files, order, state, close: () => server.close() };
 }
 
+// Up to 10 s, as motion.test.ts waits: only an upper bound for something that happens in
+// milliseconds, so a slow, loaded runner does not fail a test by being late (it once allowed 2 s).
 const until = async (ok: () => boolean) => {
-  for (let i = 0; i < 200 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
+  for (let i = 0; i < 1000 && !ok(); i++) await new Promise((r) => setTimeout(r, 10));
   expect(ok()).toBe(true);
 };
 
