@@ -32,7 +32,7 @@ BITRATE = os.environ.get("ECHO_STEMS_BITRATE", "224k")
 # implementation; 0 is about 17% faster, with the joins very nearly as clean.
 OVERLAP = min(0.5, max(0.0, float(os.environ.get("ECHO_STEMS_OVERLAP", "0.25"))))
 MAX_BYTES = 2_000_000_000  # a song, not a disk image
-KEY = re.compile(r"^[A-Za-z0-9._-]{1,200}$")
+KEY = re.compile(r"[A-Za-z0-9_-]{1,200}")  # no dots: never a path out of OUT (ECHO sends 40 hex digits)
 
 os.nice(19)
 separator = None
@@ -140,7 +140,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def _key(self, prefix):
         key = self.path[len(prefix):].split("?")[0]
-        return key if KEY.match(key) else None
+        return key if KEY.fullmatch(key) else None
 
     def do_PUT(self):
         key = self._key("/separate/") if self.path.startswith("/separate/") else None
