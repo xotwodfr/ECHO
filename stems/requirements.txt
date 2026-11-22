@@ -1,2 +1,4 @@
-numpy==2.5.5
-onnxruntime==1.32.0
+# Exact versions, each at least 14 days old when chosen (docs/TECHNICAL_ARCHITECTURE.md §3):
+# the newest on 2026-11-22 were numpy 2.5.5 (2026-11-15) and onnxruntime 1.32.0 (2026-11-13), too new.
+numpy==2.5.4
+onnxruntime==1.31.1
