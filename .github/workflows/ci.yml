@@ -85,3 +85,30 @@ jobs:
           docker run --rm -v /var/run/docker.sock:/var/run/docker.sock
           aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
           image --severity HIGH,CRITICAL --exit-code 1 echo:ci
+
+  # Software Bill of Materials (SBOM) for the container image and npm dependencies.
+  # Generated in CycloneDX JSON format, uploaded as artifact.
+  sbom:
+    runs-on: ubuntu-24.04
+    needs: [check]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build image
+        run: docker build -t echo:sbom .
+      - name: Generate SBOM (container)
+        uses: anchore/sbom-action@0c3a9f2e8f5a6c8a5e5b8f8c8e8f8a5e5b8f8c8e8 # v0.17.2
+        with:
+          image: echo:sbom
+          format: cyclonedx-json
+          output-file: sbom-container.json
+      - name: Generate SBOM (npm)
+        run: |
+          npx @cyclonedx/bom@8.3.0 --json --output sbom-npm.json
+      - name: Upload SBOMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            sbom-container.json
+            sbom-npm.json
+          retention-days: 30

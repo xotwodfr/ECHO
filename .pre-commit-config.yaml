@@ -1,0 +1,41 @@
+repos:
+  - repo: https://github.com/biomejs/biome
+    rev: 2.5.15
+    hooks:
+      - id: biome
+        name: biome check
+        entry: biome check --write
+        language: system
+        types_or: [javascript, typescript, json, css]
+        require_serial: true
+        additional_dependencies: []
+
+  - repo: https://github.com/zricethezav/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+        name: gitleaks
+        entry: gitleaks detect --redact --exit-code 1
+        language: docker
+        types: [text]
+        verbose: true
+
+  - repo: local
+    hooks:
+      - id: pnpm-audit
+        name: pnpm audit (prod)
+        entry: pnpm audit --prod --audit-level high
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: typecheck
+        name: TypeScript typecheck
+        entry: pnpm typecheck
+        language: system
+        pass_filenames: false
+        always_run: true
+
+ci:
+  autoupdate_schedule: weekly
+  autofix_commit_msg: "chore: pre-commit autofix"
