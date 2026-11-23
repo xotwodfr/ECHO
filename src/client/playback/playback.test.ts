@@ -303,6 +303,33 @@ describe('PlaybackController (§3 transport rules)', () => {
     expect(buffered).toEqual(['t2']);
   });
 
+  it('asks, when the fade would start, whether to crossfade: not within an album, not under repeat-one', () => {
+    const { clock, provider, c } = setup();
+    let ask: (() => boolean) | undefined;
+    (
+      provider as unknown as {
+        preload: (t: Track, o?: { crossfade?: () => boolean }) => Promise<void>;
+      }
+    ).preload = async (_t, o) => {
+      ask = o?.crossfade;
+    };
+    const mixed = [1, 2, 3].map((n) => ({
+      ...track(n),
+      album: { id: `al${n}`, title: `Album ${n}`, key: `navidrome:al${n}` },
+    }));
+    c.playList(mixed, 0, { kind: 'playlist', id: 'p', title: 'Mix' });
+    clock.advance(5_100);
+    expect(ask?.()).toBe(true);
+    c.cycleRepeat(); // all: still fades
+    expect(ask?.()).toBe(true);
+    c.cycleRepeat(); // one: the song starts again instead
+    expect(ask?.()).toBe(false);
+    c.cycleRepeat();
+    c.playList(album, 0, ctx); // one album: gapless, no fade
+    clock.advance(5_100);
+    expect(ask?.()).toBe(false);
+  });
+
   it('a new next track (Play next) is buffered in its turn', () => {
     const { clock, provider, c } = setup();
     const buffered: string[] = [];

@@ -1,0 +1,4 @@
+{
+  "url": "/api/v1/navidrome/stream/al-1-t1?uid=1&exp=1800021660000&sig=test_signature_not_a_secret",
+  "expiresAt": 1800021660000
+}

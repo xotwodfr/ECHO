@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "trackKey": "fixture:pop-line",
+  "sync": "line",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 180000,
+  "lines": [
+    { "text": "Neon on the wet street", "start": 8000, "end": 9510 },
+    { "text": "paper planes and bus fare", "start": 9960 },
+    { "text": "every song is about you", "start": 11995, "end": 13530 },
+    { "text": "every chorus says your name", "start": 13980 },
+    { "text": "Light it up, light it up", "start": 16815, "end": 18545 },
+    { "text": "paper satellites tonight", "start": 18995 },
+    { "text": "we were never coming down", "start": 20615, "end": 22200 },
+    { "text": "light it up, light it up", "start": 22650 },
+    { "text": "", "start": 24150 },
+    { "text": "Neon on the wet street", "start": 29380, "end": 30890 },
+    { "text": "paper planes and bus fare", "start": 31340 },
+    { "text": "every song is about you", "start": 33375, "end": 34910 },
+    { "text": "every chorus says your name", "start": 35360 },
+    { "text": "Light it up, light it up", "start": 37445, "end": 39175 },
+    { "text": "paper satellites tonight", "start": 39625 },
+    { "text": "we were never coming down", "start": 41245, "end": 42830 },
+    { "text": "light it up, light it up", "start": 43280 }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en"
+}

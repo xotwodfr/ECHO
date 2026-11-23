@@ -1,0 +1,87 @@
+name: Bug Report
+description: Report a reproducible issue
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please fill in as much detail as possible.
+
+  - type: input
+    id: version
+    attributes:
+      label: ECHO Version
+      description: The version you're running (check Settings → About or `docker compose images`)
+      placeholder: "0.8.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: client
+    attributes:
+      label: Client
+      description: Where did you encounter the bug?
+      options:
+        - Web (Chrome/Chromium)
+        - Web (Firefox)
+        - Web (Safari)
+        - Android app
+        - Linux app
+        - Windows app
+        - macOS app
+        - iOS app
+        - Server / API
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+      placeholder: "Ubuntu 24.04 / Android 15 / Windows 11 / macOS 15"
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Numbered steps to reproduce the issue
+      placeholder: |
+        1. Go to Settings → Account
+        2. Tap "Sign in on a computer"
+        3. Scan QR code from desktop browser
+        4. Observe error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens? Include error messages, logs, screenshots.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Logs
+      description: Server logs (`docker compose logs echo`), browser console, adb logcat, etc.
+      render: shell
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I've searched existing issues
+        - label: I can reproduce this on the latest version
+        - label: This is not a security issue (report those to security@folk3s.com)

@@ -1,0 +1,11 @@
+{
+  "enabled": true,
+  "online": true,
+  "ready": 0,
+  "queued": 0,
+  "failed": 0,
+  "uploads": 0,
+  "bytes": 0,
+  "cacheBytes": 1000000000,
+  "loops": [5, 8, 12, 15]
+}

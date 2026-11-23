@@ -16,6 +16,7 @@ describe('api() and reachability', () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.unstubAllGlobals();
+    vi.restoreAllMocks();
   });
 
   it('a proxy 502 with no ECHO body marks the server unreachable', async () => {
@@ -32,6 +33,43 @@ describe('api() and reachability', () => {
     });
     await vi.advanceTimersByTimeAsync(0);
     expect(connectionStore.getState().server.down).toBe(false);
+  });
+
+  it('a read over the API budget asks again after Retry-After; a write and a sign-in do not', async () => {
+    const limited = () =>
+      new Response(JSON.stringify({ error: 'rate_limited' }), {
+        status: 429,
+        headers: { 'retry-after': '1' },
+      });
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(limited())
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ok: 1 }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    vi.spyOn(Math, 'random').mockReturnValue(0.5); // + 150 ms of the 300 ms jitter
+    const read = api('/navidrome/rest/getAlbum?id=al-1');
+    await vi.advanceTimersByTimeAsync(1149);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    await expect(read).resolves.toEqual({ ok: 1 });
+    // Twice at most (after 1 s, then 2 s), then the error.
+    fetch.mockReset().mockImplementation(async () => limited());
+    const stuck = expect(api('/wanted')).rejects.toMatchObject({ status: 429 });
+    await vi.advanceTimersByTimeAsync(1150);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(2149);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    await vi.advanceTimersByTimeAsync(1);
+    await stuck;
+    expect(fetch).toHaveBeenCalledTimes(3);
+    // A write is never sent twice; the sign-in limits name no Retry-After.
+    fetch.mockClear();
+    await expect(api('/wanted', { method: 'POST', body: { text: 'x' } })).rejects.toMatchObject({
+      status: 429,
+    });
+    fetch.mockImplementation(async () => new Response('{"error":"rate_limited"}', { status: 429 }));
+    await expect(api('/session')).rejects.toMatchObject({ status: 429 });
+    expect(fetch).toHaveBeenCalledTimes(2);
   });
 
   it('a 500 from ECHO is an error, not an outage', async () => {

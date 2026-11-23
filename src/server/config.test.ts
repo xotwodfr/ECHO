@@ -15,10 +15,24 @@ describe('loadConfig', () => {
       lrclibUrl: 'https://lrclib.net',
       spicyUrl: 'https://api.spicylyrics.org',
       ytdlp: '/app/bin/yt-dlp',
+      stemsUrl: null,
+      stemsLibrary: true,
+      stemsMaxMinutes: 20,
+      motionUrl: null,
+      motionCacheMb: 2048,
       neteaseUrl: 'https://music.163.com',
       listenbrainzUrl: 'https://labs.api.listenbrainz.org',
       musicbrainzUrl: 'https://musicbrainz.org',
     });
+  });
+
+  it('reads the motion service and its cache cap (docs/MOTION.md)', () => {
+    const c = loadConfig({
+      ECHO_MOTION_URL: 'http://echo-motion:8091/',
+      ECHO_MOTION_CACHE_MB: '512',
+    });
+    expect([c.motionUrl, c.motionCacheMb]).toEqual(['http://echo-motion:8091', 512]);
+    expect(loadConfig({ ECHO_MOTION_CACHE_MB: 'lots' }).motionCacheMb).toBe(2048);
   });
 
   it('reads the trusted proxy list', () => {
@@ -50,6 +64,11 @@ describe('loadConfig', () => {
       lrclibUrl: 'https://lrclib.net',
       spicyUrl: 'https://api.spicylyrics.org',
       ytdlp: '/app/bin/yt-dlp',
+      stemsUrl: null,
+      stemsLibrary: true,
+      stemsMaxMinutes: 20,
+      motionUrl: null,
+      motionCacheMb: 2048,
       neteaseUrl: 'https://music.163.com',
       listenbrainzUrl: 'https://labs.api.listenbrainz.org',
       musicbrainzUrl: 'https://musicbrainz.org',

@@ -10,6 +10,7 @@ import type {
 } from '../../shared/types.ts';
 import { strings } from '../strings.ts';
 import { type Clock, realClock } from './clock.ts';
+import { crossfadeBetween, MAX_CROSSFADE_S } from './crossfade.ts';
 import { SILENT_FEATURES } from './features.ts';
 import * as Q from './queue.ts';
 import { createSongClock, positionNow } from './songClock.ts';
@@ -35,6 +36,21 @@ export { positionNow };
 type Provider = PlaybackProvider;
 
 const PRELOAD_IN_MS = 5000;
+
+/**
+ * Listen together (src/client/together): while one is set, the transport and the queue go to the
+ * shared session instead of this player, which only follows it (`together` below).
+ */
+export interface RemoteQueue {
+  toggle(): void;
+  next(): void;
+  previous(): void;
+  seek(ms: number): void;
+  add(tracks: Track[], label: string, next: boolean): void;
+  play(tracks: Track[], index: number): void;
+  /** The song ended here; the session decides what comes next. */
+  ended(): void;
+}
 
 export function createPlaybackController(opts: {
   provider: Provider | null;
@@ -74,6 +90,7 @@ export function createPlaybackController(opts: {
   /** The whole list being played, for repeat-all to wrap around. */
   let source: { tracks: Track[]; context: PlayContext } | null = null;
   let loading = false;
+  let remote: RemoteQueue | null = null;
   /** The volume to return to when unmuting. */
   let unmuted = 1;
   const songClock = createSongClock(
@@ -124,7 +141,8 @@ export function createPlaybackController(opts: {
 
   /**
    * The next track is buffered 5 s into this one (Next starts at once: instant, step 4), or 20 s
-   * before it ends when it is shorter, for a gapless hand-over (§5.6).
+   * before it ends (and before the longest crossfade) when it is shorter, for a gapless hand-over
+   * or a crossfade (§5.6).
    */
   let preloadTimer: ReturnType<Clock['setTimeout']> | null = null;
   function schedulePreload(track: Track, startMs: number) {
@@ -138,9 +156,18 @@ export function createPlaybackController(opts: {
         const q = queue.getState();
         const next = Q.upcoming(q)[0];
         if (q.now?.key === track.key && next && player.getState().repeat !== 'one')
-          void p.preload?.(next);
+          void p.preload?.(next, {
+            // Asked when the fade would start: repeat or the queue may have changed since.
+            crossfade: () =>
+              player.getState().repeat !== 'one' &&
+              Q.upcoming(queue.getState())[0]?.key === next.key &&
+              crossfadeBetween(queue.getState().now, next),
+          });
       },
-      Math.min(PRELOAD_IN_MS, Math.max(0, track.durationMs - startMs - 20_000)),
+      Math.min(
+        PRELOAD_IN_MS,
+        Math.max(0, track.durationMs - startMs - 20_000 - MAX_CROSSFADE_S * 1000),
+      ),
     );
   }
   // A different next track (Play next, Add to queue, shuffle) is buffered in its turn.
@@ -188,6 +215,10 @@ export function createPlaybackController(opts: {
   }
 
   async function onEnded() {
+    if (remote) {
+      player.setState({ status: 'paused' });
+      return remote.ended();
+    }
     const { repeat } = player.getState();
     if (repeat === 'one') {
       await provider?.seek(0);
@@ -225,6 +256,11 @@ export function createPlaybackController(opts: {
   }
 
   function seek(ms: number) {
+    if (remote) return remote.seek(ms);
+    localSeek(ms);
+  }
+
+  function localSeek(ms: number) {
     const s = player.getState();
     if (!provider || !s.track || !s.capabilities.canSeek) return;
     const to = Math.min(Math.max(0, ms), s.track.durationMs);
@@ -235,6 +271,7 @@ export function createPlaybackController(opts: {
   }
 
   function toggle() {
+    if (remote) return remote.toggle();
     const s = player.getState();
     if (!provider || !s.track) return;
     if (isActive()) return void provider.pause();
@@ -256,6 +293,11 @@ export function createPlaybackController(opts: {
   function playList(tracks: Track[], index: number | 'shuffle', context: PlayContext) {
     const first = tracks[0];
     if (!provider || !first || !plays(first)) return;
+    if (remote)
+      return remote.play(
+        tracks,
+        index === 'shuffle' ? Math.floor(random() * tracks.length) : index,
+      );
     if (index === 'shuffle') {
       player.setState({ shuffle: true });
       index = Math.floor(random() * tracks.length);
@@ -311,6 +353,7 @@ export function createPlaybackController(opts: {
     toggle,
 
     next() {
+      if (remote) return remote.next();
       const next =
         Q.advance(queue.getState()) ?? (player.getState().repeat === 'all' ? wrap() : null);
       if (next) load(next, isActive());
@@ -328,6 +371,7 @@ export function createPlaybackController(opts: {
     },
 
     previous() {
+      if (remote) return remote.previous();
       const s = player.getState();
       if (!s.track) return;
       const prev = positionNow(s, clock.now()) > RESTART_AFTER_MS ? null : Q.back(queue.getState());
@@ -358,6 +402,7 @@ export function createPlaybackController(opts: {
 
     /** "Play next": before anything already queued. `label` names it in the notice. */
     playNext(tracks: Track[], label: string) {
+      if (remote) return remote.add(tracks, label, true);
       let q = queue.getState();
       for (const t of [...tracks].reverse()) q = Q.playNext(q, t);
       enqueue(q);
@@ -366,10 +411,38 @@ export function createPlaybackController(opts: {
 
     /** "Add to queue": after everything already queued. */
     addToQueue(tracks: Track[], label: string) {
+      if (remote) return remote.add(tracks, label, false);
       let q = queue.getState();
       for (const t of tracks) q = Q.addToQueue(q, t);
       enqueue(q);
       notify(strings.playback.added(label));
+    },
+
+    /** Listen together: the session's remote, and the player's own moves to follow it. */
+    together: {
+      setRemote(r: RemoteQueue | null) {
+        remote = r;
+      },
+      get remote() {
+        return remote;
+      },
+      /** The session's song, alone in the queue, from `startMs`. */
+      load(track: Track, startMs: number, autoplay: boolean, context: PlayContext) {
+        if (!provider || !plays(track)) return;
+        source = null;
+        load(
+          Q.startContext(Q.emptyQueue(), [track], 0, context, track.provider, false, random),
+          autoplay,
+          startMs,
+        );
+      },
+      play() {
+        void provider?.play();
+      },
+      pause() {
+        void provider?.pause();
+      },
+      seek: localSeek,
     },
 
     /** Play an upcoming track now (`index` into `upcoming()`), skipping the ones before it. */

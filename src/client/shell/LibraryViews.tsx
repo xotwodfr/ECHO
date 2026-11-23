@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { useStore } from 'zustand';
 import type { PlayContext, Track } from '../../shared/types.ts';
 import {
   ALBUM_SORTS,
@@ -9,6 +10,7 @@ import {
 } from '../library.ts';
 import { useLibrary, usePlayback, usePlayer, useQueue } from '../playback/context.tsx';
 import { positionNow } from '../playback/controller.ts';
+import { requestKaraoke } from '../playback/karaoke.ts';
 import { strings } from '../strings.ts';
 import { Button, buttonClass, Field, IconButton } from '../ui/controls.tsx';
 import { Icon } from '../ui/icons.tsx';
@@ -25,6 +27,7 @@ import {
 import { ConfirmDialog, Menu, type MenuItem, Sheet } from '../ui/overlays.tsx';
 import { BlockEmpty, BlockError, FreshnessNote, GridLoading, RowsLoading } from '../ui/states.tsx';
 import type { LibraryTab } from '../view.ts';
+import { useArtists } from './artists.ts';
 import {
   refreshPlaylists,
   setStar,
@@ -36,8 +39,10 @@ import { dragTracks } from './drag.ts';
 import { useFresh } from './fresh.ts';
 import { HeartButton, SaveAlbumButton } from './hearts.tsx';
 import { Link, useView } from './link.tsx';
+import { useMotionCover } from './MotionCover.tsx';
 import { openPicker } from './PlaylistPicker.tsx';
 import { startRadio, startSmartShuffle } from './radio.ts';
+import { searchRowId, searchSongs, showSearchSongs } from './searchKeys.ts';
 import { WantedList } from './WantedView.tsx';
 import { addWanted, youTubeMusicSearch } from './wanted.ts';
 
@@ -158,6 +163,14 @@ function useTrackMenu() {
         : []),
       { label: strings.album.playNext, onSelect: () => c.playNext([t], t.title) },
       { label: strings.album.addToQueue, onSelect: () => c.addToQueue([t], t.title) },
+      ...(t.provider === 'navidrome' && library
+        ? [
+            {
+              label: strings.karaoke.make,
+              onSelect: () => void requestKaraoke(t, (m) => toastStore.getState().show(m)),
+            },
+          ]
+        : []),
       ...(t.artists[0]?.id
         ? [
             {
@@ -185,6 +198,7 @@ export function Rows({
   numbered,
   art,
   extraMenu,
+  highlight,
 }: {
   tracks: Track[];
   context: PlayContext;
@@ -192,6 +206,8 @@ export function Rows({
   /** Covers on the rows (playlists, Liked Songs, search); albums have one cover for all. */
   art?: boolean;
   extraMenu?: (t: Track, i: number) => MenuItem[];
+  /** Search's keyboard highlight (SRCH-01): the row at `active` is selected; each row has an id. */
+  highlight?: { active: number; id: (i: number) => string };
 }) {
   const c = usePlayback();
   const p = usePlayer((s) => s);
@@ -209,6 +225,7 @@ export function Rows({
         durationMs={t.durationMs}
         artwork={art ? { src: t.artwork[0]?.url, album: t.album.title } : undefined}
         nowPlaying={now}
+        selected={highlight?.active === i}
         decay={
           now
             ? {
@@ -221,7 +238,7 @@ export function Rows({
         onPlay={() => c.playList(tracks, i, context)}
         heart={<HeartButton track={t} />}
         menu={menuOf(t, extraMenu?.(t, i))}
-        rowProps={dragTracks([t])}
+        rowProps={{ ...dragTracks([t]), ...(highlight && { id: highlight.id(i) }) }}
       />
     );
   });
@@ -315,7 +332,6 @@ export function Albums({ albums, sub }: { albums: Album[]; sub?: (a: Album) => s
 
 export function LibraryContent({ tab }: { tab: LibraryTab }) {
   const library = useLibrary();
-  const followed = useStarredAll();
   const s = strings.library;
   // The Wanted list is the server's, with or without a library connected.
   if (tab === 'wanted') return <WantedList />;
@@ -349,43 +365,42 @@ export function LibraryContent({ tab }: { tab: LibraryTab }) {
     );
   if (tab === 'playlists' && library.playlists) return <Playlists />;
   if (tab === 'starred' && library.starred) return <Starred />;
-  if (tab === 'artists') {
-    // Derived from the album list, so the counts are only true once every page has loaded.
-    if (status === 'loading') return <RowsLoading label={s.tabs.artists} />;
-    // By id where the library has one (each row then links to the artist's page, S6), else by name.
-    const artists = new Map<string, { name: string; id?: string; n: number }>();
-    for (const a of library.albums) {
-      const key = a.artistId ?? `name:${a.artist}`;
-      const known = artists.get(key);
-      if (known) known.n++;
-      else artists.set(key, { name: a.artist.trim(), id: a.artistId, n: 1 });
-    }
-    // The artists the user follows (hearts), with or without a saved album of theirs.
-    for (const f of followed && followed !== 'error' ? followed.artists : [])
-      if (!artists.has(f.id)) artists.set(f.id, { name: f.name, id: f.id, n: 0 });
-    if (!artists.size) return <p className="empty">{s.noArtists}</p>;
-    return (
-      <ul className="artist-list">
-        {[...artists]
-          .sort(([, a], [, b]) => a.name.localeCompare(b.name))
-          .map(([key, a]) => (
-            <li key={key}>
-              {a.id ? (
-                <Link className={buttonClass('tertiary')} to={{ view: 'artist', id: a.id }}>
-                  {a.name}
-                </Link>
-              ) : (
-                <span>{a.name}</span>
-              )}
-              <span className="artist-count">
-                {a.n ? s.albumCount(a.n) : strings.artist.following}
-              </span>
-            </li>
-          ))}
-      </ul>
-    );
-  }
+  if (tab === 'artists') return <Artists />;
   return <p className="empty">{tab === 'playlists' ? s.noPlaylists : s.noStarred}</p>;
+}
+
+/** Your Library → Artists (LIB-01): the server's own list where it has one, else the albums'. */
+function Artists() {
+  const library = useLibrary();
+  const { state, rows, retry } = useArtists();
+  const s = strings.library;
+  // The albums' artists are only all there once every album page has loaded.
+  const deriving = !library?.artists && library?.status?.() === 'loading';
+  if (state === 'loading' || deriving) return <RowsLoading label={s.tabs.artists} />;
+  if (state === 'error') return <BlockError what={strings.states.artistsFailed} onRetry={retry} />;
+  if (!rows.length) return <p className="empty">{s.noArtists}</p>;
+  return (
+    <ul className="artist-list">
+      {rows.map((a) => (
+        <li key={a.key}>
+          {a.id ? (
+            <Link className={buttonClass('tertiary')} to={{ view: 'artist', id: a.id }}>
+              {a.name}
+            </Link>
+          ) : (
+            <span>{a.name}</span>
+          )}
+          <span className="artist-count">
+            {a.followedOnly
+              ? strings.artist.following
+              : a.albums
+                ? s.albumCount(a.albums)
+                : strings.artist.title}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 /** The album order (PRODUCT_SPEC.md §6.3): recently added, A–Z, year, most played. */
@@ -478,6 +493,7 @@ export function AlbumView({ id }: { id: string }) {
   useEffect(fetchAlbum, [fetchAlbum]);
   const s = strings.album;
   const { live, playing } = useContextPlaying((x) => x?.kind === 'album' && x.id === id);
+  const motion = useMotionCover(a);
   if (!a && load === 'loading') return <PageLoading kind={s.title} />;
   // Its tracks could not be fetched: an error with Retry, never "0 tracks" or "not in your library".
   if (load === 'error' && !a?.tracks.length)
@@ -545,8 +561,10 @@ export function AlbumView({ id }: { id: string }) {
                     },
                   ]
                 : []),
+              ...motion.items,
             ]}
           />
+          {motion.ui}
         </div>
         {load === 'loading' && !a.tracks.length ? (
           <RowsLoading label={a.title} />
@@ -1107,15 +1125,23 @@ const RESULTS = 6; // per group (PRODUCT_SPEC.md §6.4)
  */
 export function SearchResults({ q }: { q: string }) {
   const [said, setSaid] = useState('');
+  // The song the search field's arrows highlight (SRCH-01), said here once: not in the field's
+  // label (it would become the field's name), and not twice (the top bar's and the phone's field).
+  const highlighted = useStore(searchSongs, (x) => x.tracks[x.active]);
   return (
     <>
       <p className="visually-hidden" role="status">
         {said}
       </p>
+      <p className="visually-hidden" aria-live="polite">
+        {highlighted ? sayHighlighted(highlighted) : ''}
+      </p>
       {q ? <SearchBody q={q} onResult={setSaid} /> : <BrowseAll />}
     </>
   );
 }
+
+const sayHighlighted = (t: Track) => strings.search.highlighted(t.title, artistsOf(t));
 
 /** A search that found nothing: put it on the Wanted list, or look on YouTube Music. */
 function NothingFound({ q }: { q: string }) {
@@ -1203,6 +1229,13 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
     (n, g) => n + g.tracks.length + g.albums.length + g.artists.length,
     0,
   );
+  // The songs shown under Songs, for the search field's arrows (SRCH-01); none while loading.
+  const songs = groups[0]?.tracks.slice(0, 4) ?? [];
+  const songKeys = songs.map((t) => t.key).join('\n');
+  const active = useStore(searchSongs, (x) => x.active);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: republished when the songs change
+  useEffect(() => showSearchSongs(songs, { kind: 'search', title: q }), [songKeys, q]);
+  useEffect(() => () => showSearchSongs([], null), []);
   // A failure says so itself (role="alert"); nothing is said while there is no answer yet.
   const said = !found || remote?.failed ? '' : s.found(shown);
   useEffect(() => onResult(said), [onResult, said]);
@@ -1267,7 +1300,12 @@ function SearchBody({ q, onResult }: { q: string; onResult: (said: string) => vo
               <section className="results" aria-labelledby={`results-tracks-${g.provider}`}>
                 <h2 id={`results-tracks-${g.provider}`}>{s.songs}</h2>
                 <TrackList label={s.tracks}>
-                  <Rows tracks={g.tracks.slice(0, 4)} context={{ kind: 'search', title: q }} art />
+                  <Rows
+                    tracks={g.tracks.slice(0, 4)}
+                    context={{ kind: 'search', title: q }}
+                    art
+                    highlight={gi === 0 ? { active, id: searchRowId } : undefined}
+                  />
                 </TrackList>
               </section>
             )}

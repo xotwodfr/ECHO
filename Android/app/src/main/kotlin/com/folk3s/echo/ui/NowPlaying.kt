@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -69,6 +70,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -86,7 +88,7 @@ import kotlinx.coroutines.launch
 // paused, the song with its heart and menu, the wavy seek bar, the transport with the big play
 // button, Lyrics and Up next, and the lyrics card that opens the lyrics view.
 
-private val FROM = mapOf("album" to "ALBUM", "playlist" to "PLAYLIST", "starred" to "LIKED SONGS", "search" to "SEARCH", "radio" to "RADIO", "artist" to "ARTIST")
+private val FROM = mapOf("album" to "ALBUM", "playlist" to "PLAYLIST", "starred" to "LIKED SONGS", "search" to "SEARCH", "radio" to "RADIO", "artist" to "ARTIST", "karaoke" to "KARAOKE")
 
 /** Spotify's sleep timer: pause after some minutes. One at a time; a new one replaces it. */
 object SleepTimer {
@@ -122,7 +124,7 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
   // The cover sits back a little while paused, and springs forward on play.
   val scale by animateFloatAsState(if (p.playing || still) 1f else 0.84f, spring(dampingRatio = 0.62f, stiffness = 260f), label = "cover")
   Box(Modifier.fillMaxSize()) {
-    AlbumMesh(still)
+    if (look.material != Material.Flat) Box(Modifier.fillMaxSize().matterGround(lerp(matter.ground, matter.accent(0), 0.22f))) else AlbumMesh(still)
     Column(
       Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.statusBars).windowInsetsPadding(WindowInsets.navigationBars).verticalScroll(rememberScrollState()),
     ) {
@@ -146,6 +148,31 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           .swipes(left = app.playback::next, right = app.playback::previous, down = { nav.back() }),
         contentAlignment = Alignment.Center,
       ) {
+        if (look.material == Material.HiFi)
+          // Retro hi-fi: the cover is the label of the record turning under the tonearm.
+          Vinyl(t.cover?.replace("size=600", "size=900"), t.album.title, p.playing, still, Modifier.fillMaxSize())
+        else if (look.material == Material.Paper)
+          // Paper: the cover as a polaroid, taped down a little crooked.
+          Box(Modifier.fillMaxSize().padding(10.dp).graphicsLayer {
+            scaleX = scale
+            scaleY = scale
+            rotationZ = -2.5f
+          }) {
+            Box(Modifier.fillMaxSize().matter(Color(0xFFFFFDF8), 2.dp, seed = 50, depth = 1.6f).padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 46.dp)) {
+              Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = 0.dp)
+            }
+            Tape(Modifier.align(Alignment.TopCenter).offset(y = (-10).dp), tilt = 3f)
+          }
+        else if (look.material != Material.Flat) {
+          val tilt = if (look.material == Material.Glass) 0f else -0.8f
+          Box(
+            Modifier.fillMaxSize().graphicsLayer {
+              scaleX = scale
+              scaleY = scale
+              rotationZ = tilt
+            }.matter(matter.paper, look.page + 12.dp, seed = 50, depth = 1.6f, seam = true).padding(16.dp),
+          ) { Artwork(t.cover?.replace("size=600", "size=900"), t.album.title, null, Modifier.fillMaxSize(), radius = look.page) }
+        } else
         Box(
           Modifier.fillMaxSize().graphicsLayer {
             scaleX = scale
@@ -158,9 +185,9 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
           Text(t.title, color = Color.White, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable { t.album.id?.let { nav.go(Route.Album(it)) } })
           Text(t.artist, color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Normal), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable { t.artists.firstOrNull()?.id?.let { nav.go(Route.Artist(it)) } })
         }
-        Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) { Heart(t, 22) }
+        Box(Modifier.size(40.dp).then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 20.dp, seed = 51) else Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.14f))), contentAlignment = Alignment.Center) { Heart(t, 22) }
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.size(40.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(40.dp).then(if (look.material != Material.Flat) Modifier.matter(matter.paper, 20.dp, seed = 52) else Modifier.clip(CircleShape).background(Color.White.copy(alpha = 0.14f))), contentAlignment = Alignment.Center) {
           MoreMenu(
             "More for ${t.title}",
             songMenu(app, t, nav, picker) +
@@ -173,15 +200,20 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
       Row(Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
         IconBtn(EchoIcons.shuffle, if (p.shuffle) "Shuffle on" else "Shuffle off", if (p.shuffle) Color.White else Color.White.copy(alpha = 0.55f), 24) { app.playback.toggleShuffle() }
         IconBtn(EchoIcons.previous, "Previous", Color.White, 38) { app.playback.previous() }
-        PlayButton(p.playing, enabled = true, onClick = app.playback::toggle, size = 84)
+        if (look.material == Material.Paper) OrigamiPlay(p.playing, 84, matter.strong, app.playback::toggle)
+        else PlayButton(p.playing, enabled = true, onClick = app.playback::toggle, size = 84)
         IconBtn(EchoIcons.next, "Next", Color.White, 38) { app.playback.next() }
         IconBtn(if (p.repeat == Repeat.One) EchoIcons.repeatOne else EchoIcons.repeat, "Repeat", if (p.repeat != Repeat.Off) Color.White else Color.White.copy(alpha = 0.55f), 24) { app.playback.cycleRepeat() }
       }
       Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)) {
         Pill(EchoIcons.lyrics, "Lyrics") { nav.go(Route.Listen) }
-        Pill(EchoIcons.queue, "Up next", onQueue)
+        Pill(EchoIcons.queue, "Up next", onClick = onQueue)
+        Pill(EchoIcons.mic, "Karaoke", on = prefs.karaoke) { app.karaoke.setOn(!prefs.karaoke) }
+        val together by app.together.session.collectAsStateWithLifecycle()
+        Pill(EchoIcons.user, togetherLabel(together), on = together != null) { app.together.sheetOpen.value = true }
         if (SleepTimer.minutes != null) Pill(EchoIcons.moon, "${SleepTimer.minutes} min") { SleepTimer.set(app, null) }
       }
+      VocalsSlider(Color.White, Modifier.padding(start = 28.dp, end = 28.dp, bottom = 12.dp))
       LyricsCard(p) { nav.go(Route.Listen) }
       Spacer(Modifier.height(32.dp))
     }
@@ -190,14 +222,20 @@ fun NowPlayingScreen(p: PlayerState, nav: Nav, onQueue: () -> Unit, picker: (Tra
 
 /** A translucent pill over the album's colours. */
 @Composable
-private fun Pill(icon: ImageVector, label: String, onClick: () -> Unit) {
+private fun Pill(icon: ImageVector, label: String, on: Boolean = false, onClick: () -> Unit) {
+  val made = look.material != Material.Flat
+  // On (Karaoke): a filled pill, the glyph and label cut out of it.
+  val fill = if (made) (if (on) matter.accent(0) else matter.paper) else Color.White.copy(alpha = if (on) 0.92f else 0.14f)
+  val ink = if (made) (if (on) inkOn(fill, matter.ink) else Color.White) else if (on) Color.Black.copy(alpha = 0.85f) else Color.White
   Row(
-    Modifier.height(40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick).clip(CircleShape).background(Color.White.copy(alpha = 0.14f)).padding(horizontal = 16.dp),
+    Modifier.height(if (made) 44.dp else 40.dp).bouncy(scale = 0.92f, label = label, onClick = onClick)
+      .semantics { if (on) stateDescription = "On" }
+      .then(if (made) Modifier.matter(fill, 22.dp, seed = label.length) else Modifier.clip(CircleShape).background(fill)).padding(horizontal = 16.dp),
     verticalAlignment = Alignment.CenterVertically,
   ) {
-    Icon(icon, null, tint = Color.White, modifier = Modifier.size(18.dp))
+    Icon(icon, null, tint = ink, modifier = Modifier.size(18.dp))
     Spacer(Modifier.width(8.dp))
-    Text(label, color = Color.White, style = MaterialTheme.typography.labelLarge)
+    Text(label, color = ink, style = MaterialTheme.typography.labelLarge, maxLines = 1)
   }
 }
 

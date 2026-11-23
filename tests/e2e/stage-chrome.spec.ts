@@ -142,8 +142,8 @@ test.describe('the song and the lyrics', () => {
     const side = page.locator('.np-side');
     await expect(side.locator('.np-title')).toHaveText('Ferry at Six');
     await expect(side.locator('.np-artist')).toHaveText('Lowfield');
-    // Small SVG covers are inlined as data: URIs; their <title> names them.
-    await expect(side.locator('.art img')).toHaveAttribute('src', /Harbour%20Lights/);
+    // The fixture covers are files, like a real library's (fixtures/library.ts).
+    await expect(side.locator('.art img')).toHaveAttribute('src', /\/harbour-lights-[\w-]+\.svg$/);
     expect(await side.locator('.art img').evaluate((el) => getComputedStyle(el).objectFit)).toBe(
       'cover',
     );

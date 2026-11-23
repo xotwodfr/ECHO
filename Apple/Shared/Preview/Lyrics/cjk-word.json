@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "trackKey": "fixture:cjk-word",
+  "sync": "word",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 90000,
+  "lines": [
+    {
+      "text": "夜の窓に雨が光る",
+      "start": 5000,
+      "end": 7400,
+      "words": [
+        { "text": "夜", "start": 5000, "end": 5300, "isPartOfWord": true },
+        { "text": "の", "start": 5300, "end": 5600, "isPartOfWord": true },
+        { "text": "窓", "start": 5600, "end": 5900, "isPartOfWord": true },
+        { "text": "に", "start": 5900, "end": 6200, "isPartOfWord": true },
+        { "text": "雨", "start": 6200, "end": 6500, "isPartOfWord": true },
+        { "text": "が", "start": 6500, "end": 6800, "isPartOfWord": true },
+        { "text": "光", "start": 6800, "end": 7100, "isPartOfWord": true },
+        { "text": "る", "start": 7100, "end": 7400, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "遠い港の灯り",
+      "start": 8300,
+      "end": 10700,
+      "words": [
+        { "text": "遠", "start": 8300, "end": 8600, "isPartOfWord": true },
+        { "text": "い", "start": 8600, "end": 8900, "isPartOfWord": true },
+        { "text": "港", "start": 8900, "end": 9200, "isPartOfWord": true },
+        { "text": "の", "start": 9200, "end": 9500, "isPartOfWord": true },
+        { "text": "灯", "start": 9500, "end": 10100, "isPartOfWord": true },
+        { "text": "り", "start": 10100, "end": 10700, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "あなたの声が聞こえる",
+      "start": 11600,
+      "end": 14600,
+      "words": [
+        { "text": "あ", "start": 11600, "end": 11900, "isPartOfWord": true },
+        { "text": "な", "start": 11900, "end": 12200, "isPartOfWord": true },
+        { "text": "た", "start": 12200, "end": 12500, "isPartOfWord": true },
+        { "text": "の", "start": 12500, "end": 12800, "isPartOfWord": true },
+        { "text": "声", "start": 12800, "end": 13100, "isPartOfWord": true },
+        { "text": "が", "start": 13100, "end": 13400, "isPartOfWord": true },
+        { "text": "聞", "start": 13400, "end": 13700, "isPartOfWord": true },
+        { "text": "こ", "start": 13700, "end": 14000, "isPartOfWord": true },
+        { "text": "え", "start": 14000, "end": 14300, "isPartOfWord": true },
+        { "text": "る", "start": 14300, "end": 14600, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "波の向こうから",
+      "start": 15500,
+      "end": 18500,
+      "words": [
+        { "text": "波", "start": 15500, "end": 15800, "isPartOfWord": true },
+        { "text": "の", "start": 15800, "end": 16100, "isPartOfWord": true },
+        { "text": "向", "start": 16100, "end": 16700, "isPartOfWord": true },
+        { "text": "こ", "start": 16700, "end": 17300, "isPartOfWord": true },
+        { "text": "う", "start": 17300, "end": 17900, "isPartOfWord": true },
+        { "text": "か", "start": 17900, "end": 18200, "isPartOfWord": true },
+        { "text": "ら", "start": 18200, "end": 18500, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "ゆっくり歩いて行こう",
+      "start": 19400,
+      "end": 23600,
+      "words": [
+        { "text": "ゆ", "start": 19400, "end": 20000, "isPartOfWord": true },
+        { "text": "っ", "start": 20000, "end": 20600, "isPartOfWord": true },
+        { "text": "く", "start": 20600, "end": 21200, "isPartOfWord": true },
+        { "text": "り", "start": 21200, "end": 21800, "isPartOfWord": true },
+        { "text": "歩", "start": 21800, "end": 22100, "isPartOfWord": true },
+        { "text": "い", "start": 22100, "end": 22400, "isPartOfWord": true },
+        { "text": "て", "start": 22400, "end": 22700, "isPartOfWord": true },
+        { "text": "行", "start": 22700, "end": 23000, "isPartOfWord": true },
+        { "text": "こ", "start": 23000, "end": 23300, "isPartOfWord": true },
+        { "text": "う", "start": 23300, "end": 23600, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "朝が来るまで",
+      "start": 24500,
+      "end": 27500,
+      "words": [
+        { "text": "朝", "start": 24500, "end": 24800, "isPartOfWord": true },
+        { "text": "が", "start": 24800, "end": 25100, "isPartOfWord": true },
+        { "text": "来", "start": 25100, "end": 25700, "isPartOfWord": true },
+        { "text": "る", "start": 25700, "end": 26300, "isPartOfWord": true },
+        { "text": "ま", "start": 26300, "end": 26900, "isPartOfWord": true },
+        { "text": "で", "start": 26900, "end": 27500, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "このままで",
+      "start": 28400,
+      "end": 31700,
+      "words": [
+        { "text": "こ", "start": 28400, "end": 28700, "isPartOfWord": true },
+        { "text": "の", "start": 28700, "end": 29000, "isPartOfWord": true },
+        { "text": "ま", "start": 29000, "end": 29900, "isPartOfWord": true },
+        { "text": "ま", "start": 29900, "end": 30800, "isPartOfWord": true },
+        { "text": "で", "start": 30800, "end": 31700, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "ここにいて",
+      "start": 32600,
+      "end": 35900,
+      "words": [
+        { "text": "こ", "start": 32600, "end": 32900, "isPartOfWord": true },
+        { "text": "こ", "start": 32900, "end": 33200, "isPartOfWord": true },
+        { "text": "に", "start": 33200, "end": 33500, "isPartOfWord": true },
+        { "text": "い", "start": 33500, "end": 34700, "isPartOfWord": true },
+        { "text": "て", "start": 34700, "end": 35900, "isPartOfWord": false }
+      ]
+    }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "ja"
+}

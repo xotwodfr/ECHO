@@ -57,18 +57,22 @@ const browserEnv: LoopEnv = {
   },
 };
 
-const perf: { frameMs: number[]; lyricsMs: number[]; tier: Tier } = {
+/** Per frame: its main-thread time, the lyric field's share, and the tier it was drawn at. */
+const perf: { frameMs: number[]; lyricsMs: number[]; tiers: Tier[]; tier: Tier } = {
   frameMs: [],
   lyricsMs: [],
+  tiers: [],
   tier: 'T1',
 };
 function recordPerf(frameMs: number, lyricsMs: number, tier: Tier) {
   perf.frameMs.push(frameMs);
   perf.lyricsMs.push(lyricsMs);
+  perf.tiers.push(tier);
   perf.tier = tier;
   if (perf.frameMs.length > 600) {
     perf.frameMs.shift();
     perf.lyricsMs.shift();
+    perf.tiers.shift();
   }
   (window as unknown as { __echoPerf?: typeof perf }).__echoPerf = perf;
 }
@@ -267,6 +271,15 @@ export function mountStage(root: HTMLElement, canvas: HTMLCanvasElement, opts: S
           // mode, deterministic frames) probes until the solver settles, so it is drawn compliant.
           const now = env.now();
           if (loop.mode === 'still') {
+            // A deterministic frame (VISUALIZER_SPEC.md §10) is solved afresh from its own inputs.
+            // The solver's hysteresis would otherwise keep the order the palette and the cover came
+            // in: the palette last left no scrim, the cover last the full one, and one frame drew
+            // two ways. Still mode in use keeps its history, which is what stops it flickering.
+            if (frame && (solve.exposure !== 0 || solve.scrim !== 0)) {
+              solve = { exposure: 0, scrim: 0 };
+              renderer.setZone(0, 0);
+              renderer.render(input);
+            }
             for (let i = 0; i < 12 && contrastStep(PROBE_MS); i++) renderer.render(input);
           } else if (now - lastProbe >= PROBE_MS) {
             contrastStep(Math.min(now - lastProbe, 1000));

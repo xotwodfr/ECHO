@@ -1,0 +1,67 @@
+name: android
+
+# ECHO for Android (docs/ANDROID_CLIENT.md): on PRs, runs checks and unit tests.
+# Release is handled by android-release.yml on tags.
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'Android/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'gradle'
+
+      - name: Android SDK platform 37 and build tools 37
+        run: |
+          sdk="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$sdk" --licenses > /dev/null
+          "$sdk" "platforms;android-37" "build-tools;37.0.0" > /dev/null
+
+      - name: Grant gradlew execute permission
+        run: chmod +x Android/gradlew
+
+      - name: Ktlint check
+        working-directory: Android
+        run: ./gradlew ktlintCheck --no-daemon
+
+      - name: Detekt
+        working-directory: Android
+        run: ./gradlew detekt --no-daemon
+
+      - name: Unit tests
+        working-directory: Android
+        run: ./gradlew testDebugUnitTest --no-daemon
+
+      - name: Assemble Debug (verify build)
+        working-directory: Android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: android-test-reports
+          path: |
+            Android/app/build/reports/tests/
+            Android/app/build/outputs/apk/debug/
+          retention-days: 7

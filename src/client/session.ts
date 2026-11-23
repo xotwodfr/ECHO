@@ -19,6 +19,8 @@ export type SessionState =
       mustEnrolTotp?: boolean;
       /** YouTube Music mode: the admin switch, and whether this user saved a sign-in. */
       youtube?: { enabled: boolean; signedIn: boolean };
+      /** A guest account (guests.ts): no inviting, no Guests block. */
+      guest?: boolean;
     };
 
 export const sessionStore = createStore<SessionState>()(() => ({ status: 'unknown' }));

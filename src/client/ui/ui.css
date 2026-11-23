@@ -14,7 +14,7 @@
   height: var(--fl-button-h);
   padding: 0 var(--fl-button-pad);
   border: var(--rule) solid var(--fl-stroke-control);
-  border-radius: var(--r-control);
+  border-radius: var(--r-button);
   --btn-bg: var(--fl-control);
   --btn-ink: var(--text);
   background: var(--btn-bg);
@@ -845,7 +845,7 @@
 }
 
 .track-row[data-now-playing] .track-title {
-  color: var(--fl-accent-text);
+  color: var(--accent-text);
 }
 
 .track-num,
@@ -1564,7 +1564,7 @@
 }
 
 .toast .icon {
-  color: var(--fl-accent-text);
+  color: var(--accent-text);
 }
 
 .toast[data-leaving] {
@@ -1764,7 +1764,7 @@
   border: 0;
   border-radius: var(--r-control);
   background: transparent;
-  color: var(--fl-accent-text);
+  color: var(--accent-text);
   font: var(--fl-type-body-strong) var(--font-ui);
   pointer-events: auto;
   cursor: pointer;

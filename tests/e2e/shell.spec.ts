@@ -48,6 +48,10 @@ for (const link of DEEP_LINKS) {
       expect(new URL(page.url()).pathname + new URL(page.url()).search).toBe(link.url);
       if (link.tab) await expect(page.locator('.tabs [aria-current="page"]')).toHaveText(link.tab);
       if (link.text) await expect(page.getByText(link.text)).toBeVisible();
+      // A reload while a font is still downloading aborts it, and Firefox logs that as a console
+      // error (a CI run failed on three of them). The page has laid out by now, so the fonts it
+      // uses have started loading: wait for them.
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
       await page.reload();
     }
     expect(errors).toEqual([]);
@@ -170,6 +174,48 @@ test('`/` focuses the search pill, which opens Search; typing is one history ent
   await page.goBack();
   await expect(page).toHaveURL(/\/library$/);
   await expect(field).toHaveValue('');
+});
+
+test('search from the keyboard: arrows highlight a song, Enter plays, Shift+Enter queues, → opens its album (SRCH-01)', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto('/library');
+  await expect(h1(page)).toHaveText('Your Library');
+  await page.locator('body').press('/');
+  const field = mainNav(page).getByRole('searchbox', { name: 'Search' });
+  await field.pressSequentially('ground');
+  const songs = page.getByRole('list', { name: 'Tracks' }).locator('.track-row');
+  await expect(songs).toHaveCount(2);
+  const selected = page.locator('.track-row[data-selected]');
+  await expect(selected).toHaveCount(0); // nothing until an arrow
+  await field.press('ArrowDown');
+  await expect(selected).toHaveText(/Ground Control to Nobody/);
+  // Said once, outside the field's label: the field keeps its name.
+  await expect(page.locator('[aria-live="polite"]').filter({ hasText: 'Enter plays' })).toHaveText(
+    /^Ground Control to Nobody, The Quiet Hours\./,
+  );
+  await expect(field).toHaveAccessibleName('Search');
+  await field.press('ArrowDown');
+  await expect(selected).toHaveText(/Ground Hum/);
+  await field.press('ArrowDown'); // past the end: back to the typed text
+  await expect(selected).toHaveCount(0);
+  await field.press('ArrowUp'); // and round from there to the last song
+  await expect(selected).toHaveText(/Ground Hum/);
+  await expect(field).toBeFocused();
+  await field.press('Enter');
+  await expect(songs.nth(1)).toHaveAttribute('aria-current', 'true');
+  await field.press('ArrowUp');
+  await field.press('Shift+Enter');
+  await expect(page.getByText('Added “Ground Control to Nobody” to the queue')).toBeVisible();
+  // Escape drops the highlight (and leaves the query); → then opens the highlighted song's album.
+  await field.press('Escape');
+  await expect(field).toHaveValue('ground');
+  await expect(selected).toHaveCount(0);
+  await field.press('ArrowDown');
+  await field.press('ArrowRight');
+  await expect(page).toHaveURL(/\/library\/album\/al-paper$/);
+  await expect(h1(page)).toHaveText('Paper Satellites');
 });
 
 // DESIGN_SYSTEM.md §5: cards at least --tile-min (180px) fill the row; their covers line up with

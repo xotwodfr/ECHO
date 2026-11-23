@@ -1022,13 +1022,20 @@ a {
   margin-bottom: var(--pill-inset);
   padding: 0 var(--sp-5) 0 var(--sp-2);
   border: var(--rule) solid var(--fl-stroke);
-  border-radius: var(--r-pill);
+  border-radius: var(--r-dock);
   background: var(--fl-flyout);
   box-shadow: var(--fl-shadow-16);
   container: pill / inline-size;
 }
 
 /* A narrow pill (a wide panel beside it) keeps the transport and lets the extras go first. */
+@container pill (max-width: 1099.98px) {
+  /* Room for the karaoke mic: the volume slider gives up half its length first. */
+  .volume .slider--volume {
+    width: calc(var(--volume-w) / 2);
+  }
+}
+
 @container pill (max-width: 839.98px) {
   .dock-sleep {
     display: none;
@@ -1162,7 +1169,7 @@ a {
 
 @keyframes wash {
   from {
-    background: var(--fl-accent-subtle);
+    background: var(--accent-subtle);
   }
 }
 
@@ -1682,6 +1689,7 @@ a {
   overflow: hidden;
   border-radius: var(--r-panel);
   background: var(--hue);
+  color: var(--on-hue);
   transition: scale var(--spring);
 }
 
@@ -1695,7 +1703,7 @@ a {
 }
 
 .genre-count {
-  color: var(--text-on-tint);
+  color: var(--on-hue-2);
 }
 
 .page-empty {
@@ -1794,7 +1802,8 @@ a {
   gap: var(--sp-4);
   padding: var(--sp-5);
   border-radius: var(--r-panel);
-  background: linear-gradient(transparent, var(--header-shade)), var(--hue);
+  background: linear-gradient(transparent, var(--hue-shade)), var(--hue);
+  color: var(--on-hue);
 }
 
 .wrapped-card h2 {
@@ -1827,7 +1836,7 @@ a {
 }
 
 .wrapped-count {
-  color: var(--text-on-tint);
+  color: var(--on-hue-2);
   font-weight: 400;
 }
 
@@ -2157,6 +2166,38 @@ a {
 
 .pref-slider .slider--volume {
   width: 100%;
+}
+
+/* Settings → Equalizer: a row per band, frequency | slider | gain; dimmed while it is off. */
+.pref-eq {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.pref-eq[data-off] {
+  opacity: 0.6;
+}
+
+.pref-eq-band {
+  display: contents;
+}
+
+.pref-eq .slider--volume {
+  width: 100%;
+}
+
+.pref-eq-hz,
+.pref-eq-db {
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pref-eq-db {
+  min-width: calc(var(--hit-lg) * 1.5);
+  text-align: end;
 }
 
 .keymap {
@@ -2787,4 +2828,494 @@ a {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-2);
+}
+
+/* ---- Karaoke mode (docs/KARAOKE.md): the player bar's mic and Vocals slider, the panel in Now
+   Playing and the lyrics view ---- */
+.dock-karaoke {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* The bar has no room to spare: the Vocals slider floats just above the mic, while Karaoke is on
+   and the mic is hovered or focused (keyboard and dragging keep it open). */
+.dock-karaoke .karaoke-vocals {
+  position: absolute;
+  bottom: calc(100% + var(--sp-3));
+  left: 50%;
+  translate: -50% 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-panel);
+  border: var(--rule) solid var(--fl-stroke);
+  background: var(--fl-flyout);
+  box-shadow: var(--shadow-float);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity var(--dur-hover) var(--ease-in-out),
+    visibility var(--dur-hover) step-end;
+}
+
+.dock-karaoke[data-on]:is(:hover, :focus-within) .karaoke-vocals {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--dur-hover) var(--ease-in-out),
+    visibility var(--dur-hover) step-start;
+}
+
+/* A bridge over the gap, so moving up from the mic to the slider keeps it open. */
+.dock-karaoke .karaoke-vocals::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: var(--sp-3);
+}
+
+.karaoke-vocals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.karaoke-vocals-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.karaoke-vocals-row .slider {
+  flex: 1;
+  width: auto;
+}
+
+.dock-karaoke .karaoke-vocals-row .slider {
+  flex: none;
+  width: calc(var(--volume-w) * 1.5);
+}
+
+.karaoke-vocals-label,
+.karaoke-vocals-value {
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+/* Vocals over Key: the two sliders start at the same place. */
+.karaoke-vocals-label {
+  min-width: calc(var(--hit-lg) * 1.5);
+}
+
+.karaoke-vocals-value {
+  min-width: var(--hit-lg);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.karaoke-note {
+  margin: 0;
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.karaoke-panel {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--r-panel);
+  background: var(--raised);
+}
+
+.karaoke-panel > .karaoke-vocals {
+  flex: 1;
+}
+
+.karaoke-panel[data-on] > .icon-btn {
+  color: var(--green);
+}
+
+.karaoke-panel-title {
+  font: var(--fl-type-body-strong) var(--font-ui);
+  color: var(--muted);
+}
+
+/* On the Stage the panel sits under the titles, as wide as the cover. */
+.np-side .karaoke-panel {
+  width: var(--np-art);
+  max-width: 100%;
+}
+
+/* ---- Guests (shell/Guests.tsx): the invite's QR code, the list of guests, the guest link's page ---- */
+.guest-invite {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  text-align: center;
+}
+
+.guest-qr-frame {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: calc(var(--hit-lg) * 5);
+  aspect-ratio: 1;
+  padding: var(--sp-4);
+  border-radius: var(--r-panel);
+  background: var(--qr-paper, white);
+  color: var(--qr-ink, black);
+}
+
+.guest-qr {
+  width: 100%;
+  height: 100%;
+}
+
+.guest-qr path {
+  fill: currentColor;
+}
+
+.guest-qr-mark {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--hit-lg);
+  aspect-ratio: 1;
+  border: var(--sp-1) solid var(--qr-paper, white);
+  border-radius: var(--r-control);
+  background: var(--qr-ink, black);
+  color: var(--qr-paper, white);
+  font: var(--fl-type-caption-strong) var(--font-ui);
+  font-size: var(--fs-micro, 0.6rem);
+  letter-spacing: normal;
+}
+
+.guest-joined {
+  margin: 0;
+  font: var(--fl-type-subtitle2) var(--font-ui);
+}
+
+.guest-durations {
+  display: flex;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.guest-durations .chip[aria-pressed="true"] {
+  background: var(--green);
+  color: var(--on-green);
+}
+
+.guest-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guest-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.guest-avatar {
+  display: grid;
+  place-items: center;
+  width: var(--hit-lg);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--on-green);
+  font: var(--fl-type-body-strong) var(--font-ui);
+}
+
+.guest-who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.guest-landing {
+  max-width: 40ch;
+  margin: var(--sp-9) auto;
+  padding: 0 var(--gutter);
+  text-align: center;
+}
+
+/* ---- Sign in (shell/SignIn.tsx): the drifting wall of covers, the wordmark, the frosted card and
+   "Sign in with your phone" ---- */
+.auth-page:has(> .signin-stage) {
+  display: block;
+  padding: 0;
+}
+
+.signin-stage {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--signin-ground);
+  color: white;
+}
+
+.signin-wall {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.signin-wall-tilt {
+  position: absolute;
+  inset: -40% -30%;
+  display: flex;
+  justify-content: center;
+  gap: var(--signin-gap);
+  rotate: -12deg;
+}
+
+.signin-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--signin-gap);
+  animation: signin-drift var(--signin-drift) linear infinite;
+}
+
+.signin-col[data-dir="up"] {
+  animation-direction: reverse;
+}
+
+@keyframes signin-drift {
+  to {
+    translate: 0 var(--signin-drift-by);
+  }
+}
+
+:root[data-motion="less"] .signin-col,
+:root[data-motion="off"] .signin-col {
+  animation: none;
+}
+
+.signin-tile {
+  flex: none;
+  width: var(--signin-tile);
+  height: var(--signin-tile);
+  border-radius: var(--r-panel);
+  object-fit: cover;
+  box-shadow: var(--shadow-float);
+}
+
+.signin-tile[data-tile="0"] {
+  background: var(--tile-0);
+}
+.signin-tile[data-tile="1"] {
+  background: var(--tile-1);
+}
+.signin-tile[data-tile="2"] {
+  background: var(--tile-2);
+}
+.signin-tile[data-tile="3"] {
+  background: var(--tile-3);
+}
+.signin-tile[data-tile="4"] {
+  background: var(--tile-4);
+}
+.signin-tile[data-tile="5"] {
+  background: var(--tile-5);
+}
+.signin-tile[data-tile="6"] {
+  background: var(--tile-6);
+}
+.signin-tile[data-tile="7"] {
+  background: var(--tile-7);
+}
+
+/* Dark toward the card, so the form reads; the covers glow at the top. */
+.signin-shade {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(120% 75% at 50% 70%, var(--signin-ground) 32%, transparent 100%);
+  opacity: 0.94;
+}
+
+.signin-content {
+  position: relative;
+  display: grid;
+  box-sizing: border-box;
+  min-height: 100vh;
+  place-items: center;
+  align-content: center;
+  gap: var(--sp-6);
+  padding: var(--sp-8) var(--gutter);
+}
+
+.signin-logo {
+  display: grid;
+  margin: 0;
+  text-align: center;
+  font: var(--fl-type-title1) var(--font);
+  font-size: calc(var(--hit-lg) * 1.2);
+  font-weight: 900;
+  letter-spacing: var(--tracking-title);
+  background: linear-gradient(90deg, var(--signin-amber), var(--signin-rose), var(--signin-violet));
+  background-clip: text;
+  color: transparent;
+  animation: signin-rise var(--dur-ui) var(--ease-in-out) both;
+}
+
+.signin-logo span {
+  font: var(--fl-type-body) var(--font-ui);
+  letter-spacing: normal;
+  background: none;
+  color: white;
+  opacity: 0.65;
+}
+
+@keyframes signin-rise {
+  from {
+    opacity: 0;
+    translate: 0 var(--sp-5);
+  }
+}
+
+.signin-card {
+  display: grid;
+  box-sizing: border-box;
+  width: min(100%, calc(var(--form-w) + 2 * var(--sp-8)));
+  gap: var(--sp-7);
+  padding: var(--sp-7);
+  border: var(--rule) solid var(--signin-edge);
+  border-radius: calc(var(--r-panel) * 2);
+  background: var(--signin-card);
+  box-shadow: var(--shadow-float);
+}
+
+@media (min-width: 900px) {
+  .signin-card[data-phone] {
+    width: min(100%, calc(var(--form-w) * 2 + 4 * var(--sp-8)));
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
+
+.signin-card .auth {
+  width: auto;
+  padding: 0;
+  background: none;
+}
+
+.auth--signin > h1 {
+  text-align: start;
+}
+
+.signin-card .auth .btn--primary {
+  border: none;
+  background: linear-gradient(90deg, var(--signin-amber), var(--signin-rose));
+  color: var(--signin-ink);
+}
+
+.signin-card .field input:focus-visible {
+  outline-color: var(--signin-amber);
+}
+
+.signin-phone {
+  display: grid;
+  justify-items: center;
+  gap: var(--sp-3);
+  padding-inline-start: var(--sp-7);
+  border-inline-start: var(--rule) solid var(--signin-edge);
+}
+
+@media (max-width: 899.98px) {
+  .signin-phone {
+    padding: var(--sp-6) 0 0;
+    border-inline-start: none;
+    border-top: var(--rule) solid var(--signin-edge);
+  }
+}
+
+.signin-phone h2 {
+  margin: 0;
+  font: var(--fl-type-subtitle2) var(--font);
+}
+
+.signin-qr {
+  display: grid;
+  place-items: center;
+  width: calc(var(--hit-lg) * 4);
+  aspect-ratio: 1;
+  padding: var(--sp-3);
+  border-radius: var(--r-panel);
+  background: white;
+  color: black;
+}
+
+.signin-qr .guest-qr path {
+  fill: currentColor;
+}
+
+.signin-steps {
+  margin: 0;
+  padding-inline-start: var(--sp-5);
+  font: var(--fl-type-caption) var(--font-ui);
+  opacity: 0.75;
+}
+
+/* ---- Listen together (together/Together.tsx): the chip, the session's sheet, the shared queue ---- */
+.together-chip[data-on] {
+  background: var(--green);
+  color: var(--on-green);
+}
+
+.together-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  max-width: 100%;
+}
+
+.together-link code {
+  overflow-wrap: anywhere;
+  font: var(--fl-type-caption) var(--font-ui);
+  color: var(--muted);
+}
+
+.together-members {
+  align-self: stretch;
+  margin: 0;
+  text-align: start;
+}
+
+.together-members li[data-away] {
+  color: var(--muted);
+}
+
+.together-actions {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.together-queue {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
+.together-queue > ul,
+.together-queue > ol,
+.together-queue > .empty {
+  align-self: stretch;
 }

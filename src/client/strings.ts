@@ -12,6 +12,7 @@ export const strings = {
     admin: 'Admin',
     profile: 'Profile',
     signOut: 'Log out',
+    inviteGuest: 'Invite a guest',
   },
   home: {
     title: 'Home',
@@ -289,6 +290,25 @@ export const strings = {
     shuffleName: (t: string) => `Shuffle ${t}`,
     more: (t: string) => `More options for ${t}`,
   },
+  /** The album's animated lock-screen cover (admins, the album page's menu; docs/MOTION.md). */
+  motion: {
+    upload: 'Upload motion cover…',
+    replace: 'Replace motion cover…',
+    remove: 'Remove motion cover',
+    uploading: 'Uploading the motion cover…',
+    uploaded: 'Motion cover uploaded. ECHO is preparing it for the lock screen.',
+    ready: 'The motion cover is ready.',
+    convertFailed: (why: string) =>
+      `The motion cover couldn’t be converted${why ? ` (${why})` : ''}. Try another video.`,
+    tooLarge: 'That video is over 50 MB.',
+    notVideo: 'That isn’t an MP4, M4V or QuickTime video.',
+    failed: 'Couldn’t change the motion cover. Try again.',
+    removed: 'Motion cover removed.',
+    removeTitle: 'Remove the motion cover?',
+    removeConsequence: (album: string) =>
+      `The video you uploaded for ${album} is deleted. The iPhone’s lock screen gets a cover ECHO makes from the album art instead.`,
+    removeConfirm: 'Remove',
+  },
   wanted: {
     title: 'Wanted',
     intro:
@@ -311,6 +331,8 @@ export const strings = {
     youTubeMusic: 'YouTube Music',
     play: (title: string) => `Play ${title}`,
     remove: (text: string) => `Remove ${text} from Wanted`,
+    removed: (text: string) => `Removed “${text}” from Wanted`,
+    undo: 'Undo',
     /** Your Library's row. */
     sub: (n: number, found: number) =>
       `List • ${n} item${n === 1 ? '' : 's'}${found ? ` · ${found} in your library` : ''}`,
@@ -328,6 +350,9 @@ export const strings = {
     found: (n: number) => (n === 0 ? 'No results' : n === 1 ? '1 result' : `${n} results`),
     tracks: 'Tracks',
     albums: 'Albums',
+    /** Spoken as the arrows move over the songs (SRCH-01). */
+    highlighted: (title: string, artist: string) =>
+      `${title}, ${artist}. Enter plays, Shift+Enter adds to queue, Right arrow opens the album.`,
   },
   settings: {
     sections: { preferences: 'Preferences', account: 'Account', admin: 'Admin' },
@@ -339,6 +364,14 @@ export const strings = {
   },
   prefs: {
     notSaved: "That setting wasn't saved. Try again.",
+    appearance: 'Appearance',
+    theme: 'Theme',
+    themeHint:
+      'Follows you to every device. The style themes are inspired by those services; the names are labels, nothing more.',
+    dark: 'Light or dark',
+    darkNames: { theme: 'Theme', system: 'System', light: 'Light', dark: 'Dark' },
+    darkHint:
+      "Theme: each theme's own (Spotify style is dark, Apple Music style light, ECHO dark).",
     later: 'Arrives in a later version.',
     perDevice: 'This device only.',
     perDeviceNextVisit: 'This device only. Applies the next time the Stage opens.',
@@ -357,7 +390,28 @@ export const strings = {
     scrobble: 'Scrobble plays to Navidrome',
     autoplay: 'Autoplay',
     autoplayHint: 'When your music ends, similar songs play. This device only.',
-    crossfade: 'Crossfade between tracks',
+    crossfade: 'Crossfade',
+    crossfadeText: (sec: number) => (sec === 0 ? 'Off' : `${sec} s`),
+    crossfadeHint:
+      'Each song fades out as the next fades in. Songs from the same album play straight into each other, without a fade. This device only.',
+    equalizer: 'Equalizer',
+    eqOn: 'Use the equalizer',
+    eqHint:
+      'Shapes the sound on this device. Boosts lower the overall level a little, so loud songs never distort.',
+    eqPreset: 'Preset',
+    eqPresetNames: {
+      flat: 'Flat',
+      bass: 'Bass boost',
+      treble: 'Treble boost',
+      vocal: 'Vocal',
+      loudness: 'Loudness',
+      acoustic: 'Acoustic',
+      electronic: 'Electronic',
+      custom: 'Custom',
+    },
+    eqBand: (hz: number) => (hz >= 1000 ? `${hz / 1000} kHz` : `${hz} Hz`),
+    eqGainText: (db: number) => (db > 0 ? `+${db} dB` : db < 0 ? `−${-db} dB` : '0 dB'),
+    eqBandsHint: 'Moving a band switches to Custom, starting from the preset you had.',
     lyrics: 'Lyrics',
     size: 'Lyric size',
     sizeNames: { '0.85': 'Small', '1': 'Default', '1.15': 'Large', '1.3': 'Largest' },
@@ -525,6 +579,7 @@ export const strings = {
     libraryFailed: "Couldn't load your library.",
     playlistsFailed: "Couldn't load playlists.",
     starredFailed: "Couldn't load starred tracks.",
+    artistsFailed: "Couldn't load your artists.",
     albumFailed: "Couldn't load this album.",
     artistFailed: "Couldn't load this artist.",
     searchFailed: "Search didn't answer.",
@@ -561,6 +616,14 @@ export const strings = {
     passwordHint: 'At least 12 characters.',
     expiredTitle: 'Sign in again',
     expiredIntro: 'Your session ended. Sign in to carry on where you were.',
+    phoneTitle: 'Sign in with your phone',
+    phoneQr: 'Sign-in QR code',
+    phoneSteps: [
+      'Open ECHO on your phone',
+      'Settings → Sign in on a computer',
+      'Scan this code and approve',
+    ],
+    phoneFailed: 'Couldn’t make a code. Reload to try again.',
   },
   navidrome: {
     title: 'Navidrome',
@@ -663,8 +726,132 @@ export const strings = {
     sheetLabel: 'Lyrics',
     transcriptLabel: 'Lyrics',
   },
+  guests: {
+    title: 'Guests',
+    blurb:
+      'Show a QR code; whoever scans it with the ECHO app on their phone can listen for an hour, a day or a week.',
+    invite: 'Invite a guest',
+    inviteHint:
+      'Let someone try ECHO on their phone: they open the ECHO app, tap “Scan a guest code” and point it here.',
+    qrLabel: 'Guest QR code',
+    howLong: 'How long they can listen',
+    duration: (ms: number) => (ms <= 3_600_000 ? '1 hour' : ms <= 86_400_000 ? '1 day' : '1 week'),
+    codeLeft: (s: number) =>
+      `Code works once, for ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`,
+    ranOut: 'This code ran out.',
+    newCode: 'New code',
+    making: 'Making a code…',
+    failed: 'Couldn’t make a code. Try again.',
+    tooMany: 'You have five codes waiting. Let them run out first.',
+    joined: (who: string) => `✓ ${who} joined`,
+    joinedHint: (d: string) => `They’re in. They can listen for ${d}.`,
+    wantsToStay: (name: string) => `${name} (wants to stay)`,
+    timeLeft: (ms: number) => {
+      const min = Math.max(0, Math.floor(ms / 60_000));
+      return min < 60
+        ? `Guest · ${min} min left`
+        : min < 48 * 60
+          ? `Guest · ${Math.floor(min / 60)} h left`
+          : `Guest · ${Math.floor(min / 1440)} days left`;
+    },
+    approve: 'Approve',
+    end: 'End now',
+    landingTitle: 'An ECHO guest pass',
+    landingText:
+      'This code is for the ECHO app. Open ECHO on your phone, tap “Scan a guest code” on the sign-in screen, and scan the code again.',
+  },
+  karaoke: {
+    title: 'Karaoke',
+    on: 'Karaoke on',
+    off: 'Karaoke off',
+    vocals: 'Vocals',
+    vocalsValue: (pct: number) => `${pct}%`,
+    key: 'Key',
+    keyValue: (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0'),
+    keyText: (n: number) =>
+      n === 0
+        ? 'Original key'
+        : `${n > 0 ? 'Up' : 'Down'} ${Math.abs(n)} ${Math.abs(n) === 1 ? 'semitone' : 'semitones'}`,
+    shelf: 'Karaoke',
+    make: 'Make karaoke version',
+    preparing: (ahead: number) =>
+      ahead === 0
+        ? 'Preparing the karaoke version… it starts by itself when it’s ready.'
+        : `Preparing the karaoke version… ${ahead} ${ahead === 1 ? 'song' : 'songs'} before this one.`,
+    failed: 'The voice couldn’t be taken out of this song.',
+    tooLong: 'This song is too long for Karaoke.',
+    unavailable: 'Karaoke works with songs from your library.',
+    noServer: 'Karaoke needs the stem service on your ECHO server (docs/KARAOKE.md).',
+    downmixed:
+      'This browser mixes 5.1 audio down to stereo, so the voice stays in. Try Chrome or Firefox.',
+    requested: {
+      ready: (t: string) => `The karaoke version of “${t}” is ready.`,
+      now: (t: string) => `Making the karaoke version of “${t}” now: a few minutes.`,
+      queued: (t: string, n: number) =>
+        `“${t}” is next in line for karaoke: ${n} ${n === 1 ? 'song' : 'songs'} before it.`,
+      failed: (t: string) => `The voice couldn’t be taken out of “${t}”.`,
+      tooLong: (t: string) => `“${t}” is too long for Karaoke.`,
+      off: 'Karaoke isn’t set up on your ECHO server yet.',
+      error: 'Couldn’t reach ECHO. Try again in a moment.',
+    },
+    progress: {
+      title: 'Karaoke',
+      blurb:
+        'Turns the singer down with the Vocals slider in the player. Your ECHO server separates each song once; until a song is ready it plays as usual and switches over by itself.',
+      toggle: 'Karaoke mode on this device',
+      line: (ready: number, total: number, gb: string, failed: number) =>
+        `${ready.toLocaleString()} of ${total.toLocaleString()} songs ready · ${gb} GB${failed ? ` · ${failed} couldn’t be separated` : ''}`,
+      notSetUp: 'Not set up on your server yet: it needs the stem service (docs/KARAOKE.md).',
+      offline: 'The server’s stem service isn’t answering right now.',
+    },
+  },
   playback: {
     playingNext: (title: string) => `Playing “${title}” next`,
     added: (title: string) => `Added “${title}” to the queue`,
+  },
+  together: {
+    start: 'Listen together',
+    title: 'Listen together',
+    blurb:
+      'Everyone hears the same song at the same moment, and everyone can add songs. Scan the code with the ECHO app, or open the link signed in to this ECHO.',
+    qrLabel: 'Listen together QR code',
+    copy: 'Copy link',
+    copied: 'Link copied',
+    starting: 'Starting…',
+    failed: 'Couldn’t start listening together. Try again.',
+    noLibrary: 'Connect your Navidrome library first (Settings → Library).',
+    members: (n: number) => (n === 1 ? '1 listener' : `${n} listeners`),
+    chip: (n: number) => `Listening together · ${n}`,
+    host: 'host',
+    you: 'you',
+    away: 'away',
+    end: 'End session',
+    leave: 'Leave',
+    ended: 'The listening session ended.',
+    left: 'You left the listening session.',
+    joinTitle: 'Listen together',
+    joinText: (host: string, n: number) =>
+      `${host} invited you to listen together${n > 1 ? ` with ${n - 1} other${n > 2 ? 's' : ''}` : ''}. Your music follows theirs while you’re in.`,
+    join: 'Join',
+    notNow: 'Not now',
+    joined: (host: string) => `Listening together with ${host}`,
+    otherLibrary: (host: string) =>
+      `Joining needs the same library: ${host}’s songs come from a Navidrome server you aren’t connected to.`,
+    gone: 'This listening session has ended.',
+    joinFailed: 'Couldn’t join. Try again.',
+    hostOnly: 'Only the host controls playback.',
+    added: (title: string) => `Added “${title}” to the shared queue`,
+    addedNext: (title: string) => `“${title}” plays next for everyone`,
+    notLibrary: 'Only songs from your library can be shared.',
+    addFailed: 'Couldn’t add that to the shared queue.',
+    queueTitle: 'Shared queue',
+    nowPlaying: 'Now playing',
+    upNext: 'Up next',
+    empty: 'Nothing queued. Add songs from any song’s menu.',
+    nothing: 'Nothing playing yet: add a song.',
+    addedBy: (who: string) => `added by ${who}`,
+    remove: (title: string) => `Remove “${title}”`,
+    playNow: 'Play now',
+    context: 'Listening together',
   },
 } as const;

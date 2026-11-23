@@ -1,6 +1,6 @@
 # ECHO — Android client
 
-Status: **v0.3 built** (2026-11-18: themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
+Status: **v0.4 built** (2026-11-18: Clay and Yarn; v0.3 themes, lyric styles, motion; v0.2 2026-11-17; v0.1 2026-10-29), tested on an Android 17 emulator against a local server · Related: [Technical architecture](TECHNICAL_ARCHITECTURE.md) §2.2 · [Visualizer](VISUALIZER_SPEC.md) · [Lyrics experience](LYRICS_EXPERIENCE.md) · [Design system](DESIGN_SYSTEM.md)
 
 The other native apps (2026-11-04: `Linux/`, `Windows/`, `macOS/`, `iOS/`) are baselines on the
 same API; this one is the full app. Each folder's README says what it has
@@ -18,7 +18,7 @@ could not run in a third-party Android app; the web dropped Spotify too on 2026-
 |---|---|
 | `api.ts`, session cookie | `api/Api.kt`: OkHttp with a **device token** (`POST /api/v1/auth/device`, `Authorization: Bearer echo_dt_…`; the Origin check exempts it), kept encrypted by an Android Keystore key |
 | `library-navidrome.ts` | `library/Library.kt`: the same Subsonic calls through `/api/v1/navidrome/rest/*` |
-| `playback/*` (an `<audio>` element) | `playback/`: a Media3 `MediaSessionService` (ExoPlayer, background playback, notification and lock-screen controls), streams from `/navidrome/stream/{id}` with the bearer header |
+| `playback/*` (an `<audio>` element) | `playback/`: a Media3 `MediaLibraryService` (ExoPlayer, Android Auto's browse tree, background playback, notification and lock-screen controls), streams from `/navidrome/stream/{id}` with the bearer header |
 | `playback/analyser.ts` (Web Audio) | `playback/Features.kt`: the same FFT features from a `TeeAudioProcessor` tap |
 | `stage/*` (three.js, WebGL 2) | `stage/`: OpenGL ES 3.0 with the same GLSL ES 3.00 shaders (room, energy, composite, probe), the governor and Reverb ported as is |
 | `stage/lyrics/*` | `stage/lyrics/`: timing, springs, beat and the field model ported as is; layout and drawing in Compose |
@@ -44,6 +44,243 @@ way) take `-Pecho.devUrl=http://10.0.2.2:<port>` and allow plain HTTP; release n
 throwaway ECHO with the E2E mock Navidrome (`node scripts/mock-subsonic.ts <port>`, user
 `ada` / `navidrome-pass`, `ECHO_NAVIDROME_URL` and the lyric sources pointed at it) gives a library
 with covers, WAV streams and timed lyrics.
+
+## v0.8: offline downloads (2026-11-19)
+
+Owner decisions (2026-11-19): albums, playlists and Liked Songs can be downloaded to the phone
+and play with no connection. They are stored as **Opus at 192 kbps**, which Navidrome transcodes
+through ECHO's proxy (`/api/v1/navidrome/stream/{id}?format=opus&maxBitRate=192`, with the device
+token like any stream). Downloads wait for **Wi-Fi by default**.
+
+- **Storage** (`offline/OfflineIndex.kt`, `offline/Downloads.kt`): everything stays in
+  app-private storage under `files/offline/`. `index.json` lists each download (kind, id, title,
+  subtitle, cover and the `Track`s as they were last seen online) plus the finished files
+  (track id → bytes, cover id → bytes). Tracks go in `tracks/<id>.opus` (written as `.part`, then
+  renamed) and covers in `covers/<cover id>.jpg` (fetched at 600 px). A track or cover shared by
+  two downloads is kept until both are removed (`OfflineIndex.remove`). A downloaded playlist,
+  album or Liked Songs follows its online version whenever it is seen again (`Downloads.sync`;
+  Liked Songs follows the hearts). Signing out deletes everything (REL-05).
+- **The worker** (`offline/DownloadWorker.kt`): a WorkManager `CoroutineWorker`, so downloads go
+  on after the app closes. It needs `UNMETERED` (Wi-Fi only, the default) or `CONNECTED`
+  networks and enough free storage. It fetches covers first, then one track at a time, newest
+  download first. It runs as a `dataSync` foreground service with a quiet progress notification
+  when Android allows; if Android refuses because it was started from the background, it runs
+  without one. If a connection drops it retries with backoff; a track the server refuses is
+  skipped for that run and retried later. A new download is queued with `APPEND_OR_REPLACE`, so
+  one added just as a run ends is still fetched. Changing the Wi-Fi setting replaces the queued run.
+- **Playback** (`playback/Playback.kt`): `uriOf` asks `chooseSource`. The karaoke version wins
+  while Karaoke mode is on, it is ready and ECHO can be reached. Otherwise the downloaded file
+  plays (`file://`, even online, to save data), and otherwise the stream. A finished download
+  moves queued songs to their files without touching the one playing; going offline or online
+  swaps that one too, at the same position. `PlaybackService` reads through
+  `DefaultDataSource` (files, plus OkHttp for streams), and the notification artwork uses the
+  saved cover. A Coil `Mapper` serves saved covers at any size, and so does the Stage's
+  backdrop.
+- **Offline** (`offline/Network.kt`): online means the phone has a network *and* ECHO answered
+  the last request. `Api` marks the server unreachable when a request to it fails to connect,
+  but not when the request was cancelled. While the phone has a network but ECHO doesn't answer,
+  `/api/v1/health` is asked every 20 s. When ECHO is back, the library reloads by itself.
+  Offline, Home becomes the downloads list. Library shows an "Offline · your downloads still
+  play" note instead of the error, and other pages show that note above the bars. Album,
+  playlist and Liked Songs pages fall back to the downloaded copy.
+- **Screens** (`ui/Downloads.kt`): the download button sits in the album, playlist and Liked
+  Songs top bars. It shows an arrow to download, a ring that fills while downloading (tap to
+  cancel), or a filled disc once downloaded (tap to remove, after asking). The same actions are
+  in each page's ⋯ menu. Library → Downloads lists each download with its size or progress,
+  Play and ⋯, the total, the reason it's waiting ("Waiting for Wi-Fi") and Remove all. Settings →
+  Downloads has "Download only on Wi-Fi", the storage used and Manage downloads.
+- Tests: `OfflineTest` (which source plays, shared files, the missing list, sizes, cover ids).
+## v0.8: crossfade, equalizer, key (2026-11-19)
+
+Owner decisions (2026-11-19): crossfade from Off to 12 s, an equalizer with presets and a custom
+curve, and a Key control for Karaoke (−6 to +6 semitones, same tempo), on Android and the web. The
+same sums are in `playback/AudioMath.kt` here and `src/client/playback/{crossfade,eq,pitch}.ts`
+on the web, tested on both sides.
+
+- **Crossfade** (`playback/Crossfader.kt`, Settings → Playback): ExoPlayer plays one song at a
+  time, so the service has two players. The media session always holds the main one. 8 s before
+  the fade, the spare gets the same playlist (with the same shuffle order), starting at the next
+  song, prepared, paused and at volume 0. With `crossfadeSec` left and the spare `READY`, the
+  spare starts and the volumes cross on equal-power curves (cos/sin, ticked every 40 ms). Then
+  the spare becomes the main player: `MediaSession.setPlayer` hands it over, audio focus moves to
+  it, and the old one is emptied. The queue, notification and scrobbles carry on from the
+  session, because the playlist is the same. The audio heard is never sought or restarted, so the
+  overlap is seamless.
+  - **No crossfade** between two songs of the same album (the album id travels in each
+    `MediaItem`'s metadata extras), under repeat one, or when the spare isn't buffered in time. In
+    those cases the ordinary gapless hand-over runs.
+  - **Interruptions**: a pause during the fade finishes it on the new song, paused. A seek, a skip
+    or a queue edit calls the fade off: the spare stops and the song playing goes on.
+  - **Visualizer**: only the main player's audio reaches the Stage's tap (`Crossfader.tap`), so
+    during a fade it follows the outgoing song.
+  - `Crossfader` is self-contained: the service builds the players and follows `onSwap`, so it
+    moves unchanged to a `MediaLibraryService`.
+- **Equalizer** (`playback/Effects.kt`, `ui/Equalizer.kt`, Settings → Playback → Equalizer):
+  Android's own `android.media.audiofx.Equalizer`. Both players share one audio session
+  (`Util.generateAudioSessionIdV21`; if that returns `C.AUDIO_SESSION_ID_UNSET`, the main
+  player's own session is used), so the equalizer covers a crossfade's two songs. The presets
+  (Flat, Bass boost, Treble boost, Vocal, Loudness, Acoustic, Electronic) are the web's ten-band
+  curves, read off at the phone's own bands (usually five) on a log-frequency axis. Moving a band
+  makes the curve Custom. It is kept as points (Hz → dB), so it survives a phone with different
+  bands. Boosts take the same amount off the player's volume, so loud songs don't clip. A phone
+  without an equalizer shows a note instead.
+- **Key** (`ui/Karaoke.kt`, under the Vocals slider; a KEY knob in Retro hi-fi): ExoPlayer's
+  `PlaybackParameters(speed = 1, pitch = 2^(n/12))`, which DefaultAudioSink applies with Sonic. It
+  is set on both players. The value is kept while Karaoke is off and applies only while Karaoke is
+  on.
+- Prefs (this device): `crossfadeSec`, `eqOn`, `eqPreset`, `eqCustomHz`/`eqCustom`, `karaokeKey`.
+
+## v0.7: sign-in and guest accounts (2026-11-19)
+
+Owner decisions (2026-11-19): a more beautiful, smoother sign-in screen (an album art wall,
+chosen from mockups); guest accounts from a QR code. Any user can invite and picks 1 hour, 1 day
+or 1 week. Guests listen only, with a "Keep account" request the inviter approves. The web app
+invites too.
+
+- **Sign in** (`ui/SignIn.kt`): `CoverWall` keeps up to 24 small covers from the last signed-in
+  session, refreshed daily and never on a guest's phone; coloured tiles stand in before that. Six
+  tilted columns drift (still with reduced motion) under a darkening gradient. The wordmark has a
+  gradient brush and rises in with a spring. The card is a translucent panel with a lit edge,
+  fields glow amber when focused, and a refused sign-in shakes. Two-factor works as before.
+- **Scanning** (`ui/GuestScan.kt`): ZXing's `BarcodeView` (QR only, continuous, following the
+  lifecycle) with ECHO's own viewfinder and scan line. `guestCodeOf` accepts only
+  `<this server>/guest#<code>`. `peek` shows whose pass it is, and `redeem` stores the guest's
+  device token in the usual token store.
+- **Guests** (`ui/Guests.kt`, `api/Guests.kt`): `GuestState` holds the guest's `/guests/me` and
+  the inviter's pending keep requests. Home shows the guest's countdown banner (with "Keep
+  account") or, for an inviter, the request card. Settings → Guests has the invite sheet (a ZXing
+  QR code with error correction H and the ECHO mark in its centre, 1 hour / 1 day / 1 week, a
+  countdown, and it notices a join by polling `/guests`), plus the list with Approve and End now.
+  Guests get no heart and no "Add to playlist".
+- Server: `src/server/guests.ts`; the rules are in `GUEST_DENY` (auth/routes.ts).
+
+## v0.6: Liquid glass, Paper & origami, Retro hi-fi (2026-11-18)
+
+Owner decision (2026-11-18): build the three themes from the mockups (themes3), each with its own
+lyrics and sounds like Clay and Yarn, and the Karaoke controls in each.
+
+- **Materials** (`ui/Matter.kt`), with new `Material` values:
+  - `Glass`: a tinted frosted pane, a top-left rim of light, a slanted reflection and a caustic
+    along the bottom. Its colours are a hair under opaque (`SEE_THROUGH`), so `inkOn` keeps the
+    material's ink on them. The ground is three glows from the album's colour on a deep ground.
+  - `Paper`: card with generated fibres, a crisp and a soft cut-paper shadow, a crease on some
+    bigger pieces and a dog-eared corner (`PaperShape`) on others. The ground is fibred paper.
+  - `HiFi`: generated brushed aluminium with a bevel and corner screws on panels, on a generated
+    wood-veneer cabinet.
+- **Palettes** (`matterColors`): Glass from the album (dark, and a light variant); Paper light
+  (pastel papers) and dark (kraft); Hi-fi dark (walnut, gunmetal panels, silver and champagne
+  buttons, amber for the playing track) and light (oak, silver panels).
+- **Pieces** (`ui/Made.kt`):
+  - Hi-fi: the cover as the label of a record turning at 33⅓ rpm under a tonearm that sets down
+    while playing; VU and PEAK meters from `AudioTap` on Home's featured panel; a knurled VOCALS
+    knob (drag, with detent clicks) instead of the slider.
+  - Paper: the Now Playing cover as a taped polaroid, tape on the featured card, and an origami
+    pentagon play button.
+  - Glass: round play button.
+- **Lyrics** (`Styled.kt`):
+  - Glass: the line being sung inside a glass lens that fades in as the line starts; the rest are
+    blurred.
+  - Cut-out: on a notebook page with blue rules and a red margin. Sung words are cut from coloured
+    paper and land on the line a little crooked; words to come are pencil.
+  - Display: a teal VFD in the cabinet. Capitals in a monospaced face, lit letter by letter with a
+    glow; the rest are unlit segments.
+  - Picking a theme picks its style.
+- **Sounds** (`scripts/android-sounds.py`): glass tink and chimes, paper rustle and fold, hi-fi
+  switch thunk and knob detent.
+
+## v0.5: Karaoke mode (2026-11-18)
+
+Owner decisions (2026-11-18): a karaoke toggle like Apple Music's, with a vocals slider; the
+voice removed by a model on the server (no GPU), for the whole library and on demand, stored
+at /Media/Media/Instrumentals, gently (two cores, lowest priority). Server side: docs/KARAOKE.md.
+
+- **The file**: the server's karaoke version is AAC 5.1, with the instrumental on front L/R and
+  the vocals on rear L/R. `VocalMixProcessor` (`playback/VocalMix.kt`) comes first in the audio
+  sink. It mixes the file back to stereo as `instrumental + level × vocals`, with the level
+  gliding over each buffer, so the slider acts at once without clicks. Any other 5.1 song gets
+  an ordinary downmix. The Stage's tap sees the stereo result.
+- **Swapping** (`Playback.refreshSources`): with Karaoke mode on, each queued item gets the
+  karaoke URI once the server has it. The song playing is replaced at its position. Turning the
+  mode off swaps back to the original.
+- **Asking** (`playback/Karaoke.kt`): while on, the song playing is asked for every 5 s until
+  ready (`GET /karaoke/{id}`, made first), and the next two once a minute (`?soon=1`). Settled
+  answers (ready, failed, too long) are kept for the session.
+- **Downmix check**: if a karaoke file still arrives as 2 channels after 2 s (the phone's AAC
+  decoder downmixed it), the app says so once, because the voice can't be removed on that phone.
+- **UI** (`ui/Karaoke.kt`): a Karaoke pill on Now Playing with the Vocals slider and a status
+  line under it, a mic button on the lyrics dock with the slider over it, and Settings →
+  Karaoke with the server's progress. `Prefs.karaoke` and `Prefs.vocalLevel` (default 0 %).
+
+## v0.4: Clay and Yarn (2026-11-18)
+
+Owner decisions (2026-11-18): a Clay theme (pastel plasticine, handmade realism, everything in
+clay, light with a dark option whose colour follows the album or is picked from eight), a Yarn
+theme (knitted, cosy autumn colours), lyrics to match (Clay; Embroidered), both themes as 3D as
+possible, and sounds on presses in each.
+
+- **Materials** (`ui/Matter.kt`): `Modifier.matter(colour, radius, pressed, seed, depth, rib,
+  seam)` draws a surface in the theme's material; `matterGround` the page under it. Clay: a
+  hand-made outline (`HandShape`: corners and edges varied by a seed), a tinted drop shadow, a
+  top-left light and bottom-right shade, a gloss spot, a rim light, a multiplied grain texture
+  (generated), and on bigger pieces sometimes a fingerprint; pressed, the light reverses and the
+  shadow goes. Yarn: a generated knit tile (each loop lit and shaded, with its twist), a cushion
+  puff, a rolled edge, fuzz along the outline (fibres placed along a `PathMeasure`), ribbing on
+  bars, dashed stitched seams. Flat themes get a plain rounded surface.
+- **Palettes** (`matterColors`): light Clay pastels; dark Clay from `Prefs.clayDark` (`album`, or
+  one of `CLAY_DARK`'s eight); Yarn light and dark. Each has a ground, a paper, six accents, an
+  ink and a strong colour for Play and the playing track.
+- **Where**: page grounds, the tab bar (ribbed in Yarn), the mini player, Play and Shuffle, track
+  rows, cover frames (cards, page headers, Now Playing), Home's featured card, the search field,
+  the back and avatar buttons, Games (stats, today's pick, tiles, answers), Now Playing's buttons.
+- **Lyrics** (`Styled.kt`): Clay (sung words extruded in four layers with a lit face and a soft
+  shadow, held words swell and tilt; the rest stamped) on a clay slab; Embroidered (satin-stitch
+  thread, a needle at the stitching edge, sung lines in green, the rest traced) on a hoop
+  (`Modifier.hoop`) over green knit. Choosing the theme switches the style; both are in the list.
+- **Sounds** (`ui/Sounds.kt`, `res/raw/*.wav`, synthesized for ECHO): Clay squish, pop, and a
+  squish-pop for a right answer; Yarn thump, needle tick, and two ticks. Played through
+  `Haptics` with a little pitch variation, as UI sounds; `Prefs.themeSounds` turns them off.
+
+## v0.8: Android Auto and the widget
+
+**Android Auto.** `PlaybackService` is a Media3 `MediaLibraryService` (the manifest's
+`com.google.android.gms.car.application` → `res/xml/automotive_app_desc.xml`, and the
+`MediaLibraryService` / `MediaSessionService` / `android.media.browse.MediaBrowserService` intent
+filters), so the car browses the library and plays from it. The tree (`playback/CarTree.kt`, pure
+and tested in `CarTreeTest`): *Recently played* (`getAlbumList2` recent), *Made for you* (the mixes),
+*Playlists*, *New albums* (newest) and *Liked songs*; a car whose root hint allows fewer rows
+(Android Auto: 4 tabs) gets the first three and a *More* folder. Albums, playlists and mixes open
+to their songs; a song plays **its whole list from there**, as in the app, and the history learns
+the context (`Playback.playingFrom`). Search (`onSearch`, Subsonic `search3`) lists songs, then
+albums; voice ("play … on ECHO") plays the songs found, else the first album, and with nothing said,
+Liked songs. Signed out, every list is an *authentication expired* error that says to sign in on the
+phone. No lyrics and no Stage on the car screen.
+
+`playback/CarLibrary.kt` is the session callback. Items from the app's own `MediaController` carry
+their stream URIs and pass straight through; the browser's ids (`song/<track>/<list>`) are resolved
+there to the same items the app plays (`/api/v1/navidrome/stream/{id}?format=raw`, the bearer header
+through the service's OkHttp data source). Songs the session queued are put in `KnownTracks`, so the
+in-app player shows them too. Starting the service (the car, the widget) brings up the app's player
+model as well, so scrobbles, the history and the saved queue work without opening the app.
+
+Covers: the car loads artwork URIs itself and cannot send the device token, so every artwork URI the
+session hands out (browse items and the queue's, the app's included) is a `content://<app>.artwork/`
+URI served by `playback/ArtworkProvider.kt`: fetched through the authed client and cached in
+`cacheDir/artwork`. It serves `/api/v1/navidrome/cover/…` only, nothing else of the API. The session's
+bitmap loader reads both (a `DefaultDataSource` over the OkHttp one).
+
+**Widget.** `widget/NowPlayingWidget.kt` (classic `RemoteViews`, `res/layout/widget_now_playing.xml`,
+`res/xml/widget_now_playing_info.xml`, 4×1 and resizable; the layout is also its picker preview):
+the cover, the song and artist, previous / play-pause / next; a tap elsewhere opens the app. The
+service's player listener pushes every change of song or play state (the cover loaded once per song
+through the session's bitmap loader, scaled to 256 px); when the service stops it shows the last song,
+paused. The buttons are broadcasts to the widget's receiver, which calls the app's `Playback`
+(`previous` / `toggle` / `next`): it connects to the service, starting it if need be.
+
+**Trying it.** Android Auto: enable developer mode in the Android Auto app (tap the version ten times),
+"Start head unit server", then run the Desktop Head Unit (`$ANDROID_HOME/extras/google/auto/desktop-head-unit`,
+after `adb forward tcp:5277 tcp:5277`); sideloaded apps also need *Unknown sources* on in Android
+Auto's developer settings. The Media Controller Test app (androidx/media's `session-test`) browses the
+same tree on a phone. The widget: long-press the home screen → Widgets → ECHO.
 
 ## v0.3: themes, lyric styles, motion (2026-11-18)
 

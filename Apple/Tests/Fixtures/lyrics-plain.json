@@ -1,0 +1,28 @@
+{
+  "doc": {
+    "version": 1,
+    "trackKey": "navidrome:al-2-t1",
+    "sync": "none",
+    "source": "navidrome-plain",
+    "attribution": {
+      "text": "Lyrics from your library"
+    },
+    "offsetMs": 0,
+    "lines": [
+      {
+        "text": "Plain words",
+        "start": 0
+      },
+      {
+        "text": "from tags",
+        "start": 0
+      }
+    ],
+    "fetchedAt": "2027-01-15T08:19:15.000Z",
+    "durationMs": 20000
+  },
+  "override": {
+    "offsetMs": 0,
+    "pinnedSource": null
+  }
+}

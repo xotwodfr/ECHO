@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import Database from 'better-sqlite3';
@@ -203,13 +203,11 @@ describe('nightly backup', () => {
     const copy = new Database(made, { readonly: true });
     expect(copy.pragma('quick_check', { simple: true })).toBe('ok');
     copy.close();
-    // A run that fails (here: the directory is read-only) leaves nothing that looks like a backup.
-    chmodSync(out, 0o500);
-    try {
-      expect(() => nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 2, 3)))).toThrow();
-    } finally {
-      chmodSync(out, 0o700);
-    }
+    // A run whose VACUUM INTO fails leaves nothing that looks like a backup. A closed handle makes it
+    // fail for any user (a read-only directory did not stop root, so the test failed in containers).
+    const broken = openDb(join(dir, 'other.db'));
+    broken.close();
+    expect(() => nightlyBackup(broken, out, new Date(Date.UTC(2026, 9, 2, 3)))).toThrow();
     expect(existsSync(join(out, 'echo-auto-2026-10-02.db'))).toBe(false);
     expect(nightlyBackup(db, out, new Date(Date.UTC(2026, 9, 2, 4))).made).toMatch(/10-02\.db$/);
   });

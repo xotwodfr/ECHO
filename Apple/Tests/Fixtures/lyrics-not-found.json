@@ -1,0 +1,21 @@
+{
+  "error": "not_found",
+  "tried": [
+    {
+      "source": "navidrome",
+      "outcome": "notFound"
+    },
+    {
+      "source": "navidrome-plain",
+      "outcome": "notFound"
+    },
+    {
+      "source": "lrclib",
+      "outcome": "notFound"
+    }
+  ],
+  "override": {
+    "offsetMs": 0,
+    "pinnedSource": null
+  }
+}

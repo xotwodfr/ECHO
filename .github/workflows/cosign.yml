@@ -1,0 +1,104 @@
+name: cosign
+
+# Sign container images with cosign (keyless, OIDC) on release tags.
+# Requires: branch protection on main, OIDC token permissions.
+# Images pushed to GHCR: ghcr.io/<owner>/echo:<tag>, ghcr.io/<owner>/echo-stems:<tag>, ghcr.io/<owner>/echo-motion:<tag>
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  id-token: write      # for keyless signing
+  contents: read
+  packages: write      # to push signatures to GHCR
+  attestations: write  # for SLSA provenance
+
+jobs:
+  sign:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Build and push ECHO image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/echo:${{ steps.version.outputs.version }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push echo-stems image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/stems
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/echo-stems:${{ steps.version.outputs.version }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push echo-motion image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app/motion
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/echo-motion:${{ steps.version.outputs.version }}
+          provenance: true
+          sbom: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+        with:
+          cosign-release: 'v2.5.0'
+
+      - name: Sign ECHO image
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{ github.repository_owner }}/echo:${{ steps.version.outputs.version }}
+
+      - name: Sign echo-stems image
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{ github.repository_owner }}/echo-stems:${{ steps.version.outputs.version }}
+
+      - name: Sign echo-motion image
+        env:
+          COSIGN_EXPERIMENTAL: 1
+        run: |
+          cosign sign --yes \
+            ghcr.io/${{ github.repository_owner }}/echo-motion:${{ steps.version.outputs.version }}
+
+      - name: Generate SLSA provenance
+        uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.0.0
+        with:
+          base64-subjects: "${{ steps.build.outputs.digest }}"
+          provenance-name: provenance.intoto.jsonl
+        env:
+          SLSA_GITHUB_GENERATOR_COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}

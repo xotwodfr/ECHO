@@ -5,7 +5,7 @@ name: ECHO
 options:
   bundleIdPrefix: com.folk3s
   deploymentTarget:
-    macOS: "14.0"
+    macOS: "26.0"
 targets:
   ECHO:
     type: application
@@ -17,6 +17,8 @@ targets:
       path: Info.plist
       properties:
         CFBundleDisplayName: ECHO
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         LSApplicationCategoryType: public.app-category.music
         # Test servers on this network (ECHO_URL=http://…); everything else stays https only.
         NSAppTransportSecurity:
@@ -27,3 +29,45 @@ targets:
         MARKETING_VERSION: 0.1.0
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.0"
+        # The Icon Composer icon in Apple/Shared (Liquid Glass layers), compiled by actool.
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        # The amber accent (Apple/Shared/Assets.xcassets): the Mac sidebar's selection, menus' tint.
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+  # The Swift tests (Swift Testing, Apple/Tests): the API client, models, sign-in, the library
+  # (hearts, the sorts, Wanted's Undo, the cover cache), playback (the queue, the saved queue,
+  # scrobbles, the lock screen's info and controls, on a fake engine) and the lyrics (the loader,
+  # the field's timing, springs and motion on the web's lyric fixtures, the layout), the animated
+  # lock-screen covers (asking, waiting, the files kept, the loop speed), the iPhone's home-screen widget
+  # (what the app writes for it, the timeline, the reloads, its buttons) against the server's recorded
+  # answers (Apple/Tests/Fixtures, scripts/apple-fixtures.ts). A bundle of its own
+  # with that code compiled in, so no app has to launch; run by .github/workflows/apple.yml.
+  ECHOTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: ../Apple/Shared/Api
+      - path: ../Apple/Shared/Library
+      - path: ../Apple/Shared/Playback
+      - path: ../Apple/Shared/Karaoke
+      - path: ../Apple/Shared/Together
+      - path: ../Apple/Shared/Lyrics
+      - path: ../Apple/Shared/Motion
+      - path: ../Apple/Shared/Settings
+      - path: ../Apple/Shared/Themes
+      - path: ../Apple/Shared/Widget
+      - path: ../Apple/Shared/Guests
+      - path: ../Apple/Shared/App/AppLink.swift
+      - path: ../Apple/Shared/Preview/Lyrics
+      - path: ../Apple/Tests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.folk3s.echo.mac.tests
+        GENERATE_INFOPLIST_FILE: "YES"
+        SWIFT_VERSION: "5.0"
+schemes:
+  ECHOTests:
+    build:
+      targets:
+        ECHOTests: [test]
+    test:
+      targets: [ECHOTests]

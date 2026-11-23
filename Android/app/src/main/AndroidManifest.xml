@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:tools="http://schemas.android.com/tools">
 
   <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <!-- Offline downloads (v0.8): WorkManager's worker runs as a data-sync foreground service. -->
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+  <!-- Scanning a guest code (asked for only then); phones without a camera can still sign in. -->
+  <uses-permission android:name="android.permission.CAMERA" />
+  <uses-feature android:name="android.hardware.camera.any" android:required="false" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -16,6 +23,11 @@
     android:theme="@style/Theme.Echo"
     android:usesCleartextTraffic="${cleartext}">
 
+    <!-- Android Auto: a media app, browsed through PlaybackService's library session. -->
+    <meta-data
+      android:name="com.google.android.gms.car.application"
+      android:resource="@xml/automotive_app_desc" />
+
     <activity
       android:name=".MainActivity"
       android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|density|uiMode"
@@ -25,6 +37,13 @@
         <action android:name="android.intent.action.MAIN" />
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
+      <!-- Listen together links (docs/TOGETHER.md): <origin>/together/<id> opens here, if chosen. -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW" />
+        <category android:name="android.intent.category.DEFAULT" />
+        <category android:name="android.intent.category.BROWSABLE" />
+        <data android:scheme="${echoScheme}" android:host="${echoHost}" android:pathPrefix="/together/" />
+      </intent-filter>
     </activity>
 
     <service
@@ -32,8 +51,35 @@
       android:exported="true"
       android:foregroundServiceType="mediaPlayback">
       <intent-filter>
+        <action android:name="androidx.media3.session.MediaLibraryService" />
         <action android:name="androidx.media3.session.MediaSessionService" />
+        <action android:name="android.media.browse.MediaBrowserService" />
       </intent-filter>
     </service>
+
+    <service
+      android:name="androidx.work.impl.foreground.SystemForegroundService"
+      android:foregroundServiceType="dataSync"
+      tools:node="merge" />
+
+    <!-- Covers for Android Auto, which cannot send the device token (ArtworkProvider): covers only. -->
+    <provider
+      android:name=".playback.ArtworkProvider"
+      android:authorities="${applicationId}.artwork"
+      android:exported="true"
+      tools:ignore="ExportedContentProvider" />
+
+    <!-- The home-screen widget: cover, song, previous / play-pause / next. -->
+    <receiver
+      android:name=".widget.NowPlayingWidget"
+      android:exported="true"
+      android:label="ECHO">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/widget_now_playing_info" />
+    </receiver>
   </application>
 </manifest>

@@ -1,0 +1,103 @@
+{
+  "version": 1,
+  "trackKey": "fixture:intro-outro",
+  "sync": "word",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 100000,
+  "lines": [
+    {
+      "text": "The station clock was striking nine",
+      "start": 25000,
+      "end": 28280,
+      "words": [
+        { "text": "The", "start": 25000, "end": 25350, "isPartOfWord": false },
+        { "text": "sta", "start": 25410, "end": 25760, "isPartOfWord": true },
+        { "text": "tion", "start": 25760, "end": 26140, "isPartOfWord": false },
+        { "text": "clock", "start": 26200, "end": 26610, "isPartOfWord": false },
+        { "text": "was", "start": 26670, "end": 27020, "isPartOfWord": false },
+        { "text": "strik", "start": 27080, "end": 27490, "isPartOfWord": true },
+        { "text": "ing", "start": 27490, "end": 27840, "isPartOfWord": false },
+        { "text": "nine", "start": 27900, "end": 28280, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "the platform empty, still and wide",
+      "start": 28980,
+      "end": 33210,
+      "words": [
+        { "text": "the", "start": 28980, "end": 29330, "isPartOfWord": false },
+        { "text": "plat", "start": 29390, "end": 29770, "isPartOfWord": true },
+        { "text": "form", "start": 29770, "end": 30150, "isPartOfWord": false },
+        { "text": "emp", "start": 30210, "end": 30560, "isPartOfWord": true },
+        { "text": "ty,", "start": 30560, "end": 30880, "isPartOfWord": false },
+        { "text": "still", "start": 31540, "end": 32360, "isPartOfWord": false },
+        { "text": "and", "start": 32420, "end": 32770, "isPartOfWord": false },
+        { "text": "wide", "start": 32830, "end": 33210, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I counted lanterns on the line",
+      "start": 33910,
+      "end": 37420,
+      "words": [
+        { "text": "I", "start": 33910, "end": 34200, "isPartOfWord": false },
+        { "text": "count", "start": 34260, "end": 34670, "isPartOfWord": true },
+        { "text": "ed", "start": 34670, "end": 34990, "isPartOfWord": false },
+        { "text": "lan", "start": 35050, "end": 35400, "isPartOfWord": true },
+        { "text": "terns", "start": 35400, "end": 35810, "isPartOfWord": false },
+        { "text": "on", "start": 35870, "end": 36190, "isPartOfWord": false },
+        { "text": "the", "start": 36250, "end": 36600, "isPartOfWord": false },
+        { "text": "line", "start": 36660, "end": 37420, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "and waited for the other side",
+      "start": 38120,
+      "end": 41980,
+      "words": [
+        { "text": "and", "start": 38120, "end": 38470, "isPartOfWord": false },
+        { "text": "wait", "start": 38530, "end": 38910, "isPartOfWord": true },
+        { "text": "ed", "start": 38910, "end": 39230, "isPartOfWord": false },
+        { "text": "for", "start": 39290, "end": 39640, "isPartOfWord": false },
+        { "text": "the", "start": 39700, "end": 40050, "isPartOfWord": false },
+        { "text": "oth", "start": 40110, "end": 40460, "isPartOfWord": true },
+        { "text": "er", "start": 40460, "end": 40780, "isPartOfWord": false },
+        { "text": "side", "start": 40840, "end": 41980, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "The train came in across the light",
+      "start": 43980,
+      "end": 47260,
+      "words": [
+        { "text": "The", "start": 43980, "end": 44330, "isPartOfWord": false },
+        { "text": "train", "start": 44390, "end": 44800, "isPartOfWord": false },
+        { "text": "came", "start": 44860, "end": 45240, "isPartOfWord": false },
+        { "text": "in", "start": 45300, "end": 45620, "isPartOfWord": false },
+        { "text": "a", "start": 45680, "end": 45970, "isPartOfWord": true },
+        { "text": "cross", "start": 45970, "end": 46380, "isPartOfWord": false },
+        { "text": "the", "start": 46440, "end": 46790, "isPartOfWord": false },
+        { "text": "light", "start": 46850, "end": 47260, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "and took the quiet far away",
+      "start": 47960,
+      "end": 52280,
+      "words": [
+        { "text": "and", "start": 47960, "end": 48310, "isPartOfWord": false },
+        { "text": "took", "start": 48370, "end": 48750, "isPartOfWord": false },
+        { "text": "the", "start": 48810, "end": 49160, "isPartOfWord": false },
+        { "text": "qui", "start": 49220, "end": 49570, "isPartOfWord": true },
+        { "text": "et", "start": 49570, "end": 49890, "isPartOfWord": false },
+        { "text": "far", "start": 49950, "end": 50300, "isPartOfWord": false },
+        { "text": "a", "start": 50360, "end": 51230, "isPartOfWord": true },
+        { "text": "way", "start": 51230, "end": 52280, "isPartOfWord": false }
+      ]
+    }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en"
+}

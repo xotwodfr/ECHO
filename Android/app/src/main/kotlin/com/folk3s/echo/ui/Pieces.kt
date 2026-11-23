@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
@@ -59,8 +60,9 @@ fun Avatar(onClick: () -> Unit) {
   val app = LocalContext.current.echo
   val (me, _) = load("me") { app.api.get("/me").jsonObject["username"]?.jsonPrimitive?.contentOrNull ?: "" }
   val initial = (me as? Load.Ok)?.value?.firstOrNull()?.uppercase() ?: ""
+  val made = look.material != Material.Flat
   Box(
-    Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onClick)
+    (if (made) Modifier.size(40.dp).bouncy(onClick = onClick).matter(matter.accent(0), 20.dp, seed = 1) else Modifier.size(36.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primaryContainer).clickable(onClick = onClick))
       .semantics { contentDescription = "Profile and settings" },
     contentAlignment = Alignment.Center,
   ) {
@@ -90,7 +92,8 @@ fun PageBar(nav: Nav, trailing: @Composable () -> Unit = {}) {
   Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
     if (nav.stack.size > 1)
       Box(
-        Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { nav.back() }
+        (if (look.material != Material.Flat) Modifier.size(42.dp).bouncy { nav.back() }.matter(matter.paper, 16.dp, seed = 2)
+        else Modifier.size(40.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable { nav.back() })
           .semantics { contentDescription = "Back" },
         contentAlignment = Alignment.Center,
       ) { Icon(EchoIcons.chevronLeft, null, tint = Chamber.text, modifier = Modifier.size(24.dp)) }
@@ -103,9 +106,13 @@ fun PageBar(nav: Nav, trailing: @Composable () -> Unit = {}) {
 @Composable
 fun PageHeader(art: @Composable () -> Unit, title: String, subtitle: String?, meta: String?, onSubtitle: (() -> Unit)? = null) {
   Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-    Box(Modifier.padding(top = 4.dp).size(260.dp).coverTo().shadow(28.dp, RoundedCornerShape(look.page), clip = false, ambientColor = MaterialTheme.colorScheme.scrim, spotColor = MaterialTheme.colorScheme.scrim)) {
-      art()
-    }
+    if (look.material != Material.Flat)
+      // The cover in a thick frame of the material, a little off-straight like a hand placed it.
+      Box(Modifier.padding(top = 4.dp).size(262.dp).graphicsLayer { rotationZ = 0.8f }.matter(matter.paper, look.page + 10.dp, seed = 21, depth = 1.4f, seam = true).padding(14.dp).coverTo()) { art() }
+    else
+      Box(Modifier.padding(top = 4.dp).size(260.dp).coverTo().shadow(28.dp, RoundedCornerShape(look.page), clip = false, ambientColor = MaterialTheme.colorScheme.scrim, spotColor = MaterialTheme.colorScheme.scrim)) {
+        art()
+      }
     Spacer(Modifier.height(18.dp))
     Text(title, style = MaterialTheme.typography.headlineMedium, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
     if (subtitle != null)
@@ -126,6 +133,7 @@ fun PageHeader(art: @Composable () -> Unit, title: String, subtitle: String?, me
 @Composable
 fun PlayShuffle(label: String, live: Boolean, playing: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit) {
   val app = LocalContext.current.echo
+  if (look.material != Material.Flat) return MadePlayShuffle(label, live, playing, onPlay, onShuffle)
   Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
     val haptics = rememberHaptics()
     Button(
@@ -157,9 +165,63 @@ fun PlayShuffle(label: String, live: Boolean, playing: Boolean, onPlay: () -> Un
   }
 }
 
+/** Play and Shuffle in clay or yarn: two pieces of the material that sink in under the finger. */
+@Composable
+private fun MadePlayShuffle(label: String, live: Boolean, playing: Boolean, onPlay: () -> Unit, onShuffle: () -> Unit) {
+  val app = LocalContext.current.echo
+  val haptics = rememberHaptics()
+  Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    for (k in 0..1) {
+      val (source, down) = rememberPress()
+      val fill = if (k == 0) matter.strong else matter.paper
+      val ink = if (k == 0) inkOn(fill, matter.ink) else MaterialTheme.colorScheme.primary
+      Row(
+        Modifier.weight(1f).height(56.dp)
+          .bouncy(scale = 0.96f, source = source, label = if (k == 0) "Play $label" else "Shuffle $label") {
+            if (k == 0) {
+              haptics.toggle(!playing)
+              if (live) app.playback.toggle() else onPlay()
+            } else {
+              haptics.tap()
+              onShuffle()
+            }
+          }
+          .matter(fill, look.button.coerceAtMost(28.dp), pressed = down, seed = 30 + k),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+      ) {
+        Icon(if (k == 1) EchoIcons.shuffle else if (playing) EchoIcons.pause else EchoIcons.play, null, tint = ink, modifier = Modifier.size(20.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(if (k == 1) "Shuffle" else if (playing) "Pause" else "Play", color = ink, style = MaterialTheme.typography.titleMedium)
+      }
+    }
+  }
+}
+
 /** An album's track: the number (or the playing bars), the title, the artist when it differs, ⋯. */
 @Composable
 fun NumberedRow(n: Int, t: Track, albumArtist: String?, nowPlaying: Boolean, onPlay: () -> Unit, menu: List<Pair<String, () -> Unit>>) {
+  if (look.material != Material.Flat) {
+    // A strip of the material per track; the playing one in colour, pressed in.
+    val fill = if (nowPlaying) matter.strong else matter.paper
+    val ink = inkOn(fill, matter.ink)
+    Row(
+      Modifier.padding(horizontal = 20.dp, vertical = 5.dp).fillMaxWidth().height(54.dp)
+        .combinedClickable(onClick = onPlay, onLongClick = { if (menu.isNotEmpty()) Menus.open = "More for ${t.title}" to menu })
+        .matter(fill, 16.dp, pressed = nowPlaying, seed = 40 + n, depth = 0.7f).padding(start = 12.dp, end = 4.dp),
+      verticalAlignment = Alignment.CenterVertically,
+    ) {
+      Box(Modifier.size(28.dp).matter(if (nowPlaying) matter.paper else matter.accent(1), 10.dp, pressed = !nowPlaying, seed = n), contentAlignment = Alignment.Center) {
+        if (nowPlaying) NowPlayingBars() else Text("$n", color = inkOn(matter.accent(1), matter.ink), style = MaterialTheme.typography.labelMedium)
+      }
+      Column(Modifier.weight(1f).padding(start = 12.dp)) {
+        Text(t.title, color = ink, style = MaterialTheme.typography.bodyLarge.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        if (albumArtist != null && t.artist != albumArtist) Text(t.artist, color = ink.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
+      }
+      MoreMenu("More for ${t.title}", menu)
+    }
+    return
+  }
   Column(Modifier.padding(start = 20.dp)) {
     Row(
       Modifier.fillMaxWidth().combinedClickable(onClick = onPlay, onLongClick = { if (menu.isNotEmpty()) Menus.open = "More for ${t.title}" to menu })

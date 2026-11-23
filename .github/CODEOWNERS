@@ -1,0 +1,65 @@
+# CODEOWNERS for ECHO
+# These users/groups will be requested for review when matching files are changed.
+# See https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global owners (everything)
+* @folkes
+
+# Documentation
+docs/ @folkes
+
+# Docker / Compose / Deployment
+compose.yaml @folkes
+compose.override.yaml @folkes
+Dockerfile @folkes
+Caddyfile.example @folkes
+.env.example @folkes
+install-routing.sh @folkes
+
+# Server (Node/TypeScript)
+src/server/ @folkes
+package.json @folkes
+pnpm-lock.yaml @folkes
+pnpm-workspace.yaml @folkes
+tsconfig.json @folkes
+vite.config.ts @folkes
+biome.json @folkes
+
+# Client (Web)
+src/client/ @folkes
+index.html @folkes
+public/ @folkes
+
+# Shared types
+src/shared/ @folkes
+
+# Scripts
+scripts/ @folkes
+
+# Android app
+Android/ @folkes
+
+# Linux app
+Linux/ @folkes
+
+# Windows app
+Windows/ @folkes
+
+# macOS / iOS apps
+macOS/ @folkes
+iOS/ @folkes
+Apple/ @folkes
+
+# Stems service (Karaoke)
+stems/ @folkes
+
+# Motion service (Animated covers)
+motion/ @folkes
+
+# CI / GitHub Actions
+.github/workflows/ @folkes
+.github/dependabot.yml @folkes
+.github/CODEOWNERS @folkes
+
+# Git hooks
+.githooks/ @folkes

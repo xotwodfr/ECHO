@@ -6,6 +6,7 @@ import { strings } from '../strings.ts';
 import { Icon } from '../ui/icons.tsx';
 import { Artwork } from '../ui/media.tsx';
 import type { Route } from '../view.ts';
+import { useArtists } from './artists.ts';
 import {
   addToPlaylist,
   createPlaylist,
@@ -38,6 +39,7 @@ function useRows(filter: LibraryFilter, q: string): Row[] {
   const playlists = usePlaylists();
   const starred = useStarredAll();
   const wanted = useStore(wantedStore, (s) => s.items);
+  const { rows: artists } = useArtists(filter === 'artists');
   return useMemo(() => {
     void version;
     const albums = library?.albums ?? [];
@@ -63,41 +65,20 @@ function useRows(filter: LibraryFilter, q: string): Row[] {
     if (filter === 'all' || filter === 'albums')
       for (const a of albums)
         if (hit(a.title, a.artist)) rows.push({ kind: 'album', key: `a:${a.id}`, a });
-    if (filter === 'artists') {
-      const artists = new Map<string, Row & { kind: 'artist' }>();
-      for (const a of albums) {
-        const key = a.artistId ?? `name:${a.artist}`;
-        const known = artists.get(key);
-        if (known) known.albums++;
-        else
-          artists.set(key, {
+    // The server's artist list once it has arrived, the albums' until then (artists.ts).
+    if (filter === 'artists')
+      for (const x of artists)
+        if (hit(x.name))
+          rows.push({
             kind: 'artist',
-            key: `r:${key}`,
-            id: a.artistId,
-            name: a.artist.trim(),
-            cover: a.cover,
-            albums: 1,
+            key: `r:${x.key}`,
+            id: x.id,
+            name: x.name,
+            cover: x.image,
+            albums: x.albums,
           });
-      }
-      // The artists the user follows (hearts), with or without a saved album of theirs.
-      for (const f of starred && starred !== 'error' ? starred.artists : [])
-        if (!artists.has(f.id))
-          artists.set(f.id, {
-            kind: 'artist',
-            key: `r:${f.id}`,
-            id: f.id,
-            name: f.name,
-            cover: f.image,
-            albums: 0,
-          });
-      rows.push(
-        ...[...artists.values()]
-          .filter((x) => hit(x.name))
-          .sort((x, y) => x.name.localeCompare(y.name)),
-      );
-    }
     return rows;
-  }, [library, version, playlists, starred, wanted, filter, q]);
+  }, [library, version, playlists, starred, wanted, artists, filter, q]);
 }
 
 function useLibraryVersion() {

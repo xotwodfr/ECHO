@@ -1,0 +1,394 @@
+{
+  "version": 1,
+  "trackKey": "fixture:ballad-word",
+  "sync": "word",
+  "source": "fixture",
+  "attribution": { "text": "Fixture lyrics written for ECHO" },
+  "offsetMs": 0,
+  "durationMs": 220000,
+  "lines": [
+    {
+      "text": "I left the porch light burning for the night",
+      "start": 9000,
+      "end": 13980,
+      "words": [
+        { "text": "I", "start": 9000, "end": 9290, "isPartOfWord": false },
+        { "text": "left", "start": 9350, "end": 9730, "isPartOfWord": false },
+        { "text": "the", "start": 9790, "end": 10140, "isPartOfWord": false },
+        { "text": "porch", "start": 10200, "end": 10610, "isPartOfWord": false },
+        { "text": "light", "start": 10670, "end": 11080, "isPartOfWord": false },
+        { "text": "burn", "start": 11140, "end": 11520, "isPartOfWord": true },
+        { "text": "ing", "start": 11520, "end": 11870, "isPartOfWord": false },
+        { "text": "for", "start": 11930, "end": 12280, "isPartOfWord": false },
+        { "text": "the", "start": 12340, "end": 12690, "isPartOfWord": false },
+        { "text": "night", "start": 12750, "end": 13980, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "a small gold window in the falling rain",
+      "start": 14680,
+      "end": 19420,
+      "words": [
+        { "text": "a", "start": 14680, "end": 14970, "isPartOfWord": false },
+        { "text": "small", "start": 15030, "end": 15440, "isPartOfWord": false },
+        { "text": "gold", "start": 15500, "end": 15880, "isPartOfWord": false },
+        { "text": "win", "start": 15940, "end": 16290, "isPartOfWord": true },
+        { "text": "dow", "start": 16290, "end": 16640, "isPartOfWord": false },
+        { "text": "in", "start": 16700, "end": 17020, "isPartOfWord": false },
+        { "text": "the", "start": 17080, "end": 17430, "isPartOfWord": false },
+        { "text": "fall", "start": 17490, "end": 17870, "isPartOfWord": true },
+        { "text": "ing", "start": 17870, "end": 18220, "isPartOfWord": false },
+        { "text": "rain", "start": 18280, "end": 19420, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "you said the river knows the way back home",
+      "start": 20120,
+      "end": 24980,
+      "words": [
+        { "text": "you", "start": 20120, "end": 20470, "isPartOfWord": false },
+        { "text": "said", "start": 20530, "end": 20910, "isPartOfWord": false },
+        { "text": "the", "start": 20970, "end": 21320, "isPartOfWord": false },
+        { "text": "riv", "start": 21380, "end": 21730, "isPartOfWord": true },
+        { "text": "er", "start": 21730, "end": 22050, "isPartOfWord": false },
+        { "text": "knows", "start": 22110, "end": 22520, "isPartOfWord": false },
+        { "text": "the", "start": 22580, "end": 22930, "isPartOfWord": false },
+        { "text": "way", "start": 22990, "end": 23340, "isPartOfWord": false },
+        { "text": "back", "start": 23400, "end": 23780, "isPartOfWord": false },
+        { "text": "home", "start": 23840, "end": 24980, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "and I believed it, I believed it then",
+      "start": 25680,
+      "end": 30930,
+      "words": [
+        { "text": "and", "start": 25680, "end": 26030, "isPartOfWord": false },
+        { "text": "I", "start": 26090, "end": 26380, "isPartOfWord": false },
+        { "text": "be", "start": 26440, "end": 26760, "isPartOfWord": true },
+        { "text": "lieved", "start": 26760, "end": 27200, "isPartOfWord": false },
+        { "text": "it,", "start": 27260, "end": 27580, "isPartOfWord": false },
+        { "text": "I", "start": 28240, "end": 28530, "isPartOfWord": false },
+        { "text": "be", "start": 28590, "end": 28910, "isPartOfWord": true },
+        { "text": "lieved", "start": 28910, "end": 29350, "isPartOfWord": false },
+        { "text": "it", "start": 29410, "end": 29730, "isPartOfWord": false },
+        { "text": "then", "start": 29790, "end": 30930, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "So call me from the harbour when it’s late",
+      "start": 33430,
+      "end": 38960,
+      "words": [
+        { "text": "So", "start": 33430, "end": 33750, "isPartOfWord": false },
+        { "text": "call", "start": 33810, "end": 34190, "isPartOfWord": false },
+        { "text": "me", "start": 34250, "end": 34570, "isPartOfWord": false },
+        { "text": "from", "start": 34630, "end": 35010, "isPartOfWord": false },
+        { "text": "the", "start": 35070, "end": 35420, "isPartOfWord": false },
+        { "text": "har", "start": 35480, "end": 36530, "isPartOfWord": true },
+        { "text": "bour", "start": 36530, "end": 37670, "isPartOfWord": false },
+        { "text": "when", "start": 37730, "end": 38110, "isPartOfWord": false },
+        { "text": "it’s", "start": 38170, "end": 38520, "isPartOfWord": false },
+        { "text": "late", "start": 38580, "end": 38960, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I’ll hear you through the static and the waves",
+      "start": 39660,
+      "end": 44550,
+      "words": [
+        { "text": "I’ll", "start": 39660, "end": 40010, "isPartOfWord": false },
+        { "text": "hear", "start": 40070, "end": 40450, "isPartOfWord": false },
+        { "text": "you", "start": 40510, "end": 40860, "isPartOfWord": false },
+        { "text": "through", "start": 40920, "end": 41390, "isPartOfWord": false },
+        { "text": "the", "start": 41450, "end": 41800, "isPartOfWord": false },
+        { "text": "sta", "start": 41860, "end": 42560, "isPartOfWord": true },
+        { "text": "tic", "start": 42560, "end": 43260, "isPartOfWord": false },
+        { "text": "and", "start": 43320, "end": 43670, "isPartOfWord": false },
+        { "text": "the", "start": 43730, "end": 44080, "isPartOfWord": false },
+        { "text": "waves", "start": 44140, "end": 44550, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every echo finds the shore again",
+      "start": 45250,
+      "end": 50190,
+      "words": [
+        { "text": "ev", "start": 45250, "end": 45570, "isPartOfWord": true },
+        { "text": "ery", "start": 45570, "end": 45920, "isPartOfWord": false },
+        { "text": "ech", "start": 45980, "end": 46330, "isPartOfWord": true },
+        { "text": "o", "start": 46330, "end": 46620, "isPartOfWord": false },
+        { "text": "finds", "start": 46680, "end": 47090, "isPartOfWord": false },
+        { "text": "the", "start": 47150, "end": 47500, "isPartOfWord": false },
+        { "text": "shore", "start": 47560, "end": 48790, "isPartOfWord": false },
+        { "text": "a", "start": 48850, "end": 49430, "isPartOfWord": true },
+        { "text": "gain", "start": 49430, "end": 50190, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every echo finds its way to you",
+      "start": 50890,
+      "end": 55740,
+      "words": [
+        { "text": "ev", "start": 50890, "end": 51210, "isPartOfWord": true },
+        { "text": "ery", "start": 51210, "end": 51560, "isPartOfWord": false },
+        { "text": "ech", "start": 51620, "end": 51970, "isPartOfWord": true },
+        { "text": "o", "start": 51970, "end": 52260, "isPartOfWord": false },
+        { "text": "finds", "start": 52320, "end": 52730, "isPartOfWord": false },
+        { "text": "its", "start": 52790, "end": 53140, "isPartOfWord": false },
+        { "text": "way", "start": 53200, "end": 54250, "isPartOfWord": false },
+        { "text": "to", "start": 54310, "end": 54630, "isPartOfWord": false },
+        { "text": "you", "start": 54690, "end": 55740, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "The kitchen clock is running slow tonight",
+      "start": 59740,
+      "end": 64130,
+      "words": [
+        { "text": "The", "start": 59740, "end": 60090, "isPartOfWord": false },
+        { "text": "kitch", "start": 60150, "end": 60560, "isPartOfWord": true },
+        { "text": "en", "start": 60560, "end": 60880, "isPartOfWord": false },
+        { "text": "clock", "start": 60940, "end": 61350, "isPartOfWord": false },
+        { "text": "is", "start": 61410, "end": 61730, "isPartOfWord": false },
+        { "text": "run", "start": 61790, "end": 62140, "isPartOfWord": true },
+        { "text": "ning", "start": 62140, "end": 62520, "isPartOfWord": false },
+        { "text": "slow", "start": 62580, "end": 63340, "isPartOfWord": false },
+        { "text": "to", "start": 63400, "end": 63720, "isPartOfWord": true },
+        { "text": "night", "start": 63720, "end": 64130, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "it counts the hours like a patient friend",
+      "start": 64830,
+      "end": 69490,
+      "words": [
+        { "text": "it", "start": 64830, "end": 65150, "isPartOfWord": false },
+        { "text": "counts", "start": 65210, "end": 65650, "isPartOfWord": false },
+        { "text": "the", "start": 65710, "end": 66060, "isPartOfWord": false },
+        { "text": "hours", "start": 66120, "end": 66530, "isPartOfWord": false },
+        { "text": "like", "start": 66590, "end": 66970, "isPartOfWord": false },
+        { "text": "a", "start": 67030, "end": 67320, "isPartOfWord": false },
+        { "text": "pa", "start": 67380, "end": 67700, "isPartOfWord": true },
+        { "text": "tient", "start": 67700, "end": 68110, "isPartOfWord": false },
+        { "text": "friend", "start": 68170, "end": 69490, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I keep your coat beside the open door",
+      "start": 70190,
+      "end": 74870,
+      "words": [
+        { "text": "I", "start": 70190, "end": 70480, "isPartOfWord": false },
+        { "text": "keep", "start": 70540, "end": 70920, "isPartOfWord": false },
+        { "text": "your", "start": 70980, "end": 71360, "isPartOfWord": false },
+        { "text": "coat", "start": 71420, "end": 71800, "isPartOfWord": false },
+        { "text": "be", "start": 71860, "end": 72180, "isPartOfWord": true },
+        { "text": "side", "start": 72180, "end": 72560, "isPartOfWord": false },
+        { "text": "the", "start": 72620, "end": 72970, "isPartOfWord": false },
+        { "text": "o", "start": 73030, "end": 73320, "isPartOfWord": true },
+        { "text": "pen", "start": 73320, "end": 73670, "isPartOfWord": false },
+        { "text": "door", "start": 73730, "end": 74870, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "in case the weather changes, in case you do",
+      "start": 75570,
+      "end": 81170,
+      "words": [
+        { "text": "in", "start": 75570, "end": 75890, "isPartOfWord": false },
+        { "text": "case", "start": 75950, "end": 76330, "isPartOfWord": false },
+        { "text": "the", "start": 76390, "end": 76740, "isPartOfWord": false },
+        { "text": "weath", "start": 76800, "end": 77210, "isPartOfWord": true },
+        { "text": "er", "start": 77210, "end": 77530, "isPartOfWord": false },
+        { "text": "chang", "start": 77590, "end": 78000, "isPartOfWord": true },
+        { "text": "es,", "start": 78000, "end": 78320, "isPartOfWord": false },
+        { "text": "in", "start": 78980, "end": 79300, "isPartOfWord": false },
+        { "text": "case", "start": 79360, "end": 79740, "isPartOfWord": false },
+        { "text": "you", "start": 79800, "end": 80150, "isPartOfWord": false },
+        { "text": "do", "start": 80210, "end": 81170, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "So call me from the harbour when it’s late",
+      "start": 83670,
+      "end": 89200,
+      "words": [
+        { "text": "So", "start": 83670, "end": 83990, "isPartOfWord": false },
+        { "text": "call", "start": 84050, "end": 84430, "isPartOfWord": false },
+        { "text": "me", "start": 84490, "end": 84810, "isPartOfWord": false },
+        { "text": "from", "start": 84870, "end": 85250, "isPartOfWord": false },
+        { "text": "the", "start": 85310, "end": 85660, "isPartOfWord": false },
+        { "text": "har", "start": 85720, "end": 86770, "isPartOfWord": true },
+        { "text": "bour", "start": 86770, "end": 87910, "isPartOfWord": false },
+        { "text": "when", "start": 87970, "end": 88350, "isPartOfWord": false },
+        { "text": "it’s", "start": 88410, "end": 88760, "isPartOfWord": false },
+        { "text": "late", "start": 88820, "end": 89200, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I’ll hear you through the static and the waves",
+      "start": 89900,
+      "end": 94790,
+      "words": [
+        { "text": "I’ll", "start": 89900, "end": 90250, "isPartOfWord": false },
+        { "text": "hear", "start": 90310, "end": 90690, "isPartOfWord": false },
+        { "text": "you", "start": 90750, "end": 91100, "isPartOfWord": false },
+        { "text": "through", "start": 91160, "end": 91630, "isPartOfWord": false },
+        { "text": "the", "start": 91690, "end": 92040, "isPartOfWord": false },
+        { "text": "sta", "start": 92100, "end": 92800, "isPartOfWord": true },
+        { "text": "tic", "start": 92800, "end": 93500, "isPartOfWord": false },
+        { "text": "and", "start": 93560, "end": 93910, "isPartOfWord": false },
+        { "text": "the", "start": 93970, "end": 94320, "isPartOfWord": false },
+        { "text": "waves", "start": 94380, "end": 94790, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every echo finds the shore again",
+      "start": 95490,
+      "end": 100430,
+      "words": [
+        { "text": "ev", "start": 95490, "end": 95810, "isPartOfWord": true },
+        { "text": "ery", "start": 95810, "end": 96160, "isPartOfWord": false },
+        { "text": "ech", "start": 96220, "end": 96570, "isPartOfWord": true },
+        { "text": "o", "start": 96570, "end": 96860, "isPartOfWord": false },
+        { "text": "finds", "start": 96920, "end": 97330, "isPartOfWord": false },
+        { "text": "the", "start": 97390, "end": 97740, "isPartOfWord": false },
+        { "text": "shore", "start": 97800, "end": 99030, "isPartOfWord": false },
+        { "text": "a", "start": 99090, "end": 99670, "isPartOfWord": true },
+        { "text": "gain", "start": 99670, "end": 100430, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every echo finds its way to you",
+      "start": 101130,
+      "end": 105980,
+      "words": [
+        { "text": "ev", "start": 101130, "end": 101450, "isPartOfWord": true },
+        { "text": "ery", "start": 101450, "end": 101800, "isPartOfWord": false },
+        { "text": "ech", "start": 101860, "end": 102210, "isPartOfWord": true },
+        { "text": "o", "start": 102210, "end": 102500, "isPartOfWord": false },
+        { "text": "finds", "start": 102560, "end": 102970, "isPartOfWord": false },
+        { "text": "its", "start": 103030, "end": 103380, "isPartOfWord": false },
+        { "text": "way", "start": 103440, "end": 104490, "isPartOfWord": false },
+        { "text": "to", "start": 104550, "end": 104870, "isPartOfWord": false },
+        { "text": "you", "start": 104930, "end": 105980, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "Hold on, the light is coming slow",
+      "start": 117980,
+      "end": 123700,
+      "words": [
+        { "text": "Hold", "start": 117980, "end": 119500, "isPartOfWord": false },
+        { "text": "on,", "start": 119560, "end": 119880, "isPartOfWord": false },
+        { "text": "the", "start": 120540, "end": 120890, "isPartOfWord": false },
+        { "text": "light", "start": 120950, "end": 121360, "isPartOfWord": false },
+        { "text": "is", "start": 121420, "end": 121740, "isPartOfWord": false },
+        { "text": "com", "start": 121800, "end": 122150, "isPartOfWord": true },
+        { "text": "ing", "start": 122150, "end": 122500, "isPartOfWord": false },
+        { "text": "slow", "start": 122560, "end": 123700, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "across the water, over everything",
+      "start": 124400,
+      "end": 130460,
+      "words": [
+        { "text": "a", "start": 124400, "end": 124980, "isPartOfWord": true },
+        { "text": "cross", "start": 124980, "end": 125800, "isPartOfWord": false },
+        { "text": "the", "start": 125860, "end": 126210, "isPartOfWord": false },
+        { "text": "wa", "start": 126270, "end": 126590, "isPartOfWord": true },
+        { "text": "ter,", "start": 126590, "end": 126940, "isPartOfWord": false },
+        { "text": "o", "start": 127600, "end": 127890, "isPartOfWord": true },
+        { "text": "ver", "start": 127890, "end": 128240, "isPartOfWord": false },
+        { "text": "ev", "start": 128300, "end": 128940, "isPartOfWord": true },
+        { "text": "ery", "start": 128940, "end": 129640, "isPartOfWord": true },
+        { "text": "thing", "start": 129640, "end": 130460, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "So call me from the harbour when it’s late",
+      "start": 132960,
+      "end": 138490,
+      "words": [
+        { "text": "So", "start": 132960, "end": 133280, "isPartOfWord": false },
+        { "text": "call", "start": 133340, "end": 133720, "isPartOfWord": false },
+        { "text": "me", "start": 133780, "end": 134100, "isPartOfWord": false },
+        { "text": "from", "start": 134160, "end": 134540, "isPartOfWord": false },
+        { "text": "the", "start": 134600, "end": 134950, "isPartOfWord": false },
+        { "text": "har", "start": 135010, "end": 136060, "isPartOfWord": true },
+        { "text": "bour", "start": 136060, "end": 137200, "isPartOfWord": false },
+        { "text": "when", "start": 137260, "end": 137640, "isPartOfWord": false },
+        { "text": "it’s", "start": 137700, "end": 138050, "isPartOfWord": false },
+        { "text": "late", "start": 138110, "end": 138490, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "I’ll hear you through the static and the waves",
+      "start": 139190,
+      "end": 144080,
+      "words": [
+        { "text": "I’ll", "start": 139190, "end": 139540, "isPartOfWord": false },
+        { "text": "hear", "start": 139600, "end": 139980, "isPartOfWord": false },
+        { "text": "you", "start": 140040, "end": 140390, "isPartOfWord": false },
+        { "text": "through", "start": 140450, "end": 140920, "isPartOfWord": false },
+        { "text": "the", "start": 140980, "end": 141330, "isPartOfWord": false },
+        { "text": "sta", "start": 141390, "end": 142090, "isPartOfWord": true },
+        { "text": "tic", "start": 142090, "end": 142790, "isPartOfWord": false },
+        { "text": "and", "start": 142850, "end": 143200, "isPartOfWord": false },
+        { "text": "the", "start": 143260, "end": 143610, "isPartOfWord": false },
+        { "text": "waves", "start": 143670, "end": 144080, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every echo finds the shore again",
+      "start": 144780,
+      "end": 149720,
+      "words": [
+        { "text": "ev", "start": 144780, "end": 145100, "isPartOfWord": true },
+        { "text": "ery", "start": 145100, "end": 145450, "isPartOfWord": false },
+        { "text": "ech", "start": 145510, "end": 145860, "isPartOfWord": true },
+        { "text": "o", "start": 145860, "end": 146150, "isPartOfWord": false },
+        { "text": "finds", "start": 146210, "end": 146620, "isPartOfWord": false },
+        { "text": "the", "start": 146680, "end": 147030, "isPartOfWord": false },
+        { "text": "shore", "start": 147090, "end": 148320, "isPartOfWord": false },
+        { "text": "a", "start": 148380, "end": 148960, "isPartOfWord": true },
+        { "text": "gain", "start": 148960, "end": 149720, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "every echo finds its way to you",
+      "start": 150420,
+      "end": 155270,
+      "words": [
+        { "text": "ev", "start": 150420, "end": 150740, "isPartOfWord": true },
+        { "text": "ery", "start": 150740, "end": 151090, "isPartOfWord": false },
+        { "text": "ech", "start": 151150, "end": 151500, "isPartOfWord": true },
+        { "text": "o", "start": 151500, "end": 151790, "isPartOfWord": false },
+        { "text": "finds", "start": 151850, "end": 152260, "isPartOfWord": false },
+        { "text": "its", "start": 152320, "end": 152670, "isPartOfWord": false },
+        { "text": "way", "start": 152730, "end": 153780, "isPartOfWord": false },
+        { "text": "to", "start": 153840, "end": 154160, "isPartOfWord": false },
+        { "text": "you", "start": 154220, "end": 155270, "isPartOfWord": false }
+      ]
+    },
+    {
+      "text": "porch light burning burning for you",
+      "start": 159270,
+      "end": 165310,
+      "words": [
+        { "text": "porch", "start": 159270, "end": 159680, "isPartOfWord": false },
+        { "text": "light", "start": 159740, "end": 160150, "isPartOfWord": false },
+        { "text": "burn", "start": 160210, "end": 160970, "isPartOfWord": true },
+        { "text": "ing", "start": 160970, "end": 161670, "isPartOfWord": false },
+        { "text": "burn", "start": 162330, "end": 163090, "isPartOfWord": true },
+        { "text": "ing", "start": 163090, "end": 163790, "isPartOfWord": false },
+        { "text": "for", "start": 163850, "end": 164200, "isPartOfWord": false },
+        { "text": "you", "start": 164260, "end": 165310, "isPartOfWord": false }
+      ]
+    }
+  ],
+  "fetchedAt": "2026-10-23T00:00:00.000Z",
+  "language": "en"
+}

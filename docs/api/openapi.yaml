@@ -8,7 +8,7 @@ info:
     or a `Bearer echo_dt_…` device token (native clients). Cookie-authenticated unsafe methods need
     `Origin` equal to ECHO's public origin (docs/SETTINGS_AND_SECURITY.md §5.3). Everything not in the
     unauthenticated list of §5.5 answers 401 without a session. On every route: 413 `too_large` for a
-    body over 64 KB; 403 `totp_enrolment_required` while "require TOTP for all" is on and the user has
+    body over 64 KB (an admin's motion-cover video, PUT /motion/{albumId}/upload, may be 50 MB); 403 `totp_enrolment_required` while "require TOTP for all" is on and the user has
     no TOTP yet (only the Account routes answer); 400 for a body that is not a JSON object where one is
     read. A test (src/server/openapi.test.ts) keeps this file and the server's routes in step.
 servers:
@@ -832,6 +832,438 @@ paths:
       responses:
         '200': { description: OK, content: { application/json: { schema: { type: object, properties: { version: { type: [string, 'null'] }, updatedAt: { type: [integer, 'null'] }, lastError: { type: [string, 'null'] } } } } } }
         '403': { description: Not an admin }
+  /karaoke:
+    get:
+      summary: Karaoke mode's progress (docs/KARAOKE.md); `enabled` false when no stem service is configured (ECHO_STEMS_URL)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled: { type: boolean }
+                  online: { type: boolean, description: The stem service answered }
+                  ready: { type: integer }
+                  queued: { type: integer }
+                  failed: { type: integer }
+                  skipped: { type: integer, description: Longer than ECHO_STEMS_MAX_MINUTES }
+                  bytes: { type: [integer, 'null'], description: On the stem service's disk }
+  /karaoke/ready:
+    get:
+      summary: Songs with a karaoke version ready on the caller's own Navidrome server, newest first (Home's Karaoke shelf)
+      parameters:
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 60, default: 30 } }
+      responses:
+        '200': { description: 'Subsonic songs (getSong), those the server no longer has left out', content: { application/json: { schema: { type: object, properties: { songs: { type: array, items: { type: object } } } } } } }
+  /karaoke/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: A Navidrome song id }
+      - { name: soon, in: query, schema: { type: string, enum: ['1'] }, description: A song coming up in the queue, not playing now (waits behind those that are) }
+    get:
+      summary: The song's karaoke version; asking queues it (or moves it up), on the caller's own Navidrome server
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: ['off', queued, working, ready, failed, skipped] }
+                  ahead: { type: integer, description: Songs before it (queued or working) }
+                  url: { type: string, description: When ready, the audio }
+        '400': { description: bad_track_id }
+  /karaoke/{id}/audio:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: The karaoke version, AAC 5.1 in MP4 (instrumental front left/right, vocals rear left/right); Range works
+      responses:
+        '200': { description: The file, content: { audio/mp4: {} } }
+        '206': { description: Part of it }
+        '404': { description: Karaoke mode is off }
+        '409': { description: 'not_ready: queued, working, failed or skipped' }
+        '502': { description: stems_offline }
+  /motion:
+    get:
+      summary: Animated lock-screen covers' progress (docs/MOTION.md); `enabled` false when no motion service is configured (ECHO_MOTION_URL)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled]
+                properties:
+                  enabled: { type: boolean }
+                  online: { type: boolean, description: The motion service answered }
+                  ready: { type: integer }
+                  queued: { type: integer }
+                  failed: { type: integer }
+                  uploads: { type: integer, description: Albums with an admin's uploaded video }
+                  bytes: { type: integer, description: What the ready covers take on the motion service's disk }
+                  cacheBytes: { type: integer, description: 'The cap on generated covers (ECHO_MOTION_CACHE_MB); the longest unasked-for go first' }
+                  loops: { type: array, items: { type: integer }, description: 'The loop lengths the apps may ask for, in seconds' }
+  /motion/{albumId}:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string }, description: A Navidrome album id on the caller's own Navidrome server }
+      - { name: shape, in: query, schema: { type: string, enum: [tall, square], default: tall }, description: 'tall: 3:4, 1080 × 1440, the lock screen''s full-screen artwork; square: 1080 × 1080' }
+      - { name: loop, in: query, schema: { type: integer, enum: [5, 8, 12, 15], default: 8 }, description: "The loop's length in seconds (the apps' speed setting); an uploaded video keeps its own" }
+    get:
+      summary: "The album's motion cover: the admin's uploaded video, else one generated from the still cover; asking queues it (one cover at a time, uploads first)"
+      responses:
+        '200':
+          description: Ready (with its video and still), failed, or off; failed and off mean the still cover stays
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: { type: string, enum: [ready, failed, 'off'] }
+                  source: { type: string, enum: [upload, generated] }
+                  style: { type: string, enum: [depth, light, video], description: 'depth: photographs; light: "Living light", flat or text-heavy art; video: an upload' }
+                  shape: { type: string, enum: [tall, square] }
+                  seconds: { type: number, description: "The loop's length (an upload: its duration)" }
+                  version: { type: string, description: Changes when the cover is made again or replaced (a client keeps its downloaded copy until then) }
+                  video: { type: string, description: The MP4 }
+                  still: { type: string, description: Its first frame (JPEG) }
+        '202':
+          description: 'Queued or being made: show the still cover meanwhile and ask again after Retry-After (seconds, also in the body)'
+          headers: { Retry-After: { schema: { type: integer } } }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, ahead, retryAfter]
+                properties:
+                  status: { type: string, enum: [queued, working] }
+                  ahead: { type: integer, description: Covers before it (queued or being made) }
+                  retryAfter: { type: integer }
+        '400': { description: 'bad_album_id, or bad_params (a shape or loop length not listed)' }
+        '409': { description: 'navidrome.not_connected' }
+        '429': { description: 'busy: 20 of the caller''s covers are already waiting; ask again after Retry-After', headers: { Retry-After: { schema: { type: integer } } } }
+  /motion/{albumId}/video:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string } }
+      - { name: shape, in: query, schema: { type: string, enum: [tall, square], default: tall } }
+      - { name: loop, in: query, schema: { type: integer, enum: [5, 8, 12, 15], default: 8 } }
+    get:
+      summary: "The motion cover's video: MP4 (HEVC, or H.264 with ECHO_MOTION_CODEC=h264), no sound, looping seamlessly; Range works. Cache-Control private, max-age=86400, with an ETag (If-None-Match answers 304). Outside the per-user API budget, like covers."
+      responses:
+        '200': { description: The file, content: { video/mp4: {} } }
+        '206': { description: 'Part of it' }
+        '202': { description: 'Not ready yet (asking queued it); as GET /motion/{albumId}, with Retry-After' }
+        '304': { description: 'Not modified' }
+        '400': { description: 'bad_album_id or bad_params' }
+        '404': { description: '`off` (no motion service) or `failed`: keep the still cover' }
+        '409': { description: 'navidrome.not_connected' }
+        '429': { description: 'busy' }
+        '502': { description: 'motion_offline' }
+  /motion/{albumId}/still:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string } }
+      - { name: shape, in: query, schema: { type: string, enum: [tall, square], default: tall } }
+      - { name: loop, in: query, schema: { type: integer, enum: [5, 8, 12, 15], default: 8 } }
+    get:
+      summary: "The motion cover's first frame as a JPEG (the lock screen shows it until the video plays); caching and answers as the video's"
+      responses:
+        '200': { description: The JPEG, content: { image/jpeg: {} } }
+        '206': { description: 'Part of it' }
+        '202': { description: 'Not ready yet, with Retry-After' }
+        '304': { description: 'Not modified' }
+        '400': { description: 'bad_album_id or bad_params' }
+        '404': { description: 'off or failed' }
+        '409': { description: 'navidrome.not_connected' }
+        '429': { description: 'busy' }
+        '502': { description: 'motion_offline' }
+  /motion/{albumId}/upload:
+    parameters:
+      - { name: albumId, in: path, required: true, schema: { type: string }, description: A Navidrome album id on the admin's own Navidrome server }
+    get:
+      summary: The album's uploaded video, if any, and how its conversion went (admins only)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [enabled, upload]
+                properties:
+                  enabled: { type: boolean, description: A motion service is configured }
+                  upload:
+                    type: [object, 'null']
+                    properties:
+                      type: { type: string, enum: [mp4, mov, m4v] }
+                      bytes: { type: integer }
+                      uploadedAt: { type: integer }
+                      status: { type: string, enum: [queued, working, ready, failed] }
+                      error: { type: string, description: 'Why it failed, e.g. "longer than 60 s"' }
+        '400': { description: 'bad_album_id' }
+        '403': { description: 'Not an admin' }
+        '409': { description: 'navidrome.not_connected' }
+    put:
+      summary: >
+        An admin uploads a video as the album's motion cover (audited as admin.motion_uploaded). The body
+        is the file itself, at most 50 MB (this route alone is past the 64 KB body limit), MP4, M4V or
+        QuickTime by its Content-Type and by its first bytes; it is kept in /data/motion, replaces the
+        album's earlier upload and generated covers, and is converted first (filled to 3:4 and square,
+        no sound, at most 30 fps; at most 60 s long)
+      requestBody:
+        required: true
+        content: { video/mp4: {}, video/quicktime: {}, video/x-m4v: {} }
+      responses:
+        '201':
+          description: Kept, and queued for conversion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, enum: [queued, working] }
+                  type: { type: string, enum: [mp4, mov, m4v] }
+                  bytes: { type: integer }
+        '400': { description: 'bad_album_id' }
+        '403': { description: 'Not an admin' }
+        '409': { description: 'motion_off (no motion service), or navidrome.not_connected' }
+        '413': { description: 'too_large (over 50 MB)' }
+        '415': { description: 'unsupported_type (not one of the three), or not_a_video (its first bytes are not a video container)' }
+    delete:
+      summary: The album's uploaded video goes (file, record and conversion; audited as admin.motion_removed); a generated cover follows when asked for
+      responses:
+        '200': { description: 'Removed' }
+        '400': { description: 'bad_album_id' }
+        '403': { description: 'Not an admin' }
+        '404': { description: 'The album has no upload' }
+        '409': { description: 'motion_off, or navidrome.not_connected' }
+  /auth/qr:
+    post:
+      summary: 'Sign in with your phone: the sign-in page asks for a request; its id goes in a QR code (<origin>/link#<id>), the poll secret stays with the page. Two minutes, once.'
+      security: []
+      responses:
+        '201': { description: The request, content: { application/json: { schema: { type: object, properties: { id: { type: string }, poll: { type: string }, url: { type: string }, expiresAt: { type: integer } } } } } }
+        '429': { description: rate_limited }
+  /auth/qr/peek:
+    post:
+      summary: The phone (signed in, not a guest) sees which browser asks and from where, before approving
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id], properties: { id: { type: string } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { browser: { type: string }, ip: { type: string }, expiresAt: { type: integer } } } } } }
+        '403': { description: 'guest: a guest cannot sign a browser in' }
+        '404': { description: expired, used or unknown }
+  /auth/qr/approve:
+    post:
+      summary: The phone approves; the browser that asked gets a session for the phone's user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id], properties: { id: { type: string } } }
+      responses:
+        '200': { description: Approved }
+        '403': { description: 'guest' }
+        '404': { description: expired, used or unknown }
+  /auth/qr/poll:
+    post:
+      summary: The sign-in page waits; once approved it gets its session cookie
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [id, poll], properties: { id: { type: string }, poll: { type: string } } }
+      responses:
+        '200': { description: 'pending, approved (with Set-Cookie) or expired', content: { application/json: { schema: { type: object, properties: { status: { type: string, enum: [pending, approved, expired] } } } } } }
+  /guests/codes:
+    post:
+      summary: A one-time guest code to show as a QR code (any signed-in user but a guest); it can be scanned for 10 minutes, once
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [durationMs], properties: { durationMs: { type: integer, enum: [3600000, 86400000, 604800000], description: How long the guest may stay (1 hour, 1 day, 1 week) } } }
+      responses:
+        '201': { description: The code, content: { application/json: { schema: { type: object, properties: { code: { type: string }, url: { type: string, description: 'https://<origin>/guest#<code>, what the QR code holds' }, expiresAt: { type: integer }, durationMs: { type: integer } } } } } }
+        '400': { description: bad_duration }
+        '403': { description: 'guest: a guest cannot invite' }
+        '429': { description: 'too_many_codes: five live codes at most' }
+  /guests/peek:
+    post:
+      summary: Whose guest pass a code is and for how long, before joining (no sign-in; the code is the secret)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string } } }
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { invitedBy: { type: string }, durationMs: { type: integer } } } } } }
+        '404': { description: 'bad_code: unknown, used or expired' }
+        '429': { description: rate_limited }
+  /guests/redeem:
+    post:
+      summary: Join as a guest with a code; returns a device token for this phone, valid until the guest's time is up
+      description: The guest listens to the inviter's library (its Navidrome connection is copied); writes to Navidrome, the Wanted list, credentials, connections and other guests are refused with 403 guest.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [code], properties: { code: { type: string }, name: { type: string, maxLength: 64 } } }
+      responses:
+        '201': { description: Joined, content: { application/json: { schema: { type: object, properties: { token: { type: string }, username: { type: string }, expiresAt: { type: integer }, invitedBy: { type: string } } } } } }
+        '404': { description: 'bad_code: unknown, used or expired' }
+        '429': { description: rate_limited }
+  /guests/me:
+    get:
+      summary: The caller's guest state (null for a normal user)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { guest: { type: [object, 'null'], properties: { expiresAt: { type: integer }, invitedBy: { type: [string, 'null'] }, keep: { type: [object, 'null'], properties: { username: { type: string }, requestedAt: { type: integer } } } } } } } } } }
+  /guests/me/keep:
+    post:
+      summary: A guest asks to keep its account, under a username and password; the inviter or an admin approves
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [username, password], properties: { username: { type: string }, password: { type: string } } }
+      responses:
+        '200': { description: Asked }
+        '400': { description: 'not_a_guest, bad_username, weak_password' }
+        '409': { description: username_taken }
+  /guests:
+    get:
+      summary: The guests the caller invited (every guest for an admin), with any request to stay
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: array, items: { type: object, properties: { id: { type: integer }, username: { type: string }, invitedBy: { type: [string, 'null'] }, createdAt: { type: integer }, expiresAt: { type: integer }, keep: { type: [object, 'null'] } } } } } } }
+  /guests/{id}/approve:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    post:
+      summary: Approve a guest's request to stay; it becomes a normal user (it connects its own Navidrome)
+      responses:
+        '200': { description: Kept }
+        '404': { description: 'Not the caller''s guest (or an admin''s), or its time is up' }
+        '409': { description: 'no_request, username_taken' }
+  /guests/{id}/end:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    post:
+      summary: End a guest's time now (signed out and deleted)
+      responses:
+        '200': { description: Ended }
+        '404': { description: 'Not the caller''s guest (or an admin''s)' }
+  /together:
+    get:
+      summary: The Listen together session the caller is in, or null (a reload finds its way back)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { type: object, properties: { session: { oneOf: [{ $ref: '#/components/schemas/Together' }, { type: 'null' }] } } } } } }
+    post:
+      summary: Start a Listen together session (docs/TOGETHER.md), optionally on the song the host is playing; the caller leaves any other session
+      requestBody:
+        content:
+          application/json:
+            schema: { type: object, properties: { track: { $ref: '#/components/schemas/TrackRef' }, positionMs: { type: integer }, playing: { type: boolean }, queue: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/TrackRef' }, description: The host's upcoming songs, the shared queue's start } } }
+      responses:
+        '201': { description: 'Started; `url` is what the QR code holds', content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '400': { description: bad_track }
+        '409': { description: 'no_library: the caller has no Navidrome connection' }
+        '503': { description: too_many_sessions }
+  /together/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string }, description: 'The session id (18 random bytes, base64url; the link''s secret)' }
+    get:
+      summary: The session's state; for members, and for anyone on the host's Navidrome server about to join (`you.member` false)
+      responses:
+        '200': { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '404': { description: 'not_found: unknown or ended' }
+        '409': { description: 'other_library: the caller''s Navidrome is not the host''s (`host` names the host)' }
+  /together/{id}/join:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Join (guests too); the caller leaves any other session
+      responses:
+        '200': { description: Joined, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '404': { description: not_found }
+        '409': { description: 'other_library, full (50 members)' }
+  /together/{id}/leave:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Leave; the host leaving ends the session for everyone
+      responses:
+        '200': { description: Left, content: { application/json: { schema: { type: object, properties: { ok: { type: boolean }, ended: { type: boolean } } } } } }
+        '403': { description: not_member }
+        '404': { description: not_found }
+  /together/{id}/queue:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: Add a song to the shared queue (any member); with nothing playing it starts for everyone
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [track], properties: { track: { $ref: '#/components/schemas/TrackRef' }, next: { type: boolean, description: Before the rest of the queue } } }
+      responses:
+        '200': { description: Added, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '400': { description: bad_track }
+        '403': { description: not_member }
+        '404': { description: not_found }
+        '409': { description: 'queue_full (500 songs)' }
+  /together/{id}/queue/{uid}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+      - { name: uid, in: path, required: true, schema: { type: string }, description: The queued item's uid }
+    delete:
+      summary: Remove a queued song; the host removes any, a member those they added
+      responses:
+        '200': { description: Removed, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '403': { description: 'not_member, host_only' }
+        '404': { description: not_found }
+  /together/{id}/control:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    post:
+      summary: The host's transport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { enum: [play, pause, seek, next, previous, jump] }
+                positionMs: { type: integer, description: seek }
+                uid: { type: string, description: 'jump: the queued song to play now' }
+                from: { type: string, description: 'next: the song the host''s player finished; ignored when the session has already moved past it' }
+      responses:
+        '200': { description: Done, content: { application/json: { schema: { $ref: '#/components/schemas/Together' } } } }
+        '400': { description: 'bad_action, bad_position' }
+        '403': { description: 'not_member, host_only' }
+        '404': { description: not_found }
+        '409': { description: nothing_to_play }
+  /together/{id}/events:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: string } }
+    get:
+      summary: 'Server-Sent Events for members: `state` (a Together) first and on every change, `ping` ({serverTime, version}) every 15 s, `end` when the session ends or the caller left'
+      responses:
+        '200': { description: The stream, content: { text/event-stream: {} } }
+        '403': { description: not_member }
+        '404': { description: not_found }
   /youtube/home:
     get:
       summary: YouTube Music's Home (personal when signed in, general when not)
@@ -1000,6 +1432,29 @@ components:
     session: { type: apiKey, in: cookie, name: __Host-echo_session }
     device: { type: http, scheme: bearer, bearerFormat: echo_dt_… }
   schemas:
+    Together:
+      type: object
+      description: 'A Listen together session (docs/TOGETHER.md). Position now = serverTime - startedAt while playing; clients correct their clock by serverTime.'
+      properties:
+        id: { type: string }
+        url: { type: string, description: '<origin>/together/<id>, what the QR code holds' }
+        host: { type: object, properties: { id: { type: integer }, username: { type: string } } }
+        you: { type: object, properties: { id: { type: integer }, host: { type: boolean }, member: { type: boolean } } }
+        members: { type: array, items: { type: object, properties: { id: { type: integer }, username: { type: string }, host: { type: boolean }, online: { type: boolean } } } }
+        now: { oneOf: [{ $ref: '#/components/schemas/TogetherItem' }, { type: 'null' }] }
+        queue: { type: array, items: { $ref: '#/components/schemas/TogetherItem' } }
+        playing: { type: boolean }
+        startedAt: { type: [integer, 'null'], description: 'Server time (ms) at which the song was at 0 ms, while playing' }
+        positionMs: { type: integer, description: The position at serverTime }
+        serverTime: { type: integer }
+        version: { type: integer }
+        createdAt: { type: integer }
+    TogetherItem:
+      type: object
+      properties:
+        uid: { type: string }
+        track: { $ref: '#/components/schemas/TrackRef' }
+        addedBy: { type: object, properties: { id: { type: integer }, username: { type: string } } }
     TrackRef:
       type: object
       required: [id, title, artist, album, durationMs]

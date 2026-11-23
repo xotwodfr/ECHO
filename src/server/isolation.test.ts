@@ -31,6 +31,36 @@ const NO_USER_DATA = [
   'POST /invite',
   'POST /invite/totp',
   'GET /me',
+  // Karaoke: server-wide counts, and a song's state; songs are keyed by the caller's own Navidrome
+  // server, so another server's never answer (karaoke.test.ts). The audio is attacked below.
+  'GET /karaoke',
+  'GET /karaoke/ready',
+  // Motion covers: shared by design per Navidrome server and album (docs/MOTION.md), keyed by the
+  // caller's own server, so another server's never answer; uploads and removals are admins' only
+  // (motion.test.ts).
+  'GET /motion',
+  'GET /motion/:albumId',
+  'GET /motion/:albumId/video',
+  'GET /motion/:albumId/still',
+  'GET /motion/:albumId/upload',
+  'PUT /motion/:albumId/upload',
+  'DELETE /motion/:albumId/upload',
+  // Guests: codes are the caller's own; another user's guests are refused (guests.test.ts).
+  // Sign in with your phone: a request is the browser's own; approving it signs that browser in
+  // as the approver (qrlogin.test.ts).
+  'POST /auth/qr',
+  'POST /auth/qr/peek',
+  'POST /auth/qr/approve',
+  'POST /auth/qr/poll',
+  'POST /guests/codes',
+  'POST /guests/peek',
+  'POST /guests/redeem',
+  'GET /guests/me',
+  'POST /guests/me/keep',
+  'GET /guests',
+  'POST /guests/:id/approve',
+  'POST /guests/:id/end',
+  'GET /karaoke/:id',
   'GET /me/account',
   'POST /me/password',
   'POST /me/totp/start',
@@ -238,6 +268,7 @@ describe('SEC-11: isolation between users', () => {
       `/api/v1/navidrome/stream/${track}`,
       `/api/v1/navidrome/stream-url/${track}`,
       `/api/v1/navidrome/cover/${track}`,
+      `/api/v1/karaoke/${track}/audio`,
       '/api/v1/navidrome/rest/getAlbumList2?type=newest',
     ])
       expect((await as(B, 'GET', p)).status, p).toBeGreaterThanOrEqual(400);
@@ -252,6 +283,26 @@ describe('SEC-11: isolation between users', () => {
       await as(B, 'GET', `/api/v1/palette/navidrome:${mock.songs[0]?.albumId}`)
     ).json();
     expect(pal.source).toBe('fallback');
+
+    // Listen together: A's session, by its id. B (no Navidrome, so not A's library) can neither
+    // join nor read it, nor act in it; B is in no session; B cannot start one (no library).
+    const jam = (await (await as(A, 'POST', '/api/v1/together', {})).json()) as { id: string };
+    expect(await json(await as(B, 'GET', '/api/v1/together'))).toBe('{"session":null}');
+    expect((await as(B, 'POST', '/api/v1/together', {})).status).toBe(409);
+    expect((await as(B, 'GET', `/api/v1/together/${jam.id}`)).status).toBe(409);
+    expect((await as(B, 'POST', `/api/v1/together/${jam.id}/join`, {})).status).toBe(409);
+    for (const [m, p] of [
+      ['POST', `/api/v1/together/${jam.id}/leave`],
+      ['POST', `/api/v1/together/${jam.id}/queue`],
+      ['DELETE', `/api/v1/together/${jam.id}/queue/x`],
+      ['POST', `/api/v1/together/${jam.id}/control`],
+      ['GET', `/api/v1/together/${jam.id}/events`],
+    ] as const)
+      expect(
+        (await as(B, m, p, m === 'GET' || m === 'DELETE' ? undefined : { action: 'pause' })).status,
+        `${m} ${p}`,
+      ).toBe(403);
+    t.clock.t += 2000; // B's API budget refills
 
     // Admin routes, with A's id: B is not an admin.
     for (const [m, p] of [

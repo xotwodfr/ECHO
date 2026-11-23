@@ -8,6 +8,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -84,6 +85,7 @@ data class Look(
   val circleArt: Boolean = false,
   val navPill: Boolean = true,
   val font: FontFamily = Figtree,
+  val material: Material = Material.Flat,
 )
 
 val LocalLook = staticCompositionLocalOf { Look() }
@@ -123,6 +125,11 @@ enum class ThemePreset(
   Qobuz("qobuz", "Qobuz style", "Black and white, thin editorial type", Color(0xFF3B8CFF), dark = true, titleWeight = 300, look = Look(art = 0.dp, rowArt = 0.dp, hero = 0.dp, button = 0.dp, mini = 0.dp, navPill = false, font = Inter), darkGround = Color(0xFF0B0B0C), lightGround = Color(0xFFFFFFFF)),
   Tidal("tidal", "Tidal style", "Black, white and cyan, minimal", Color(0xFF33FFEE), Color.Black, dark = true, titleWeight = 700, look = Look(art = 6.dp, rowArt = 4.dp, hero = 6.dp, button = 6.dp, mini = 6.dp, navPill = false, font = Inter), darkGround = Color(0xFF000000), lightGround = Color(0xFFFFFFFF)),
   YouTubeMusic("youtube", "YouTube Music style", "Red, dark, round art", Color(0xFFFF0033), dark = true, titleWeight = 700, look = Look(art = 999.dp, rowArt = 999.dp, hero = 16.dp, button = 999.dp, mini = 12.dp, circleArt = true), darkGround = Color(0xFF030303), lightGround = Color(0xFFFFFFFF)),
+  Clay("clay", "Clay", "Pastel plasticine, shaped by hand", Color(0xFFC4607A), dark = false, titleWeight = 900, look = Look(art = 22.dp, rowArt = 14.dp, hero = 30.dp, button = 24.dp, mini = 26.dp, navPill = true, material = Material.Clay)),
+  Yarn("yarn", "Yarn", "Knitted in cosy autumn colours", Color(0xFF8E2F4F), dark = false, titleWeight = 900, look = Look(art = 18.dp, rowArt = 12.dp, hero = 26.dp, button = 999.dp, mini = 24.dp, navPill = true, material = Material.Yarn)),
+  Glass("glass", "Liquid glass", "Frosted panes over the album's colours", null, dark = true, titleWeight = 900, look = Look(art = 20.dp, rowArt = 12.dp, hero = 28.dp, button = 999.dp, mini = 24.dp, navPill = true, material = Material.Glass)),
+  Paper("paper", "Paper & origami", "Folded card, polaroids and tape", Color(0xFFE07E5C), dark = false, titleWeight = 900, look = Look(art = 2.dp, rowArt = 2.dp, hero = 3.dp, button = 3.dp, mini = 4.dp, navPill = true, material = Material.Paper)),
+  HiFi("hifi", "Retro hi-fi", "Wood veneer, brushed aluminium, a teal glow", Color(0xFFFFB547), dark = true, titleWeight = 900, look = Look(art = 3.dp, rowArt = 2.dp, hero = 8.dp, button = 6.dp, mini = 8.dp, navPill = true, material = Material.HiFi)),
   MaterialYou("materialyou", "Material You", "Colours from your wallpaper", null, dark = null, titleWeight = 700),
   Monochrome("mono", "Monochrome", "Greys only: the art is the colour", null, dark = null, style = PaletteStyle.Monochrome);
 
@@ -208,6 +215,41 @@ fun EchoTheme(forceDark: Boolean = false, content: @Composable () -> Unit) {
     animate = true,
     animationSpec = tween(1200),
   ) {
+    if (preset.look.material != Material.Flat) {
+      val mc = matterColors(preset, dark, prefs.clayDark, stagePalette().accentColor)
+      val base = MaterialTheme.colorScheme
+      val strong =
+        when (preset) {
+          ThemePreset.Clay -> if (dark) mc.accent(0).lighter(0.25f) else Color(0xFFB04F6C)
+          ThemePreset.Yarn -> if (dark) Color(0xFFE0AE4A) else Color(0xFF8E2F4F)
+          else -> mc.strong
+        }
+      val scheme =
+        base.copy(
+          primary = strong,
+          onPrimary = if (strong.luminance() > 0.5f) (if (mc.ink.luminance() < 0.3f) mc.ink else Color(0xFF1E1E20)) else Color.White,
+          primaryContainer = mc.accent(0),
+          onPrimaryContainer = inkOn(mc.accent(0), mc.ink),
+          secondaryContainer = mc.paper,
+          onSecondaryContainer = mc.ink,
+          background = mc.ground,
+          surface = mc.ground,
+          surfaceDim = mc.ground,
+          surfaceContainerLowest = mc.ground,
+          surfaceContainerLow = mc.paper,
+          surfaceContainer = mc.paper,
+          surfaceContainerHigh = mc.paper,
+          surfaceContainerHighest = mc.paper,
+          onSurface = mc.ink,
+          onSurfaceVariant = mc.ink.copy(alpha = 0.7f),
+          outline = mc.ink.copy(alpha = 0.35f),
+          outlineVariant = mc.ink.copy(alpha = 0.16f),
+        )
+      MaterialTheme(scheme, typography = typo) {
+        CompositionLocalProvider(LocalMatter provides mc) { inner() }
+      }
+      return@DynamicMaterialTheme
+    }
     // A brand accent stays exactly that colour, on its own ground.
     val base = MaterialTheme.colorScheme
     val accented =
@@ -232,3 +274,146 @@ fun headerTone(accent: Color): Color {
   val s = hsv[1].coerceAtMost(0.62f)
   return Color(android.graphics.Color.HSVToColor(floatArrayOf(hsv[0], s, if (s < 0.08f) 0.33f else 0.42f)))
 }
+
+private fun Color.lighter(k: Float) = lerp(this, Color.White, k)
+
+private fun Color.darker(k: Float) = lerp(this, Color.Black, k)
+
+/** [c] as hue (degrees), saturation and value, each 0..1 but the hue. */
+private fun Color.hsv(): FloatArray {
+  val mx = maxOf(red, green, blue)
+  val mn = minOf(red, green, blue)
+  val d = mx - mn
+  val h =
+    when {
+      d == 0f -> 0f
+      mx == red -> 60f * (((green - blue) / d) % 6f)
+      mx == green -> 60f * (((blue - red) / d) + 2f)
+      else -> 60f * (((red - green) / d) + 4f)
+    }
+  return floatArrayOf((h + 360f) % 360f, if (mx == 0f) 0f else d / mx, mx)
+}
+
+private fun hsvColor(h: Float, s: Float, v: Float): Color {
+  val c = v * s
+  val x = c * (1 - kotlin.math.abs((h / 60f) % 2f - 1))
+  val m = v - c
+  val (r, g, b) =
+    when ((h / 60f).toInt() % 6) {
+      0 -> Triple(c, x, 0f)
+      1 -> Triple(x, c, 0f)
+      2 -> Triple(0f, c, x)
+      3 -> Triple(0f, x, c)
+      4 -> Triple(x, 0f, c)
+      else -> Triple(c, 0f, x)
+    }
+  return Color(r + m, g + m, b + m)
+}
+
+/** The colour turned [deg] degrees round the colour wheel. */
+private fun Color.hue(deg: Float): Color {
+  val (h, sat, v) = hsv()
+  return hsvColor((h + deg + 360f) % 360f, sat, v)
+}
+
+/** A colour as clay for the dark: its hue, a clay's saturation and a mid brightness. */
+private fun Color.asClay(): Color {
+  val (h, sat, _) = hsv()
+  return hsvColor(h, if (sat < 0.08f) 0.06f else 0.48f, 0.74f)
+}
+
+/** A colour as Liquid glass's glow: its hue, vivid and bright. */
+private fun Color.asGlow(): Color {
+  val (h, sat, _) = hsv()
+  return hsvColor(h, if (sat < 0.08f) 0.1f else sat.coerceIn(0.55f, 0.8f), 1f)
+}
+
+/**
+ * The material palettes, light and dark: Clay (its dark from the album or the chosen colour), Yarn,
+ * Liquid glass (its glows from the album), Paper and Retro hi-fi.
+ */
+fun matterColors(preset: ThemePreset, dark: Boolean, clayDark: String, album: Color): MatterColors =
+  when {
+    preset == ThemePreset.Glass -> {
+      val g = album.asGlow()
+      val glows = listOf(g, g.hue(-80f), g.hue(55f))
+      val pane = Color.White.copy(alpha = SEE_THROUGH)
+      if (dark)
+        MatterColors(ground = hsvColor(g.hsv()[0], 0.62f, 0.22f), paper = pane, accents = glows.map { it.copy(alpha = SEE_THROUGH) }, ink = Color.White, onAccent = Color.White, strong = pane)
+      else
+        MatterColors(ground = hsvColor(g.hsv()[0], 0.12f, 0.96f), paper = pane, accents = glows.map { it.lighter(0.35f).copy(alpha = SEE_THROUGH) }, ink = Color(0xFF1C1530), onAccent = Color(0xFF1C1530), strong = Color(0xFF1C1530).copy(alpha = SEE_THROUGH))
+    }
+    preset == ThemePreset.Paper && !dark ->
+      MatterColors(
+        ground = Color(0xFFEFE8DC),
+        paper = Color(0xFFFBF8F2),
+        accents = listOf(Color(0xFFF6C9B4), Color(0xFFCFE3C8), Color(0xFFCBD9F2), Color(0xFFF4E3A1), Color(0xFFE8C6E0), Color(0xFFF2A385)),
+        ink = Color(0xFF2F2A24),
+        onAccent = Color(0xFF2F2A24),
+        strong = Color(0xFFE07E5C),
+      )
+    preset == ThemePreset.Paper ->
+      MatterColors(
+        ground = Color(0xFF24211D),
+        paper = Color(0xFF38332C),
+        accents = listOf(Color(0xFFB9785E), Color(0xFF7E9A74), Color(0xFF7389B3), Color(0xFFBFA458), Color(0xFF9C7393), Color(0xFFD98B6C)),
+        ink = Color(0xFFF1EADF),
+        onAccent = Color.White,
+        strong = Color(0xFFE07E5C),
+      )
+    preset == ThemePreset.HiFi && dark ->
+      MatterColors(
+        ground = Color(0xFF6B3F22),
+        paper = Color(0xFF3C3D41),
+        accents = listOf(Color(0xFFCFD0D3), Color(0xFFD8C9A3), Color(0xFF4A4B50), Color(0xFFB9BABD), Color(0xFF8A8B90), Color(0xFFE2D6B4)),
+        ink = Color(0xFFF2E9DC),
+        onAccent = Color(0xFF1E1E20),
+        strong = Color(0xFFFFB547),
+      )
+    preset == ThemePreset.HiFi ->
+      MatterColors(
+        ground = Color(0xFFB98A5C),
+        paper = Color(0xFFD6D7DA),
+        accents = listOf(Color(0xFFE4E5E8), Color(0xFFE6D9B6), Color(0xFFC4C5C9), Color(0xFFCFD0D3), Color(0xFFB0B1B5), Color(0xFFEDE3C7)),
+        ink = Color(0xFF1F1F21),
+        onAccent = Color(0xFF1F1F21),
+        strong = Color(0xFF2A2A2C),
+      )
+    preset == ThemePreset.Clay && !dark ->
+      MatterColors(
+        ground = Color(0xFFF3ECE6),
+        paper = Color(0xFFFBF5EF),
+        accents = listOf(Color(0xFFFFC9B0), Color(0xFFD8C8F4), Color(0xFFB9EAD2), Color(0xFFFFE7A3), Color(0xFFBFE0F7), Color(0xFFFFC0D3)),
+        ink = Color(0xFF3D3347),
+        onAccent = Color(0xFF4A3355),
+      )
+    preset == ThemePreset.Clay -> {
+      val hi = (com.folk3s.echo.CLAY_DARK.firstOrNull { it.first == clayDark }?.third?.let { Color(it) } ?: album.asClay())
+      MatterColors(
+        ground = hi.darker(0.74f),
+        paper = hi.darker(0.42f),
+        accents = listOf(hi, hi.hue(22f), hi.hue(-22f), hi.lighter(0.14f), hi.hue(40f).darker(0.08f), hi.hue(-40f)),
+        ink = Color(0xFFF6EEF7),
+        onAccent = Color.White,
+        strong = hi.lighter(0.1f),
+      )
+    }
+    !dark ->
+      MatterColors(
+        ground = Color(0xFFE9DCC4),
+        paper = Color(0xFFEFE3CC),
+        accents = listOf(Color(0xFFB8562F), Color(0xFF8E2F4F), Color(0xFF3F6B4A), Color(0xFFD9A43A), Color(0xFF6B4430), Color(0xFF7C99A8)),
+        ink = Color(0xFF3B2A22),
+        onAccent = Color.White,
+        strong = Color(0xFF8E2F4F),
+      )
+    else ->
+      MatterColors(
+        ground = Color(0xFF2E2925),
+        paper = Color(0xFF4A413A),
+        accents = listOf(Color(0xFFB8562F), Color(0xFF8E2F4F), Color(0xFF3F6B4A), Color(0xFFD9A43A), Color(0xFF6B4430), Color(0xFF7C99A8)),
+        ink = Color(0xFFF3E9DC),
+        onAccent = Color.White,
+        strong = Color(0xFFA83C60),
+      )
+  }

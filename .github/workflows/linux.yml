@@ -1,0 +1,81 @@
+name: linux
+
+# ECHO for Linux (Linux/README.md): on Ubuntu, the tests and a build verification run.
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'Linux/**'
+      - '.github/workflows/linux.yml'
+  pull_request:
+    paths:
+      - 'Linux/**'
+      - '.github/workflows/linux.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache cargo
+        uses: actions/cache@0400d5f644604f7f0f10e7e1f5f6756a0d6c7d9a # v4.2.1
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            Linux/target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('Linux/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libgtk-4-dev \
+            libgstreamer1.0-dev \
+            libgstreamer-plugins-base1.0-dev \
+            gstreamer1.0-plugins-base \
+            gstreamer1.0-plugins-good \
+            gstreamer1.0-plugins-bad \
+            gstreamer1.0-plugins-ugly \
+            gstreamer1.0-libav \
+            libsecret-1-dev \
+            libadwaita-1-dev \
+            pkg-config
+
+      - name: Check formatting
+        working-directory: Linux
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        working-directory: Linux
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Build
+        working-directory: Linux
+        run: cargo build --release
+
+      - name: Tests
+        working-directory: Linux
+        run: cargo test --all-targets --all-features
+
+      - name: Upload binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ECHO-linux
+          path: Linux/target/release/echo
+          retention-days: 7
